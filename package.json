@@ -29,6 +29,8 @@
     "build": "node tools/build-app.js",
     "test": "node --test test/",
     "test:golden": "node --test test/golden.test.js",
+    "parity": "node tools/parity-freeze.js",
+    "fixture": "node tools/make-fixture.js",
     "lint": "eslint .",
     "prepack": "npm run build"
   },
