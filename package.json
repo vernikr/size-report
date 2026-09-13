@@ -30,12 +30,14 @@
     "parity:live": "node tools/parity-live.js",
     "fixture": "node tools/make-fixture.js"
   },
-  "optionalDependencies": {},
   "keywords": [
     "size",
     "tokens",
     "minify",
     "git-history",
     "report"
-  ]
+  ],
+  "devDependencies": {
+    "jsdom": "~26"
+  }
 }

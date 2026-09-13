@@ -79,6 +79,66 @@ function runCli(bin, dir, args, env) {
   return { code: res.status, stdout: res.stdout || '', stderr: res.stderr || '' };
 }
 
+/* Контракт данных обязан нести ту же правду, что замороженные числа: это одна и та
+ * же история, разложенная по полям. Сверяется на живой истории — там, где
+ * фикстура не может: строки, абсолютные значения, «сейчас» и итоги, которые
+ * страница считает сама. Колонки, где файл удаляли и возвращали, из сверки дельт
+ * выпадают и называются вслух (`BLOCKERS.md` §N4). */
+function checkContract(bin, dir, env, frozen) {
+  const res = runCli(bin, dir, ['--data'], env);
+  if (res.code !== 0) return { errors: ['--data не отдался (код ' + res.code + '): ' + res.stderr.trim()] };
+  const got = JSON.parse(res.stdout);
+  const errors = [];
+
+  if (got.schema !== 1) errors.push('схема данных не объявлена');
+  if (got.rows.length !== frozen.rows.length) errors.push('строк ' + got.rows.length + ' вместо ' + frozen.rows.length);
+  if (got.files.length !== frozen.columns.length) errors.push('файлов ' + got.files.length + ' вместо ' + frozen.columns.length);
+  if (JSON.stringify(got.now) !== JSON.stringify(frozen.rows[frozen.rows.length - 1].cells)) {
+    errors.push('«сейчас» разошлось с последней строкой эталона');
+  }
+
+  got.rows.forEach((row, r) => {
+    if (r >= frozen.rows.length) return;
+    if (row.sha !== frozen.rows[r].sha) { errors.push('строка ' + (r + 1) + ': sha разошёлся'); return; }
+    if (JSON.stringify(row.values) !== JSON.stringify(frozen.rows[r].cells)) {
+      errors.push('строка ' + (r + 1) + ': абсолютные значения разошлись с эталоном');
+      return;
+    }
+    got.metrics.forEach((m) => {
+      let sum = 0;
+      row.values.forEach((v) => { if (v !== null) sum += v[m.key]; });
+      if (sum !== frozen.rows[r].totals[m.key]) {
+        errors.push('строка ' + (r + 1) + '/' + m.key + ': итог ' + sum + ' вместо ' + frozen.rows[r].totals[m.key]);
+      }
+    });
+  });
+
+  const value = (r, i, key) => (r < 0 || got.rows[r].values[i] === null ? null : got.rows[r].values[i][key]);
+  const gaps = [];
+  got.files.forEach((f, i) => {
+    let deleted = false;
+    got.rows.forEach((row, r) => {
+      if (r > 0 && got.rows[r - 1].values[i] !== null && row.values[i] === null) deleted = true;
+    });
+    if (deleted) { gaps.push(f.label); return; }
+    got.metrics.forEach((m) => {
+      let sum = 0;
+      got.rows.forEach((row, r) => {
+        const now = value(r, i, m.key);
+        if (now === null) return;
+        const before = value(r - 1, i, m.key);
+        sum += before === null ? now : now - before;
+      });
+      const at = got.now[i] === null ? 0 : got.now[i][m.key];
+      if (sum !== at) {
+        errors.push('колонка «' + f.label + '»/' + m.key + ': дельты не сходятся с текущим размером');
+      }
+    });
+  });
+
+  return { errors: errors, gaps: gaps, rows: got.rows.length, files: got.files.length };
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const repo = path.resolve(typeof args.flags['--repo'] === 'string' ? args.flags['--repo'] : DEFAULT_REPO);
@@ -99,8 +159,9 @@ function main() {
   const manifest = JSON.parse(fs.readFileSync(path.join(PARITY, 'manifest.json'), 'utf8'));
   const head = manifest.project.head;
   const data = fs.readFileSync(path.join(PARITY, 'data.json')).toString('utf8');
+  const frozen = JSON.parse(data);
   const artifactSha = fs.readFileSync(path.join(PARITY, 'artifact.sha256'), 'utf8').split(/\s+/)[0];
-  const rows = JSON.parse(data).rows.length;
+  const rows = frozen.rows.length;
 
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'size-report-live-'));
   try {
@@ -150,6 +211,16 @@ function main() {
       } else {
         bad++;
         console.error('    ✗ контрольный режим красный: ' + checked.stderr.trim());
+      }
+
+      const contract = checkContract(bin, dir, profile.env, frozen);
+      if (contract.errors.length === 0) {
+        console.log('    ✓ контракт данных несёт те же числа: ' + contract.rows + ' строк, '
+          + contract.files + ' файлов, итоги и дельты сходятся с «сейчас»'
+          + (contract.gaps.length === 0 ? '' : ' (кроме колонок с возвратом файла: ' + contract.gaps.join(', ') + ')'));
+      } else {
+        bad++;
+        contract.errors.slice(0, 3).forEach((e) => console.error('    ✗ контракт данных: ' + e));
       }
     });
 

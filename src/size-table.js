@@ -42,6 +42,8 @@
  *   node tools/size-table.js                проверка (CI и test:all)
  *   node tools/size-table.js --write        перегенерировать таблицу
  *   node tools/size-table.js --json         строки как JSON в stdout
+ *   node tools/size-table.js --data         данные для страницы и агента в stdout
+ *   node tools/size-table.js --page [файл]  собрать страницу отчёта
  *   node tools/size-table.js --init [файл]  черновик конфига для нового проекта
  *   node tools/size-table.js --config <путь>  другой файл настроек
  *
@@ -64,6 +66,14 @@ const __filename = fileURLToPath(import.meta.url);
 const CONFIG_NAME = 'size-table.config.json';
 const MAX_BUF = 256 * 1024 * 1024;
 const FIELD = '\u0001'; // разделитель полей в формате git log
+
+/* Имя и версия пакета — из его же манифеста, чтобы не держать вторую копию; без
+ * файла (чужaя сборка) остаётся заглушка: версия нужна только в данных, и
+ * отсутствие манифеста не повод не собирать таблицу. */
+let TOOL_PKG = { name: 'size-report', version: '0.0.0' };
+try {
+  TOOL_PKG = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+} catch (_e) {}
 
 // --- конфиг -----------------------------------------------------------------
 
@@ -127,6 +137,10 @@ function validateConfig(cfg) {
       fail('колонка №' + (i + 1) + ' должна быть {label, paths: [...]}');
     }
     if (labels.has(c.label)) fail('метка колонки «' + c.label + '» повторяется');
+    if (c.category !== undefined && CATEGORY_ORDER.indexOf(c.category) < 0) {
+      fail('категория «' + c.category + '» у колонки «' + c.label + '» неизвестна: '
+        + CATEGORY_ORDER.join(', '));
+    }
     labels.add(c.label);
   });
   if (!Array.isArray(cfg.metrics) || cfg.metrics.length === 0) fail('не заданы метрики (metrics)');
@@ -159,6 +173,13 @@ const LOCALES = {
     commit: 'Коммит',
     total: 'Общий объём',
     now: 'сейчас',
+    categories: { code: 'Код', docs: 'Документация', chore: 'Служебные', assets: 'Ресурсы' },
+    page: {
+      metrics: 'Метрики',
+      note: 'В клетке — изменение к предыдущему коммиту, пустая клетка — не менялось, '
+        + '«—» — файла в той ревизии ещё нет. Абсолютные размеры стоят один раз, в строке «{now}». '
+        + 'Собрано из истории git: {command}.'
+    },
     note: {
       intro: 'Строка — коммит, колонка — файл. ',
       metricSep: ', ',
@@ -182,6 +203,13 @@ const LOCALES = {
     commit: 'Commit',
     total: 'Total',
     now: 'now',
+    categories: { code: 'Code', docs: 'Documentation', chore: 'Chores', assets: 'Assets' },
+    page: {
+      metrics: 'Metrics',
+      note: 'A cell holds the change against the previous commit, an empty cell — no change, '
+        + '“—” — the file does not exist in that revision yet. Absolute sizes appear once, in the '
+        + '“{now}” row. Collected from git history: {command}.'
+    },
     note: {
       intro: 'A row is a commit, a column is a file. ',
       metricSep: ', ',
@@ -602,12 +630,24 @@ const METRICS = {
     needsText: false,
     fromSize: true,
     note: { ru: 'файл как он есть', en: 'the file as it is' },
+    method: {
+      ru: 'размер объекта git',
+      en: 'the size of the git object'
+    },
+    accuracy: 'exact',
     measure: (text) => byteLen(text)
   },
   min: {
     label: 'min',
     needsText: true,
     note: { ru: 'та же форма без комментариев и отступов', en: 'the same form without comments and indentation' },
+    // Не минификация: имена не сокращаются, и число означает «объём без балласта»,
+    // а не то, что получит сборщик. Поэтому метрика честно помечена приближением.
+    method: {
+      ru: 'снятие комментариев и отступов (не минификация: имена не сокращаются)',
+      en: 'comments and indentation stripped (not minification: names are not shortened)'
+    },
+    accuracy: 'approximate',
     measure: (text, file, cfg, rev) => {
       const min = minifyForm(text, file, cfg);
       const ext = path.extname(file).toLowerCase();
@@ -619,6 +659,8 @@ const METRICS = {
     label: 'gzip',
     needsText: true,
     note: { ru: 'сжатый поток (zlib, уровень 9)', en: 'compressed stream (zlib, level 9)' },
+    method: { ru: 'zlib, уровень 9', en: 'zlib, level 9' },
+    accuracy: 'exact',
     measure: (text) => zlib.gzipSync(Buffer.from(text, 'utf8'), { level: 9 }).length
   }
 };
@@ -689,6 +731,15 @@ function sectionLink(section, cfg) {
   if (!section || !cfg.journal) return null;
   const what = cfg.journal.anchor === 'title' ? section.id : section.head;
   return cfg.journal.url + '#' + anchor(what);
+}
+
+/* Ссылка строки: на раздел журнала, если раздел есть, иначе на сам коммит (шаблон
+ * из настроек). Одно место для артефакта и для данных страницы: адрес раздела —
+ * правило GitHub, и второе его воплощение разъехалось бы с первым. */
+function rowHref(section, sha, cfg) {
+  if (section) return sectionLink(section, cfg);
+  if (!cfg.links.commitUrl) return null;
+  return cfg.links.commitUrl.replace(/\{sha\}/g, sha).replace(/\{short\}/g, sha.slice(0, 7));
 }
 
 // --- измерение --------------------------------------------------------------
@@ -838,6 +889,85 @@ function assertMatchesDisk(state, cfg, root) {
   });
 }
 
+// --- категории ---------------------------------------------------------------
+
+/* Категория файла — только для быстрых кнопок «включить/выключить группу» на
+ * странице: на числа она не влияет. Правило одно — расширение даёт категорию, всё
+ * остальное считается кодом; категория, заданная в настройках колонки, старше
+ * правила, и в данных видно, откуда она взялась (`categoryBy`): ручное решение
+ * объяснимо, а таблица расширений — догадка по имени файла. */
+const CATEGORY_EXTS = {
+  docs: ['.md', '.markdown', '.rst', '.txt', '.adoc'],
+  chore: ['.json', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.conf', '.lock', '.editorconfig'],
+  assets: ['.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.woff', '.woff2', '.ttf', '.otf']
+};
+const CATEGORY_ORDER = ['code', 'docs', 'chore', 'assets'];
+
+function categoryOf(col) {
+  if (col.category) return { key: col.category, by: 'config' };
+  const ext = path.extname(col.paths[col.paths.length - 1]).toLowerCase();
+  const known = CATEGORY_ORDER.find((key) => (CATEGORY_EXTS[key] || []).indexOf(ext) >= 0);
+  return { key: known === undefined ? 'code' : known, by: 'auto' };
+}
+
+// --- данные (контракт со страницей) ------------------------------------------
+
+/* Контракт между движком и страницей: абсолютные значения и устройство таблицы —
+ * и ни одной производной величины. Дельты, суммы, «сейчас» и фильтры считает
+ * страница: движок не знает, что включено в просмотр, поэтому заранее посчитать
+ * сумму он не может. Числа в контракте те же, что в артефакте, — это та же правда,
+ * разложенная по полям.
+ *
+ * Причины пропущенных коммитов пока идут строками движка: разложить их по полям —
+ * вместе с командой объяснения (план, §5, шаг 5). */
+function reportData(cfg, root) {
+  const { rows, state, skipped } = build(cfg, root);
+  const loc = LOCALES[cfg.locale];
+  const files = cfg.columns.map((col, i) => {
+    const cat = categoryOf(col);
+    return {
+      label: col.label,
+      path: state[i] === null ? null : state[i].path,
+      paths: col.paths,
+      category: cat.key,
+      categoryBy: cat.by
+    };
+  });
+  return {
+    schema: 1,
+    tool: { name: TOOL_PKG.name, version: TOOL_PKG.version },
+    report: {
+      locale: cfg.locale,
+      title: cfg.title || loc.heading,
+      heading: cfg.heading || loc.heading,
+      artifact: cfg.output,
+      fixCommand: cfg.fixCommand,
+      journal: cfg.journal === null ? null : { path: cfg.journal.path },
+      showSha: cfg.rows.sha
+    },
+    metrics: cfg.metrics.map((key) => ({
+      key: key,
+      label: METRICS[key].label,
+      note: METRICS[key].note[cfg.locale],
+      method: METRICS[key].method[cfg.locale],
+      accuracy: METRICS[key].accuracy
+    })),
+    categories: CATEGORY_ORDER.filter((key) => files.some((f) => f.category === key))
+      .map((key) => ({ key: key, label: loc.categories[key] })),
+    files: files,
+    rows: rows.map((r) => ({
+      sha: r.sha,
+      when: r.when,
+      subject: r.subject,
+      section: r.section === null ? null : { id: r.section.id, head: r.section.head, added: r.section.added },
+      href: rowHref(r.section, r.sha, cfg),
+      values: r.cells
+    })),
+    now: state.map((s) => (s === null ? null : s.cells)),
+    skipped: skipped
+  };
+}
+
 // --- рендер -----------------------------------------------------------------
 
 const CSS = `
@@ -929,11 +1059,8 @@ function commitCell(row, index, cfg) {
       : '<span class="subj" title="' + title + '">' + esc(row.subject) + '</span>';
     mark = '<span class="sect" title="' + esc(row.section.head) + '">§' + esc(row.section.id)
       + (row.section.added ? '' : '*') + '</span>';
-  } else {
-    const commitHref = cfg.links.commitUrl
-      ? cfg.links.commitUrl.replace(/\{sha\}/g, row.sha).replace(/\{short\}/g, row.sha.slice(0, 7))
-      : '';
-    body = commitHref
+  } else {      const commitHref = rowHref(null, row.sha, cfg) || '';
+      body = commitHref
       ? '<a class="subj" title="' + title + '" href="' + esc(commitHref) + '">' + esc(row.subject) + '</a>'
       : '<span class="subj plain" title="' + title + '">' + esc(row.subject) + '</span>';
     mark = '<span class="sect" title="'
@@ -1039,6 +1166,280 @@ ${body}
 `;
 }
 
+// --- страница отчёта --------------------------------------------------------
+
+/* Вычислительная часть страницы: из абсолютных значений контракта получаются все
+ * производные — дельты, итоги, «сейчас». Живёт текстом, потому что страница —
+ * один файл без внешних ссылок: скрипт в неё вклеивается, а не подключается. Тест
+ * прогоняет именно этот текст (`test/contract.test.js`), поэтому числа страницы
+ * проверены не на глаз, а сверены с числами артефакта. */
+const APP_MATH = `
+function appMetrics(data, view) {
+  return data.metrics.filter(function (m) { return view.metrics[m.key]; });
+}
+function appOn(data, view) {
+  return data.files.map(function (f, i) { return view.files[i]; });
+}
+function appValue(row, i, key) {
+  const v = row.values[i];
+  return v === null ? null : v[key];
+}
+/* Итог: сумма по включённым файлам. Выключенный файл не участвует ни в таблице,
+ * ни в сумме. */
+function appTotals(values, metrics, on) {
+  const total = {};
+  metrics.forEach(function (m) { total[m.key] = 0; });
+  values.forEach(function (v, i) {
+    if (v === null || !on[i]) return;
+    metrics.forEach(function (m) { total[m.key] += v[m.key]; });
+  });
+  return total;
+}
+/* Дельта к предыдущему коммиту; появление файла — рост на весь его объём, иначе
+ * сумма дельт по колонке не сошлась бы с текущим размером. */
+function appDelta(now, before) {
+  if (now === null) return null;
+  if (before === null || before === undefined) return now;
+  return now - before;
+}
+// Разряды тонкими пробелами: toLocaleString зависит от машины, а страница обязана
+// показывать те же числа, что артефакт.
+function appGroup(n) {
+  return String(n).replace(/\\B(?=(\\d{3})+(?!\\d))/g, '\\u2009');
+}
+`;
+
+/* Оболочка страницы: панель выбора и таблица. Всё производное берётся из функций
+ * выше, поэтому включение метрики, категории или файла пересчитывает и дельты, и
+ * итоги — без обращения к движку. Отделка (дерево папок, запоминание выбора,
+ * тёмная схема) — следующий проход. */
+const APP_DOM = `
+const appData = JSON.parse(document.getElementById('data').textContent);
+const appUi = JSON.parse(document.getElementById('ui').textContent);
+const appView = { metrics: {}, files: [] };
+appData.metrics.forEach((m) => { appView.metrics[m.key] = true; });
+appData.files.forEach(() => { appView.files.push(true); });
+
+function appEl(tag, cls, text) {
+  const el = document.createElement(tag);
+  if (cls) el.className = cls;
+  if (text !== undefined) el.textContent = text;
+  return el;
+}
+
+function appBox(label, title, checked, onChange) {
+  const box = appEl('label', 'box');
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.checked = checked;
+  if (title) input.title = title;
+  input.addEventListener('change', onChange);
+  box.appendChild(input);
+  box.appendChild(appEl('span', null, label));
+  return box;
+}
+
+/* Категория — не отдельное состояние, а способ переставить галочки файлов сразу:
+ * сама она ничего не помнит, иначе одно и то же решалось бы в двух местах. */
+function appPanel() {
+  const panel = document.getElementById('panel');
+  panel.textContent = '';
+  const mrow = appEl('div', 'row');
+  mrow.appendChild(appEl('span', 'cap', appUi.metrics));
+  appData.metrics.forEach((m) => {
+    mrow.appendChild(appBox(m.label, m.note + ' · способ: ' + m.method + ' (' + m.accuracy + ')',
+      appView.metrics[m.key], (e) => {
+        appView.metrics[m.key] = e.target.checked;
+        appRender();
+      }));
+  });
+  panel.appendChild(mrow);
+  appData.categories.forEach((cat) => {
+    const idx = [];
+    appData.files.forEach((f, i) => { if (f.category === cat.key) idx.push(i); });
+    const row = appEl('div', 'row');
+    row.appendChild(appBox(cat.label, 'все файлы категории', idx.every((i) => appView.files[i]), (e) => {
+      idx.forEach((i) => { appView.files[i] = e.target.checked; });
+      appRender();
+    }));
+    idx.forEach((i) => {
+      const f = appData.files[i];
+      const where = f.path === null ? f.paths[0] + ' (нет на HEAD)' : f.path;
+      row.appendChild(appBox(f.label, where + ' · категория: '
+        + (f.categoryBy === 'config' ? 'из настроек' : 'по расширению'), appView.files[i], (e) => {
+        appView.files[i] = e.target.checked;
+        appRender();
+      }));
+    });
+    panel.appendChild(row);
+  });
+}
+
+function appDeltaCell(value, before, cls) {
+  const td = appEl('td', 'num' + (cls ? ' ' + cls : ''));
+  if (value === null) { td.className += ' miss'; td.textContent = '—'; return td; }
+  const delta = appDelta(value, before);
+  if (delta === 0) return td;
+  const span = appEl('span', 'delta ' + (delta > 0 ? 'up' : 'down'),
+    (delta > 0 ? '+' : '−') + appGroup(Math.abs(delta)));
+  td.appendChild(span);
+  return td;
+}
+
+function appCommit(row) {
+  const th = appEl('th', 'c-commit');
+  const short = appData.report.showSha ? ' ' + row.sha.slice(0, 7) : '';
+  const name = row.href ? appEl('a', 'subj', row.subject) : appEl('span', 'subj', row.subject);
+  if (row.href) name.href = row.href;
+  name.title = row.subject + short;
+  th.appendChild(appEl('span', 'when', row.when));
+  th.appendChild(name);
+  const mark = row.section === null
+    ? '—'
+    : '§' + row.section.id + (row.section.added ? '' : '*');
+  th.appendChild(appEl('span', 'sect', mark));
+  return th;
+}
+
+function appSubHead(metrics) {
+  const tr = appEl('tr');
+  metrics.forEach((m, mi) => tr.appendChild(appEl('th', mi === 0 ? 'g' : '', m.label)));
+  return tr;
+}
+
+function appTable() {
+  const metrics = appMetrics(appData, appView);
+  const on = appOn(appData, appView);
+  const files = [];
+  appData.files.forEach((f, i) => { if (on[i]) files.push(i); });
+  const table = document.getElementById('grid');
+  table.textContent = '';
+
+  const head = appEl('tr');
+  const commit = appEl('th', 'c-commit', appUi.commit);
+  commit.rowSpan = 2;
+  head.appendChild(commit);
+  const total = appEl('th', 'g', appUi.total);
+  total.colSpan = metrics.length;
+  head.appendChild(total);
+  files.forEach((i) => {
+    const th = appEl('th', 'g', appData.files[i].label);
+    th.colSpan = metrics.length;
+    head.appendChild(th);
+  });
+  const subs = appSubHead(metrics);
+  files.forEach(() => {
+    const more = appSubHead(metrics);
+    while (more.firstChild) subs.appendChild(more.firstChild);
+  });
+  const thead = appEl('thead');
+  thead.appendChild(head);
+  thead.appendChild(subs);
+
+  const body = appEl('tbody');
+  for (let r = appData.rows.length - 1; r >= 0; r--) {
+    const row = appData.rows[r];
+    const prev = r === 0 ? null : appData.rows[r - 1];
+    const totals = appTotals(row.values, metrics, on);
+    const prevTotals = prev === null ? null : appTotals(prev.values, metrics, on);
+    const tr = appEl('tr');
+    tr.appendChild(appCommit(row));
+    metrics.forEach((m, mi) => {
+      tr.appendChild(appDeltaCell(totals[m.key], prevTotals === null ? null : prevTotals[m.key],
+        mi === 0 ? 'g' : ''));
+    });
+    files.forEach((i) => {
+      metrics.forEach((m, mi) => {
+        tr.appendChild(appDeltaCell(appValue(row, i, m.key),
+          prev === null ? null : appValue(prev, i, m.key), mi === 0 ? 'g' : ''));
+      });
+    });
+    body.appendChild(tr);
+  }
+
+  /* Верхняя строка — «сейчас»: абсолютные размеры на HEAD. Дельты под ней сходятся
+   * с ней, поэтому она и стоит первой. */
+  const now = appEl('tr', 'now');
+  now.appendChild(appEl('th', 'c-commit', appUi.now));
+  const nowTotals = appTotals(appData.now, metrics, on);
+  metrics.forEach((m, mi) => { now.appendChild(appEl('td', 'num' + (mi === 0 ? ' g' : ''), appGroup(nowTotals[m.key]))); });
+  files.forEach((i) => {
+    metrics.forEach((m, mi) => {
+      const v = appData.now[i];
+      const td = appEl('td', 'num' + (mi === 0 ? ' g' : ''));
+      if (v === null) { td.className += ' miss'; td.textContent = '—'; } else { td.textContent = appGroup(v[m.key]); }
+      now.appendChild(td);
+    });
+  });
+  body.insertBefore(now, body.firstChild);
+
+  table.appendChild(thead);
+  table.appendChild(body);
+  document.getElementById('note').textContent = appUi.note.replace('{command}', appData.report.fixCommand);
+}
+
+function appRender() {
+  appPanel();
+  appTable();
+}
+appRender();
+`;
+
+const APP_CSS = `
+:root { color-scheme: light dark; }
+body { margin: 0; padding: 20px; background: Canvas; color: CanvasText; font: 12.5px/1.4 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+h1 { margin: 0 0 6px; font-size: 16px; }
+.note { margin: 12px 0 0; max-width: 90em; opacity: .75; font-size: 12px; }
+#panel { margin: 0 0 14px; font-size: 12px; }
+#panel .row { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; margin: 2px 0; }
+#panel .cap { font-weight: 600; opacity: .8; }
+#panel .box { display: inline-flex; gap: 4px; align-items: center; }
+table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { padding: 2px 7px; border-bottom: 1px solid rgba(127, 127, 127, .25); white-space: nowrap; }
+th { text-align: center; }
+.num { text-align: right; }
+.g { border-left: 1px solid rgba(127, 127, 127, .35); }
+.miss { opacity: .5; }
+.c-commit { text-align: left; font-weight: 400; }
+.c-commit a { color: inherit; }
+.when { opacity: .6; margin-right: 6px; }
+.sect { margin-left: 6px; opacity: .6; }
+.delta.up { color: #b04a00; }
+.delta.down { color: #1a7f37; }
+tr.now th, tr.now td { border-bottom: 2px solid rgba(127, 127, 127, .35); }
+tr.now .c-commit { font-weight: 600; }
+`.trim();
+
+/* Страница отчёта — один файл: данные лежат в нём же, скрипт вклеен, внешних
+ * ссылок нет. Поэтому она открывается двойным щелчком и работает без сети.
+ * `<` в данных экранируется: иначе подпись коммита или путь закрыли бы тег
+ * раньше времени (в JSON такой экранированный символ читается как обычный). */
+function pageHtml(data, cfg) {
+  const loc = LOCALES[cfg.locale];
+  return '<!doctype html>\n<html lang="' + esc(loc.html) + '">\n<head>\n<meta charset="utf-8">\n'
+    + '<title>' + esc(data.report.title) + '</title>\n<style>\n' + APP_CSS + '\n</style>\n</head>\n<body>\n'
+    + '<h1>' + esc(data.report.heading) + '</h1>\n'
+    + '<div id="panel"></div>\n<table id="grid"></table>\n<p id="note" class="note"></p>\n'
+    + '<script type="application/json" id="data">'
+    + jsonInHtml(data)
+    + '</script>\n<script type="application/json" id="ui">'
+    + jsonInHtml({
+      commit: loc.commit,
+      total: loc.total,
+      now: loc.now,
+      metrics: loc.page.metrics,
+      note: loc.page.note.replace(/\{now\}/g, loc.now) // {command} подставляет страница
+    })
+    + '</script>\n<script>\n' + APP_MATH + APP_DOM + '</script>\n</body>\n</html>\n';
+}
+
+/* JSON внутри страницы: `<` экранируется, иначе подпись коммита или путь закрыли
+ * бы тег раньше времени (в JSON такой экранированный символ читается как самый
+ * обычный). */
+function jsonInHtml(value) {
+  return JSON.stringify(value).replace(/</g, '\\u003c');
+}
+
 // --- проверка и режимы ------------------------------------------------------
 
 function kmb(bytes) {
@@ -1103,6 +1504,29 @@ function checkMode(cfg, root) {
       + 'совпадает с историей (' + cfg.output + ', ' + kmb(byteLen(html)) + ')');
   }
   return code;
+}
+
+/* Данные контракта в stdout — для страницы и для агента: та же правда, что в
+ * артефакте, но без вёрстки и без производных величин. Прежняя форма `--json`
+ * остаётся нетронутой: она заморожена эталоном паритета (fixtures/parity). */
+function dataMode(cfg, root) {
+  process.stdout.write(JSON.stringify(reportData(cfg, root), null, 2) + '\n');
+  return 0;
+}
+
+/* Страница отчёта: собирается тем же проходом по истории, что и артефакт — иначе
+ * два отчёта могли бы показывать разные числа. Файл кладётся рядом с таблицей,
+ * потому что он из неё и растёт. */
+const PAGE_NAME = 'size-report.html';
+
+function pageMode(cfg, root, file) {
+  const data = reportData(cfg, root);
+  const target = file ? path.resolve(file) : path.join(root, path.dirname(cfg.output), PAGE_NAME);
+  const html = pageHtml(data, cfg);
+  fs.writeFileSync(target, html);
+  console.log('✓ ' + path.relative(root, target) + ': ' + data.rows.length + ' строк × '
+    + data.files.length + ' файлов, ' + kmb(byteLen(html)));
+  return 0;
 }
 
 function jsonMode(cfg, root) {
@@ -1222,6 +1646,8 @@ function main() {
   if (args.indexOf('--init') >= 0) return initMode(root, argValue(args, '--init'), args.indexOf('--force') >= 0);
   const cfg = loadConfig(argValue(args, '--config') ? path.resolve(argValue(args, '--config')) : path.join(root, CONFIG_NAME));
   if (args.indexOf('--json') >= 0) return jsonMode(cfg, root);
+  if (args.indexOf('--data') >= 0) return dataMode(cfg, root);
+  if (args.indexOf('--page') >= 0) return pageMode(cfg, root, argValue(args, '--page'));
   if (args.indexOf('--write') >= 0) return writeMode(cfg, root);
   return checkMode(cfg, root);
 }
@@ -1235,7 +1661,9 @@ export {
   loadConfig, validateConfig, argValue,
   gitRoot, readHistory, blobAt, readBlobs, measureBlob, assertFullHistory,
   stripJs, stripHtml, stripCss, stripLines, compactJson, minifyForm, strategyFor,
-  parseSections, touchedSection, anchor, sectionLink,
+  parseSections, touchedSection, anchor, sectionLink, rowHref,
+  CATEGORY_EXTS, CATEGORY_ORDER, categoryOf,
+  reportData, dataMode, pageMode, pageHtml, APP_MATH, APP_DOM,
   measureHistory, totalsOf, render, noteText, initMode, sniffColumns,
   group, check, main
 };
