@@ -26,13 +26,11 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "node tools/build-app.js",
-    "test": "node --test test/",
-    "test:golden": "node --test test/golden.test.js",
+    "test": "node --test",
     "parity": "node tools/parity-freeze.js",
+    "parity:live": "node tools/parity-live.js",
     "fixture": "node tools/make-fixture.js",
-    "lint": "eslint .",
-    "prepack": "npm run build"
+    "lint": "eslint ."
   },
   "optionalDependencies": {},
   "keywords": [

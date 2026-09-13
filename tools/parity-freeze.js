@@ -10,7 +10,7 @@
  * Запуск (из корня репозитория size-report):
  *   node tools/parity-freeze.js [путь-к-проекту] [--out <каталог>]
  *
- * По умолчанию проект — `../figma/safe-resets`, каталог — `test/fixtures/parity`.
+ * По умолчанию проект — `../figma/safe-resets`, каталог — `fixtures/parity`.
  * Перезапись эталона — осознанное действие: молча он не обновляется ничем.
  */
 
@@ -81,7 +81,7 @@ function manifestNote(ctx) {
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const project = path.resolve(args.positional || DEFAULT_PROJECT);
-  const out = path.resolve(args.flags['--out'] || path.join(ROOT, 'test', 'fixtures', 'parity'));
+  const out = path.resolve(args.flags['--out'] || path.join(ROOT, 'fixtures', 'parity'));
 
   const toolFile = path.join(project, 'tools', 'size-table.js');
   const cfgFile = path.join(project, 'size-table.config.json');

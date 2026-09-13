@@ -24,10 +24,14 @@
 | `docs/requirements.md` | Требования заказчика: что и зачем |
 | `docs/module-design.md` | Архитектурный проект выноса: как устроен модуль |
 | `WORKLOG.md` | Журнал запросов и сделанного |
+| `BLOCKERS.md` | Открытые блокеры и известные пробелы (обход обязан держаться проверкой) |
 | `tools/parity-freeze.js` | Снимает эталон паритета с живого проекта: `--json`, конфиг, хеш артефакта, хеш инструмента |
 | `tools/make-fixture.js` | Собирает синтетическую фикстуру: детерминированную историю с ловушками плюс эталонные числа |
-| `test/fixtures/parity/` | Эталон с `safe-resets` на коммите `bd6ef9d`: 95 строк × 27 колонок |
-| `test/fixtures/synthetic/` | Бандл фикстуры на 16 коммитов, её конфиг, эталонные числа и хеш артефакта |
+| `tools/parity-live.js` | Сверяет движок с живым проектом на клоне: числа и артефакт (`pnpm run parity:live`) |
+| `fixtures/parity/` | Эталон с `safe-resets` на коммите `bd6ef9d`: 95 строк × 27 колонок |
+| `fixtures/synthetic/` | Бандл фикстуры на 16 коммитов, её конфиг, эталонные числа и хеш артефакта |
+| `fixtures/legacy/size-table.cjs` | Замороженная копия реализации, с которой снят эталон (сверяется по sha256) |
+| `test/parity.test.js` | Паритет-тест: числа, артефакт, локаль, свидетель известного пробела |
 
 Оба каталога эталонов пересобираются побайтово: `pnpm run parity` и `pnpm run fixture`
 дают те же файлы (проверено повторным прогоном — рабочее дерево остаётся чистым).
@@ -76,6 +80,8 @@ pnpm exec size update     # посчитать и собрать отчёт (и�
 `test/fixtures/synthetic/README.md`.
 
 ```bash
-git clone test/fixtures/synthetic/history.bundle /tmp/size-report-fixture
+pnpm test                      # паритет на фикстуре (быстро, без сети)
+pnpm run parity:live           # паритет с живым проектом на клоне (медленнее)
+git clone fixtures/synthetic/history.bundle /tmp/size-report-fixture
 node tools/make-fixture.js     # пересобрать фикстуру и эталон
 ```

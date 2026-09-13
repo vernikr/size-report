@@ -35,7 +35,7 @@
 ## Как пользоваться
 
 ```bash
-git clone test/fixtures/synthetic/history.bundle /tmp/size-report-fixture
+git clone fixtures/synthetic/history.bundle /tmp/size-report-fixture
 node tools/make-fixture.js            # пересобрать (нужен инструмент, с которого снят эталон)
 ```
 

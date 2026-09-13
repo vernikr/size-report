@@ -23,7 +23,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const OUT = path.join(ROOT, 'test', 'fixtures', 'synthetic');
+const OUT = path.join(ROOT, 'fixtures', 'synthetic');
 const DEFAULT_LEGACY = path.join(ROOT, '..', 'figma', 'safe-resets', 'tools', 'size-table.js');
 const MAX_BUF = 256 * 1024 * 1024;
 const ARTIFACT = 'docs/size-table.html';
@@ -396,7 +396,7 @@ function fixtureNote(ctx) {
     '## Как пользоваться',
     '',
     '```bash',
-    'git clone test/fixtures/synthetic/history.bundle /tmp/size-report-fixture',
+    'git clone fixtures/synthetic/history.bundle /tmp/size-report-fixture',
     'node tools/make-fixture.js            # пересобрать (нужен инструмент, с которого снят эталон)',
     '```',
     '',
