@@ -12,8 +12,7 @@
     "size": "./bin/size.js"
   },
   "exports": {
-    ".": "./src/index.js",
-    "./schema": "./src/config/schema.json"
+    ".": "./src/size-table.js"
   },
   "files": [
     "bin",
@@ -29,8 +28,7 @@
     "test": "node --test",
     "parity": "node tools/parity-freeze.js",
     "parity:live": "node tools/parity-live.js",
-    "fixture": "node tools/make-fixture.js",
-    "lint": "eslint ."
+    "fixture": "node tools/make-fixture.js"
   },
   "optionalDependencies": {},
   "keywords": [
