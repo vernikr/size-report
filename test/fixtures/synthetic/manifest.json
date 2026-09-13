@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "kind": "synthetic",
+  "head": "16b2fe8384d18b2c44b15e5c54102e57b95fe084",
+  "commits": [
+    {
+      "sha": "3294a69a82282a9722b672ec98532568ba00c81f",
+      "when": "2026-01-01 10:00",
+      "subject": "fixture: первый коммит — код, заметки, служебные файлы"
+    },
+    {
+      "sha": "25e3f3999c88f452825df97d147afd39ed30f0e7",
+      "when": "2026-01-01 11:00",
+      "subject": "fixture: правка кода и раздел 2 в журнале"
+    },
+    {
+      "sha": "cd78fd9bd5cbcd52883973446d5f7b40838ae97a",
+      "when": "2026-01-01 12:00",
+      "subject": "fixture: только отчёт"
+    },
+    {
+      "sha": "b7773dc354b50bd1b5b63f7976daeb59220a33de",
+      "when": "2026-01-01 13:00",
+      "subject": "fixture: смешанный коммит — отчёт вместе с кодом"
+    },
+    {
+      "sha": "03dc88a750bc97838c7d033bc47428f351428b05",
+      "when": "2026-01-01 14:00",
+      "subject": "fixture: правка файла под старым именем"
+    },
+    {
+      "sha": "8ff3c9acf4eb7259ab63799ae7439fc0621f9789",
+      "when": "2026-01-01 15:00",
+      "subject": "fixture: переименование legacy.js в modern.js"
+    },
+    {
+      "sha": "c32f252dfd09fe0bcedef3e3c18060a7033e4c98",
+      "when": "2026-01-01 16:00",
+      "subject": "fixture: подпись с <, &, \" и > — проверка экранирования"
+    },
+    {
+      "sha": "9fee20608e9347622b26cc2fe7cc9798a9ac63c5",
+      "when": "2026-01-01 17:00",
+      "subject": "fixture: замена символа без изменения объёма"
+    },
+    {
+      "sha": "457c37b922b7d2d12c065209060a267f55605475",
+      "when": "2026-01-01 18:00",
+      "subject": "fixture: ветка — правка кода и заметок"
+    },
+    {
+      "sha": "5aad36fb1bd37ad11236082b70a65fb84954a29f",
+      "when": "2026-01-01 19:00",
+      "subject": "fixture: правка той же строки и служебного модуля"
+    },
+    {
+      "sha": "932613461c865f1bf533acc27d1aeeb829e7418e",
+      "when": "2026-01-01 20:00",
+      "subject": "fixture: слияние ветки с правкой разрешения конфликта"
+    },
+    {
+      "sha": "c03a05ce84d5d99486cb08e9a751120381613565",
+      "when": "2026-01-01 21:00",
+      "subject": "fixture: удаление файла"
+    },
+    {
+      "sha": "01de2fb59d3618a81b6f906d9f021b182352d403",
+      "when": "2026-01-01 22:00",
+      "subject": "fixture: возврат файла"
+    },
+    {
+      "sha": "9dfe67990a086db99b3635c4f8c390435592448b",
+      "when": "2026-01-01 23:00",
+      "subject": "fixture: только журнал — раздел 3"
+    },
+    {
+      "sha": "d3db9e55a224e44242172cdc33a3d40bd79591af",
+      "when": "2026-01-02 00:00",
+      "subject": "fixture: разметка, стили и незнакомый формат"
+    },
+    {
+      "sha": "16b2fe8384d18b2c44b15e5c54102e57b95fe084",
+      "when": "2026-01-02 01:00",
+      "subject": "fixture: пустой файл"
+    }
+  ],
+  "files": {
+    "README.md": {
+      "bytes": 3824,
+      "sha256": "ed8a4564956da1941f86c25d6e80fe947966d6791fb6f900d73c73527bc3384a"
+    },
+    "artifact.sha256": {
+      "bytes": 87,
+      "sha256": "4e39dba8ef9c72740d6bf6d3c3ebeaaa19bde8df94d1a8f059f4dd96034ff833"
+    },
+    "config.json": {
+      "bytes": 1524,
+      "sha256": "da80a528fe2069ddd0324870cd44d6fafbe9df64e38cdbca66a65a45bdb57932"
+    },
+    "golden.json": {
+      "bytes": 12712,
+      "sha256": "fa08611ae2cf1455dc95535844ce1831f1df11a27957d4394833ce63a109a28c"
+    },
+    "history.bundle": {
+      "bytes": 8920,
+      "sha256": "2849d1ab32ae894e99dec8980c1c765a5c528ded34074515d660a086e6c5664c"
+    }
+  },
+  "localeStable": true,
+  "legacy": {
+    "file": "../figma/safe-resets/tools/size-table.js",
+    "sha256": "50dc144f0532085f1d93f3888c613619c5966ae177c31cc8a90de5789ecef1ba",
+    "rows": 14,
+    "columns": 10,
+    "metrics": [
+      "raw",
+      "min"
+    ],
+    "skipped": 2,
+    "artifactBytes": 22112,
+    "artifactSha256": "5c0c73e4f2e98a89d95704b4ea70396c29c28eb6d1d6bf5b0a76127f5e738cb5",
+    "goldenSha256": "fa08611ae2cf1455dc95535844ce1831f1df11a27957d4394833ce63a109a28c"
+  }
+}

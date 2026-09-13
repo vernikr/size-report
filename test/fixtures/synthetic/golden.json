@@ -1,0 +1,701 @@
+{
+  "columns": [
+    {
+      "label": "code.js",
+      "paths": [
+        "src/code.js"
+      ]
+    },
+    {
+      "label": "modern.js",
+      "paths": [
+        "src/modern.js",
+        "src/legacy.js"
+      ]
+    },
+    {
+      "label": "config.mjs",
+      "paths": [
+        "src/config.mjs"
+      ]
+    },
+    {
+      "label": "заметки.md",
+      "paths": [
+        "docs/заметки.md"
+      ]
+    },
+    {
+      "label": "crlf.txt",
+      "paths": [
+        "notes/crlf.txt"
+      ]
+    },
+    {
+      "label": "package.json",
+      "paths": [
+        "package.json"
+      ]
+    },
+    {
+      "label": "style.css",
+      "paths": [
+        "src/style.css"
+      ]
+    },
+    {
+      "label": "table.toml",
+      "paths": [
+        "data/table.toml"
+      ]
+    },
+    {
+      "label": "empty.js",
+      "paths": [
+        "src/empty.js"
+      ]
+    },
+    {
+      "label": "WORKLOG.md",
+      "paths": [
+        "WORKLOG.md"
+      ]
+    }
+  ],
+  "metrics": [
+    "raw",
+    "min"
+  ],
+  "rows": [
+    {
+      "sha": "3294a69a82282a9722b672ec98532568ba00c81f",
+      "when": "2026-01-01 10:00",
+      "subject": "fixture: первый коммит — код, заметки, служебные файлы",
+      "section": {
+        "id": "1",
+        "head": "1. 2026-01-01 — первый раздел",
+        "added": true
+      },
+      "cells": [
+        {
+          "raw": 662,
+          "min": 203
+        },
+        {
+          "raw": 152,
+          "min": 51
+        },
+        {
+          "raw": 172,
+          "min": 45
+        },
+        {
+          "raw": 262,
+          "min": 260
+        },
+        {
+          "raw": 54,
+          "min": 51
+        },
+        {
+          "raw": 87,
+          "min": 69
+        },
+        null,
+        null,
+        null,
+        {
+          "raw": 158,
+          "min": 155
+        }
+      ],
+      "totals": {
+        "raw": 1547,
+        "min": 834
+      }
+    },
+    {
+      "sha": "25e3f3999c88f452825df97d147afd39ed30f0e7",
+      "when": "2026-01-01 11:00",
+      "subject": "fixture: правка кода и раздел 2 в журнале",
+      "section": {
+        "id": "2",
+        "head": "2. 2026-01-01 — второй раздел",
+        "added": true
+      },
+      "cells": [
+        {
+          "raw": 677,
+          "min": 218
+        },
+        {
+          "raw": 152,
+          "min": 51
+        },
+        {
+          "raw": 172,
+          "min": 45
+        },
+        {
+          "raw": 262,
+          "min": 260
+        },
+        {
+          "raw": 54,
+          "min": 51
+        },
+        {
+          "raw": 87,
+          "min": 69
+        },
+        null,
+        null,
+        null,
+        {
+          "raw": 278,
+          "min": 273
+        }
+      ],
+      "totals": {
+        "raw": 1682,
+        "min": 967
+      }
+    },
+    {
+      "sha": "b7773dc354b50bd1b5b63f7976daeb59220a33de",
+      "when": "2026-01-01 13:00",
+      "subject": "fixture: смешанный коммит — отчёт вместе с кодом",
+      "section": null,
+      "cells": [
+        {
+          "raw": 692,
+          "min": 233
+        },
+        {
+          "raw": 152,
+          "min": 51
+        },
+        {
+          "raw": 172,
+          "min": 45
+        },
+        {
+          "raw": 262,
+          "min": 260
+        },
+        {
+          "raw": 54,
+          "min": 51
+        },
+        {
+          "raw": 87,
+          "min": 69
+        },
+        null,
+        null,
+        null,
+        {
+          "raw": 278,
+          "min": 273
+        }
+      ],
+      "totals": {
+        "raw": 1697,
+        "min": 982
+      }
+    },
+    {
+      "sha": "03dc88a750bc97838c7d033bc47428f351428b05",
+      "when": "2026-01-01 14:00",
+      "subject": "fixture: правка файла под старым именем",
+      "section": null,
+      "cells": [
+        {
+          "raw": 692,
+          "min": 233
+        },
+        {
+          "raw": 205,
+          "min": 51
+        },
+        {
+          "raw": 172,
+          "min": 45
+        },
+        {
+          "raw": 262,
+          "min": 260
+        },
+        {
+          "raw": 54,
+          "min": 51
+        },
+        {
+          "raw": 87,
+          "min": 69
+        },
+        null,
+        null,
+        null,
+        {
+          "raw": 278,
+          "min": 273
+        }
+      ],
+      "totals": {
+        "raw": 1750,
+        "min": 982
+      }
+    },
+    {
+      "sha": "8ff3c9acf4eb7259ab63799ae7439fc0621f9789",
+      "when": "2026-01-01 15:00",
+      "subject": "fixture: переименование legacy.js в modern.js",
+      "section": null,
+      "cells": [
+        {
+          "raw": 692,
+          "min": 233
+        },
+        {
+          "raw": 246,
+          "min": 51
+        },
+        {
+          "raw": 172,
+          "min": 45
+        },
+        {
+          "raw": 262,
+          "min": 260
+        },
+        {
+          "raw": 54,
+          "min": 51
+        },
+        {
+          "raw": 87,
+          "min": 69
+        },
+        null,
+        null,
+        null,
+        {
+          "raw": 278,
+          "min": 273
+        }
+      ],
+      "totals": {
+        "raw": 1791,
+        "min": 982
+      }
+    },
+    {
+      "sha": "c32f252dfd09fe0bcedef3e3c18060a7033e4c98",
+      "when": "2026-01-01 16:00",
+      "subject": "fixture: подпись с <, &, \" и > — проверка экранирования",
+      "section": null,
+      "cells": [
+        {
+          "raw": 730,
+          "min": 271
+        },
+        {
+          "raw": 246,
+          "min": 51
+        },
+        {
+          "raw": 172,
+          "min": 45
+        },
+        {
+          "raw": 262,
+          "min": 260
+        },
+        {
+          "raw": 54,
+          "min": 51
+        },
+        {
+          "raw": 87,
+          "min": 69
+        },
+        null,
+        null,
+        null,
+        {
+          "raw": 278,
+          "min": 273
+        }
+      ],
+      "totals": {
+        "raw": 1829,
+        "min": 1020
+      }
+    },
+    {
+      "sha": "457c37b922b7d2d12c065209060a267f55605475",
+      "when": "2026-01-01 18:00",
+      "subject": "fixture: ветка — правка кода и заметок",
+      "section": null,
+      "cells": [
+        {
+          "raw": 730,
+          "min": 271
+        },
+        {
+          "raw": 246,
+          "min": 51
+        },
+        {
+          "raw": 172,
+          "min": 45
+        },
+        {
+          "raw": 306,
+          "min": 303
+        },
+        {
+          "raw": 54,
+          "min": 51
+        },
+        {
+          "raw": 87,
+          "min": 69
+        },
+        null,
+        null,
+        null,
+        {
+          "raw": 278,
+          "min": 273
+        }
+      ],
+      "totals": {
+        "raw": 1873,
+        "min": 1063
+      }
+    },
+    {
+      "sha": "5aad36fb1bd37ad11236082b70a65fb84954a29f",
+      "when": "2026-01-01 19:00",
+      "subject": "fixture: правка той же строки и служебного модуля",
+      "section": null,
+      "cells": [
+        {
+          "raw": 731,
+          "min": 272
+        },
+        {
+          "raw": 246,
+          "min": 51
+        },
+        {
+          "raw": 172,
+          "min": 45
+        },
+        {
+          "raw": 306,
+          "min": 303
+        },
+        {
+          "raw": 54,
+          "min": 51
+        },
+        {
+          "raw": 87,
+          "min": 69
+        },
+        null,
+        null,
+        null,
+        {
+          "raw": 278,
+          "min": 273
+        }
+      ],
+      "totals": {
+        "raw": 1874,
+        "min": 1064
+      }
+    },
+    {
+      "sha": "932613461c865f1bf533acc27d1aeeb829e7418e",
+      "when": "2026-01-01 20:00",
+      "subject": "fixture: слияние ветки с правкой разрешения конфликта",
+      "section": null,
+      "cells": [
+        {
+          "raw": 735,
+          "min": 276
+        },
+        {
+          "raw": 246,
+          "min": 51
+        },
+        {
+          "raw": 172,
+          "min": 45
+        },
+        {
+          "raw": 306,
+          "min": 303
+        },
+        {
+          "raw": 54,
+          "min": 51
+        },
+        {
+          "raw": 87,
+          "min": 69
+        },
+        null,
+        null,
+        null,
+        {
+          "raw": 278,
+          "min": 273
+        }
+      ],
+      "totals": {
+        "raw": 1878,
+        "min": 1068
+      }
+    },
+    {
+      "sha": "c03a05ce84d5d99486cb08e9a751120381613565",
+      "when": "2026-01-01 21:00",
+      "subject": "fixture: удаление файла",
+      "section": null,
+      "cells": [
+        {
+          "raw": 735,
+          "min": 276
+        },
+        {
+          "raw": 246,
+          "min": 51
+        },
+        {
+          "raw": 172,
+          "min": 45
+        },
+        {
+          "raw": 306,
+          "min": 303
+        },
+        null,
+        {
+          "raw": 87,
+          "min": 69
+        },
+        null,
+        null,
+        null,
+        {
+          "raw": 278,
+          "min": 273
+        }
+      ],
+      "totals": {
+        "raw": 1824,
+        "min": 1017
+      }
+    },
+    {
+      "sha": "01de2fb59d3618a81b6f906d9f021b182352d403",
+      "when": "2026-01-01 22:00",
+      "subject": "fixture: возврат файла",
+      "section": null,
+      "cells": [
+        {
+          "raw": 735,
+          "min": 276
+        },
+        {
+          "raw": 246,
+          "min": 51
+        },
+        {
+          "raw": 172,
+          "min": 45
+        },
+        {
+          "raw": 306,
+          "min": 303
+        },
+        {
+          "raw": 63,
+          "min": 60
+        },
+        {
+          "raw": 87,
+          "min": 69
+        },
+        null,
+        null,
+        null,
+        {
+          "raw": 278,
+          "min": 273
+        }
+      ],
+      "totals": {
+        "raw": 1887,
+        "min": 1077
+      }
+    },
+    {
+      "sha": "9dfe67990a086db99b3635c4f8c390435592448b",
+      "when": "2026-01-01 23:00",
+      "subject": "fixture: только журнал — раздел 3",
+      "section": {
+        "id": "3",
+        "head": "3. 2026-01-01 — третий раздел",
+        "added": true
+      },
+      "cells": [
+        {
+          "raw": 735,
+          "min": 276
+        },
+        {
+          "raw": 246,
+          "min": 51
+        },
+        {
+          "raw": 172,
+          "min": 45
+        },
+        {
+          "raw": 306,
+          "min": 303
+        },
+        {
+          "raw": 63,
+          "min": 60
+        },
+        {
+          "raw": 87,
+          "min": 69
+        },
+        null,
+        null,
+        null,
+        {
+          "raw": 446,
+          "min": 439
+        }
+      ],
+      "totals": {
+        "raw": 2055,
+        "min": 1243
+      }
+    },
+    {
+      "sha": "d3db9e55a224e44242172cdc33a3d40bd79591af",
+      "when": "2026-01-02 00:00",
+      "subject": "fixture: разметка, стили и незнакомый формат",
+      "section": null,
+      "cells": [
+        {
+          "raw": 735,
+          "min": 276
+        },
+        {
+          "raw": 246,
+          "min": 51
+        },
+        {
+          "raw": 172,
+          "min": 45
+        },
+        {
+          "raw": 306,
+          "min": 303
+        },
+        {
+          "raw": 63,
+          "min": 60
+        },
+        {
+          "raw": 87,
+          "min": 69
+        },
+        {
+          "raw": 156,
+          "min": 55
+        },
+        {
+          "raw": 300,
+          "min": 299
+        },
+        null,
+        {
+          "raw": 446,
+          "min": 439
+        }
+      ],
+      "totals": {
+        "raw": 2511,
+        "min": 1597
+      }
+    },
+    {
+      "sha": "16b2fe8384d18b2c44b15e5c54102e57b95fe084",
+      "when": "2026-01-02 01:00",
+      "subject": "fixture: пустой файл",
+      "section": null,
+      "cells": [
+        {
+          "raw": 735,
+          "min": 276
+        },
+        {
+          "raw": 246,
+          "min": 51
+        },
+        {
+          "raw": 172,
+          "min": 45
+        },
+        {
+          "raw": 306,
+          "min": 303
+        },
+        {
+          "raw": 63,
+          "min": 60
+        },
+        {
+          "raw": 87,
+          "min": 69
+        },
+        {
+          "raw": 156,
+          "min": 55
+        },
+        {
+          "raw": 300,
+          "min": 299
+        },
+        {
+          "raw": 0,
+          "min": 0
+        },
+        {
+          "raw": 446,
+          "min": 439
+        }
+      ],
+      "totals": {
+        "raw": 2511,
+        "min": 1597
+      }
+    }
+  ],
+  "skipped": [
+    "cd78fd9 (только таблица)",
+    "9fee206 (без изменения объёма)"
+  ]
+}

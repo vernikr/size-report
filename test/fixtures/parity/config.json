@@ -1,0 +1,202 @@
+{
+  "output": "docs/size-table.html",
+  "locale": "ru",
+  "title": "Объём файлов по коммитам — Select Safe Resets",
+  "heading": "Объём файлов по коммитам",
+  "fixCommand": "pnpm run sizes",
+  "metrics": [
+    "raw",
+    "min"
+  ],
+  "columns": [
+    {
+      "label": "code.js",
+      "paths": [
+        "src/code.js",
+        "code.js"
+      ]
+    },
+    {
+      "label": "ui.html",
+      "paths": [
+        "src/ui.html",
+        "ui.html"
+      ]
+    },
+    {
+      "label": "manifest.json",
+      "paths": [
+        "src/manifest.json",
+        "manifest.json"
+      ]
+    },
+    {
+      "label": "plugin-mock.js",
+      "paths": [
+        "tests/plugin-mock.js",
+        "tests/test-plugin-mock.js",
+        "test-plugin-mock.js"
+      ]
+    },
+    {
+      "label": "ui-dom.js",
+      "paths": [
+        "tests/ui-dom.js",
+        "tests/test-ui-dom.js",
+        "test-ui-dom.js"
+      ]
+    },
+    {
+      "label": "doc-sync.js",
+      "paths": [
+        "tests/doc-sync.js",
+        "tests/test-docs.js",
+        "test-docs.js"
+      ]
+    },
+    {
+      "label": "fingerprint.js",
+      "paths": [
+        "tests/fingerprint.js",
+        "tests/test-fingerprint.js"
+      ]
+    },
+    {
+      "label": "size-table.js (тест)",
+      "paths": [
+        "tests/size-table.js"
+      ]
+    },
+    {
+      "label": "harness.js",
+      "paths": [
+        "tests/harness.js"
+      ]
+    },
+    {
+      "label": "checks.js",
+      "paths": [
+        "tests/lib/checks.js"
+      ]
+    },
+    {
+      "label": "sync-icons.js",
+      "paths": [
+        "tools/sync-icons.js",
+        "sync-icons.js"
+      ]
+    },
+    {
+      "label": "mutation-check.js",
+      "paths": [
+        "tools/mutation-check.js"
+      ]
+    },
+    {
+      "label": "size-table.js (инстр.)",
+      "paths": [
+        "tools/size-table.js"
+      ]
+    },
+    {
+      "label": "README.md",
+      "paths": [
+        "README.md"
+      ]
+    },
+    {
+      "label": "AGENTS.md",
+      "paths": [
+        "AGENTS.md"
+      ]
+    },
+    {
+      "label": "WORKLOG.md",
+      "paths": [
+        "WORKLOG.md"
+      ]
+    },
+    {
+      "label": "roadmap.md",
+      "paths": [
+        "docs/ROADMAP.md"
+      ]
+    },
+    {
+      "label": "testing.md",
+      "paths": [
+        "docs/TESTING.md"
+      ]
+    },
+    {
+      "label": "architecture.md",
+      "paths": [
+        "docs/ARCHITECTURE.md"
+      ]
+    },
+    {
+      "label": "edge-cases.md",
+      "paths": [
+        "docs/EDGE-CASES.md"
+      ]
+    },
+    {
+      "label": "figma-gotchas.md",
+      "paths": [
+        "docs/FIGMA-GOTCHAS.md"
+      ]
+    },
+    {
+      "label": "code-review (архив)",
+      "paths": [
+        "docs/archive/CODE_REVIEW_2026-09-11.md",
+        "CODE_REVIEW_2026-09-11.md"
+      ]
+    },
+    {
+      "label": "golden.txt",
+      "paths": [
+        "tests/golden/fingerprint.golden.txt"
+      ]
+    },
+    {
+      "label": "package.json",
+      "paths": [
+        "package.json"
+      ]
+    },
+    {
+      "label": "ci.yml",
+      "paths": [
+        ".github/workflows/ci.yml"
+      ]
+    },
+    {
+      "label": "eslint.config.mjs",
+      "paths": [
+        "eslint.config.mjs"
+      ]
+    },
+    {
+      "label": "lock-файлы",
+      "paths": [
+        "pnpm-lock.yaml",
+        "package-lock.json"
+      ]
+    }
+  ],
+  "journal": {
+    "path": "WORKLOG.md",
+    "url": "../WORKLOG.md",
+    "pattern": "^## (?<id>\\d+)\\.\\s+(?<title>.+?)\\s*$",
+    "anchor": "heading"
+  },
+  "links": {
+    "commitUrl": ""
+  },
+  "rows": {
+    "merges": true,
+    "sha": true
+  },
+  "skip": []
+}

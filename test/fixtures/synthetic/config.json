@@ -1,0 +1,88 @@
+{
+  "output": "docs/size-table.html",
+  "locale": "ru",
+  "title": "Объём файлов по коммитам — фикстура",
+  "heading": "Фикстура: история с ловушками",
+  "fixCommand": "node tools/size-table.js --write",
+  "metrics": [
+    "raw",
+    "min"
+  ],
+  "columns": [
+    {
+      "label": "code.js",
+      "paths": [
+        "src/code.js"
+      ]
+    },
+    {
+      "label": "modern.js",
+      "paths": [
+        "src/modern.js",
+        "src/legacy.js"
+      ]
+    },
+    {
+      "label": "config.mjs",
+      "paths": [
+        "src/config.mjs"
+      ]
+    },
+    {
+      "label": "заметки.md",
+      "paths": [
+        "docs/заметки.md"
+      ]
+    },
+    {
+      "label": "crlf.txt",
+      "paths": [
+        "notes/crlf.txt"
+      ]
+    },
+    {
+      "label": "package.json",
+      "paths": [
+        "package.json"
+      ]
+    },
+    {
+      "label": "style.css",
+      "paths": [
+        "src/style.css"
+      ]
+    },
+    {
+      "label": "table.toml",
+      "paths": [
+        "data/table.toml"
+      ]
+    },
+    {
+      "label": "empty.js",
+      "paths": [
+        "src/empty.js"
+      ]
+    },
+    {
+      "label": "WORKLOG.md",
+      "paths": [
+        "WORKLOG.md"
+      ]
+    }
+  ],
+  "journal": {
+    "path": "WORKLOG.md",
+    "url": "../WORKLOG.md",
+    "pattern": "^## (?<id>\\d+)\\.\\s+(?<title>.+?)\\s*$",
+    "anchor": "heading"
+  },
+  "links": {
+    "commitUrl": ""
+  },
+  "rows": {
+    "merges": true,
+    "sha": true
+  },
+  "skip": []
+}

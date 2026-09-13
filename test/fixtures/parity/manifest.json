@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "kind": "parity",
+  "project": {
+    "path": "/Users/vernikr/Downloads/projects/figma/safe-resets",
+    "name": "safe-resets",
+    "head": "bd6ef9db9234784d0173c086ea119bb94d1cf27b",
+    "headDate": "2026-09-14 00:31",
+    "commits": 149
+  },
+  "tool": {
+    "file": "tools/size-table.js",
+    "sha256": "50dc144f0532085f1d93f3888c613619c5966ae177c31cc8a90de5789ecef1ba"
+  },
+  "artifact": {
+    "path": "docs/size-table.html",
+    "bytes": 225673,
+    "sha256": "1bdb27e14bac2036f96e50fa5ec6623f7f37faeea4e45b6f91c54e6bc3ba59cd"
+  },
+  "data": {
+    "rows": 95,
+    "columns": 27,
+    "metrics": [
+      "raw",
+      "min"
+    ],
+    "sha256": "93f45fcf321b83bfaf4bbf2b1f76f0354a780472d59d533d4d8f56e6e28cbfa3"
+  },
+  "config": {
+    "sha256": "59bf8e14b50c8b46de2bb06cb4db42219f09caf837565a542516d2c1f53b8553"
+  }
+}
