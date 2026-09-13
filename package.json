@@ -1,0 +1,43 @@
+{
+  "name": "size-report",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Учёт роста объёма кода и документов по истории git: raw / min / токены, интерактивный отчёт вне git",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "bin": {
+    "size": "./bin/size.js"
+  },
+  "exports": {
+    ".": "./src/index.js",
+    "./schema": "./src/config/schema.json"
+  },
+  "files": [
+    "bin",
+    "src",
+    "dist",
+    "templates",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "node tools/build-app.js",
+    "test": "node --test test/",
+    "test:golden": "node --test test/golden.test.js",
+    "lint": "eslint .",
+    "prepack": "npm run build"
+  },
+  "optionalDependencies": {},
+  "keywords": [
+    "size",
+    "tokens",
+    "minify",
+    "git-history",
+    "report"
+  ]
+}
