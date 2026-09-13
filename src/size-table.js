@@ -92,8 +92,8 @@ function argValue(args, name) {
 }
 
 function gitRoot() {
-  return execFileSync('git', ['rev-parse', '--show-toplevel'], {
-    encoding: 'utf8', maxBuffer: MAX_BUF
+  return execFileSync('git', gitArgv(['rev-parse', '--show-toplevel']), {
+    encoding: 'utf8', maxBuffer: MAX_BUF, env: gitEnv()
   }).trim();
 }
 
@@ -206,10 +206,42 @@ function fill(text, vars) {
   return text.replace(/\{(\w+)\}/g, (_m, k) => (vars[k] === undefined ? '' : String(vars[k])));
 }
 
-// --- git --------------------------------------------------------------------
+// --- граница вызова git -----------------------------------------------------
+
+/* Всё, что движок читает у git, читается с явно заданными настройками: их
+ * значения по умолчанию берутся из настроек машины и меняют то, что попадает в
+ * разбор. Без `core.quotePath=false` не-английские пути приходят закавыченными и
+ * экранированными (`"docs/\320\267..."`): колонка с таким путём не находит файла,
+ * а коммит, у которого она была единственным изменением объёма, теряет строку.
+ * Остальные закрепления закрывают тот же класс — раскраска и блок подписи
+ * подмешались бы в разбираемый поток, а перекодировка подписей — в подписи строк
+ * отчёта. Закрепление задаётся здесь, а не в каждом вызове: иначе его забудет
+ * следующий вызов.
+ *
+ * Локаль закрепляется заодно: разбор не должен зависеть от того, какие переводы
+ * стоят на машине. Цена — сообщения самого git в неожиданных отказах идут
+ * по-английски; сообщения инструмента остаются русскими. */
+const GIT_PINS = [
+  'core.quotePath=false',
+  'color.ui=never',
+  'log.showSignature=false',
+  'i18n.logOutputEncoding=UTF-8'
+];
+
+function gitArgv(args) {
+  const out = ['--no-pager'];
+  GIT_PINS.forEach((pin) => { out.push('-c', pin); });
+  return out.concat(args);
+}
+
+function gitEnv() {
+  return Object.assign({}, process.env, { LC_ALL: 'C', LANG: 'C' });
+}
 
 function git(root, args) {
-  return execFileSync('git', args, { cwd: root, encoding: 'utf8', maxBuffer: MAX_BUF });
+  return execFileSync('git', gitArgv(args), {
+    cwd: root, encoding: 'utf8', maxBuffer: MAX_BUF, env: gitEnv()
+  });
 }
 
 /* Чтение блобов пачкой. `git cat-file --batch-check` отвечает про список пар
@@ -223,15 +255,15 @@ function git(root, args) {
 const BLOB_CHUNK = 1000; // спек на пачку: ограничивает и stdin, и память
 
 function catFileCheck(root, specs) {
-  const out = execFileSync('git', ['cat-file', '--batch-check=%(objectname) %(objecttype) %(objectsize)'], {
-    cwd: root, encoding: 'utf8', input: specs.join('\n') + '\n', maxBuffer: MAX_BUF
+  const out = execFileSync('git', gitArgv(['cat-file', '--batch-check=%(objectname) %(objecttype) %(objectsize)']), {
+    cwd: root, encoding: 'utf8', input: specs.join('\n') + '\n', maxBuffer: MAX_BUF, env: gitEnv()
   });
   return out.split('\n');
 }
 
 function catFileBatch(root, shas) {
-  const buf = execFileSync('git', ['cat-file', '--batch'], {
-    cwd: root, input: shas.join('\n') + '\n', maxBuffer: MAX_BUF
+  const buf = execFileSync('git', gitArgv(['cat-file', '--batch']), {
+    cwd: root, input: shas.join('\n') + '\n', maxBuffer: MAX_BUF, env: gitEnv()
   });
   const out = new Map();
   let i = 0;
@@ -1042,8 +1074,8 @@ function sniffColumns(root, limit) {
   const sizes = new Map();
   const shas = listed.map((l) => l.split(/\s+/)[1]);
   if (shas.length > 0) {
-    const checked = execFileSync('git', ['cat-file', '--batch-check=%(objectname)\t%(objectsize)'], {
-      cwd: root, encoding: 'utf8', input: shas.join('\n') + '\n', maxBuffer: MAX_BUF
+    const checked = execFileSync('git', gitArgv(['cat-file', '--batch-check=%(objectname)\t%(objectsize)']), {
+      cwd: root, encoding: 'utf8', input: shas.join('\n') + '\n', maxBuffer: MAX_BUF, env: gitEnv()
     });
     checked.split('\n').forEach((l) => {
       const [sha, size] = l.split('\t');

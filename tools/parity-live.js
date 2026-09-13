@@ -1,12 +1,17 @@
 #!/usr/bin/env node
 /* Сверяет движок пакета с эталоном, снятым с живого проекта: числа (`--json`) и
- * собранный артефакт (sha256) на том же коммите.
+ * собранный артефакт (sha256) на том же коммите — в двух окружениях сразу.
  *
  * Зачем отдельно от теста. Фикстура доказывает перенос на маленькой истории, где
  * все ловушки под контролем. Живой проект доказывает то, чего фикстура не может:
  * на настоящей истории в 149 коммитов и 27 колонок перенос не сдвинул ни одного
  * числа и ни одного байта артефакта. Идёт это десятки секунд, поэтому живёт
  * командой `pnpm run parity:live`, а не в общем прогоне тестов.
+ *
+ * Два окружения. Сверка идёт и как есть, и с нечитаемыми настройками машины
+ * (`GIT_CONFIG_GLOBAL=/dev/null`): вывод обязан совпасть с эталоном в обоих.
+ * Одного зелёного прогона мало — он доказывает, что числа совпали *здесь*, а не
+ * что они не зависят от того, у кого какие настройки git.
  *
  * Работает на клоне: проект-потребитель не открывается на запись — иначе проверка
  * подменяла бы в нём собранный отчёт.
@@ -31,6 +36,14 @@ const DEFAULT_REPO = path.join(ROOT, '..', 'figma', 'safe-resets');
 const DEFAULT_BIN = path.join(ROOT, 'bin', 'size.js');
 const MAX_BUF = 256 * 1024 * 1024;
 
+/* Среды сверки: обычная и с чужими настройками. У живого проекта пути только
+ * ASCII, поэтому `core.quotePath` здесь ни при чём — проверяется сам факт
+ * независимости вывода от настроек машины. */
+const PROFILES = [
+  { label: 'обычное окружение', env: null },
+  { label: 'настройки машины не читаются (GIT_CONFIG_GLOBAL=/dev/null)', env: { GIT_CONFIG_GLOBAL: '/dev/null' } }
+];
+
 function parseArgs(args) {
   const out = { flags: {} };
   for (let i = 0; i < args.length; i++) {
@@ -52,16 +65,16 @@ function firstDiff(a, b) {
   const lb = b.split('\n');
   for (let i = 0; i < Math.max(la.length, lb.length); i++) {
     if (la[i] !== lb[i]) {
-      return 'строка ' + (i + 1) + '\n    в выводе: ' + JSON.stringify((la[i] || '').slice(0, 160))
-        + '\n    в эталоне: ' + JSON.stringify((lb[i] || '').slice(0, 160));
+      return 'строка ' + (i + 1) + '\n      в выводе: ' + JSON.stringify((la[i] || '').slice(0, 160))
+        + '\n      в эталоне: ' + JSON.stringify((lb[i] || '').slice(0, 160));
     }
   }
   return 'различие в байтах при одинаковых строках';
 }
 
-function runCli(bin, dir, args) {
+function runCli(bin, dir, args, env) {
   const res = spawnSync(process.execPath, [bin, '--config', CONFIG].concat(args), {
-    cwd: dir, encoding: 'utf8', maxBuffer: MAX_BUF
+    cwd: dir, encoding: 'utf8', maxBuffer: MAX_BUF, env: Object.assign({}, process.env, env || {})
   });
   return { code: res.status, stdout: res.stdout || '', stderr: res.stderr || '' };
 }
@@ -71,9 +84,9 @@ function main() {
   const repo = path.resolve(typeof args.flags['--repo'] === 'string' ? args.flags['--repo'] : DEFAULT_REPO);
   const bin = path.resolve(typeof args.flags['--bin'] === 'string' ? args.flags['--bin'] : DEFAULT_BIN);
 
-  for (const [what, file] of [['эталон', path.join(PARITY, 'manifest.json')], ['движок', bin]]) {
+  for (const [what, file] of [['эталона', path.join(PARITY, 'manifest.json')], ['движка', bin]]) {
     if (!fs.existsSync(file)) {
-      console.error('✗ нет ' + what + 'а: ' + file + ' — нечего сверять');
+      console.error('✗ нет ' + what + ': ' + file + ' — нечего сверять');
       return 2;
     }
   }
@@ -85,8 +98,9 @@ function main() {
 
   const manifest = JSON.parse(fs.readFileSync(path.join(PARITY, 'manifest.json'), 'utf8'));
   const head = manifest.project.head;
-  const data = fs.readFileSync(path.join(PARITY, 'data.json'));
+  const data = fs.readFileSync(path.join(PARITY, 'data.json')).toString('utf8');
   const artifactSha = fs.readFileSync(path.join(PARITY, 'artifact.sha256'), 'utf8').split(/\s+/)[0];
+  const rows = JSON.parse(data).rows.length;
 
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'size-report-live-'));
   try {
@@ -99,44 +113,49 @@ function main() {
 
     let bad = 0;
 
-    const json = runCli(bin, dir, ['--json']);
-    if (json.code !== 0) {
-      console.error('✗ движок не отдал --json (код ' + json.code + '): ' + json.stderr.trim());
-      return 1;
-    }
-    if (json.stdout === data.toString('utf8')) {
-      console.log('✓ числа совпали с эталоном побайтово');
-    } else {
-      bad++;
-      console.error('✗ числа разошлись с эталоном: ' + firstDiff(json.stdout, data.toString('utf8')));
-    }
+    PROFILES.forEach((profile) => {
+      console.log('— ' + profile.label);
 
-    const wrote = runCli(bin, dir, ['--write']);
-    if (wrote.code !== 0) {
-      console.error('✗ движок не собрал артефакт: ' + wrote.stderr.trim());
-      return 1;
-    }
-    const artifact = fs.readFileSync(path.join(dir, manifest.artifact.path));
-    if (sha256(artifact) === artifactSha) {
-      console.log('✓ артефакт совпал побайтово: ' + artifact.length + ' Б, sha256 ' + artifactSha.slice(0, 12));
-    } else {
-      bad++;
-      console.error('✗ артефакт разошёлся: sha256 ' + sha256(artifact).slice(0, 12)
-        + ' против эталонного ' + artifactSha.slice(0, 12));
-    }
+      const json = runCli(bin, dir, ['--json'], profile.env);
+      if (json.code !== 0) {
+        bad++;
+        console.error('    ✗ движок не отдал --json (код ' + json.code + '): ' + json.stderr.trim());
+        return;
+      }
+      if (json.stdout === data) {
+        console.log('    ✓ числа совпали с эталоном побайтово');
+      } else {
+        bad++;
+        console.error('    ✗ числа разошлись с эталоном: ' + firstDiff(json.stdout, data));
+      }
 
-    const checked = runCli(bin, dir, []);
-    if (checked.code === 0) {
-      console.log('✓ контрольный режим на своём артефакте зелёный');
-    } else {
-      bad++;
-      console.error('✗ контрольный режим красный: ' + checked.stderr.trim());
-    }
+      const wrote = runCli(bin, dir, ['--write'], profile.env);
+      if (wrote.code !== 0) {
+        bad++;
+        console.error('    ✗ движок не собрал артефакт: ' + wrote.stderr.trim());
+        return;
+      }
+      const artifact = fs.readFileSync(path.join(dir, manifest.artifact.path));
+      if (sha256(artifact) === artifactSha) {
+        console.log('    ✓ артефакт совпал побайтово: ' + artifact.length + ' Б, sha256 ' + artifactSha.slice(0, 12));
+      } else {
+        bad++;
+        console.error('    ✗ артефакт разошёлся: sha256 ' + sha256(artifact).slice(0, 12)
+          + ' против эталонного ' + artifactSha.slice(0, 12));
+      }
 
-    const rows = JSON.parse(data.toString('utf8')).rows.length;
+      const checked = runCli(bin, dir, [], profile.env);
+      if (checked.code === 0) {
+        console.log('    ✓ контрольный режим на своём артефакте зелёный');
+      } else {
+        bad++;
+        console.error('    ✗ контрольный режим красный: ' + checked.stderr.trim());
+      }
+    });
+
     console.log((bad === 0 ? '✓ паритет с живым проектом' : '✗ паритет с живым проектом нарушен')
       + ': проект ' + manifest.project.name + ' на ' + head.slice(0, 7) + ', '
-      + rows + ' строк × ' + manifest.data.columns + ' колонок');
+      + rows + ' строк × ' + manifest.data.columns + ' колонок, сред ' + PROFILES.length);
     return bad === 0 ? 0 : 1;
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
