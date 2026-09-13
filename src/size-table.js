@@ -307,6 +307,50 @@ function readBlobs(root, specs, needText) {
   return out;
 }
 
+/* Дерево HEAD: sha блобов всех файлов коммита. Это правда о содержимом HEAD,
+ * добытая не тем же способом, что состояние движка (то читает блобы пачкой),
+ * поэтому расхождение с ней и означает потерянную при переносе правку. Один вызов
+ * на прогон; разбор идёт по NUL (`-z`), иначе пути с пробелами пришлось бы
+ * раскодировать. */
+function headTree(root) {
+  const out = new Map();
+  const tree = execFileSync('git', gitArgv(['ls-tree', '-r', '-z', 'HEAD']), {
+    cwd: root, encoding: 'utf8', maxBuffer: MAX_BUF, env: gitEnv()
+  });
+  tree.split('\u0000').forEach((rec) => {
+    const tab = rec.indexOf('\t');
+    if (tab < 0) return;
+    out.set(rec.slice(tab + 1), rec.slice(0, tab).split(' ')[2]);
+  });
+  return out;
+}
+
+/* Файлы на диске — такими, какими их видит git: `hash-object` пропускает каждый
+ * файл через те же переводы строк и фильтры, что и `git add` (`.gitattributes`,
+ * `core.autocrlf`). Поэтому «файл на диске соответствует коммиту» — это сравнение
+ * хешей, а не размеров: размер зависит от выкладки (при `core.autocrlf=true` на
+ * диске CRLF, в git LF). Пути приходят списком, ответы позиционные — как у
+ * `cat-file`. */
+function diskHashes(root, paths) {
+  const out = new Map();
+  const lines = execFileSync('git', gitArgv(['hash-object', '--stdin-paths']), {
+    cwd: root, encoding: 'utf8', input: paths.join('\n') + '\n', maxBuffer: MAX_BUF, env: gitEnv()
+  }).split('\n');
+  paths.forEach((p, i) => { out.set(p, lines[i] === undefined ? '' : lines[i].trim()); });
+  return out;
+}
+
+/* Обратный перевод: то, что git выложил бы на диск для блоба этой ревизии и пути
+ * (`--filters` применяет фильтры выкладки). Нужен там, где переводы строк git не
+ * возвращает обратно: файл, в котором CRLF лежат в самом коммите, при
+ * `core.autocrlf=true` выкладывается как есть, а «очистка» вернула бы LF, — сам
+ * git про такие файлы предупреждает, а на диск кладёт именно это. */
+function diskForm(root, rev, p) {
+  return execFileSync('git', gitArgv(['cat-file', '--filters', rev + ':' + p]), {
+    cwd: root, maxBuffer: MAX_BUF, env: gitEnv()
+  });
+}
+
 // Содержимое файла в ревизии или null, если файла там нет.
 function blobAt(root, rev, p) {
   const blobs = readBlobs(root, [rev + ':' + p], true);
@@ -319,9 +363,9 @@ function blobAt(root, rev, p) {
  * собиралась бы в CI по UTC и расходилась бы с локальной сборкой.
  * `--diff-merges=first-parent` — иначе у merge-коммита списка путей нет вовсе
  * (git не показывает дифф слияния, пока не попросишь): правки разрешения
- * конфликта выпали бы и из строки, и из переноса состояния, а размер на HEAD
- * разошёлся бы с файлом на диске. С первым родителем у слияния видно ровно то,
- * что оно привнесло поверх своей ветки. */
+ * конфликта выпали бы и из строки, и из переноса состояния, а состояние на HEAD
+ * разошлось бы с содержимым файла в дереве. С первым родителем у слияния видно
+ * ровно то, что оно привнесло поверх своей ветки. */
 function readHistory(root) {
   const log = git(root, [
     'log', '--reverse', '--name-only', '--diff-merges=first-parent', '--date=format:%Y-%m-%d %H:%M',
@@ -724,7 +768,7 @@ function measureHistory(cfg, root) {
       if (blob === undefined) { state[i] = null; return; }
       const cells = {};
       metrics.forEach((m) => { cells[m] = measure(m, blob, pick.path, c.sha); });
-      state[i] = { path: pick.path, cells: cells };
+      state[i] = { path: pick.path, sha: blob.sha, cells: cells };
     });
 
     if (c.parents.length > 1 && !cfg.rows.merges) { skipped.push(c.sha.slice(0, 7) + ' (merge)'); return; }
@@ -758,23 +802,39 @@ function totalsOf(cells, metrics) {
   return out;
 }
 
-/* Сверка с рабочим деревом: если перенос состояния что-то пропустил (например,
- * merge-коммит, которого нет в списке изменённых путей), размер на HEAD
- * разойдётся с файлом на диске. Файлы, изменённые в дереве, из сверки выпадают:
- * их размер в коммите и на диске различается законно. */
+/* Сверка с рабочим деревом отвечает на два вопроса, и оба обязательны: состояние
+ * движка на HEAD совпадает с деревом коммита, и файл на диске соответствует тому
+ * же содержимому. Первый ловит правку, потерянную при переносе состояния между
+ * коммитами (например, у merge-коммита, которого нет в списке изменённых путей),
+ * — и по содержимому, и по составу: колонка, у которой в состоянии файла нет,
+ * обязана быть пустой и в дереве (иначе потеряно создание файла). Второй — правку,
+ * которой в истории нет вовсе. Размеры для этого не годятся: на
+ * диске они зависят от выкладки (при `core.autocrlf=true` — значение по умолчанию
+ * в установке Git для Windows — CRLF против LF), и инструмент отказывался
+ * работать там, где всё в порядке. Файлы, изменённые в дереве, из сверки с диском
+ * выпадают: их содержимое в коммите и на диске различается законно. */
 function assertMatchesDisk(state, cfg, root) {
   const dirty = new Set(git(root, ['status', '--porcelain']).split('\n')
     .map((l) => l.trim()).filter((l) => l !== '').map((l) => l.replace(/^\S+\s+/, '').replace(/^.* -> /, '')));
+  const tree = headTree(root);
+  const clean = [];
   cfg.columns.forEach((col, i) => {
-    if (state[i] === null) return;
-    const p = state[i].path;
-    if (dirty.has(p)) return;
-    const text = fs.readFileSync(path.join(root, p), 'utf8');
-    const disk = measureBlob(cfg.metrics[0], { sha: 'disk', size: byteLen(text), text: text }, p, cfg, 'HEAD');
-    if (disk !== state[i].cells[cfg.metrics[0]]) {
-      throw new Error('размер ' + p + ' на HEAD (' + state[i].cells[cfg.metrics[0]] + ' B) не совпал с файлом на диске ('
-        + disk + ' B): перенос состояния между коммитами пропустил правку');
+    const p = state[i] === null ? col.paths.filter((alias) => tree.has(alias))[0] : state[i].path;
+    if (p === undefined || tree.get(p) !== (state[i] === null ? null : state[i].sha)) {
+      throw new Error('состояние «' + col.label + '» на HEAD не совпало с деревом коммита ('
+        + (p === undefined ? 'файла нет' : p + ' ' + tree.get(p).slice(0, 7)) + ' вместо '
+        + (state[i] === null ? 'файла нет' : state[i].path + ' ' + state[i].sha.slice(0, 7))
+        + '): перенос состояния между коммитами пропустил правку');
     }
+    if (!dirty.has(p) && clean.indexOf(p) < 0) clean.push(p);
+  });
+  if (clean.length === 0) return;
+  const onDisk = diskHashes(root, clean);
+  clean.forEach((p) => {
+    if (onDisk.get(p) === tree.get(p)) return; // git считает файл неизменным
+    if (fs.readFileSync(path.join(root, p)).equals(diskForm(root, 'HEAD', p))) return; // переводы строк необратимы
+    throw new Error('содержимое ' + p + ' на диске разошлось с HEAD (' + onDisk.get(p).slice(0, 7)
+      + ' вместо ' + tree.get(p).slice(0, 7) + '), хотя git не считает файл изменённым: правка есть только на диске');
   });
 }
 

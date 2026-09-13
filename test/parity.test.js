@@ -43,6 +43,7 @@ const LEGACY = path.join(ROOT, 'fixtures', 'legacy', 'size-table.cjs');
 const BUNDLE = path.join(SYNTH, 'history.bundle');
 const CONFIG = path.join(SYNTH, 'config.json');
 const PACKAGE_BIN = path.join(ROOT, 'bin', 'size.js');
+const PACKAGE_SRC = path.join(ROOT, 'src', 'size-table.js');
 const MAX_BUF = 256 * 1024 * 1024;
 
 /* Настройки git через окружение (git ≥ 2.31): так тест задаёт машине чужие
@@ -258,4 +259,90 @@ test('в окружении без настроек машины фикстур�
   // Коммит, у которого эта колонка была единственным изменением объёма.
   assert.ok(data.rows.some((r) => r.subject === 'fixture: ветка — правка кода и заметок'),
     'коммит, терявший строку из-за колонки с не-ASCII путём, снова её не получил');
+});
+
+/* ---------- сверка с рабочим деревом ---------- */
+
+/* Клон, выложенный с нормализацией переводов строк: так выглядит рабочее дерево
+ * при `core.autocrlf=true` — значении по умолчанию в установке Git для Windows.
+ * На диске CRLF, в git LF, и git считает дерево чистым. */
+function cloneCrlf() {
+  const dir = path.join(tmp, 'crlf-' + (clones++));
+  execFileSync('git', ['-c', 'core.autocrlf=true', 'clone', '-q', BUNDLE, dir], {
+    encoding: 'utf8', maxBuffer: MAX_BUF
+  });
+  execFileSync('git', ['-C', dir, 'config', 'core.autocrlf', 'true'], { encoding: 'utf8', maxBuffer: MAX_BUF });
+  return dir;
+}
+
+function gitIn(dir, args) {
+  return execFileSync('git', ['-C', dir].concat(args), { encoding: 'utf8', maxBuffer: MAX_BUF });
+}
+
+/* Проверка проверки: правка файла на диске, о которой git молчит (файл помечен
+ * «предполагается неизменным»), обязана быть поймана — иначе «починка» свелась бы
+ * к удалению сверки. */
+function assertCatchesDiskEdit(dir, label) {
+  gitIn(dir, ['update-index', '--assume-unchanged', 'src/code.js']);
+  fs.appendFileSync(path.join(dir, 'src', 'code.js'), '// правка, которой нет в git\n');
+  assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '',
+    'в выкладке «' + label + '» правка попала в статус git: файл выпал бы из сверки как грязный, и проверять нечего');
+  const res = runCli(PACKAGE, dir, ['--json']);
+  assert.notEqual(res.code, 0, 'сверка пропустила правку, которой нет в истории (' + label + ')');
+  assert.match(res.stderr, /правка есть только на диске/,
+    'сверка отказалась по другой причине: ' + res.stderr.trim().split('\n')[0]);
+}
+
+/* Свидетель B2: выкладка с CRLF (`.gitattributes`/`core.autocrlf`) — это не
+ * расхождение с историей, и инструмент обязан работать так же. */
+test('выкладка с переводами строк в CRLF не мешает сверке', () => {
+  requireTarget(PACKAGE);
+  const dir = cloneCrlf();
+  assert.ok(/\r\n/.test(fs.readFileSync(path.join(dir, 'src', 'code.js'), 'utf8')),
+    'клон вышел без CRLF: это не то окружение, которое проверяем');
+  assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '',
+    'git считает выкладку грязной: сверка такие файлы пропускает, и проверять нечего');
+
+  const plain = runCli(PACKAGE, cloneFixture(), ['--json']);
+  const crlf = runCli(PACKAGE, dir, ['--json']);
+  assert.equal(crlf.code, 0, 'при core.autocrlf=true инструмент отказался работать: ' + crlf.stderr.trim().split('\n')[0]);
+  assert.equal(crlf.stdout, plain.stdout, 'выкладка CRLF изменила числа: ' + firstDiff(crlf.stdout, plain.stdout));
+  assert.equal(crlf.stdout, goldenText, 'выкладка CRLF разошлась с эталоном: ' + firstDiff(crlf.stdout, goldenText));
+
+  const wrote = runCli(PACKAGE, dir, ['--write']);
+  assert.equal(wrote.code, 0, 'сборка в выкладке CRLF не прошла: ' + wrote.stderr.trim().split('\n')[0]);
+  assert.equal(sha256(fs.readFileSync(path.join(dir, 'docs', 'size-table.html'))),
+    shaFileLine(path.join(SYNTH, 'artifact.sha256')),
+    'артефакт в выкладке CRLF разошёлся с эталонным побайтово');
+});
+
+test('правка файла только на диске ловится — и в обычной выкладке, и в CRLF', () => {
+  requireTarget(PACKAGE);
+  assertCatchesDiskEdit(cloneFixture(), 'обычная выкладка');
+  assertCatchesDiskEdit(cloneCrlf(), 'выкладка CRLF');
+});
+
+/* Вторая половина сверки — состояние против дерева коммита — существует ради
+ * правки, потерянной при переносе между коммитами. Мутация убирает из чтения
+ * истории слияния (`--diff-merges=first-parent`), то есть воспроизводит ровно ту
+ * ошибку, от которой сверка и защищает: правка разрешения конфликта выпадает из
+ * состояния, а в дереве остаётся. */
+test('потерянная правка merge-коммита ловится состоянием против дерева', () => {
+  requireTarget(PACKAGE);
+  const source = fs.readFileSync(PACKAGE_SRC, 'utf8');
+  const mutated = source.replace("'--diff-merges=first-parent', ", '');
+  assert.notEqual(mutated, source,
+    'мутация не применилась: движок больше не читает слияния первым родителем — мутацию пора переписать');
+
+  const dir = path.join(tmp, 'engine-without-merge-paths');
+  fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
+  fs.mkdirSync(path.join(dir, 'bin'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'src', 'size-table.js'), mutated);
+  fs.copyFileSync(PACKAGE_BIN, path.join(dir, 'bin', 'size.js'));
+
+  const res = runCli({ name: 'мутированный движок', file: path.join(dir, 'bin', 'size.js'), env: null },
+    cloneFixture(), ['--json']);
+  assert.notEqual(res.code, 0, 'потерянная правка merge-коммита прошла мимо сверки');
+  assert.match(res.stderr, /перенос состояния между коммитами пропустил правку/,
+    'сверка отказалась по другой причине: ' + res.stderr.trim().split('\n')[0]);
 });
