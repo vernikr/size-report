@@ -17,10 +17,10 @@
  * **Проектное — в конфиге, механика — здесь.** Этот файл не знает ни имён
  * файлов проекта, ни имени журнала, ни языка подписей: колонки, метрики,
  * журнал, локаль, куда писать — всё в `size-table.config.json` рядом с корнем
- * репозитория (`--config` — другой путь). Поэтому файл переносится в другой
- * проект копированием: `node size-table.js --init` подбирает черновик конфига
- * (какие расширения в проекте, где журнал, куда писать), дальше он правится
- * глазами.
+ * репозитория (`--config` — другой путь). Поэтому пакет подключается к новому
+ * проекту как зависимость, а `size --init` подбирает там черновик конфига
+ * (какие расширения в проекте, где журнал, куда писать), который дальше
+ * правится глазами.
  *
  * Строку получает коммит, сдвинувший хотя бы одно число, включая merge: у
  * слияния берётся дифф к первому родителю, поэтому его правки видны и в строке,
@@ -38,14 +38,16 @@
  * начинает работать и для стратегии «пересобрать и дописать в тот же коммит»:
  * без sha артефакт становится неподвижной точкой сборки.
  *
- * Запуск (из любого места репозитория):
- *   node tools/size-table.js                проверка (CI и test:all)
- *   node tools/size-table.js --write        перегенерировать таблицу
- *   node tools/size-table.js --json         строки как JSON в stdout
- *   node tools/size-table.js --data         данные для страницы и агента в stdout
- *   node tools/size-table.js --page [файл]  собрать страницу отчёта
- *   node tools/size-table.js --init [файл]  черновик конфига для нового проекта
- *   node tools/size-table.js --config <путь>  другой файл настроек
+ * Запуск (из любого места репозитория; `size` — когда пакет установлен, иначе
+ * `node bin/size.js`):
+ *   size                    проверка: таблица совпадает с историей (CI)
+ *   size --write            перегенерировать таблицу
+ *   size --json             строки как JSON в stdout
+ *   size --data             данные для страницы и агента в stdout
+ *   size --page [файл]      собрать страницу отчёта
+ *   size --init [файл]      черновик конфига для нового проекта
+ *   size --config <путь>    другой файл настроек
+ *   size --help             справка и коды выхода
  *
  * Требуется полная история: на обрезанном клоне (shallow) скрипт отказывается
  * работать, а не пишет молча короткую таблицу. В CI — `fetch-depth: 0`.
@@ -75,6 +77,54 @@ try {
   TOOL_PKG = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 } catch (_e) {}
 
+// --- отказ ------------------------------------------------------------------
+
+/* Отказ — это код выхода и одна строка с готовой командой починки: по коду
+ * ветвится агент (таблица кодов в `PLAN.md` §4.1), по тексту — человек. Стек
+ * наружу не отдаётся вовсе: подсказки в нём нет, зато есть пути машины. */
+const EXIT = { OK: 0, VIOLATION: 1, CONFIG: 2, SHALLOW: 3, SENSOR: 4, INTERNAL: 5 };
+
+class Refusal extends Error {
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+  }
+}
+
+function refuse(code, message) {
+  throw new Refusal(code, message);
+}
+
+/* Команда починки цитирует точку входа, а не сам движок: при импорте движок
+ * ничего не запускает, поэтому `--init` работает только через команду. Путь
+ * считается от места движка, а не от текущего каталога, — сообщение обязано
+ * работать из любого места проекта. */
+function cliCommand(flag) {
+  const bin = path.resolve(path.dirname(__filename), '..', 'bin', 'size.js');
+  const shown = path.relative(process.cwd(), bin);
+  return 'node ' + (shown === '' || shown.indexOf('..') === 0 ? bin : shown) + ' ' + flag;
+}
+
+const USAGE = [
+  'size-report — таблица объёма файлов по коммитам.',
+  '',
+  'Запуск: node bin/size.js [режим] [ключи]',
+  '',
+  'Режимы:',
+  '  --init [файл]   черновик настроек (--force — перезаписать существующий)',
+  '  --write         собрать таблицу в файл из настроек',
+  '  --data          данные контракта в stdout — для страницы и для агента',
+  '  --page [файл]   страница отчёта (по умолчанию рядом с таблицей)',
+  '  --json          прежняя форма данных в stdout',
+  '  (без режима)    проверить, что таблица совпадает с историей',
+  '',
+  'Ключи: --config <файл> — другие настройки; --help — эта справка.',
+  '',
+  'Коды выхода: 0 — всё хорошо, 1 — расхождение с историей, 2 — настройки или',
+  'окружение, 3 — неполная история, 4 — нет датчика, 5 — внутренняя ошибка.',
+  ''
+].join('\n');
+
 // --- конфиг -----------------------------------------------------------------
 
 const DEFAULT_CONFIG = {
@@ -102,22 +152,28 @@ function argValue(args, name) {
 }
 
 function gitRoot() {
-  return execFileSync('git', gitArgv(['rev-parse', '--show-toplevel']), {
-    encoding: 'utf8', maxBuffer: MAX_BUF, env: gitEnv()
-  }).trim();
+  try {
+    return execFileSync('git', gitArgv(['rev-parse', '--show-toplevel']), {
+      encoding: 'utf8', maxBuffer: MAX_BUF, env: gitEnv()
+    }).trim();
+  } catch (_e) {
+    refuse(EXIT.CONFIG, 'не git-репозиторий (или git недоступен): таблица собирается по истории git.\n'
+      + '  запустите команду из каталога проекта; если истории ещё нет — создайте её: git init');
+  }
 }
 
 /* Настройки читаются как есть и досыпаются значениями по умолчанию: у проекта,
  * который только подключил генератор, конфиг может быть в три строки. */
 function loadConfig(file) {
   if (!fs.existsSync(file)) {
-    throw new Error('нет файла настроек ' + file + '\n  создайте его: node ' + path.relative(process.cwd(), __filename) + ' --init');
+    refuse(EXIT.CONFIG, 'нет файла настроек ' + file + '\n  создайте его: ' + cliCommand('--init'));
   }
   let raw;
   try {
     raw = JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch (e) {
-    throw new Error('не разобран ' + file + ': ' + e.message);
+    refuse(EXIT.CONFIG, 'не разобран ' + file + ': ' + e.message
+      + '\n  починка: правьте ' + file + '; образец настроек даёт ' + cliCommand('--init') + ' в пустом каталоге');
   }
   const cfg = Object.assign({}, DEFAULT_CONFIG, raw);
   cfg.minify = Object.assign({}, DEFAULT_CONFIG.minify, raw.minify);
@@ -129,7 +185,7 @@ function loadConfig(file) {
 }
 
 function validateConfig(cfg) {
-  const fail = (msg) => { throw new Error('конфиг ' + cfg.path + ': ' + msg); };
+  const fail = (msg) => refuse(EXIT.CONFIG, 'конфиг ' + cfg.path + ': ' + msg + '\n  починка: правьте ' + cfg.path);
   if (!cfg.columns || cfg.columns.length === 0) fail('не задано ни одной колонки (columns)');
   const labels = new Set();
   cfg.columns.forEach((c, i) => {
@@ -415,7 +471,7 @@ function readHistory(root) {
 
 function assertFullHistory(root) {
   if (git(root, ['rev-parse', '--is-shallow-repository']).trim() === 'true') {
-    throw new Error('история обрезана (shallow clone): таблица строится по всей истории коммитов.\n'
+    refuse(EXIT.SHALLOW, 'история обрезана (shallow clone): таблица строится по всей истории коммитов.\n'
       + '  локально: git fetch --unshallow\n'
       + '  в CI: actions/checkout с fetch-depth: 0');
   }
@@ -872,10 +928,11 @@ function assertMatchesDisk(state, cfg, root) {
   cfg.columns.forEach((col, i) => {
     const p = state[i] === null ? col.paths.filter((alias) => tree.has(alias))[0] : state[i].path;
     if (p === undefined || tree.get(p) !== (state[i] === null ? null : state[i].sha)) {
-      throw new Error('состояние «' + col.label + '» на HEAD не совпало с деревом коммита ('
+      refuse(EXIT.VIOLATION, 'состояние «' + col.label + '» на HEAD не совпало с деревом коммита ('
         + (p === undefined ? 'файла нет' : p + ' ' + tree.get(p).slice(0, 7)) + ' вместо '
         + (state[i] === null ? 'файла нет' : state[i].path + ' ' + state[i].sha.slice(0, 7))
-        + '): перенос состояния между коммитами пропустил правку');
+        + '): перенос состояния между коммитами пропустил правку'
+        + '\n  починка: пересоберите таблицу (' + cfg.fixCommand + ') и закоммитьте ' + cfg.output);
     }
     if (!dirty.has(p) && clean.indexOf(p) < 0) clean.push(p);
   });
@@ -884,8 +941,9 @@ function assertMatchesDisk(state, cfg, root) {
   clean.forEach((p) => {
     if (onDisk.get(p) === tree.get(p)) return; // git считает файл неизменным
     if (fs.readFileSync(path.join(root, p)).equals(diskForm(root, 'HEAD', p))) return; // переводы строк необратимы
-    throw new Error('содержимое ' + p + ' на диске разошлось с HEAD (' + onDisk.get(p).slice(0, 7)
-      + ' вместо ' + tree.get(p).slice(0, 7) + '), хотя git не считает файл изменённым: правка есть только на диске');
+    refuse(EXIT.VIOLATION, 'содержимое ' + p + ' на диске разошлось с HEAD (' + onDisk.get(p).slice(0, 7)
+      + ' вместо ' + tree.get(p).slice(0, 7) + '), хотя git не считает файл изменённым: правка есть только на диске'
+      + '\n  починка: закоммитьте правку или откатите её: git checkout -- ' + p);
   });
 }
 
@@ -1483,10 +1541,17 @@ function build(cfg, root) {
   return measured;
 }
 
+/* Запись вывода, у которого может не быть каталога: `--page .size-report/report.html`
+ * в свежем проекте — обычный запуск, а не ошибка пользователя. */
+function writeFileEnsured(file, text) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, text);
+}
+
 function writeMode(cfg, root) {
   const { rows, skipped, state } = build(cfg, root);
   const html = render(rows, cfg);
-  fs.writeFileSync(path.join(root, cfg.output), html);
+  writeFileEnsured(path.join(root, cfg.output), html);
   console.log('✓ ' + cfg.output + ': ' + rows.length + ' строк × ' + cfg.columns.length + ' файлов, '
     + kmb(byteLen(html)) + ' (пропущено без строки: ' + skipped.length + ' — '
     + skipped.join(', ') + ')');
@@ -1523,7 +1588,7 @@ function pageMode(cfg, root, file) {
   const data = reportData(cfg, root);
   const target = file ? path.resolve(file) : path.join(root, path.dirname(cfg.output), PAGE_NAME);
   const html = pageHtml(data, cfg);
-  fs.writeFileSync(target, html);
+  writeFileEnsured(target, html);
   console.log('✓ ' + path.relative(root, target) + ': ' + data.rows.length + ' строк × '
     + data.files.length + ' файлов, ' + kmb(byteLen(html)));
   return 0;
@@ -1553,7 +1618,9 @@ const INIT_EXTS = ['.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.html', '.css'
 const INIT_JOURNALS = ['WORKLOG.md', 'CHANGELOG.md', 'CHANGES.md', 'HISTORY.md'];
 const INIT_SKIP_NAMES = [/package-lock\.json$/, /\.min\./, /\.map$/, /yarn\.lock$/, /composer\.lock$/];
 
-function sniffColumns(root, limit) {
+/* `skip` — пути, которые колонками быть не могут (файл самой таблицы: его размер
+ * зависит от числа строк, то есть от самого себя). */
+function sniffColumns(root, limit, skip) {
   const listed = git(root, ['ls-files', '-s']).split('\n').filter((l) => l !== '');
   const sizes = new Map();
   const shas = listed.map((l) => l.split(/\s+/)[1]);
@@ -1567,8 +1634,10 @@ function sniffColumns(root, limit) {
     });
   }
   const byExt = new Map();
+  const skipped = skip || [];
   listed.forEach((line) => {
     const f = line.split('\t')[1];
+    if (skipped.indexOf(f) >= 0) return;
     if (INIT_SKIP_NAMES.some((re) => re.test(f))) return;
     const ext = path.extname(f).toLowerCase();
     if (INIT_EXTS.indexOf(ext) < 0) return;
@@ -1592,19 +1661,19 @@ function sniffColumns(root, limit) {
 function initMode(root, file, force) {
   const target = file ? path.resolve(root, file) : path.join(root, CONFIG_NAME);
   if (fs.existsSync(target) && !force) {
-    console.error('✗ конфиг уже есть: ' + target + ' (--force — перезаписать)');
-    return 1;
+    refuse(EXIT.CONFIG, 'конфиг уже есть: ' + target + '\n  починка: правьте его или перезапишите черновиком: '
+      + cliCommand('--init --force'));
   }
-  const sniffed = sniffColumns(root, 12);
+  const journalPath = INIT_JOURNALS.find((p) => fs.existsSync(path.join(root, p))) || '';
+  const outDir = fs.existsSync(path.join(root, 'docs')) ? 'docs/' : '';
+  const sniffed = sniffColumns(root, 12, [outDir + 'size-table.html']);
   if (sniffed.columns.length === 0) {
     console.error('✗ не нашлось файлов с известными расширениями (' + INIT_EXTS.join(' ') + ')\n'
       + '  впишите колонки в конфиг руками');
   }
-  const journalPath = INIT_JOURNALS.find((p) => fs.existsSync(path.join(root, p))) || '';
-  const outDir = fs.existsSync(path.join(root, 'docs')) ? 'docs/' : '';
   // Подпись артефакта цитирует команду починки, поэтому в проекте без
-  // package.json она должна указывать на сам скрипт: иначе таблица ссылалась бы
-  // на npm-скрипт, которого там нет.
+  // package.json она должна указывать на саму команду: иначе таблица ссылалась
+  // бы на npm-скрипт, которого там нет.
   const hasPkg = fs.existsSync(path.join(root, 'package.json'));
   // Менеджер пакетов — по lock-файлу, а не предположением: подпись артефакта
   // цитирует команду починки, и она обязана существовать в чужом проекте.
@@ -1615,7 +1684,7 @@ function initMode(root, file, force) {
     locale: 'ru',
     title: 'Объём файлов по коммитам',
     heading: 'Объём файлов по коммитам',
-    fixCommand: hasPkg ? manager + ' run sizes' : 'node tools/size-table.js --write',
+    fixCommand: hasPkg ? manager + ' run sizes' : 'npx size-report --write',
     metrics: ['raw', 'min'],
     columns: sniffed.columns,
     journal: journalPath
@@ -1625,38 +1694,57 @@ function initMode(root, file, force) {
     rows: { merges: true, sha: true },
     skip: []
   };
-  fs.writeFileSync(target, JSON.stringify(cfg, null, 2) + '\n');
+  // Черновик обязан проходить ту же проверку, которой его встретит первый запуск:
+  // иначе отказ из подсказки приводит в новый тупик. Проект без знакомых
+  // расширений — исключение: колонок нет вовсе, и черновик правят руками.
+  if (cfg.columns.length > 0) validateConfig(Object.assign({}, cfg, { path: target }));
+  writeFileEnsured(target, JSON.stringify(cfg, null, 2) + '\n');
   console.log('✓ черновик конфига: ' + path.relative(root, target));
   console.log('  расширения в проекте: ' + (sniffed.exts.join(' ') || '—'));
   console.log('  колонок: ' + sniffed.columns.length + ' (крупнейшие файлы по расширениям)');
   console.log('  журнал: ' + (journalPath || 'не найден — ссылки строк будут без разделов'));
   console.log('  дальше: 1) поправьте колонки и метрики — какие файлы важны, знает только проект');
   console.log('          2) ' + (hasPkg
-    ? 'добавьте в package.json: "sizes": "node tools/size-table.js --write", '
-      + '"test:sizes": "node tools/size-table.js"'
-    : 'запуск: node tools/size-table.js --write (проверка — без --write)'));
+    ? 'добавьте в package.json: "sizes": "size --write", "test:sizes": "size"'
+    : 'запуск: ' + cfg.fixCommand + ' (проверка — без --write)'));
   console.log('          3) ' + (hasPkg ? 'добавьте ' + manager + ' run test:sizes в CI' : 'добавьте проверку в CI')
-    + '; те же проверки переносятся вместе с tests/size-table.js');
+    + '; сами проверки едут вместе с пакетом');
   return 0;
 }
 
 function main() {
   const args = process.argv.slice(2);
-  const root = gitRoot();
-  if (args.indexOf('--init') >= 0) return initMode(root, argValue(args, '--init'), args.indexOf('--force') >= 0);
-  const cfg = loadConfig(argValue(args, '--config') ? path.resolve(argValue(args, '--config')) : path.join(root, CONFIG_NAME));
-  if (args.indexOf('--json') >= 0) return jsonMode(cfg, root);
-  if (args.indexOf('--data') >= 0) return dataMode(cfg, root);
-  if (args.indexOf('--page') >= 0) return pageMode(cfg, root, argValue(args, '--page'));
-  if (args.indexOf('--write') >= 0) return writeMode(cfg, root);
-  return checkMode(cfg, root);
+  if (args.indexOf('--help') >= 0 || args.indexOf('-h') >= 0) {
+    process.stdout.write(USAGE);
+    return EXIT.OK;
+  }
+  try {
+    const root = gitRoot();
+    if (args.indexOf('--init') >= 0) return initMode(root, argValue(args, '--init'), args.indexOf('--force') >= 0);
+    const cfg = loadConfig(argValue(args, '--config') ? path.resolve(argValue(args, '--config')) : path.join(root, CONFIG_NAME));
+    if (args.indexOf('--json') >= 0) return jsonMode(cfg, root);
+    if (args.indexOf('--data') >= 0) return dataMode(cfg, root);
+    if (args.indexOf('--page') >= 0) return pageMode(cfg, root, argValue(args, '--page'));
+    if (args.indexOf('--write') >= 0) return writeMode(cfg, root);
+    return checkMode(cfg, root);
+  } catch (e) {
+    if (e instanceof Refusal) {
+      console.error('✗ ' + e.message);
+      return e.code;
+    }
+    // Непредвиденное — это дефект инструмента, а не тупик пользователя: стек здесь
+    // нужен целиком, иначе такой отказ нечем разбирать.
+    console.error('✗ внутренняя ошибка: ' + e.stack);
+    return EXIT.INTERNAL;
+  }
 }
 
 /* Наружу отдаём и механику, и то, что от неё можно проверить отдельно
- * (`tests/size-table.js`): стрипперы на образцах, разбор журнала, якоря,
+ * (`test/` пакета): стрипперы на образцах, разбор журнала, якоря,
  * реестр метрик и рендер на синтетических строках. `main` — для точки входа
  * `bin/size.js`: сам движок при импорте ничего не запускает. */
 export {
+  EXIT, USAGE, Refusal, refuse, cliCommand,
   CONFIG_NAME, DEFAULT_CONFIG, LOCALES, METRICS, STRATEGIES,
   loadConfig, validateConfig, argValue,
   gitRoot, readHistory, blobAt, readBlobs, measureBlob, assertFullHistory,
