@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
 import { EXIT, Refusal, USAGE, cliCommand, refuse } from './refusal.js';
-import { CONFIG_NAME, argValue, gitRoot, loadConfig, validateConfig } from './config.js';
+import { CONFIG_NAME, gitRoot, loadConfig, validateConfig } from './config.js';
 import { MAX_BUF, git, gitArgv, gitEnv } from './git.js';
 import { byteLen } from './strip.js';
 import { build, skipLine } from './history.js';
@@ -144,49 +144,121 @@ function explainMode(cfg, root, target, asJson) {
   return EXIT.OK;
 }
 
-/* Слова в аргументах: не ключи и не значения ключей. Ключ со значением
- * (`--config <файл>`, `--init [файл]`, `--page [файл]`) забирает следующий
- * аргумент, поэтому команда читается где угодно: и `size check --config x`, и
- * `size --config x check` — одно и то же. */
+/* Грамматика командной строки: один разбор на входе, до чтения проекта. Он решает
+ * всё сразу — какой режим запрошен, совместим ли он с командой и с остальными
+ * ключами, все ли ключи получили значение, нет ли лишних слов, — и отвечает либо
+ * планом, либо отказом. Порядок ветвлений в `main` поэтому ничего не решает:
+ * правило «так нельзя» это значение, а не место в коде, и наружу оно выходит одним
+ * способом — отказом с названным виновником и готовой командой.
+ *
+ * Ключи трёх родов: режимы (взаимоисключающие — они задают, что делать), ключи со
+ * значением (забирают следующий аргумент) и переключатели. Команда — первое слово
+ * вне ключей: её чтение не зависит от места в строке, поэтому и `size check
+ * --config x`, и `size --config x check` — одно и то же. */
+const MODES = ['--init', '--write', '--data', '--page'];
 const VALUE_FLAGS = ['--config', '--init', '--page'];
-const MODE_FLAGS = ['--init', '--write', '--data', '--page'];
-const FLAGS = ['--help', '-h'].concat(VALUE_FLAGS, ['--write', '--data', '--json', '--force']);
+const FLAGS = ['--help', '-h'].concat(MODES, VALUE_FLAGS, ['--json', '--force']);
 const COMMANDS = ['check', 'explain', 'doctor', 'install-hook', 'uninstall-hook', 'hook-run'];
+const JSON_COMMANDS = ['check', 'explain', 'doctor'];
+const HOOK_COMMANDS = ['install-hook', 'uninstall-hook', 'hook-run'];
 
-/* Ключ или слово, которых инструмент не знает, — отказ с названным виновником и
- * готовой командой. Молчаливый пропуск делает опечатку обычным прогоном: `--wite`
- * отвечает нулём, ничего не сделав, и от исправного запуска это неотличимо. */
-function strayArg(args) {
-  const unknown = args.find((a) => a[0] === '-' && FLAGS.indexOf(a) < 0);
-  if (unknown !== undefined) {
-    return 'незнакомый ключ «' + unknown + '»\n  починка: ' + cliCommand('--help');
+function parseArgs(args) {
+  // Справка отвечает всегда и первой: она и есть выход из любой опечатки.
+  if (args.indexOf('--help') >= 0 || args.indexOf('-h') >= 0) return { help: true };
+  const seen = new Set();
+  const modes = [];
+  const values = {};
+  const words = [];
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a[0] !== '-') {
+      words.push(a);
+      continue;
+    }
+    if (FLAGS.indexOf(a) < 0) {
+      refuse(EXIT.CONFIG, 'незнакомый ключ «' + a + '»\n  починка: ' + cliCommand('--help'));
+    }
+    if (seen.has(a)) {
+      refuse(EXIT.CONFIG, 'ключ «' + a + '» назван дважды\n  починка: ' + cliCommand('--help'));
+    }
+    seen.add(a);
+    if (VALUE_FLAGS.indexOf(a) >= 0) {
+      const next = args[i + 1];
+      const none = next === undefined || next[0] === '-';
+      // У `--init` и `--page` это законное «по умолчанию», а у `--config` —
+      // молчаливый пропуск: настройки были бы взяты не те, что назвал человек.
+      if (none && a === '--config') {
+        refuse(EXIT.CONFIG, 'у ключа «' + a + '» нет значения: нужен файл настроек'
+          + '\n  починка: ' + cliCommand(a + ' <файл>'));
+      }
+      if (!none) i++;
+      values[a] = none ? null : next;
+    }
+    if (MODES.indexOf(a) >= 0) modes.push(a);
   }
-  if (args.indexOf('--config') >= 0 && !argValue(args, '--config')) {
-    return 'у ключа «--config» нет значения: нужен файл настроек'
-      + '\n  починка: ' + cliCommand('--config <файл>');
-  }
-  if (args.indexOf('--force') >= 0 && args.indexOf('--init') < 0) {
-    return 'ключ «--force» работает только с «--init»\n  починка: ' + cliCommand('--init --force');
-  }
-  return null;
+  return Object.assign({ help: false, values: values }, checkArgs(words, seen, values, modes));
 }
 
-/* Команды, которым аргумент не нужен: лишнее слово — отказ, а не молчаливый
- * пропуск, иначе опечатка выглядела бы обычным прогоном. */
-function noArgs(verb, words) {
-  if (words.length > 1) {
-    refuse(EXIT.CONFIG, 'команда «' + verb + '» аргументов не принимает: «' + words[1] + '» лишний'
+/* Проверки, которые нельзя сделать по одному аргументу: они про сочетание
+ * названного. Отсюда и все правила вида «это с этим не работает» — одним списком,
+ * а не разбросанными по ветвлениям. */
+function checkArgs(words, seen, values, modes) {
+  const verb = words.length > 0 ? words[0] : null;
+  const arg = words.slice(1);
+  const mode = modes.length > 0 ? modes[0] : null;
+  if (modes.length > 1) {
+    refuse(EXIT.CONFIG, 'два режима сразу: «' + modes[0] + '» и «' + modes[1] + '» — режим один'
+      + '\n  починка: ' + cliCommand(modes[0]));
+  }
+  if (seen.has('--force') && mode !== '--init') {
+    refuse(EXIT.CONFIG, 'ключ «--force» работает только с «--init»\n  починка: ' + cliCommand('--init --force'));
+  }
+  if (seen.has('--config') && mode === '--init') {
+    refuse(EXIT.CONFIG, 'у «--init» свой файл, а «--config» называет настройки проекта'
+      + '\n  починка: ' + cliCommand('--init <файл>'));
+  }
+  if (verb !== null && COMMANDS.indexOf(verb) < 0) {
+    // Слово после режима со значением (`--init`, `--page`) — не «неизвестная
+    // команда»: команды здесь никто не звал, а виновато лишнее значение, и отказ
+    // обязан назвать виновника своим именем. У `--config` остаток — именно
+    // команда, и зов её разбирается ниже.
+    const valued = MODES.find((f) => VALUE_FLAGS.indexOf(f) >= 0 && typeof values[f] === 'string');
+    if (valued !== undefined) {
+      refuse(EXIT.CONFIG, 'лишнее слово «' + verb + '»: «' + valued + '» принимает одно значение'
+        + '\n  починка: ' + cliCommand(valued + ' [файл]'));
+    }
+    refuse(EXIT.CONFIG, 'неизвестная команда «' + verb + '»\n  починка: ' + cliCommand('--help'));
+  }
+  if (verb !== null && mode !== null) {
+    refuse(EXIT.CONFIG, 'команда «' + verb + '» и режим «' + mode + '» — разное, вместе они не работают'
       + '\n  починка: ' + cliCommand(verb));
   }
-}
-
-function plainWords(args) {
-  const out = [];
-  for (let i = 0; i < args.length; i++) {
-    if (args[i][0] === '-') { if (VALUE_FLAGS.indexOf(args[i]) >= 0) i++; continue; }
-    out.push(args[i]);
+  // Коммит либо не назван, либо назван не один раз — тупика два, а починка одна.
+  if (verb === 'explain' && arg.length !== 1) {
+    refuse(EXIT.CONFIG, (arg.length === 0
+      ? 'команде «explain» нужен коммит: смотрите на sha или его начало'
+      : 'команда «explain» принимает один коммит, а не ' + arg.length
+        + ': «' + arg.slice(1).join('», «') + '» лишние')
+      + '\n  починка: ' + cliCommand('explain <коммит>'));
   }
-  return out;
+  if (verb !== null && verb !== 'explain' && arg.length > 0) {
+    refuse(EXIT.CONFIG, 'команда «' + verb + '» аргументов не принимает: «' + arg[0] + '» лишний'
+      + '\n  починка: ' + cliCommand(verb));
+  }
+  if (seen.has('--json') && verb !== null && JSON_COMMANDS.indexOf(verb) < 0) {
+    refuse(EXIT.CONFIG, 'у команды «' + verb + '» нет ответа в JSON\n  починка: ' + cliCommand(verb));
+  }
+  if (seen.has('--json') && verb === null && mode !== null) {
+    refuse(EXIT.CONFIG, '«--json» и режим «' + mode + '» — разное: данные или запись, но не оба'
+      + '\n  починка: ' + cliCommand(mode));
+  }
+  return {
+    verb: verb,
+    mode: mode,
+    arg: arg,
+    json: seen.has('--json'),
+    force: seen.has('--force')
+  };
 }
 
 /* Данные контракта в stdout — для страницы и для агента: та же правда, что в
@@ -341,68 +413,28 @@ export function initMode(root, file, force) {
 
 /* Команды — словами, режимы — ключами: словами называются те два ответа, которых
  * у ключей не было («всё ли посчитано» и «почему нет строки»), а прежние ключи
- * остаются собой. Слово, которого инструмент не знает, — отказ, а не молчаливый
- * пропуск: прежде лишнее слово никто не читал, и ошибка в нём выглядела бы как
- * обычный прогон. */
+ * остаются собой. Отказ до этой функции не доходит: разбор либо вернул готовый
+ * план, либо уже бросил, и бросил до того, как проект был прочитан. */
 export function main() {
-  const args = process.argv.slice(2);
-  if (args.indexOf('--help') >= 0 || args.indexOf('-h') >= 0) {
-    process.stdout.write(USAGE);
-    return EXIT.OK;
-  }
-  const stray = strayArg(args);
-  if (stray !== null) {
-    console.error('✗ ' + stray);
-    return EXIT.CONFIG;
-  }
-  const words = plainWords(args);
-  const verb = words.length > 0 ? words[0] : null;
-  const extra = words.length > 2 ? words.slice(2) : [];
-  const mode = MODE_FLAGS.filter((f) => args.indexOf(f) >= 0)[0];
-  if (verb !== null && COMMANDS.indexOf(verb) < 0) {
-    // Слово после режима со значением — не «неизвестная команда»: команды здесь
-    // никто не звал, а отказ обязан называть виновника своим именем. У `--config`
-    // (он не режим, а ключ) остаток — именно команда, и зов её разбирается ниже.
-    const value = MODE_FLAGS.filter((f) => VALUE_FLAGS.indexOf(f) >= 0 && args.indexOf(f) >= 0)[0];
-    if (value !== undefined) {
-      console.error('✗ лишнее слово «' + verb + '»: «' + value + '» принимает одно значение'
-        + '\n  починка: ' + cliCommand(value + ' [файл]'));
-      return EXIT.CONFIG;
-    }
-    console.error('✗ неизвестная команда «' + verb + '»\n  починка: ' + cliCommand('--help'));
-    return EXIT.CONFIG;
-  }
-  if (verb !== null && mode !== undefined) {
-    console.error('✗ команда «' + verb + '» и режим «' + mode + '» — разное, вместе они не работают'
-      + '\n  починка: ' + cliCommand(verb));
-    return EXIT.CONFIG;
-  }
   try {
-    // Аргументы разбираются до чтения проекта: отказ обязан называть то, что человек
-    // только что набрал, а не то, чего в проекте нет.
-    if (verb !== null && verb !== 'explain') noArgs(verb, words);
-    if (verb === 'explain' && words.length < 2) {
-      refuse(EXIT.CONFIG, 'команде «explain» нужен коммит: смотрите на sha или его начало'
-        + '\n  починка: ' + cliCommand('explain <коммит>'));
-    }
-    if (verb === 'explain' && extra.length > 0) {
-      refuse(EXIT.CONFIG, 'команда «explain» принимает один коммит, а не ' + words.length
-        + ': «' + extra.join('», «') + '» лишние\n  починка: ' + cliCommand('explain <коммит>'));
+    const cmd = parseArgs(process.argv.slice(2));
+    if (cmd.help) {
+      process.stdout.write(USAGE);
+      return EXIT.OK;
     }
     const root = gitRoot();
-    if (args.indexOf('--init') >= 0) return initMode(root, argValue(args, '--init'), args.indexOf('--force') >= 0);
-    const configFile = argValue(args, '--config') ? path.resolve(argValue(args, '--config')) : path.join(root, CONFIG_NAME);
-    if (verb === 'doctor') return doctorMode(root, configFile, args.indexOf('--json') >= 0);
-    if (verb === 'install-hook' || verb === 'uninstall-hook' || verb === 'hook-run') {
-      return hookMode(verb, root, configFile);
-    }
+    if (cmd.mode === '--init') return initMode(root, cmd.values['--init'], cmd.force);
+    const named = cmd.values['--config'];
+    const configFile = named ? path.resolve(named) : path.join(root, CONFIG_NAME);
+    if (cmd.verb === 'doctor') return doctorMode(root, configFile, cmd.json);
+    if (HOOK_COMMANDS.indexOf(cmd.verb) >= 0) return hookMode(cmd.verb, root, configFile);
     const cfg = loadConfig(configFile);
-    if (verb === 'check') return coverageMode(cfg, root, configFile, args.indexOf('--json') >= 0);
-    if (verb === 'explain') return explainMode(cfg, root, words[1], args.indexOf('--json') >= 0);
-    if (args.indexOf('--json') >= 0) return jsonMode(cfg, root);
-    if (args.indexOf('--data') >= 0) return dataMode(cfg, root);
-    if (args.indexOf('--page') >= 0) return pageMode(cfg, root, argValue(args, '--page'));
-    if (args.indexOf('--write') >= 0) return writeMode(cfg, root);
+    if (cmd.verb === 'check') return coverageMode(cfg, root, configFile, cmd.json);
+    if (cmd.verb === 'explain') return explainMode(cfg, root, cmd.arg[0], cmd.json);
+    if (cmd.mode === '--data') return dataMode(cfg, root);
+    if (cmd.mode === '--page') return pageMode(cfg, root, cmd.values['--page']);
+    if (cmd.mode === '--write') return writeMode(cfg, root);
+    if (cmd.json) return jsonMode(cfg, root);
     return checkMode(cfg, root);
   } catch (e) {
     if (e instanceof Refusal) {

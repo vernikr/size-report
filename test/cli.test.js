@@ -137,18 +137,74 @@ test('незнакомый ключ, ключ без значения и лиш�
   refusal(stray, 2, 'лишнее слово у команды');
   assert.match(stray.stderr, /«extra» лишний/, 'отказ назвал не причину:\n' + stray.stderr);
 
+  // Одинокие дефисы ключами не являются и мимо разбора тоже не проходят.
+  ['-', '--'].forEach((lonely) => {
+    const res = runSize(dir, [lonely]);
+    refusal(res, 2, 'одинокий ' + lonely);
+    assert.ok(res.stderr.indexOf('«' + lonely + '»') >= 0, 'отказ не называет ' + lonely + ':\n' + res.stderr);
+  });
+
   // Обратная сторона: законные зовы остаются законными — значение ключа не
-  // путается с лишним словом, а команда читается в любом месте строки.
+  // путается с лишним словом, а команда и ключи читаются в любом порядке.
   const legal = [
     ['--init', 'draft.json', '--force'],
     ['--page', 'out.html', '--config', CONFIG],
-    ['explain', gitIn(dir, ['rev-parse', 'HEAD']).trim(), '--config', CONFIG]
+    ['explain', gitIn(dir, ['rev-parse', 'HEAD']).trim(), '--config', CONFIG],
+    ['--json', '--config', CONFIG],
+    ['--data', '--config', CONFIG],
+    ['--write', '--config', CONFIG]
   ];
   legal.forEach((args) => {
     const res = runSize(dir, args);
     assert.equal(res.code, 0, 'законный зов «' + args.join(' ') + '» отвергнут: ' + firstLine(res.stderr));
   });
   assert.ok(fs.existsSync(path.join(dir, 'out.html')), 'значение «--page» не дошло до записи');
+});
+
+/* Второй род молчаливого пропуска — не слово, а режим: `--write --data` отвечал
+ * нулём, записав таблицу и не отдав данные, и от исправного запуска это так же
+ * неотличимо. Правило «режим один» живёт в разборе аргументов, поэтому проверка
+ * идёт перебором, а не примерами: все сочетания режимов, ключи, которые друг с
+ * другом не работают, и ключ, названный дважды. */
+test('два режима сразу и несовместимые ключи — отказ, а не тишина', () => {
+  const dir = cloneFixture(path.join(tmp, 'mode-clash'));
+  const modes = ['--init', '--write', '--data', '--page'];
+  for (let i = 0; i < modes.length; i++) {
+    for (let j = i + 1; j < modes.length; j++) {
+      const res = runSize(dir, [modes[i], modes[j]]);
+      refusal(res, 2, 'два режима: ' + modes[i] + ' ' + modes[j]);
+      assert.ok(res.stderr.indexOf('«' + modes[i] + '»') >= 0 && res.stderr.indexOf('«' + modes[j] + '»') >= 0,
+        'отказ не называет оба режима:\n' + res.stderr);
+      assert.ok(commandIn(res.stderr) !== null, 'в отказе нет команды починки:\n' + res.stderr);
+    }
+  }
+
+  // Данные и запись — разное, и `--json` тут не ответ команды, а прежняя форма
+  // данных: рядом с режимом он теряется так же молча.
+  const dataAndWrite = runSize(dir, ['--json', '--write']);
+  refusal(dataAndWrite, 2, '--json рядом с режимом');
+  assert.ok(dataAndWrite.stderr.indexOf('«--json»') >= 0 && dataAndWrite.stderr.indexOf('«--write»') >= 0,
+    'отказ не называет оба ключа:\n' + dataAndWrite.stderr);
+
+  // Команда и режим, чужой ответ в JSON, файл черновика дважды описанным способом.
+  const cases = [
+    [['check', '--data'], /«check»/],
+    [['install-hook', '--json'], /нет ответа в JSON/],
+    [['--config', CONFIG, '--init', 'draft.json'], /«--init»/],
+    [['--write', '--write'], /дважды/],
+    [['--config', CONFIG, '--config', CONFIG], /дважды/]
+  ];
+  cases.forEach(([args, probe]) => {
+    const res = runSize(dir, args);
+    refusal(res, 2, 'несовместимый зов «' + args.join(' ') + '»');
+    assert.match(res.stderr, probe, 'отказ объясняет не то:\n' + res.stderr);
+  });
+
+  // Ни одна ветка этих отказов не должна была тронуть проект: разбор идёт до
+  // чтения дерева, и лишний файл здесь означал бы, что порядок ветвлений всё ещё
+  // решает.
+  assert.equal(fs.existsSync(path.join(dir, 'draft.json')), false,
+    'отвергнутый зов всё-таки записал файл');
 });
 
 /* ---------- таблица кодов ---------- */
