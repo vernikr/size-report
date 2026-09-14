@@ -13,7 +13,10 @@
  *   4. страница собирается и работает в настоящем DOM (jsdom): включение метрик,
  *      категорий, файлов и папок дерева пересчитывает таблицу без обращения к движку;
  *   5. оформление таблицы у двух выводов одно, и цвет дельт задан один раз;
- *   6. состояния пустоты (сняты все метрики или все файлы) объясняются словами.
+ *   6. состояния пустоты (сняты все метрики или все файлы) объясняются словами;
+ *   7. выбор читателя переживает перезаход, но не переезжает на чужой отчёт
+ *      (другой паспорт, чужая версия записи, испорченная или неизвестное имя),
+ *      а первый читатель видит умолчание.
  */
 
 import { test, after } from 'node:test';
@@ -261,8 +264,9 @@ test('вычислительная часть страницы — код дви
    * разметка, либо вернувшийся своим путём расчёт; первое правится здесь же,
    * второе лучше не делать вовсе. */
   assert.deepEqual(defined('\n' + appSrc).sort(), [
-    'appBox', 'appCell', 'appCommit', 'appEl', 'appFileBox', 'appIndexes', 'appLegend', 'appPanel',
-    'appRender', 'appState', 'appSubHead', 'appTable', 'appTree', 'appTreeList', 'appValueCell'
+    'appApply', 'appBox', 'appCell', 'appCommit', 'appEl', 'appFileAt', 'appFileBox', 'appHash',
+    'appIndexes', 'appLegend', 'appPanel', 'appPassport', 'appRead', 'appRender', 'appState',
+    'appSubHead', 'appTable', 'appTree', 'appTreeList', 'appValueCell', 'appWrite'
   ], 'оболочка страницы завела свою функцию: расчёт должен жить в вычислительной части');
   assert.equal(/\breduce\(|Math\.abs/.test(appSrc), false,
     'оболочка страницы считает итоги или знак дельты сама');
@@ -287,6 +291,39 @@ function pageHtml() {
 }
 
 const pageText = pageHtml();
+
+/* Страница с памятью: адрес даёт ей начало координат (без него jsdom, как и браузер
+ * в приватном окне, памяти не даёт), а `beforeParse` кладёт в неё то, что «браузер
+ * сохранил» с прошлого захода — так перезаход и проверяется. */
+const PAGE_URL = 'https://report.invalid/size-report.html';
+function openPage(seed) {
+  return new JSDOM(pageText, {
+    url: PAGE_URL,
+    runScripts: 'dangerously',
+    beforeParse(window) {
+      Object.keys(seed || {}).forEach((key) => window.localStorage.setItem(key, seed[key]));
+    }
+  });
+}
+
+// Что «браузер» сохранил к этому моменту — то, что переживёт закрытие страницы.
+function stored(dom) {
+  const store = dom.window.localStorage;
+  const out = {};
+  for (let i = 0; i < store.length; i++) out[store.key(i)] = store.getItem(store.key(i));
+  return out;
+}
+
+const panelInputs = (doc) => [...doc.querySelectorAll('#panel input')];
+const metricBox = (doc) => panelInputs(doc).find((b) => b.title.indexOf('approximate') >= 0);
+const fileBox = (doc, path) => panelInputs(doc).find((b) => b.title.indexOf(path) === 0);
+const nowTotalCell = (doc) => doc.querySelectorAll('#grid tbody tr')[0].querySelectorAll('td')[0].textContent;
+const nowCells = (doc) => doc.querySelectorAll('#grid tbody tr')[0].querySelectorAll('td').length;
+const allCells = () => (data.files.length + 1) * data.metrics.length;
+function toggleCheck(doc, box, checked) {
+  box.checked = checked;
+  box.dispatchEvent(new doc.defaultView.Event('change'));
+}
 
 test('страница самодостаточна и несёт данные контракта', () => {
   assert.equal(pageRun.code, 0, 'сборка страницы не отчиталась: ' + pageRun.stderr.trim());
@@ -433,6 +470,93 @@ test('дерево файлов: папки по путям, три состоя
   toggle(chore.querySelector('input'), true);
   assert.equal(dirBox('data/').querySelector('input').checked, true,
     'включение категории не вернуло её файлы');
+});
+
+/* Память выбора: страница помнит, что читатель выключил, и возвращает его при
+ * следующем открытии — тем же набором колонок и теми же числами. Проверяется
+ * перезаходом: вторая страница получает ту память, которую записала первая. */
+test('память выбора: перезаход возвращает тот же выбор и те же числа', () => {
+  const first = openPage();
+  const doc = first.window.document;
+
+  /* Первый читатель: всё включено, и памяти о нём ещё нет. */
+  assert.deepEqual(stored(first), {}, 'первый заход оставил запись о выборе, которого не было');
+  assert.equal(nowCells(doc), allCells(), 'умолчание не всё включено');
+
+  toggleCheck(doc, metricBox(doc), false);
+  toggleCheck(doc, fileBox(doc, 'src/code.js'), false);
+  const off = data.files.map((f) => f.path !== 'src/code.js');
+  const total = valueParts(pageMath.totalsOf(data.now, ['raw'], off).raw).text;
+  assert.equal(nowTotalCell(doc), total, 'итог после выбора не тот, что даёт вычислительная часть');
+
+  const saved = stored(first);
+  assert.equal(Object.keys(saved).length, 1, 'выбор записан не одной записью');
+
+  /* Перезаход: тот же отчёт, та же память. */
+  const again = openPage(saved);
+  const doc2 = again.window.document;
+  assert.equal(metricBox(doc2).checked, false, 'перезаход не вернул выключенную метрику');
+  assert.equal(fileBox(doc2, 'src/code.js').checked, false, 'перезаход не вернул выключенный файл');
+  // Включено всё, кроме выключенных выбором метрики и файла — это и видно колонками.
+  assert.equal(nowCells(doc2), (off.filter(Boolean).length + 1) * (data.metrics.length - 1),
+    'перезаход вернул не тот набор колонок');
+  assert.equal(nowTotalCell(doc2), total, 'перезаход показал другие числа');
+
+  /* Включил всё обратно — выбор стал умолчанием, и записи больше нет: иначе
+   * «вернул как было» ничем не отличается от «что-то выключено». */
+  toggleCheck(doc2, metricBox(doc2), true);
+  toggleCheck(doc2, fileBox(doc2, 'src/code.js'), true);
+  assert.deepEqual(stored(again), {}, 'возврат всех галочек оставил запись о выборе');
+  assert.equal(nowCells(doc2), allCells(), 'возврат галочек не вернул таблицу к умолчанию');
+});
+
+/* Память обязана молчать, когда чужая: чужой отчёт, разошедшийся паспорт,
+ * устаревшая версия записи, испорченный JSON, имя, которого в отчёте нет. */
+test('память выбора: чужая или испорченная запись не применяется', () => {
+  const first = openPage();
+  const doc = first.window.document;
+  toggleCheck(doc, metricBox(doc), false);
+  toggleCheck(doc, fileBox(doc, 'src/code.js'), false);
+  const saved = stored(first);
+  const key = Object.keys(saved)[0];
+  const rec = JSON.parse(saved[key]);
+
+  /* Запись объясняет себя: версия формата, паспорт (он же — имя ключа, иначе
+   * запись ищется не там, где лежит) и только выключенное, по именам. */
+  assert.equal(rec.v, 1, 'запись не объявила версию формата');
+  assert.equal(rec.passport, key.slice('size-report:'.length),
+    'ключ записи и её паспорт разошлись');
+  assert.deepEqual(rec.metrics, { min: false }, 'запись не назвала выключенную метрику');
+  assert.deepEqual(rec.files, { 'src/code.js': false }, 'запись не назвала выключенный файл');
+
+  /* Чужой отчёт: его запись лежит под своим ключом и должна остаться целой. */
+  const foreignKey = 'size-report:2f1a';
+  const other = openPage({ [foreignKey]: JSON.stringify({ v: 1, passport: '2f1a',
+    metrics: { min: false }, files: { 'src/code.js': false } }) });
+  assert.equal(nowCells(other.window.document), allCells(), 'выбор чужого отчёта применился к этому');
+  assert.deepEqual(Object.keys(stored(other)), [foreignKey], 'страница стёрла чужую запись');
+
+  /* Свой ключ, но чужой паспорт — равносильно отсутствию записи. */
+  const stranger = openPage({ [key]: JSON.stringify(Object.assign({}, rec, { passport: 'deadbeef' })) });
+  assert.equal(nowCells(stranger.window.document), allCells(), 'запись с чужим паспортом применилась');
+
+  /* Запись другого формата и испорченная читаются одинаково: никак. */
+  const older = openPage({ [key]: JSON.stringify(Object.assign({}, rec, { v: 0 })) });
+  assert.equal(nowCells(older.window.document), allCells(), 'запись старого формата применилась');
+  const broken = openPage({ [key]: '{ это не JSON' });
+  assert.equal(nowCells(broken.window.document), allCells(), 'испорченная запись сломала страницу');
+
+  /* Имя, которого в отчёте больше нет: названное верно применяется, неизвестное не
+   * значит ничего и не выключает чужое, а запись приводится к тому, что есть. */
+  const ghost = openPage({ [key]: JSON.stringify({ v: 1, passport: rec.passport,
+    metrics: { tok: false, min: false }, files: { 'src/gone.js': false, 'src/code.js': false } }) });
+  const gd = ghost.window.document;
+  assert.equal(metricBox(gd).checked, false, 'названная метрика не применилась');
+  assert.equal(fileBox(gd, 'src/code.js').checked, false, 'названный файл не применился');
+  assert.equal(fileBox(gd, 'src/empty.js').checked, true, 'исчезнувшее имя выключило чужой файл');
+  assert.deepEqual(JSON.parse(stored(ghost)[key]),
+    { v: 1, passport: rec.passport, metrics: { min: false }, files: { 'src/code.js': false } },
+    'страница не привела запись к тому, что есть в отчёте');
 });
 
 /* Оформление: общая часть таблицы у двух выводов одна, и цвет дельт задан один раз.

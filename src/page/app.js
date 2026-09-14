@@ -11,7 +11,9 @@
  * а разметка клеток повторяет статическую таблицу (`clip` и подпись коммита —
  * правила общей части оформления).
  *
- * Отделка (запоминание выбора в браузере) — следующий проход. */
+ * Панель помнит выбор читателя между открытиями («Память выбора» ниже): запись
+ * привязана к паспорту отчёта и хранит только выключенное по именам, поэтому
+ * чужая запись не применяется, а исчезнувшее имя просто ничего не значит. */
 
 /* Импорт — одной строкой: модульный синтаксис снимается при вклейке построчно,
  * и оставшаяся строка `import` попала бы в страницу (её ловит проверка). */
@@ -22,6 +24,91 @@ const appUi = JSON.parse(document.getElementById('ui').textContent);
 const appView = { metrics: {}, files: [] };
 appData.metrics.forEach((m) => { appView.metrics[m.key] = true; });
 appData.files.forEach(() => { appView.files.push(true); });
+
+/* -------- память выбора читателя -------- */
+
+/* Имя файла для записи — путь на HEAD, а если файла там уже нет, последний из
+ * настроек: по нему файл и опознаётся в отчёте. */
+function appFileAt(i) {
+  const f = appData.files[i];
+  return f.path === null ? f.paths[0] : f.path;
+}
+
+/* Отпечаток паспорта: опознавательный знак записи, а не защита от подделки,
+ * поэтому 32 бит достаточно (FNV-1a). */
+function appHash(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(16);
+}
+
+/* Паспорт отчёта: имя инструмента, схема данных, путь артефакта, заголовок и метки
+ * колонок в порядке отчёта. Он и отделяет один отчёт от другого — по нему выбирается
+ * ключ записи, поэтому выбор с чужого отчёта не подхватывается. Версии пакета и
+ * верхушки истории в паспорте нет намеренно: это тот же отчёт — обновление
+ * инструмента не меняет того, что значит колонка, а подросшая история это та же
+ * история, к которой читатель и возвращается. */
+function appPassport() {
+  return appHash([appData.tool.name, appData.schema, appData.report.artifact,
+    appData.report.title, appData.files.map((f) => f.label).join('|')].join('\n'));
+}
+const appKey = 'size-report:' + appPassport();
+
+/* Хранится только выключенное: «включено» и «записи нет» — одно и то же состояние,
+ * поэтому возврат всех галочек убирает запись, а не оставляет след, неотличимый
+ * от выбора. */
+function appWrite() {
+  const metrics = {};
+  const files = {};
+  appData.metrics.forEach((m) => { if (!appView.metrics[m.key]) metrics[m.key] = false; });
+  appData.files.forEach((_f, i) => { if (!appView.files[i]) files[appFileAt(i)] = false; });
+  try {
+    if (Object.keys(metrics).length === 0 && Object.keys(files).length === 0) {
+      window.localStorage.removeItem(appKey);
+    } else {
+      window.localStorage.setItem(appKey, JSON.stringify(
+        { v: 1, passport: appPassport(), metrics: metrics, files: files }));
+    }
+  } catch (_e) {
+    /* Памяти нет (браузер её не даёт этой странице): выбор не переживёт закрытия, а
+     * числа и разметка от этого не зависят. */
+  }
+}
+
+/* Чтение: только своя запись — своей версии формата и своего паспорта. Запись
+ * чужого отчёта лежит под другим ключом, а чужая, устаревшая или испорченная
+ * равносильна её отсутствию. */
+function appRead() {
+  let text = null;
+  try {
+    text = window.localStorage.getItem(appKey);
+  } catch (_e) {
+    return null;
+  }
+  if (text === null) return null;
+  let rec = null;
+  try {
+    rec = JSON.parse(text);
+  } catch (_e) {
+    return null;
+  }
+  if (rec === null || typeof rec !== 'object' || rec.v !== 1) return null;
+  return rec.passport === appPassport() ? rec : null;
+}
+
+/* Применение — по именам: файл опознаётся путём, метрика ключом. Имени, которого в
+ * отчёте нет, ничего не соответствует (колонку перенаправили на другой путь,
+ * метрику убрали из настроек), а появившиеся файлы и метрики остаются включёнными —
+ * как их видит тот, кто открыл страницу впервые. */
+function appApply(rec) {
+  const metrics = rec.metrics || {};
+  const files = rec.files || {};
+  appData.metrics.forEach((m) => { if (metrics[m.key] === false) appView.metrics[m.key] = false; });
+  appData.files.forEach((_f, i) => { if (files[appFileAt(i)] === false) appView.files[i] = false; });
+}
 
 function appEl(tag, cls, text) {
   const el = document.createElement(tag);
@@ -63,7 +150,7 @@ function appLegend() {
  * одно и то же решение жило бы в двух местах и расходилось. */
 function appFileBox(i) {
   const f = appData.files[i];
-  const where = f.path === null ? f.paths[0] + ' (нет на HEAD)' : f.path;
+  const where = appFileAt(i) + (f.path === null ? ' (нет на HEAD)' : '');
   return appBox(f.label, where + ' · категория: '
     + (f.categoryBy === 'config' ? 'из настроек' : 'по расширению'), appView.files[i], (e) => {
     appView.files[i] = e.target.checked;
@@ -273,6 +360,7 @@ function appTable() {
   document.getElementById('note').textContent = appUi.note
     .replace('{rows}', appData.rows.length)
     .replace('{command}', appData.report.fixCommand);
+  appWrite();
 }
 
 /* Панель перерисовывается целиком, поэтому поле, стоящее под клавиатурой, после
@@ -285,4 +373,9 @@ function appRender() {
   if (at >= 0) document.querySelectorAll('#panel input')[at].focus();
   appTable();
 }
+
+/* Восстановление — до первой отрисовки: у того, кто открыл страницу впервые,
+ * разметка обязана быть умолчанием, а не чужим выбором. */
+const appSaved = appRead();
+if (appSaved !== null) appApply(appSaved);
 appRender();
