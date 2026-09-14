@@ -208,8 +208,9 @@ export function assertCompilable(min, rev, p, src) {
   if (asModule === null) return;
   const shape = MODULE_EXT.indexOf(path.extname(p).toLowerCase()) >= 0 || MODULE_MARK.test(min);
   if (src !== undefined && scriptError(src, p) !== null && moduleError(src) !== null) {
-    refuseCause('файл не JavaScript', 'файл ' + p + ' — не JavaScript (это видно ещё до снятия балласта), '
-      + 'а ' + path.extname(p) + ' стоит в minify.guard: ' + (shape ? asModule : asScript) + '\n'
+    refuseCause('файл не JavaScript', 'файл ' + p + ' — не JavaScript: его исходный текст не'
+      + ' разбирается ни как скрипт, ни как модуль, так что дело не в стриптере, а '
+      + path.extname(p) + ' стоит в minify.guard: ' + (shape ? asModule : asScript) + '\n'
       + '  починка: уберите это расширение из minify.guard или задайте для него '
       + 'minify.ext — например { "' + path.extname(p).toLowerCase() + '": "strip-lines" }');
   }

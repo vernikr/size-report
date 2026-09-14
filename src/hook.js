@@ -156,7 +156,8 @@ function hookState(root) {
 export function installHook(root, cfg) {
   const entry = hookEntry(root);
   if (entry === null) {
-    refuseCause('нечем звать инструмент', 'не нашлось чем звать инструмент: хук будет молчать.\n'
+    refuseCause('нечем звать инструмент', 'не нашлось чем звать инструмент: хук без него молчал бы'
+      + ' после каждого коммита.\n'
       + '  починка: поставьте пакет зависимостью проекта (например: pnpm add -D ' + TOOL_PKG.name + ')'
       + ' и повторите установку');
   }

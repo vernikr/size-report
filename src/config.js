@@ -50,9 +50,20 @@ export function gitRoot() {
     return execFileSync('git', gitArgv(['rev-parse', '--show-toplevel']), {
       encoding: 'utf8', maxBuffer: MAX_BUF, env: gitEnv()
     }).trim();
-  } catch (_e) {
-    refuseCause('не git-репозиторий', 'не git-репозиторий (или git недоступен): таблица собирается по истории git.\n'
-      + '  запустите команду из каталога проекта; если истории ещё нет — создайте её: git init');
+  } catch (e) {
+    // Два тупика с разной починкой — «git не запустился» и «репозитория здесь нет»,
+    // — и расходятся они по тому, что сказал сам git, а не по догадке: ENOENT
+    // значит, что не нашлась программа. Один текст на оба случая («не git-репозиторий
+    // или git недоступен») не называл ни одного из них.
+    if (e.code === 'ENOENT') {
+      refuseCause('нет git', 'git не запустился: его нет в PATH (таблица собирается по его'
+        + ' истории, а смотрю я в ' + process.cwd() + ').\n'
+        + '  починка: поставьте git (https://git-scm.com) и повторите команду');
+    }
+    refuseCause('не git-репозиторий', 'git не видит здесь репозитория: таблица собирается по его'
+      + ' истории (сейчас смотрю в ' + process.cwd() + ').\n'
+      + '  смотрите: запущена ли команда из каталога проекта\n'
+      + '  починка: если истории ещё нет — создайте её: git init');
   }
 }
 
@@ -87,8 +98,15 @@ export function validateConfig(cfg) {
   if (!cfg.columns || cfg.columns.length === 0) fail('не задано ни одной колонки (columns)');
   const labels = new Set();
   cfg.columns.forEach((c, i) => {
-    if (!c || !c.label || !Array.isArray(c.paths) || c.paths.length === 0) {
-      fail('колонка №' + (i + 1) + ' должна быть {label, paths: [...]}');
+    // Метка и пути — имена, а не что попало: путь числом или объектом молча не
+    // совпадает ни с чем, и колонка отчитывается нулём строк за успех. Отказ
+    // обязан случиться здесь, а не превратиться в пустой отчёт.
+    const pathsAreNames = c && Array.isArray(c.paths)
+      && c.paths.length > 0 && c.paths.every((p) => typeof p === 'string' && p !== '');
+    if (!c || typeof c.label !== 'string' || c.label === '' || !pathsAreNames) {
+      fail('колонка №' + (i + 1) + ' должна быть {label, paths: [...]} из непустых строк: '
+        + JSON.stringify(c).slice(0, 90) + '\n  смотрите: черновик с готовыми колонками даёт '
+        + cliCommand('--init <файл>'));
     }
     if (labels.has(c.label)) fail('метка колонки «' + c.label + '» повторяется');
     if (c.category !== undefined && CATEGORY_ORDER.indexOf(c.category) < 0) {
