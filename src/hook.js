@@ -128,15 +128,13 @@ function script(entry) {
     + 'exec node ' + entry.quoted + ' hook-run\n';
 }
 
-/* Состояние хука для человека и для `size doctor`: установлен ли, наш ли файл и
- * чем кончился последний запуск. Ничего не считает и ни к чему не обязывает. */
+/* Состояние хука для `size doctor`: установлен ли и чем кончился последний
+ * запуск. Ничего не считает и ни к чему не обязывает. */
 export function hookStatus(root) {
   const files = HOOKS.map((name) => hookFile(root, name));
-  const present = files.filter((f) => fs.existsSync(f));
   return {
     files: files.map((f) => path.relative(root, f)),
-    installed: present.length > 0,
-    ours: present.length === files.length && present.every(isOurs),
+    installed: files.some((f) => fs.existsSync(f)),
     last: hookState(root)
   };
 }
@@ -147,7 +145,7 @@ function isOurs(file) {
 
 /* Запись о последнем запуске. Отсутствие файла — «хук ещё не запускался», а не
  * ошибка: до первого коммита её и не должно быть. */
-export function hookState(root) {
+function hookState(root) {
   try {
     return JSON.parse(fs.readFileSync(path.join(stateDir(root), STATE), 'utf8'));
   } catch (_e) {
