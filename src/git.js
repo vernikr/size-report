@@ -1,4 +1,4 @@
-import { execFileSync } from 'child_process';
+import { execFileSync, spawnSync } from 'child_process';
 import { EXIT, refuse } from './refusal.js';
 
 /* Единственная граница вызова git: закрепления настроек, блобы пачкой, история и
@@ -42,6 +42,19 @@ export function git(root, args) {
   return execFileSync('git', gitArgv(args), {
     cwd: root, encoding: 'utf8', maxBuffer: MAX_BUF, env: gitEnv()
   });
+}
+
+/* То же чтение, но с кодом возврата: там, где ненулевой код — ожидаемый ответ, а не
+ * отказ (`git diff --quiet` отвечает 1 на расхождение). Исключение здесь означало бы
+ * отказ инструмента там, где задан простой вопрос. `env` досыпается к окружению
+ * границы — им хук собирает коммит отчёта в отдельном индексе, не трогая
+ * настоящий (см. `src/hook.js`). */
+export function gitTry(root, args, env) {
+  const res = spawnSync('git', gitArgv(args), {
+    cwd: root, encoding: 'utf8', maxBuffer: MAX_BUF,
+    env: Object.assign(gitEnv(), env || {})
+  });
+  return { status: res.status, stdout: res.stdout || '', stderr: res.stderr || '' };
 }
 
 /* Чтение блобов пачкой. `git cat-file --batch-check` отвечает про список пар

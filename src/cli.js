@@ -10,6 +10,8 @@ import { reportData } from './data.js';
 import { coverage, coverageText } from './check.js';
 import { explainCommit, explainText } from './explain.js';
 import { doctor, doctorText } from './doctor.js';
+import { hookRun, installHook, uninstallHook } from './hook.js';
+import { rebuild } from './artifact.js';
 import { sensorGaps } from './metrics.js';
 import { render } from './render.js';
 import { totalsOf } from './derived.js';
@@ -71,9 +73,7 @@ function writeFileEnsured(file, text) {
 }
 
 function writeMode(cfg, root) {
-  const { rows, dropped, state } = build(cfg, root);
-  const html = render(rows, cfg);
-  writeFileEnsured(path.join(root, cfg.output), html);
+  const { rows, dropped, state, html } = rebuild(cfg, root);
   console.log('✓ ' + cfg.output + ': ' + rows.length + ' строк × ' + cfg.columns.length + ' файлов, '
     + kmb(byteLen(html)) + ' (пропущено без строки: ' + dropped.length + ' — '
     + dropped.map(skipLine).join(', ') + ')');
@@ -119,6 +119,21 @@ function doctorMode(root, configFile, asJson) {
   return rep.exit;
 }
 
+/* Хук: установка, снятие и то, что он зовёт сам. Ставится и снимается только
+ * явной командой; `hook-run` зовётся хуком и всегда отвечает кодом 0 — коммит уже
+ * сделан, и валить его нечем (устройство и причины — `src/hook.js`). Строка о
+ * сделанном идёт в stderr: она часть вывода git, а не данных инструмента. */
+function hookMode(verb, root, configFile) {
+  if (verb === 'hook-run') {
+    const rep = hookRun(root, configFile);
+    if (rep.note !== '') console.error(rep.note);
+    return rep.code;
+  }
+  const rep = verb === 'install-hook' ? installHook(root, loadConfig(configFile)) : uninstallHook(root);
+  rep.lines.forEach((line) => console.log(line));
+  return rep.code;
+}
+
 /* Объяснение пропущенной строки (`size explain <коммит>`): ответ есть у любого
  * коммита, поэтому код выхода 0 и у «строка есть», и у «строки нет»; 2 — только
  * когда названного коммита в истории нет или префикс подходит нескольким. */
@@ -135,6 +150,16 @@ function explainMode(cfg, root, target, asJson) {
  * `size --config x check` — одно и то же. */
 const VALUE_FLAGS = ['--config', '--init', '--page'];
 const MODE_FLAGS = ['--init', '--write', '--data', '--page'];
+const COMMANDS = ['check', 'explain', 'doctor', 'install-hook', 'uninstall-hook', 'hook-run'];
+
+/* Команды, которым аргумент не нужен: лишнее слово — отказ, а не молчаливый
+ * пропуск, иначе опечатка выглядела бы обычным прогоном. */
+function noArgs(verb, words) {
+  if (words.length > 1) {
+    refuse(EXIT.CONFIG, 'команда «' + verb + '» аргументов не принимает: «' + words[1] + '» лишний'
+      + '\n  починка: ' + cliCommand(verb));
+  }
+}
 
 function plainWords(args) {
   const out = [];
@@ -272,6 +297,7 @@ export function initMode(root, file, force) {
       : null,
     links: { commitUrl: '' },
     rows: { merges: true, sha: true },
+    hooks: { enabled: true },
     skip: []
   };
   // Черновик обязан проходить ту же проверку, которой его встретит первый запуск:
@@ -308,7 +334,7 @@ export function main() {
   const words = plainWords(args);
   const verb = words.length > 0 ? words[0] : null;
   const extra = words.length > 2 ? words.slice(2) : [];
-  if (verb !== null && verb !== 'check' && verb !== 'explain' && verb !== 'doctor') {
+  if (verb !== null && COMMANDS.indexOf(verb) < 0) {
     console.error('✗ неизвестная команда «' + verb + '»\n  починка: ' + cliCommand('--help'));
     return EXIT.CONFIG;
   }
@@ -323,18 +349,16 @@ export function main() {
     if (args.indexOf('--init') >= 0) return initMode(root, argValue(args, '--init'), args.indexOf('--force') >= 0);
     const configFile = argValue(args, '--config') ? path.resolve(argValue(args, '--config')) : path.join(root, CONFIG_NAME);
     if (verb === 'doctor') {
-      if (words.length > 1) {
-        refuse(EXIT.CONFIG, 'команда «doctor» аргументов не принимает: «' + words[1] + '» лишний'
-          + '\n  починка: ' + cliCommand('doctor'));
-      }
+      noArgs(verb, words);
       return doctorMode(root, configFile, args.indexOf('--json') >= 0);
+    }
+    if (verb === 'install-hook' || verb === 'uninstall-hook' || verb === 'hook-run') {
+      noArgs(verb, words);
+      return hookMode(verb, root, configFile);
     }
     const cfg = loadConfig(configFile);
     if (verb === 'check') {
-      if (words.length > 1) {
-        refuse(EXIT.CONFIG, 'команда «check» аргументов не принимает: «' + words[1] + '» лишний'
-          + '\n  починка: ' + cliCommand('check'));
-      }
+      noArgs(verb, words);
       return coverageMode(cfg, root, configFile, args.indexOf('--json') >= 0);
     }
     if (verb === 'explain') {

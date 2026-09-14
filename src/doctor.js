@@ -1,8 +1,9 @@
-import { EXIT, Refusal } from './refusal.js';
+import { EXIT, Refusal, cliCommand } from './refusal.js';
 import { GIT_PINS, git, gitEnv } from './git.js';
 import { loadConfig } from './config.js';
 import { TOOL_PKG } from './tool.js';
 import { coverage, coverageText } from './check.js';
+import { hookStatus } from './hook.js';
 import { minifier } from './minify.js';
 import { tokenizer } from './tokens.js';
 
@@ -18,7 +19,9 @@ import { tokenizer } from './tokens.js';
  * важности, а не «всё хорошо»: 2 — настройки нечитаемы (читать больше нечего),
  * 3 — история обрезана, 1 — покрытие неполно, 4 — число приближённо. Порядок
  * именно такой: сначала то, что мешает считать, потом то, что требует починки,
- * потом честная оговорка о счёте.
+ * потом честная оговорка о счёте. Хук в этот порядок не входит: отчёт собирается
+ * и без него, поэтому сломанный хук — находка без своего кода (вердикт `ok` при
+ * этом всё равно «есть дело»).
  *
  * Чего ответ не делает: не говорит, «правильно» ли выбраны колонки (это знает
  * проект), и не угадывает там, где данных нет, — отсутствие ответа называется
@@ -86,6 +89,7 @@ export function doctor(root, configFile) {
     environment: environment(root),
     config: null,
     dependencies: null,
+    hooks: null,
     coverage: null,
     findings: [],
     exit: EXIT.OK
@@ -103,6 +107,21 @@ export function doctor(root, configFile) {
     rep.exit = e.code;
   }
   rep.dependencies = dependencies(cfg);
+  rep.hooks = hooksReport(root, cfg);
+  if (rep.hooks.installed && rep.hooks.enabled === false) {
+    rep.findings.push({
+      level: 'action',
+      what: 'хук установлен, но автоматика выключена настройкой hooks.enabled: отчёт обновляется руками',
+      fix: 'верните «"hooks": {"enabled": true}» в файл настроек или снимите хук: ' + cliCommand('uninstall-hook')
+    });
+  }
+  if (rep.hooks.installed && rep.hooks.last !== null && HOOK_BAD.indexOf(rep.hooks.last.result) >= 0) {
+    rep.findings.push({
+      level: 'action',
+      what: 'хук: последний запуск не пересобрал отчёт — ' + rep.hooks.last.why,
+      fix: 'починьте то, на что жалуется причина, и пересоберите отчёт: ' + cliCommand('--write')
+    });
+  }
   if (cfg === null) {
     rep.findings.push({
       level: 'note',
@@ -133,10 +152,48 @@ export function doctor(root, configFile) {
     else if (rep.coverage.sensors.length > 0) rep.exit = EXIT.SENSOR;
   }
 
-  // «Делать нечего»: настройки читаемы, покрытие сосчитано и полно, датчики на месте.
-  rep.ok = rep.config.ok && rep.coverage !== null && rep.coverage.ok
-    && rep.coverage.sensors.length === 0;
+  /* «Делать нечего»: ни одной находки-действия и покрытие сосчитано и полно.
+   * Покрытие спрашивается отдельно, потому что его неполнота говорится не находкой,
+   * а блоком покрытия (см. выше), — а вердикт она менять обязана. */
+  rep.ok = rep.coverage !== null && rep.coverage.ok
+    && !rep.findings.some((f) => f.level === 'action');
   return rep;
+}
+
+/* Итог последнего запуска хука словами: по нему человек понимает, что произошло
+ * после коммита, не заглядывая в `.git`. */
+const HOOK_RESULT = {
+  committed: 'отчёт пересобран и закоммичен',
+  rebuilt: 'отчёт пересобран без коммита',
+  unchanged: 'менять было нечего',
+  refused: 'отказ',
+  failed: 'ошибка',
+  skipped: 'пропущен'
+};
+// Итоги, которые требуют действий: отказ инструмента и его собственная ошибка.
+const HOOK_BAD = ['refused', 'failed'];
+
+/* Состояние хука: установлен ли, включён ли настройкой и чем кончился последний
+ * запуск. «Не установлен» — не находка: автоматика ставится явной командой,
+ * и её отсутствие — решение проекта, а не забывчивость. */
+function hooksReport(root, cfg) {
+  const status = hookStatus(root);
+  return {
+    installed: status.installed,
+    files: status.files,
+    enabled: cfg === null ? null : cfg.hooks.enabled,
+    last: status.last
+  };
+}
+
+function hookLine(hooks) {
+  if (!hooks.installed) return 'не установлен (ставится командой ' + cliCommand('install-hook') + ')';
+  const last = hooks.last === null
+    ? 'ещё не запускался'
+    : 'последний запуск ' + hooks.last.at + ' — ' + (HOOK_RESULT[hooks.last.result] || hooks.last.result)
+      + (hooks.last.commit ? ' (' + hooks.last.commit + ')' : '')
+      + (hooks.last.why ? ': ' + hooks.last.why.split('\n')[0] : '');
+  return hooks.files.join(', ') + (hooks.enabled === false ? ' (выключен настройкой)' : '') + '; ' + last;
 }
 
 /* Текст для человека. Покрытие печатает `coverageText` — тот же, что у
@@ -158,6 +215,7 @@ export function doctorText(rep) {
   lines.push('  зависимости: ' + rep.dependencies.map((d) => d.name
     + (d.present === null ? ' — ' + d.note : d.present ? ' ' + d.version + ' есть' : ' нет')
     + ' (' + d.metric + ')').join(', '));
+  lines.push('  хук: ' + hookLine(rep.hooks));
   if (rep.coverage) lines.push(coverageText(rep.coverage));
   rep.findings.forEach((f) => {
     lines.push((f.level === 'action' ? '✗ ' : '· ') + f.what);

@@ -26,6 +26,10 @@ export const DEFAULT_CONFIG = {
   minify: { engine: 'strip', ext: {}, guard: ['.js', '.mjs', '.cjs'] },
   // Токены: каким словарём считать. Семейство — про модели, кодировка — про число.
   tokens: Object.assign({}, TOKEN_DEFAULTS),
+  // Автоматика хука: хук ставится только явной командой (`install-hook`), а этот
+  // ключ — её выключатель (`.size-report/…` не нужен: снятие хука возвращает
+  // проект к прежнему поведению).
+  hooks: { enabled: true },
   journal: null,
   links: { commitUrl: '' },
   // Слияние — обычный коммит: у него есть правки разрешения конфликта, и без
@@ -68,6 +72,7 @@ export function loadConfig(file) {
   const cfg = Object.assign({}, DEFAULT_CONFIG, raw);
   cfg.minify = Object.assign({}, DEFAULT_CONFIG.minify, raw.minify);
   cfg.tokens = Object.assign({}, DEFAULT_CONFIG.tokens, raw.tokens);
+  cfg.hooks = Object.assign({}, DEFAULT_CONFIG.hooks, raw.hooks);
   cfg.links = Object.assign({}, DEFAULT_CONFIG.links, raw.links);
   cfg.rows = Object.assign({}, DEFAULT_CONFIG.rows, raw.rows);
   cfg.path = file;
@@ -107,6 +112,11 @@ export function validateConfig(cfg) {
       + cfg.tokens.family + ' (есть: ' + family.encodings.join(', ') + ')');
   }
   if (!LOCALES[cfg.locale]) fail('неизвестная локаль «' + cfg.locale + '» (есть: ' + Object.keys(LOCALES).join(', ') + ')');
+  // Выключатель хука — «да/нет», а не «правда/ложь»: `false` от случайной строки
+  // отличать обязан инструмент, иначе выключенная автоматика осталась бы включённой.
+  if (typeof cfg.hooks.enabled !== 'boolean') {
+    fail('hooks.enabled — не «да/нет»: ' + JSON.stringify(cfg.hooks.enabled));
+  }
   // Файл таблицы не может быть её колонкой: размер артефакта зависит от числа
   // строк, то есть от самого себя.
   cfg.columns.forEach((c) => {
