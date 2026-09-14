@@ -1,5 +1,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { TOOL_PKG } from './tool.js';
 
 /* Отказ и справка: код выхода, сообщение с готовой командой починки и текст
  * «--help». Стоит ниже всех в цепочке — ни о настройках, ни о git не знает,
@@ -25,20 +26,31 @@ export function refuse(code, message) {
   throw new Refusal(code, message);
 }
 
-/* Команда починки цитирует точку входа, а не сам движок: при импорте движок
- * ничего не запускает, поэтому `--init` работает только через команду. Путь
- * считается от места движка, а не от текущего каталога, — сообщение обязано
+/* Как инструмент вызывается там, где его читают. В репозитории пакета движок
+ * лежит рядом, и команда — это `node bin/size.js`; у проекта-потребителя он в
+ * `node_modules`, и путь туда — не подсказка, а шум: нужна команда, которую можно
+ * скопировать как есть. Там это `npx <имя пакета>`: npx запускает установленный
+ * пакет и в сеть не идёт, пока он есть на месте.
+ *
+ * Команда починки цитирует точку входа, а не сам движок: при импорте движок ничего
+ * не запускает, поэтому `--init` работает только через команду. Для репозитория
+ * путь считается от места движка, а не от текущего каталога, — сообщение обязано
  * работать из любого места проекта. */
-export function cliCommand(flag) {
+function invocation() {
+  if (/[\\/]node_modules[\\/]/.test(__filename)) return 'npx ' + TOOL_PKG.name;
   const bin = path.resolve(path.dirname(__filename), '..', 'bin', 'size.js');
   const shown = path.relative(process.cwd(), bin);
-  return 'node ' + (shown === '' || shown.indexOf('..') === 0 ? bin : shown) + ' ' + flag;
+  return 'node ' + (shown === '' || shown.indexOf('..') === 0 ? bin : shown);
+}
+
+export function cliCommand(flag) {
+  return invocation() + ' ' + flag;
 }
 
 export const USAGE = [
   'size-report — таблица объёма файлов по коммитам.',
   '',
-  'Запуск: node bin/size.js [режим] [ключи]',
+  'Запуск: ' + invocation() + ' [режим] [ключи]',
   '',
   'Режимы:',
   '  --init [файл]   черновик настроек (--force — перезаписать существующий)',

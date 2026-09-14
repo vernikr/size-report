@@ -36,7 +36,11 @@ export const METRICS = {
     measure: (text, file, cfg, rev) => {
       const min = minifyForm(text, file, cfg);
       const ext = path.extname(file).toLowerCase();
-      if (strategyFor(file, cfg) === 'strip-js' && cfg.minify.guard.indexOf(ext) >= 0) assertCompilable(min, rev, file);
+      // Исходный текст нужен гарду, чтобы отличить свою поломку (текст разбирался,
+      // а результат нет) от чужой (в этой графе не JavaScript вовсе).
+      if (strategyFor(file, cfg) === 'strip-js' && cfg.minify.guard.indexOf(ext) >= 0) {
+        assertCompilable(min, rev, file, text);
+      }
       return byteLen(min);
     }
   },
