@@ -55,11 +55,7 @@ const TARGETS = [
   'docs/requirements.md', 'docs/module-design.md'
 ];
 
-/* Сторож читает git сам, поэтому закрепляет его настройки у своего вызова — так
- * же, как это делает движок на своей границе: без `core.quotePath=false` пути вне
- * ASCII приходят закавыченными, и ответ сторожа зависел бы от машины (`B1`). */
-const GIT = ['-c', 'core.quotePath=false'];
-const tracked = gitIn(ROOT, GIT.concat(['ls-files'])).split('\n').filter((l) => l !== '');
+const tracked = gitIn(ROOT, ['ls-files']).split('\n').filter((l) => l !== '');
 const dirs = new Set();
 tracked.forEach((f) => {
   const parts = f.split('/');
@@ -129,7 +125,7 @@ function invocations(text) {
 test('пути, названные документацией, есть в дереве', () => {
   // Файлы, которые знала фикстура: её история — не одно дерево, и документация
   // вправе называть файл по имени, жившему до переименования.
-  const fixture = new Set(gitIn(sharedClone('plain', tmp), GIT.concat(['log', '--name-only', '--pretty=format:']))
+  const fixture = new Set(gitIn(sharedClone('plain', tmp), ['log', '--name-only', '--pretty=format:'])
     .split('\n').filter((l) => l !== ''));
   const foreign = new Set(FOREIGN);
   const missing = [];

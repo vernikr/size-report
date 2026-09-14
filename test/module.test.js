@@ -21,8 +21,7 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
-import { ROOT, firstLine, hasStack, runSize, runTool, tempDir } from '../tools/harness.js';
+import { ROOT, firstLine, gitIn, hasStack, runSize, runTool, tempDir } from '../tools/harness.js';
 
 const tmp = tempDir('module');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
@@ -46,11 +45,11 @@ function makeRepo(name, pkg, extra) {
   fs.writeFileSync(path.join(dir, 'src', 'greet.js'), GREET);
   fs.writeFileSync(path.join(dir, 'README.md'), '# ' + name + '\n');
   Object.keys(extra || {}).forEach((f) => fs.writeFileSync(path.join(dir, f), extra[f]));
-  execFileSync('git', ['init', '-q'], { cwd: dir });
-  execFileSync('git', ['-C', dir, 'config', 'user.email', 'test@example.com']);
-  execFileSync('git', ['-C', dir, 'config', 'user.name', 'Тест']);
-  execFileSync('git', ['-C', dir, 'add', '-A']);
-  execFileSync('git', ['-C', dir, 'commit', '-qm', 'первый коммит']);
+  gitIn(dir, ['init', '-q']);
+  gitIn(dir, ['config', 'user.email', 'test@example.com']);
+  gitIn(dir, ['config', 'user.name', 'Тест']);
+  gitIn(dir, ['add', '-A']);
+  gitIn(dir, ['commit', '-qm', 'первый коммит']);
   return dir;
 }
 
@@ -198,7 +197,7 @@ test('подсказка в чужом node_modules — это команда, �
     fs.cpSync(path.join(ROOT, part), path.join(pkg, part), { recursive: true });
   }
   fs.copyFileSync(path.join(ROOT, 'package.json'), path.join(pkg, 'package.json'));
-  execFileSync('git', ['init', '-q'], { cwd: dir });
+  gitIn(dir, ['init', '-q']);
 
   const installed = { name: 'движок из node_modules', file: path.join(pkg, 'bin', 'size.js'), env: null };
   const res = runTool(installed, dir, []);

@@ -32,16 +32,15 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { execFileSync, spawn } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { collectOutput } from './harness.js';
+import { collectOutput, gitIn } from './harness.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PARITY = path.join(ROOT, 'fixtures', 'parity');
 const CONFIG = path.join(PARITY, 'config.json');
 const DEFAULT_REPO = path.join(ROOT, '..', 'figma', 'safe-resets');
 const DEFAULT_BIN = path.join(ROOT, 'bin', 'size.js');
-const MAX_BUF = 256 * 1024 * 1024;
 
 /* Среды сверки: обычная и с чужими настройками. У живого проекта пути только
  * ASCII, поэтому `core.quotePath` здесь ни при чём — проверяется сам факт
@@ -159,8 +158,8 @@ async function checkProfile(profile, expected, tmp) {
   let bad = 0;
 
   const dir = path.join(tmp, 'clone-' + PROFILES.indexOf(profile));
-  execFileSync('git', ['clone', '-q', '--no-hardlinks', repo, dir], { encoding: 'utf8', maxBuffer: MAX_BUF });
-  execFileSync('git', ['checkout', '-q', head], { cwd: dir, encoding: 'utf8', maxBuffer: MAX_BUF });
+  gitIn(null, ['clone', '-q', '--no-hardlinks', repo, dir]);
+  gitIn(dir, ['checkout', '-q', head]);
 
   const json = await runCli(bin, dir, ['--json'], profile.env);
   if (json.code !== 0) {

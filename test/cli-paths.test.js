@@ -12,9 +12,8 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
 import {
-  CONFIG, MAX_BUF, cloneFixture, firstLine, gitIn, hasStack, refusal, runFixture, runSize, tempDir
+  CONFIG, cloneFixture, firstLine, gitIn, gitTry, hasStack, refusal, runFixture, runSize, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('cli-paths');
@@ -25,8 +24,7 @@ after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 test('обрезанная история: код 3 и команда докачки', () => {
   const base = cloneFixture(path.join(tmp, 'shallow-source'));
   const dir = path.join(tmp, 'shallow');
-  const clone = spawnSync('git', ['clone', '-q', '--depth', '1', 'file://' + base, dir],
-    { encoding: 'utf8', maxBuffer: MAX_BUF });
+  const clone = gitTry(null, ['clone', '-q', '--depth', '1', 'file://' + base, dir]);
   assert.equal(clone.status, 0, 'не удалось собрать обрезанную выкладку: ' + firstLine(clone.stderr));
   assert.equal(gitIn(dir, ['rev-parse', '--is-shallow-repository']).trim(), 'true',
     'выкладка вышла полной: проверять нечего');

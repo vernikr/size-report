@@ -38,6 +38,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { LEGACY, MAX_BUF, gitConfig, sha256 } from './harness.js';
 import { CONFIG_NAME } from '../src/config.js';
+import { gitArgv, gitEnv } from '../src/git.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_PROJECT = path.join(ROOT, '..', 'figma', 'safe-resets');
@@ -46,14 +47,16 @@ const DEFAULT_OUT = path.join(ROOT, 'fixtures', 'parity');
 /* stderr задан явно, хотя он и не читается: без этого `execFileSync` дублирует его
  * в наш stderr, и замечание самого git (`hint: Using 'master' …`) становится
  * первой строкой нашего сообщения об отказе, а причина — невидимой. */
+/* Закрепления — тот же список, что у движка и проверок: эталон снимается одним и
+ * тем же чтением git независимо от машины. */
 function git(dir, args) {
-  return execFileSync('git', args,
-    { cwd: dir, encoding: 'utf8', maxBuffer: MAX_BUF, stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  return execFileSync('git', gitArgv(args),
+    { cwd: dir, encoding: 'utf8', maxBuffer: MAX_BUF, env: gitEnv(), stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 }
 
 function gitBytes(dir, args) {
-  return execFileSync('git', args,
-    { cwd: dir, maxBuffer: MAX_BUF, stdio: ['ignore', 'pipe', 'pipe'] });
+  return execFileSync('git', gitArgv(args),
+    { cwd: dir, maxBuffer: MAX_BUF, env: gitEnv(), stdio: ['ignore', 'pipe', 'pipe'] });
 }
 
 /* Копия запускается закреплённым окружением — тем же, что у проверок

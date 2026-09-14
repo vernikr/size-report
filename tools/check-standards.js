@@ -27,7 +27,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { MAX_BUF, PARITY, ROOT, SYNTH, firstDiff, tempDir } from './harness.js';
+import { MAX_BUF, PARITY, ROOT, SYNTH, firstDiff, gitIn, tempDir } from './harness.js';
 
 const LIVE = path.join(ROOT, 'fixtures', 'live', 'history.bundle');
 const BUNDLE = 'history.bundle';
@@ -107,8 +107,7 @@ function compareManifest(made, committed) {
  * доказательство, что упаковка читается, и только: число коммитов считается по
  * всему достижимому, а не по выложенной ветке. */
 function bundleFacts(file) {
-  const listed = execFileSync('git', ['bundle', 'list-heads', file],
-    { encoding: 'utf8', maxBuffer: MAX_BUF }).trim().split('\n');
+  const listed = gitIn(null, ['bundle', 'list-heads', file]).trim().split('\n');
   const heads = {};
   listed.filter((line) => line !== '').forEach((line) => {
     const at = line.indexOf(' ');
@@ -116,10 +115,8 @@ function bundleFacts(file) {
   });
   const dir = tempDir('bundle');
   try {
-    execFileSync('git', ['clone', '-q', '--no-hardlinks', file, dir],
-      { stdio: ['ignore', 'ignore', 'pipe'], maxBuffer: MAX_BUF });
-    heads['*'] = execFileSync('git', ['-C', dir, 'rev-list', '--count', '--all'],
-      { encoding: 'utf8', maxBuffer: MAX_BUF }).trim();
+    gitIn(null, ['clone', '-q', '--no-hardlinks', file, dir]);
+    heads['*'] = gitIn(dir, ['rev-list', '--count', '--all']).trim();
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

@@ -27,6 +27,7 @@ import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { LEGACY, MAX_BUF, gitConfig, sha256 } from './harness.js';
+import { gitArgv, gitEnv } from '../src/git.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'fixtures', 'synthetic');
@@ -56,12 +57,14 @@ const AUTHOR = {
   GIT_COMMITTER_EMAIL: 'fixture@size-report.invalid'
 };
 
+/* Настройки закреплены как у движка и у проверок: фикстура собирается тем же git,
+ * и её байты не должны зависеть от машины, на которой её собрали. */
 function git(dir, args, env) {
-  return execFileSync('git', args, {
+  return execFileSync('git', gitArgv(args), {
     cwd: dir,
     encoding: 'utf8',
     maxBuffer: MAX_BUF,
-    env: Object.assign({}, process.env, AUTHOR, env || {})
+    env: Object.assign({}, gitEnv(), AUTHOR, env || {})
   });
 }
 
@@ -289,8 +292,8 @@ function buildRepo(dir) {
   write(dir, 'src/config.mjs', CONFIG_MJS_2);
   commit(dir, 'fixture: правка той же строки и служебного модуля');
 
-  const merged = spawnSync('git', ['merge', '--no-commit', '--no-ff', 'feature'], {
-    cwd: dir, encoding: 'utf8', env: Object.assign({}, process.env, AUTHOR)
+  const merged = spawnSync('git', gitArgv(['merge', '--no-commit', '--no-ff', 'feature']), {
+    cwd: dir, encoding: 'utf8', env: Object.assign({}, gitEnv(), AUTHOR)
   });
   if (merged.status === 0) throw new Error('слияние в фикстуре прошло без конфликта');
   write(dir, 'src/code.js', CODE_MERGED);

@@ -18,6 +18,11 @@
  *
  * Проверки, которые правят файлы, берут свой клон (`cloneFixture`) и в общие
  * не ходят: соседняя проверка из того же файла получила бы чужую правку.
+ *
+ * Третье правило — про git: проверки и инструменты зовут его через `gitIn`
+ * (или `gitTry`, где нужен код возврата), а настройки берутся из того же списка,
+ * что закрепляет движок (`src/git.js`). Читать git в обход этого списка нечем,
+ * и это стережёт `test/git-pins.test.js`, а не комментарий здесь.
  */
 
 import fs from 'node:fs';
@@ -27,6 +32,7 @@ import crypto from 'node:crypto';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { gitArgv, gitEnv } from '../src/git.js';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const SYNTH = path.join(ROOT, 'fixtures', 'synthetic');
@@ -65,8 +71,7 @@ export function gitConfig(pairs) {
 /* Клон фикстуры без общих жёстких ссылок: он же рабочее дерево для проверок,
  * которые правят файлы. */
 export function cloneFixture(into) {
-  execFileSync('git', ['clone', '-q', '--no-hardlinks', BUNDLE, into],
-    { encoding: 'utf8', maxBuffer: MAX_BUF });
+  gitIn(null, ['clone', '-q', '--no-hardlinks', BUNDLE, into]);
   return into;
 }
 
@@ -74,10 +79,8 @@ export function cloneFixture(into) {
  * при `core.autocrlf=true` — значении по умолчанию в установке Git для Windows.
  * На диске CRLF, в git LF, и git считает дерево чистым. */
 export function cloneCrlf(into) {
-  execFileSync('git', ['-c', 'core.autocrlf=true', 'clone', '-q', '--no-hardlinks', BUNDLE, into],
-    { encoding: 'utf8', maxBuffer: MAX_BUF });
-  execFileSync('git', ['-C', into, 'config', 'core.autocrlf', 'true'],
-    { encoding: 'utf8', maxBuffer: MAX_BUF });
+  gitIn(null, ['-c', 'core.autocrlf=true', 'clone', '-q', '--no-hardlinks', BUNDLE, into]);
+  gitIn(into, ['config', 'core.autocrlf', 'true']);
   return into;
 }
 
@@ -92,8 +95,27 @@ export function sharedClone(kind, tempRoot) {
   return shared.get(kind);
 }
 
+/* Единственный вход к git для проверок и инструментов: закрепления и локаль —
+ * общие с движком (`src/git.js`), чтобы список настроек был один на пакет.
+ * `dir === null` — команда не про каталог (клон, разбор бандла). */
 export function gitIn(dir, args) {
-  return execFileSync('git', ['-C', dir].concat(args), { encoding: 'utf8', maxBuffer: MAX_BUF });
+  return execFileSync('git', gitArgv((dir === null ? [] : ['-C', dir]).concat(args)),
+    { encoding: 'utf8', maxBuffer: MAX_BUF, env: gitEnv() });
+}
+
+// То же, но с кодом возврата: там, где отказ — ожидаемый ответ (слияние, clone).
+export function gitTry(dir, args) {
+  const res = spawnSync('git', gitArgv((dir === null ? [] : ['-C', dir]).concat(args)),
+    { encoding: 'utf8', maxBuffer: MAX_BUF, env: gitEnv() });
+  return { status: res.status, stdout: res.stdout || '', stderr: res.stderr || '' };
+}
+
+/* Заведомо незакреплённый вызов — и он один на весь репозиторий: проверке, которая
+ * измеряет само окружение (принимает ли git настройки из окружения и сильнее ли
+ * ключ командной строки), закрепления мешают ровно так же, как помогали бы везде
+ * ещё. Поэтому имя говорит, что делает, а не «так случайно вышло». */
+export function gitBare(args, opts) {
+  return spawnSync('git', args, Object.assign({ encoding: 'utf8', maxBuffer: MAX_BUF }, opts || {}));
 }
 
 /* Инструмента может не быть на месте (сборка не собрана, замороженная копия не

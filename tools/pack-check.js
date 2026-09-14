@@ -24,7 +24,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { BUNDLE, CONFIG, MAX_BUF, ROOT } from './harness.js';
+import { BUNDLE, CONFIG, MAX_BUF, ROOT, gitIn } from './harness.js';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'size-report-pack-'));
 let failed = 0;
@@ -49,7 +49,7 @@ function run(bin, cwd, args) {
 
 function clone(name) {
   const dir = path.join(tmp, name);
-  execFileSync('git', ['clone', '-q', BUNDLE, dir], { maxBuffer: MAX_BUF });
+  gitIn(null, ['clone', '-q', BUNDLE, dir]);
   return dir;
 }
 

@@ -12,9 +12,8 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
 import {
-  PACKAGE, SYNTH, firstDiff, gitConfig, readRun, sharedClone, tempDir
+  PACKAGE, SYNTH, firstDiff, gitBare, gitConfig, readRun, sharedClone, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('environment');
@@ -42,9 +41,9 @@ const HOSTILE_ENVS = [
 ];
 
 test('окружение теста умеет задавать настройки git (нужен git ≥ 2.31)', () => {
-  const res = spawnSync('git', ['config', '--get', 'core.quotePath'], {
-    encoding: 'utf8', env: Object.assign({}, process.env, gitConfig({ 'core.quotePath': 'true' }))
-  });
+  // Заведомо без закреплений: проверяется само окружение, а не чтение репозитория.
+  const res = gitBare(['config', '--get', 'core.quotePath'],
+    { env: Object.assign({}, process.env, gitConfig({ 'core.quotePath': 'true' })) });
   assert.equal((res.stdout || '').trim(), 'true',
     'git не принимает настройки через окружение: чужие правила машины задать нечем, '
       + 'а значит герметичность нечем и проверить');
@@ -53,9 +52,8 @@ test('окружение теста умеет задавать настройк
 /* Ключ командной строки сильнее и настроек машины, и настроек из окружения — на
  * этом стоит вся починка: закрепление живёт в движке, а не в чужом конфиге. */
 test('закрепление движка нельзя перебить из окружения', () => {
-  const res = spawnSync('git', ['-c', 'core.quotePath=false', 'config', '--get', 'core.quotePath'], {
-    encoding: 'utf8', env: Object.assign({}, process.env, gitConfig({ 'core.quotePath': 'true' }))
-  });
+  const res = gitBare(['-c', 'core.quotePath=false', 'config', '--get', 'core.quotePath'],
+    { env: Object.assign({}, process.env, gitConfig({ 'core.quotePath': 'true' })) });
   assert.equal((res.stdout || '').trim(), 'false',
     'ключ командной строки больше не сильнее окружения: закрепление в движке ничего не гарантирует');
 });
