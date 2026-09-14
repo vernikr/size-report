@@ -1,6 +1,6 @@
 import { assertFullHistory, readHistory } from './git.js';
 import { measureHistory } from './history.js';
-import { EXIT, cliCommand, refuse } from './refusal.js';
+import { cliCommand, refuseCause } from './refusal.js';
 import { CONFIG_NAME } from './config.js';
 
 /* Почему у коммита нет строки — ответ на конкретный вопрос про конкретный коммит.
@@ -27,11 +27,12 @@ export function explainCommit(cfg, root, target) {
   const needle = String(target).toLowerCase();
   const found = commits.filter((c) => c.sha.toLowerCase().indexOf(needle) === 0);
   if (found.length === 0) {
-    refuse(EXIT.CONFIG, 'в истории нет коммита «' + target + '»'
+    refuseCause('нет такого коммита', 'в истории нет коммита «' + target + '»'
       + '\n  починка: посмотрите историю: git log --oneline');
   }
   if (found.length > 1) {
-    refuse(EXIT.CONFIG, 'префикс «' + target + '» неоднозначен: подходят ' + found.length + ' коммитов'
+    refuseCause('коммит назван неточно', 'префикс «' + target + '» неоднозначен: подходят '
+      + found.length + ' коммитов'
       + '\n  ' + found.slice(0, 5).map((c) => c.sha.slice(0, 7) + ' ' + c.subject).join('\n  ')
       + '\n  починка: назовите больше знаков');
   }

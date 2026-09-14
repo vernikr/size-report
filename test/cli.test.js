@@ -207,6 +207,49 @@ test('два режима сразу и несовместимые ключи �
     'отвергнутый зов всё-таки записал файл');
 });
 
+/* `--json` — форма ответа, а не режим, и правило у него одно: ответ бывает ровно у
+ * четырёх вызовов. Проверка идёт перебором, потому что правило именно про все:
+ * у каждой команды и у каждого режима `--json` либо отвечает данными, либо
+ * отвергнут с названным виновником. Второе и есть обещание — просить JSON там, где
+ * его не бывает, не должно выглядеть исправным прогоном. */
+test('--json отвечает ровно там, где у вызова есть ответ', () => {
+  const dir = cloneFixture(path.join(tmp, 'json-rule'));
+  // Настройки кладутся в проект, а не отдаются ключом: `--config` рядом с `--init`
+  // — сам по себе отказ, и проверка правила подменилась бы проверкой этого отказа.
+  fs.copyFileSync(CONFIG, path.join(dir, 'size-table.config.json'));
+  const sha = gitIn(dir, ['rev-parse', 'HEAD']).trim();
+
+  // Четыре вызова с ответом: без команды и режима — прежняя форма данных
+  // (заморожена эталоном паритета), и три команды со своим ответом.
+  [[], ['check'], ['doctor'], ['explain', sha]].forEach((args) => {
+    const res = runSize(dir, args.concat('--json'));
+    assert.equal(hasStack(res.stderr), false,
+      'зов «' + args.concat('--json').join(' ') + '» упал стеком:\n' + res.stderr);
+    const rep = JSON.parse(res.stdout);
+    assert.equal(typeof rep, 'object', 'зов «' + args.join(' ') + ' --json» не ответил данными');
+  });
+
+  // Режимы: у них ответ уже один — запись или черновик, и JSON к ней не просится.
+  ['--init', '--write', '--data', '--page'].forEach((mode) => {
+    const res = runSize(dir, [mode, '--json']);
+    refusal(res, 2, '--json рядом с режимом ' + mode);
+    assert.ok(res.stderr.indexOf('«--json»') >= 0 && res.stderr.indexOf('«' + mode + '»') >= 0,
+      'отказ не называет оба виновника:\n' + res.stderr);
+  });
+
+  // Команды: у этих трёх ответа нет вовсе.
+  ['install-hook', 'uninstall-hook', 'hook-run'].forEach((verb) => {
+    const res = runSize(dir, [verb, '--json']);
+    refusal(res, 2, '--json у команды ' + verb);
+    assert.match(res.stderr, /нет ответа в JSON/, 'отказ объясняет не то:\n' + res.stderr);
+  });
+
+  // И ни один отвергнутый зов не тронул проект: разбор идёт до чтения дерева.
+  const page = path.join(dir, 'refused-page.html');
+  refusal(runSize(dir, ['--page', page, '--json']), 2, '--json рядом с --page');
+  assert.equal(fs.existsSync(page), false, 'отвергнутый зов всё-таки записал страницу');
+});
+
 /* ---------- таблица кодов ---------- */
 
 test('коды выхода совпадают с таблицей плана', async () => {

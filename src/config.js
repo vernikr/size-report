@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { execFileSync } from 'child_process';
 import { MAX_BUF, gitArgv, gitEnv } from './git.js';
-import { EXIT, cliCommand, refuse } from './refusal.js';
+import { cliCommand, refuseCause } from './refusal.js';
 import { LOCALES } from './locales.js';
 import { METRICS, MINIFY_ENGINES } from './metrics.js';
 import { TOKEN_DEFAULTS, TOKEN_FAMILIES } from './tokens.js';
@@ -51,7 +51,7 @@ export function gitRoot() {
       encoding: 'utf8', maxBuffer: MAX_BUF, env: gitEnv()
     }).trim();
   } catch (_e) {
-    refuse(EXIT.CONFIG, 'не git-репозиторий (или git недоступен): таблица собирается по истории git.\n'
+    refuseCause('не git-репозиторий', 'не git-репозиторий (или git недоступен): таблица собирается по истории git.\n'
       + '  запустите команду из каталога проекта; если истории ещё нет — создайте её: git init');
   }
 }
@@ -60,13 +60,14 @@ export function gitRoot() {
  * который только подключил генератор, конфиг может быть в три строки. */
 export function loadConfig(file) {
   if (!fs.existsSync(file)) {
-    refuse(EXIT.CONFIG, 'нет файла настроек ' + file + '\n  создайте его: ' + cliCommand('--init'));
+    refuseCause('нет файла настроек', 'нет файла настроек ' + file
+      + '\n  создайте его: ' + cliCommand('--init'));
   }
   let raw;
   try {
     raw = JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch (e) {
-    refuse(EXIT.CONFIG, 'не разобран ' + file + ': ' + e.message
+    refuseCause('настройки не разобраны', 'не разобран ' + file + ': ' + e.message
       + '\n  починка: правьте ' + file + '; образец настроек даёт ' + cliCommand('--init') + ' в пустом каталоге');
   }
   const cfg = Object.assign({}, DEFAULT_CONFIG, raw);
@@ -81,7 +82,8 @@ export function loadConfig(file) {
 }
 
 export function validateConfig(cfg) {
-  const fail = (msg) => refuse(EXIT.CONFIG, 'конфиг ' + cfg.path + ': ' + msg + '\n  починка: правьте ' + cfg.path);
+  const fail = (msg) => refuseCause('настройки неверны',
+    'конфиг ' + cfg.path + ': ' + msg + '\n  починка: правьте ' + cfg.path);
   if (!cfg.columns || cfg.columns.length === 0) fail('не задано ни одной колонки (columns)');
   const labels = new Set();
   cfg.columns.forEach((c, i) => {

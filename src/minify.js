@@ -1,6 +1,6 @@
 import path from 'path';
 import { loadOptional } from './optional.js';
-import { EXIT, refuse } from './refusal.js';
+import { refuseCause } from './refusal.js';
 
 /* Настоящий минификатор — необязательная зависимость (её устройство — в
  * `src/optional.js`), а здесь только то, что знает сам минификатор: какие форматы
@@ -47,7 +47,8 @@ export function minifyWithEsbuild(text, file, rev) {
       sourcefile: file
     }).code;
   } catch (e) {
-    refuse(EXIT.CONFIG, 'esbuild не разобрал ' + file + ' на ' + rev.slice(0, 7) + ': ' + cause(e.message)
+    refuseCause('минификатор не разобрал', 'esbuild не разобрал ' + file + ' на '
+      + rev.slice(0, 7) + ': ' + cause(e.message)
       + '\n  починка: расширение соврало о содержимом или минификатор старше синтаксиса;'
       + ' задайте этому расширению упрощение в minify.ext (например {"' + ext + '": "strip-lines"})'
       + ' или считайте метрику прежним способом: "minify": {"engine": "strip"}');

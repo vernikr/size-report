@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
-import { EXIT, Refusal, USAGE, cliCommand, refuse } from './refusal.js';
+import { EXIT, Refusal, USAGE, cliCommand, refuseCause } from './refusal.js';
 import { CONFIG_NAME, gitRoot, loadConfig, validateConfig } from './config.js';
 import { MAX_BUF, git, gitArgv, gitEnv } from './git.js';
 import { byteLen } from './strip.js';
@@ -159,7 +159,7 @@ const MODES = ['--init', '--write', '--data', '--page'];
 const VALUE_FLAGS = ['--config', '--init', '--page'];
 const FLAGS = ['--help', '-h'].concat(MODES, VALUE_FLAGS, ['--json', '--force']);
 const COMMANDS = ['check', 'explain', 'doctor', 'install-hook', 'uninstall-hook', 'hook-run'];
-const JSON_COMMANDS = ['check', 'explain', 'doctor'];
+const ANSWER_COMMANDS = ['check', 'explain', 'doctor'];
 const HOOK_COMMANDS = ['install-hook', 'uninstall-hook', 'hook-run'];
 
 function parseArgs(args) {
@@ -176,10 +176,10 @@ function parseArgs(args) {
       continue;
     }
     if (FLAGS.indexOf(a) < 0) {
-      refuse(EXIT.CONFIG, 'незнакомый ключ «' + a + '»\n  починка: ' + cliCommand('--help'));
+      refuseCause('незнакомый ключ', 'незнакомый ключ «' + a + '»\n  починка: ' + cliCommand('--help'));
     }
     if (seen.has(a)) {
-      refuse(EXIT.CONFIG, 'ключ «' + a + '» назван дважды\n  починка: ' + cliCommand('--help'));
+      refuseCause('повтор ключа', 'ключ «' + a + '» назван дважды\n  починка: ' + cliCommand('--help'));
     }
     seen.add(a);
     if (VALUE_FLAGS.indexOf(a) >= 0) {
@@ -188,7 +188,7 @@ function parseArgs(args) {
       // У `--init` и `--page` это законное «по умолчанию», а у `--config` —
       // молчаливый пропуск: настройки были бы взяты не те, что назвал человек.
       if (none && a === '--config') {
-        refuse(EXIT.CONFIG, 'у ключа «' + a + '» нет значения: нужен файл настроек'
+        refuseCause('ключ без значения', 'у ключа «' + a + '» нет значения: нужен файл настроек'
           + '\n  починка: ' + cliCommand(a + ' <файл>'));
       }
       if (!none) i++;
@@ -207,14 +207,15 @@ function checkArgs(words, seen, values, modes) {
   const arg = words.slice(1);
   const mode = modes.length > 0 ? modes[0] : null;
   if (modes.length > 1) {
-    refuse(EXIT.CONFIG, 'два режима сразу: «' + modes[0] + '» и «' + modes[1] + '» — режим один'
+    refuseCause('два режима сразу', 'два режима сразу: «' + modes[0] + '» и «' + modes[1] + '» — режим один'
       + '\n  починка: ' + cliCommand(modes[0]));
   }
   if (seen.has('--force') && mode !== '--init') {
-    refuse(EXIT.CONFIG, 'ключ «--force» работает только с «--init»\n  починка: ' + cliCommand('--init --force'));
+    refuseCause('несовместимый ключ', 'ключ «--force» работает только с «--init»'
+      + '\n  починка: ' + cliCommand('--init --force'));
   }
   if (seen.has('--config') && mode === '--init') {
-    refuse(EXIT.CONFIG, 'у «--init» свой файл, а «--config» называет настройки проекта'
+    refuseCause('несовместимый ключ', 'у «--init» свой файл, а «--config» называет настройки проекта'
       + '\n  починка: ' + cliCommand('--init <файл>'));
   }
   if (verb !== null && COMMANDS.indexOf(verb) < 0) {
@@ -224,32 +225,39 @@ function checkArgs(words, seen, values, modes) {
     // команда, и зов её разбирается ниже.
     const valued = MODES.find((f) => VALUE_FLAGS.indexOf(f) >= 0 && typeof values[f] === 'string');
     if (valued !== undefined) {
-      refuse(EXIT.CONFIG, 'лишнее слово «' + verb + '»: «' + valued + '» принимает одно значение'
+      refuseCause('лишнее слово', 'лишнее слово «' + verb + '»: «' + valued + '» принимает одно значение'
         + '\n  починка: ' + cliCommand(valued + ' [файл]'));
     }
-    refuse(EXIT.CONFIG, 'неизвестная команда «' + verb + '»\n  починка: ' + cliCommand('--help'));
+    refuseCause('неизвестная команда', 'неизвестная команда «' + verb + '»\n  починка: ' + cliCommand('--help'));
   }
   if (verb !== null && mode !== null) {
-    refuse(EXIT.CONFIG, 'команда «' + verb + '» и режим «' + mode + '» — разное, вместе они не работают'
+    refuseCause('команда и режим', 'команда «' + verb + '» и режим «' + mode + '» — разное, вместе они не работают'
       + '\n  починка: ' + cliCommand(verb));
   }
   // Коммит либо не назван, либо назван не один раз — тупика два, а починка одна.
-  if (verb === 'explain' && arg.length !== 1) {
-    refuse(EXIT.CONFIG, (arg.length === 0
-      ? 'команде «explain» нужен коммит: смотрите на sha или его начало'
-      : 'команда «explain» принимает один коммит, а не ' + arg.length
-        + ': «' + arg.slice(1).join('», «') + '» лишние')
+  if (verb === 'explain' && arg.length === 0) {
+    refuseCause('нет коммита', 'команде «explain» нужен коммит: смотрите на sha или его начало'
       + '\n  починка: ' + cliCommand('explain <коммит>'));
   }
+  if (verb === 'explain' && arg.length > 1) {
+    refuseCause('лишнее слово', 'команда «explain» принимает один коммит, а не ' + arg.length
+      + ': «' + arg.slice(1).join('», «') + '» лишние\n  починка: ' + cliCommand('explain <коммит>'));
+  }
   if (verb !== null && verb !== 'explain' && arg.length > 0) {
-    refuse(EXIT.CONFIG, 'команда «' + verb + '» аргументов не принимает: «' + arg[0] + '» лишний'
+    refuseCause('лишнее слово', 'команда «' + verb + '» аргументов не принимает: «' + arg[0] + '» лишний'
       + '\n  починка: ' + cliCommand(verb));
   }
-  if (seen.has('--json') && verb !== null && JSON_COMMANDS.indexOf(verb) < 0) {
-    refuse(EXIT.CONFIG, 'у команды «' + verb + '» нет ответа в JSON\n  починка: ' + cliCommand(verb));
+  // `--json` — не режим, а форма ответа, и правило у него одно: ответ бывает
+  // ровно у четырёх вызовов. Без команды и режима это прежняя форма данных
+  // (заморожена эталоном паритета — убрать её нельзя), три команды отвечают
+  // своим. У команды без ответа просить нечего, а у режима ответ уже один —
+  // запись; оба случая — отказ, и каждый называет своего виновника.
+  if (seen.has('--json') && verb !== null && ANSWER_COMMANDS.indexOf(verb) < 0) {
+    refuseCause('нет ответа в JSON', 'у команды «' + verb + '» нет ответа в JSON'
+      + '\n  починка: ' + cliCommand(verb));
   }
   if (seen.has('--json') && verb === null && mode !== null) {
-    refuse(EXIT.CONFIG, '«--json» и режим «' + mode + '» — разное: данные или запись, но не оба'
+    refuseCause('два ответа сразу', '«--json» и режим «' + mode + '» — разное: данные или запись, но не оба'
       + '\n  починка: ' + cliCommand(mode));
   }
   return {
@@ -351,8 +359,8 @@ export function sniffColumns(root, limit, skip) {
 export function initMode(root, file, force) {
   const target = file ? path.resolve(root, file) : path.join(root, CONFIG_NAME);
   if (fs.existsSync(target) && !force) {
-    refuse(EXIT.CONFIG, 'конфиг уже есть: ' + target + '\n  починка: правьте его или перезапишите черновиком: '
-      + cliCommand('--init --force'));
+    refuseCause('конфиг уже есть', 'конфиг уже есть: ' + target
+      + '\n  починка: правьте его или перезапишите черновиком: ' + cliCommand('--init --force'));
   }
   const journalPath = INIT_JOURNALS.find((p) => fs.existsSync(path.join(root, p))) || '';
   const outDir = fs.existsSync(path.join(root, 'docs')) ? 'docs/' : '';

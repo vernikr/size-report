@@ -1,6 +1,6 @@
 import path from 'path';
 import vm from 'vm';
-import { EXIT, refuse } from './refusal.js';
+import { refuseCause } from './refusal.js';
 import { moduleError } from './parse.js';
 
 /* Снятие балласта: стрипперы комментариев и отступов для каждой формы текста и
@@ -208,7 +208,7 @@ export function assertCompilable(min, rev, p, src) {
   if (asModule === null) return;
   const shape = MODULE_EXT.indexOf(path.extname(p).toLowerCase()) >= 0 || MODULE_MARK.test(min);
   if (src !== undefined && scriptError(src, p) !== null && moduleError(src) !== null) {
-    refuse(EXIT.CONFIG, 'файл ' + p + ' — не JavaScript (это видно ещё до снятия балласта), '
+    refuseCause('файл не JavaScript', 'файл ' + p + ' — не JavaScript (это видно ещё до снятия балласта), '
       + 'а ' + path.extname(p) + ' стоит в minify.guard: ' + (shape ? asModule : asScript) + '\n'
       + '  починка: уберите это расширение из minify.guard или задайте для него '
       + 'minify.ext — например { "' + path.extname(p).toLowerCase() + '": "strip-lines" }');

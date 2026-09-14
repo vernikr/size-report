@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { EXIT, Refusal, cliCommand, refuse } from './refusal.js';
+import { EXIT, Refusal, cliCommand, refuseCause } from './refusal.js';
 import { git, gitTry } from './git.js';
 import { loadConfig } from './config.js';
 import { TOOL_PKG } from './tool.js';
@@ -156,13 +156,13 @@ function hookState(root) {
 export function installHook(root, cfg) {
   const entry = hookEntry(root);
   if (entry === null) {
-    refuse(EXIT.CONFIG, 'не нашлось чем звать инструмент: хук будет молчать.\n'
+    refuseCause('нечем звать инструмент', 'не нашлось чем звать инструмент: хук будет молчать.\n'
       + '  починка: поставьте пакет зависимостью проекта (например: pnpm add -D ' + TOOL_PKG.name + ')'
       + ' и повторите установку');
   }
   const hooks = hooksDir(root);
   if (hooks.custom) {
-    refuse(EXIT.CONFIG, 'в проекте задан core.hooksPath (' + hooks.dir + '): этот каталог может лежать'
+    refuseCause('чужой core.hooksPath', 'в проекте задан core.hooksPath (' + hooks.dir + '): этот каталог может лежать'
       + ' в другом репозитории, и править его инструмент не станет.\n'
       + '  починка: впишите в свой хук строку «' + runLine(entry) + '»');
   }
@@ -170,7 +170,7 @@ export function installHook(root, cfg) {
   const rels = files.map((f) => path.relative(root, f));
   files.forEach((file, i) => {
     if (fs.existsSync(file) && !isOurs(file)) {
-      refuse(EXIT.CONFIG, 'хук ' + rels[i] + ' уже есть и поставлен не этим инструментом (в нём нет метки).\n'
+      refuseCause('чужой хук', 'хук ' + rels[i] + ' уже есть и поставлен не этим инструментом (в нём нет метки).\n'
         + '  починка: позовите инструмент из своего хука строкой «' + runLine(entry) + '»'
         + ' — перезаписи чужого файла нет намеренно');
     }
@@ -213,7 +213,7 @@ export function uninstallHook(root) {
   }
   present.forEach((file) => {
     if (!isOurs(file)) {
-      refuse(EXIT.CONFIG, 'хук ' + path.relative(root, file) + ' поставлен не этим инструментом — не трогаю.\n'
+      refuseCause('чужой хук', 'хук ' + path.relative(root, file) + ' поставлен не этим инструментом — не трогаю.\n'
         + '  починка: уберите из него строку с «hook-run», если она там есть');
     }
   });
