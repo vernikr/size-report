@@ -55,8 +55,11 @@
 /* Точка входа пакета — и только она: здесь нет ни одного расчёта, только
  * реэкспорт. Механика разложена по швам, которые видно по зависимостям:
  *
- *   refusal, locales, journal, tool, strip, metrics   — ни на чём не стоят;
- *   git → refusal                                     — всё, что читается у git;
+ *   refusal, locales, journal, tool, css, derived        — ни на чём не стоят;
+ *   parse → parse-worker                               — разбор модуля вне процесса;
+ *   strip → refusal, parse                             — снятие балласта и гард;
+ *   metrics → strip                                    — реестр метрик;
+ *   git → refusal                                      — всё, что читается у git;
  *   config → git, refusal, locales, metrics, data      — настройки проекта;
  *   history → git, metrics, journal, refusal           — сборка по истории;
  *   data → locales, metrics, journal, history, tool    — контракт со страницей;

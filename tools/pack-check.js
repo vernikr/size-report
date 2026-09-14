@@ -23,7 +23,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SYNTH = path.join(ROOT, 'fixtures', 'synthetic');
@@ -78,6 +78,14 @@ try {
   const missing = inRepo.filter((f) => inPack.indexOf(f) < 0);
   if (missing.length > 0) bad('в пакет не доехали исходники', missing.join(' '));
   else ok('все исходники в пакете', inRepo.length + ' записей');
+
+  /* Разбор модуля держится на файле рядом с собой (`parse-worker.js`), а не на
+   * пути от корня репозитория: из установленного пакета поток обязан подняться
+   * так же — иначе пользователь платит запуск Node на каждую клетку. */
+  const parse = await import(pathToFileURL(path.join(packedSrc, 'parse.js')).href);
+  parse.moduleError('export const a = 1;');
+  if (parse.parseMode() !== 'thread') bad('разбор модуля в пакете ушёл в запуск, а не в поток');
+  else ok('разбор модуля в пакете идёт потоком');
 
   const repoBin = path.join(ROOT, 'bin', 'size.js');
   const packBin = path.join(pkg, 'bin', 'size.js');

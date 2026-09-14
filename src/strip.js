@@ -1,9 +1,7 @@
-import fs from 'fs';
-import os from 'os';
 import path from 'path';
 import vm from 'vm';
-import { execFileSync } from 'child_process';
 import { EXIT, refuse } from './refusal.js';
+import { moduleError } from './parse.js';
 
 /* Снятие балласта: стрипперы комментариев и отступов для каждой формы текста и
  * правило, какая форма к какому файлу применяется. Только преобразование
@@ -184,11 +182,9 @@ export function minifyForm(text, file, cfg) {
  * От этого он не слабеет: настоящая поломка не разберётся ни скриптом, ни
  * модулем, и тогда наружу идёт причина того разбора, которым файл был.
  *
- * Модуль проверяет сам Node: формат она определяет по расширению (или по
- * `type` в манифесте, а у временного файла манифеста нет), поэтому текст кладётся
- * в файл с расширением `.mjs`. Для этого и нужен временный файл: иначе конфиг вида
- * `eslint.config.mjs` остался бы без гарда, а без гарда его правка могла бы
- * испортить «объём» молча.
+ * Модуль разбирает отдельный рабочий поток (`parse.js`): без него разбор модуля
+ * стоил бы запуска Node на каждую клетку. Иначе конфиг вида `eslint.config.mjs`
+ * остался бы без гарда, а без гарда его правка могла бы испортить «объём» молча.
  *
  * Когда не разбирается даже исходный текст, стриппер тут ни при чём: в этой
  * графе измеряется не JavaScript (TypeScript, JSX), и это отказ с командой
@@ -198,13 +194,13 @@ const MODULE_EXT = ['.mjs'];
 
 export function assertCompilable(min, rev, p, src) {
   // Скрипт пробуется первым не ради формы, а ради цены: этот разбор идёт
-  // в процессе, а модуль требует запуска Node.
+  // в процессе, а модуль — в рабочем потоке.
   const asScript = scriptError(min, p);
   if (asScript === null) return;
-  const asModule = moduleError(min, p);
+  const asModule = moduleError(min);
   if (asModule === null) return;
   const shape = MODULE_EXT.indexOf(path.extname(p).toLowerCase()) >= 0 || MODULE_MARK.test(min);
-  if (src !== undefined && scriptError(src, p) !== null && moduleError(src, p) !== null) {
+  if (src !== undefined && scriptError(src, p) !== null && moduleError(src) !== null) {
     refuse(EXIT.CONFIG, 'файл ' + p + ' — не JavaScript (это видно ещё до снятия балласта), '
       + 'а ' + path.extname(p) + ' стоит в minify.guard: ' + (shape ? asModule : asScript) + '\n'
       + '  починка: уберите это расширение из minify.guard или задайте для него '
@@ -225,18 +221,3 @@ function scriptError(text, p) {
   }
 }
 
-function moduleError(text, p) {
-  const tmp = path.join(os.tmpdir(), 'size-table-guard-' + process.pid + '-mod.mjs');
-  try {
-    fs.writeFileSync(tmp, text);
-    execFileSync(process.execPath, ['--check', tmp], { stdio: ['ignore', 'pipe', 'pipe'] });
-    return null;
-  } catch (e) {
-    // В stderr Node сначала эхо строки с ошибкой, потом сам SyntaxError и стек.
-    const lines = String((e && e.stderr) || (e && e.message) || e).split('\n')
-      .map((l) => l.trim()).filter((l) => l !== '');
-    return lines.find((l) => /^\w*Error\b/.test(l)) || lines[0] || 'модуль не разбирается';
-  } finally {
-    fs.rmSync(tmp, { force: true });
-  }
-}
