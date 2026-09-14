@@ -1,7 +1,7 @@
 import fs from 'fs';
 import { execFileSync } from 'child_process';
 import { MAX_BUF, gitArgv, gitEnv } from './git.js';
-import { cliCommand, refuseCause } from './refusal.js';
+import { cliCommand, invocation, refuseCause } from './refusal.js';
 import { LOCALES } from './locales.js';
 import { METRICS, MINIFY_ENGINES } from './metrics.js';
 import { TOKEN_DEFAULTS, TOKEN_FAMILIES } from './tokens.js';
@@ -18,7 +18,9 @@ export const DEFAULT_CONFIG = {
   locale: 'ru',
   title: '',          // по умолчанию — заголовок из локали
   heading: '',
-  fixCommand: 'npx size-report --write',
+  // Починка — зов, который не может уйти в реестр: путь внутри проекта. Имя
+  // пакета здесь не годится (`npx <имя>` в проекте без пакета — чужой код).
+  fixCommand: invocation() + ' --write',
   metrics: ['raw', 'min'],
   columns: [],
   // `engine` — чем считается метрика `min`: снятием балласта (умолчание, под ним

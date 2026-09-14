@@ -1,6 +1,7 @@
-/* Три обещания документации: **документ зовёт только то, что инструмент умеет**
+/* Четыре обещания документации: **документ зовёт только то, что инструмент умеет**
  * (команды и ключи — из справки, а не из второго списка), **называет те причины
- * отказа, которые бывают**, и **ссылается на существующие разделы**.
+ * отказа, которые бывают**, **ссылается на существующие разделы** и **зовёт
+ * инструмент так, что зов работает и без установленного пакета**.
  *
  * Причины кодом 2 держатся реестром: `CONFIG_CAUSES` в `src/refusal.js` — одно
  * место, где они перечислены словами, справка печатает их из него, а таблица
@@ -21,6 +22,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT, gitIn } from '../tools/harness.js';
 import { CONFIG_CAUSES, USAGE, refuseCause } from '../src/refusal.js';
+import { TOOL_PKG } from '../src/tool.js';
+
+/* Инструкции — то, по чему читатель запускает инструмент: README пакета и записка
+ * в шаблонах. `PLAN.md` и `REFACTOR.md` называют целевую поверхность и историю,
+ * а `WORKLOG.md` и `CHANGELOG.md` — прошедшее время: прежние зовы там уместны. */
+const INSTRUCTIONS = ['README.md', 'templates/README.md'];
 import {
   DOCS, NOT_TODAY, TARGETS, callWords, facts, invocations, read, sectionsOf,
   usageCommands, usageFlags
@@ -74,9 +81,9 @@ test('документация зовёт только существующие 
   // поверхность (`size init`, `size measure`, `--out`) — это план, и требовать от
   // них сегодняшнего CLI значило бы запретить планировать.
   const bad = [];
-  ['README.md', 'templates/README.md'].forEach((doc) => {
+  INSTRUCTIONS.forEach((doc) => {
     invocations(facts(doc, NOT_TODAY[doc])).forEach((call) => {
-      if (!/^(?:size|pnpm exec size|npx size-report|node bin\/size\.js)(\s|$)/.test(call)) return;
+      if (!/^(?:size|pnpm exec size|npm exec size|node node_modules\/size-report\/bin\/size\.js|node bin\/size\.js|npx size-report)(\s|$)/.test(call)) return;
       const words = callWords(call);
       if (words.length === 0) return;
       const known = usageCommands.indexOf(words[0]) >= 0;
@@ -96,6 +103,23 @@ test('документация зовёт только существующие 
     });
   });
   assert.deepEqual(bad, [], 'документация зовёт то, чего инструмент не знает:\n  ' + bad.join('\n  '));
+});
+
+test('документация зовёт инструмент так, что зов работает и без установленного пакета', () => {
+  /* У обещанного зова два состояния, и совет обязан работать в обоих: рядом с
+   * установленным пакетом — делать обещанное, без пакета — отказывать на месте.
+   * Зов по имени пакета этого не умеет: `npx <имя>` идёт в реестр, когда пакета
+   * рядом нет, и запускает чужой пакет под тем же именем. Поэтому инструкции
+   * называют путь внутри проекта, а имени пакета в зове нет. */
+  const escaped = TOOL_PKG.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const byName = new RegExp('^(?:npx|npm exec|yarn) ' + escaped + '(\\s|$)');
+  const bad = [];
+  INSTRUCTIONS.forEach((doc) => {
+    invocations(facts(doc, NOT_TODAY[doc])).forEach((call) => {
+      if (byName.test(call)) bad.push(doc + ': «' + call + '»');
+    });
+  });
+  assert.deepEqual(bad, [], 'зов идёт по имени пакета, а не путём внутри проекта:\n  ' + bad.join('\n  '));
 });
 
 test('причины отказа совпадают у движка, справки и таблицы кодов README', () => {

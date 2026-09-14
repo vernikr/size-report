@@ -3,7 +3,7 @@
   "locale": "ru",
   "title": "Объём файлов по коммитам",
   "heading": "Объём файлов по коммитам",
-  "fixCommand": "npx size-report --write",
+  "fixCommand": "node node_modules/size-report/bin/size.js --write",
   "metrics": [
     "raw",
     "min",

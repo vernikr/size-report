@@ -33,7 +33,7 @@ function knownFlags() {
   return [...USAGE.matchAll(/--[a-z][a-z-]*/g)].map((m) => m[0]);
 }
 
-// Ключи инструмента, названные в команде: `npx size-report --write` → ['--write'].
+// Ключи инструмента, названные в команде: `…/bin/size.js --write` → ['--write'].
 function flagsOf(command) {
   return [...command.matchAll(/--[a-z][a-z-]*/g)].map((m) => m[0]);
 }
@@ -136,6 +136,15 @@ test('черновик настроек проходит проверку инс
     assert.ok(known2.indexOf(flag) >= 0, 'черновик зовёт ключ, которого нет в справке: ' + flag);
   });
 
+  /* Форма самого зова: путь внутри проекта, а не имя из реестра. Имя в команде
+   * (`npx size-report`) в проекте без установленного пакета уходит в реестр и
+   * запускает чужой пакет с тем же именем — совет, который должен выручать,
+   * приводил бы к чужому коду (REFACTOR.md R-4.21). */
+  assert.match(cfg.fixCommand, /^node node_modules\/size-report\/bin\/size\.js\s/,
+    'черновик советует не путь внутри проекта: ' + cfg.fixCommand);
+  assert.equal(/(^|\s)(?:npx|npm exec|yarn)\s+size-report/.test(cfg.fixCommand), false,
+    'черновик советует зов по имени пакета: ' + cfg.fixCommand);
+
   /* Записка о шаблонах — то, чем проект и пользуется: файл, о котором она молчит
    * (или которого нет), — это описание, разошедшееся с поставкой. */
   const note = fs.readFileSync(NOTE, 'utf8');
@@ -167,8 +176,15 @@ test('описание проверки в CI разбирается и запу
     'история клонируется обрезанной: таблица строится по коммитам и обрежется вместе с ней');
 
   const runs = job.steps.filter((s) => typeof s.run === 'string');
-  const tool = runs.filter((s) => /(^|\s)(pnpm exec size|npx size-report|yarn size-report)(\s|$)/.test(s.run));
+  const tool = runs.filter((s) => /(^|\s)(pnpm exec size|node node_modules\/size-report\/bin\/size\.js)(\s|$)/.test(s.run));
   assert.ok(tool.length >= 2, 'проверка не зовёт команду инструмента хотя бы дважды');
+
+  /* Шаг с пакетом ставит его до проверки, но зов по имени пакета всё равно не
+   * годится: та же строка, скопированная в проект без установленного пакета,
+   * уходит в реестр и запускает чужой пакет под тем же именем (REFACTOR.md R-4.21). */
+  const byName = runs.filter((s) => /(^|\s)(?:npx|npm exec|yarn)\s+size-report(\s|$)/.test(s.run));
+  assert.deepEqual(byName.map((s) => s.run), [],
+    'шаг проверки зовёт инструмент по имени пакета, а не локальным бинарём');
 
   /* Две среды — это один и тот же вызов: снимок чисел без настроек машины и
    * обычный, а затем их сравнение. Иначе «две среды» были бы разными командами. */

@@ -114,15 +114,17 @@ export const usageFlags = [...USAGE.matchAll(/--[a-z][a-z-]*/g)].map((m) => m[0]
 /* Зов инструмента: либо код-спан, либо строка блока кода (там, где его запускают,
  * а не упоминают в прозе). Хвост после `#` — комментарий примера, не аргументы. */
 export function invocations(text) {
-  const lines = text.split('\n').filter((l) => /^\s*(?:size|pnpm exec size|npx size-report|node bin\/size\.js)\s/.test(l))
+  const lines = text.split('\n').filter((l) => /^\s*(?:size|pnpm exec size|npm exec size|node node_modules\/size-report\/bin\/size\.js|node bin\/size\.js|npx size-report)\s/.test(l))
     .map((l) => l.split('#')[0].trim());
   return spans(text).concat(lines);
 }
 
 /* Слова зова без имени инструмента: `pnpm exec size check --json` → ['check', …]. */
 export function callWords(call) {
-  return call.replace(/^pnpm exec /, '').replace(/^npx size-report/, 'size')
-    .replace(/^node bin\/size\.js/, 'size').trim().split(/\s+/).slice(1);
+  return call.replace(/^pnpm exec /, '').replace(/^npm exec /, '')
+    .replace(/^npx size-report/, 'size')
+    .replace(/^node (?:node_modules\/size-report\/bin|bin)\/size\.js/, 'size')
+    .trim().split(/\s+/).slice(1);
 }
 
 /* Команды, которые зовёт инструкция: первое слово зова — только оно и может быть

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
-import { EXIT, Refusal, USAGE, cliCommand, refuseCause } from './refusal.js';
+import { EXIT, Refusal, USAGE, cliCommand, invocation, refuseCause } from './refusal.js';
 import { CONFIG_NAME, gitRoot, loadConfig, validateConfig } from './config.js';
 import { MAX_BUF, git, gitArgv, gitEnv } from './git.js';
 import { byteLen } from './strip.js';
@@ -387,7 +387,9 @@ export function initMode(root, file, force) {
     locale: 'ru',
     title: 'Объём файлов по коммитам',
     heading: 'Объём файлов по коммитам',
-    fixCommand: hasPkg ? manager + ' run sizes' : 'npx size-report --write',
+    // Ни в одной ветви нет имени пакета как команды: без манифеста скрипта нет,
+    // а имя в реестре — чужой пакет (§refusal.js, invocation).
+    fixCommand: hasPkg ? manager + ' run sizes' : invocation() + ' --write',
     metrics: ['raw', 'min', 'tok'],
     // Настоящее сжатие и настоящий словарь, а не приближения: новый проект не
     // должен начинать с приближённых чисел. Плата названа в подсказке ниже: без
