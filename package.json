@@ -5,6 +5,7 @@
   "description": "Учёт роста объёма кода и документов по истории git: raw / min / токены, интерактивный отчёт вне git",
   "type": "module",
   "license": "MIT",
+  "packageManager": "pnpm@10.6.1",
   "engines": {
     "node": ">=20.19"
   },
@@ -27,6 +28,7 @@
     "parity": "node tools/parity-freeze.js",
     "parity:live": "node tools/parity-live.js",
     "pack:check": "node tools/pack-check.js",
+    "check:standards": "node tools/check-standards.js",
     "fixture": "node tools/make-fixture.js"
   },
   "keywords": [

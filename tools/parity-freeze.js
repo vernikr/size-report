@@ -126,14 +126,15 @@ function main() {
     throw new Error('проект не найден: ' + project
       + '\n  укажите путь: node tools/parity-freeze.js <путь-к-проекту>');
   }
-  if (git(project, ['rev-parse', '--is-shallow-repository']) === 'true') {
-    throw new Error('история проекта обрезана (shallow): эталон снимается только с полной истории');
-  }
-
   const work = fs.mkdtempSync(path.join(os.tmpdir(), 'size-report-parity-'));
   try {
     const clone = path.join(work, 'clone');
     git(work, ['clone', '-q', '--no-hardlinks', project, clone]);
+    /* Обрезанность проверяется у клона, а не у источника: источником может быть
+     * и бандл истории (файл), у которого своего рабочего дерева нет. */
+    if (git(clone, ['rev-parse', '--is-shallow-repository']) === 'true') {
+      throw new Error('история проекта обрезана (shallow): эталон снимается только с полной истории');
+    }
     const at = want || git(clone, ['rev-parse', 'HEAD']);
     try {
       git(clone, ['checkout', '-q', at]);
