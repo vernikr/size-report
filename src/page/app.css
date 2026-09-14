@@ -57,6 +57,17 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
 .panel .cap { display: block; margin-bottom: 4px; }
 .panel .row { display: flex; flex-wrap: wrap; gap: 3px 6px; align-items: center; }
 
+/* Дерево файлов: вложенность показана отступом и линией уровня, папка — такой же
+ * переключатель, как файл, только его галочка отвечает за всё поддерево, а число
+ * рядом говорит, за сколько файлов. Список файлов длиннее окна, поэтому панель
+ * прокручивается сама: иначе управление вытолкнуло бы таблицу за экран. */
+.panel .files { max-height: min(30vh, 320px); overflow: auto; }
+.panel .tree { margin: 0; padding: 0; list-style: none; }
+.panel .tree .tree { margin-left: 14px; padding-left: 9px; border-left: 1px solid var(--line); }
+.panel .tree .box { padding: 1px 7px 1px 5px; }
+.box.dir { font-weight: 600; }
+.box .n { margin-left: 1px; color: var(--muted); font-size: 11px; }
+
 /* Переключатель — метка вокруг поля ввода: и подпись, и цель нажатия одна, поэтому
  * по нему попадает и мышь, и клавиатура (Space на поле ввода), и вспомогательные
  * технологии. */

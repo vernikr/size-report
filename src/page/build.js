@@ -46,6 +46,8 @@ function uiText(page, loc) {
     total: loc.total,
     now: loc.now,
     metrics: page.metrics,
+    files: page.files,
+    dir: page.dir,
     all: page.all,
     legend: [
       { cls: 'up', text: page.legendUp },

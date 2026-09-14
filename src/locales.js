@@ -16,6 +16,8 @@ export const LOCALES = {
      * независимо от его заморожённых байтов. */
     page: {
       metrics: 'Метрики',
+      files: 'Файлы',
+      dir: 'все файлы папки {name} ({n})',
       all: 'все',
       sub: '{tool} {version} · рядом со страницей — статическая таблица: {artifact}',
       legendUp: 'рост',
@@ -56,6 +58,8 @@ export const LOCALES = {
     categories: { code: 'Code', docs: 'Documentation', chore: 'Chores', assets: 'Assets' },
     page: {
       metrics: 'Metrics',
+      files: 'Files',
+      dir: 'all files in “{name}” ({n})',
       all: 'all',
       sub: '{tool} {version} · a static table sits next to this page: {artifact}',
       legendUp: 'growth',

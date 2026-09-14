@@ -11,7 +11,7 @@
  * а разметка клеток повторяет статическую таблицу (`clip` и подпись коммита —
  * правила общей части оформления).
  *
- * Отделка (дерево папок, запоминание выбора в браузере) — следующий проход. */
+ * Отделка (запоминание выбора в браузере) — следующий проход. */
 
 /* Импорт — одной строкой: модульный синтаксис снимается при вклейке построчно,
  * и оставшаяся строка `import` попала бы в страницу (её ловит проверка). */
@@ -58,8 +58,73 @@ function appLegend() {
   return list;
 }
 
-/* Категория — не отдельное состояние, а способ переставить галочки файлов сразу:
- * сама она ничего не помнит, иначе одно и то же решалось бы в двух местах. */
+/* Галочку файла ставит только файл: и категория, и папка в дереве — способы
+ * переставить те же галочки сразу группой, а своего состояния у них нет. Иначе
+ * одно и то же решение жило бы в двух местах и расходилось. */
+function appFileBox(i) {
+  const f = appData.files[i];
+  const where = f.path === null ? f.paths[0] + ' (нет на HEAD)' : f.path;
+  return appBox(f.label, where + ' · категория: '
+    + (f.categoryBy === 'config' ? 'из настроек' : 'по расширению'), appView.files[i], (e) => {
+    appView.files[i] = e.target.checked;
+    appRender();
+  });
+}
+
+/* Все файлы поддерева — то, чем управляет переключатель папки. */
+function appIndexes(node) {
+  const out = node.files.slice();
+  node.dirs.forEach((sub) => { out.push(...appIndexes(sub)); });
+  return out;
+}
+
+/* Узлы одного уровня: сперва папки по алфавиту, затем файлы в порядке данных.
+ * Переключатель папки стоит над своим поддеревом и показывает три состояния: все
+ * файлы включены, часть, ни одного. */
+function appTreeList(node) {
+  const list = appEl('ul', 'tree');
+  [...node.dirs.keys()].sort().forEach((name) => {
+    const sub = node.dirs.get(name);
+    const idx = appIndexes(sub);
+    const on = idx.map((i) => appView.files[i]);
+    const some = on.some((v) => v);
+    const head = appBox(name + '/', appUi.dir.replace('{name}', name).replace('{n}', idx.length),
+      some && on.every((v) => v), (e) => {
+        idx.forEach((i) => { appView.files[i] = e.target.checked; });
+        appRender();
+      }, 'dir');
+    head.querySelector('input').indeterminate = some && !on.every((v) => v);
+    head.appendChild(appEl('span', 'n', idx.length));
+    const li = appEl('li');
+    li.appendChild(head);
+    li.appendChild(appTreeList(sub));
+    list.appendChild(li);
+  });
+  node.files.forEach((i) => {
+    const li = appEl('li');
+    li.appendChild(appFileBox(i));
+    list.appendChild(li);
+  });
+  return list;
+}
+
+/* Дерево файлов: путь делится по «/», папки становятся узлами, файлы — листьями.
+ * Строится из тех же путей, что показаны в подписи файла, поэтому дерево и список
+ * файлов не могут разойтись. */
+function appTree() {
+  const root = { files: [], dirs: new Map() };
+  appData.files.forEach((f, i) => {
+    const parts = (f.path === null ? f.paths[0] : f.path).split('/');
+    let node = root;
+    for (let d = 0; d < parts.length - 1; d++) {
+      if (!node.dirs.has(parts[d])) node.dirs.set(parts[d], { files: [], dirs: new Map() });
+      node = node.dirs.get(parts[d]);
+    }
+    node.files.push(i);
+  });
+  return appTreeList(root);
+}
+
 function appPanel() {
   const panel = document.getElementById('panel');
   panel.textContent = '';
@@ -77,28 +142,21 @@ function appPanel() {
   metrics.appendChild(mrow);
   panel.appendChild(metrics);
 
+  const files = appEl('fieldset', 'files');
+  files.appendChild(appEl('legend', null, appUi.files));
+  const cats = appEl('div', 'row');
   appData.categories.forEach((cat) => {
     const idx = [];
     appData.files.forEach((f, i) => { if (f.category === cat.key) idx.push(i); });
-    const group = appEl('fieldset');
-    group.appendChild(appEl('legend', null, cat.label));
-    const row = appEl('div', 'row');
-    row.appendChild(appBox(appUi.all, 'все файлы категории', idx.every((i) => appView.files[i]), (e) => {
-      idx.forEach((i) => { appView.files[i] = e.target.checked; });
-      appRender();
-    }, 'all'));
-    idx.forEach((i) => {
-      const f = appData.files[i];
-      const where = f.path === null ? f.paths[0] + ' (нет на HEAD)' : f.path;
-      row.appendChild(appBox(f.label, where + ' · категория: '
-        + (f.categoryBy === 'config' ? 'из настроек' : 'по расширению'), appView.files[i], (e) => {
-        appView.files[i] = e.target.checked;
+    cats.appendChild(appBox(cat.label, appUi.all + ' · ' + cat.label, idx.every((i) => appView.files[i]),
+      (e) => {
+        idx.forEach((i) => { appView.files[i] = e.target.checked; });
         appRender();
-      }));
-    });
-    group.appendChild(row);
-    panel.appendChild(group);
+      }, 'all'));
   });
+  files.appendChild(cats);
+  files.appendChild(appTree());
+  panel.appendChild(files);
 
   panel.appendChild(appLegend());
 }

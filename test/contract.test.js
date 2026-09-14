@@ -11,7 +11,7 @@
  *      сумма дельт по колонке — с текущим размером; оболочка страницы при этом не
  *      имеет права заводить свои функции расчёта;
  *   4. страница собирается и работает в настоящем DOM (jsdom): включение метрик,
- *      категорий и файлов пересчитывает таблицу без обращения к движку;
+ *      категорий, файлов и папок дерева пересчитывает таблицу без обращения к движку;
  *   5. оформление таблицы у двух выводов одно, и цвет дельт задан один раз;
  *   6. состояния пустоты (сняты все метрики или все файлы) объясняются словами.
  */
@@ -261,8 +261,8 @@ test('вычислительная часть страницы — код дви
    * разметка, либо вернувшийся своим путём расчёт; первое правится здесь же,
    * второе лучше не делать вовсе. */
   assert.deepEqual(defined('\n' + appSrc).sort(), [
-    'appBox', 'appCell', 'appCommit', 'appEl', 'appLegend', 'appPanel', 'appRender', 'appState',
-    'appSubHead', 'appTable', 'appValueCell'
+    'appBox', 'appCell', 'appCommit', 'appEl', 'appFileBox', 'appIndexes', 'appLegend', 'appPanel',
+    'appRender', 'appState', 'appSubHead', 'appTable', 'appTree', 'appTreeList', 'appValueCell'
   ], 'оболочка страницы завела свою функцию: расчёт должен жить в вычислительной части');
   assert.equal(/\breduce\(|Math\.abs/.test(appSrc), false,
     'оболочка страницы считает итоги или знак дельты сама');
@@ -350,6 +350,89 @@ test('страница считает то же, что артефакт, и п�
   const expected = totalRaw - data.now[fileIndex].raw;
   assert.equal(lastNow[0].textContent, valueParts(expected).text,
     'итог после выключения файла не совпал с суммой без него');
+});
+
+/* Дерево файлов: папки повторяют пути данных, у папки три состояния, а её
+ * переключатель ведёт за собой всё поддерево. Состояние хранят только файлы —
+ * поэтому дерево, быстрые кнопки категорий и числа таблицы не могут разойтись:
+ * проверяется это по итогу таблицы, а не по разметке. */
+test('дерево файлов: папки по путям, три состояния и всё поддерево', () => {
+  const dom = new JSDOM(pageText, { runScripts: 'dangerously' });
+  const doc = dom.window.document;
+  const where = (f) => (f.path === null ? f.paths[0] : f.path);
+  const dirs = () => [...doc.querySelectorAll('#panel .box.dir')];
+  const dirBox = (prefix) => dirs().find((b) => b.textContent.indexOf(prefix) === 0);
+  const leaves = () => [...doc.querySelectorAll('#panel .tree .box:not(.dir)')];
+  const toggle = (box, checked) => {
+    box.checked = checked;
+    box.dispatchEvent(new dom.window.Event('change'));
+  };
+  const nowTotal = () => doc.querySelectorAll('#grid tbody tr')[0]
+    .querySelectorAll('td')[0].textContent;
+  const all = allOn();
+  const rawOf = (on) => pageMath.totalsOf(data.now, ['raw'], on).raw;
+
+  /* Папки дерева — ровно те, что есть в путях файлов, и в дереве лежат все файлы,
+   * каждый под своим путём. */
+  const expected = [...new Set(data.files.map((f) => where(f).split('/').slice(0, -1).join('/')))]
+    .filter((d) => d !== '').sort();
+  assert.deepEqual(dirs().map((b) => b.textContent.replace(/\/\d+$/, '')).sort(), expected,
+    'папки дерева разошлись с путями файлов');
+  assert.equal(leaves().length, data.files.length, 'в дереве не все файлы');
+  data.files.forEach((f) => assert.ok(leaves()
+    .some((b) => b.querySelector('input').title.indexOf(where(f)) === 0),
+  'в дереве нет файла ' + where(f)));
+
+  const inSrc = [];
+  data.files.forEach((f, i) => { if (where(f).indexOf('src/') === 0) inSrc.push(i); });
+  assert.ok(inSrc.length > 1, 'в фикстуре нет папки с несколькими файлами');
+
+  /* Три состояния папки: все её файлы включены — отметка; часть — третье
+   * состояние; ни одного — папка просто не отмечена, но не выглядит частичной. */
+  const srcBox = () => dirBox('src/').querySelector('input');
+  assert.equal(srcBox().checked, true, 'папка не отмечена вместе со своими файлами');
+  toggle(dirBox('src/').closest('li').querySelector('.box:not(.dir) input'), false);
+  assert.equal(srcBox().indeterminate, true,
+    'папка с частью выключенных файлов не показала третье состояние');
+  assert.equal(srcBox().checked, false, 'частично выключенная папка отмечена как целая');
+  toggle(srcBox(), true);
+  assert.equal(srcBox().indeterminate, false, 'третье состояние осталось после включения всех файлов');
+
+  assert.equal(dirBox('notes/').querySelector('input').checked, true,
+    'папка с единственным файлом не отмечена вместе с ним');
+  toggle(dirBox('notes/').closest('li').querySelector('.box:not(.dir) input'), false);
+  assert.equal(dirBox('notes/').querySelector('input').indeterminate, false,
+    'папка без включённых файлов показана как частичная');
+  assert.equal(dirBox('notes/').querySelector('input').checked, false,
+    'папка без включённых файлов осталась отмеченной');
+  toggle(dirBox('notes/').querySelector('input'), true);
+  assert.equal(dirBox('notes/').querySelector('input').checked, true,
+    'включение папки не включило её файл');
+
+  /* Переключатель папки ведёт за собой всё поддерево: из таблицы и из итога
+   * уходят ровно её файлы и их колонки. */
+  assert.equal(dirBox('src/').querySelector('.n').textContent, String(inSrc.length),
+    'счётчик файлов у папки не тот');
+  assert.equal(nowTotal(), valueParts(rawOf(all)).text, 'итог до выключения папки не тот');
+  toggle(dirBox('src/').querySelector('input'), false);
+  const off = all.map((_on, i) => inSrc.indexOf(i) < 0);
+  assert.equal(nowTotal(), valueParts(rawOf(off)).text, 'выключение папки не убрало её файлы из итога');
+  assert.equal(doc.querySelectorAll('#grid tbody tr')[0].querySelectorAll('td').length,
+    (off.filter(Boolean).length + 1) * data.metrics.length, 'выключение папки не убрало её колонки');
+
+  /* Быстрые кнопки категорий и дерево — одно состояние: выключение категории
+   * видно на папке, где лежат её файлы, и не трогает чужие. */
+  const chore = [...doc.querySelectorAll('#panel .row .box.all')]
+    .find((b) => b.textContent === data.categories.find((c) => c.key === 'chore').label);
+  assert.ok(chore, 'в панели нет быстрой кнопки категории');
+  toggle(chore.querySelector('input'), false);
+  assert.equal(dirBox('data/').querySelector('input').checked, false,
+    'выключение категории не отразилось на папке с её файлами');
+  assert.equal(dirBox('docs/').querySelector('input').checked, true,
+    'выключение категории выключило чужие файлы');
+  toggle(chore.querySelector('input'), true);
+  assert.equal(dirBox('data/').querySelector('input').checked, true,
+    'включение категории не вернуло её файлы');
 });
 
 /* Оформление: общая часть таблицы у двух выводов одна, и цвет дельт задан один раз.
