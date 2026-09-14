@@ -33,6 +33,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { firstLine, gitIn, gitTry, hasStack, runSize, tempDir } from '../tools/harness.js';
 
+/* Окружение проверки задаётся ею самой, а не машиной: `CI` и `SIZE_REPORT_NO_HOOK` —
+ * это выключатели хука, и в CI они стоят у всего набора; тогда каждый сценарий
+ * молчал бы «по причине CI», а виноватым выглядел бы хук. Сценарий про выключатели
+ * задаёт их сам — в вызове, а не в окружении процесса. */
+delete process.env.CI;
+delete process.env.SIZE_REPORT_NO_HOOK;
+
 const tmp = tempDir('hook');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
