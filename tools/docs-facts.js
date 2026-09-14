@@ -25,7 +25,7 @@ import { ROOT, gitIn } from './harness.js';
 import { USAGE } from '../src/size-table.js';
 
 /* Документы, которые описывают **сегодняшнее** состояние репозитория. */
-export const DOCS = ['README.md', 'PLAN.md', 'REFACTOR.md', 'BLOCKERS.md', 'templates/README.md'];
+export const DOCS = ['README.md', 'PLAN.md', 'REFACTOR.md', 'BLOCKERS.md', 'templates/README.md', 'CHANGELOG.md'];
 
 /* Пути, которых в репозитории нет и быть не должно: чужие или плановые. Список
  * ведёт человек — проверка требует лишь, чтобы новый такой путь попал сюда
