@@ -1,4 +1,4 @@
-import { assertFullHistory, readHistory } from './git.js';
+import { assertFullHistory, readHistory, resolveCommit } from './git.js';
 import { measureHistory } from './history.js';
 import { cliCommand, refuseCause } from './refusal.js';
 import { CONFIG_NAME } from './config.js';
@@ -24,10 +24,24 @@ const REASON_TEXT = {
 export function explainCommit(cfg, root, target) {
   assertFullHistory(root);
   const commits = readHistory(root);
+  /* Имя ревизии разрешает git, и только если имени нет — ищем начало sha по
+   * списку коммитов: так у неоднозначного префикса остаётся человеческий отказ
+   * со списком подходящих, а у имени — правила git, а не наши. */
+  const resolved = resolveCommit(root, String(target));
   const needle = String(target).toLowerCase();
-  const found = commits.filter((c) => c.sha.toLowerCase().indexOf(needle) === 0);
+  const found = resolved === null
+    ? commits.filter((c) => c.sha.toLowerCase().indexOf(needle) === 0)
+    : commits.filter((c) => c.sha === resolved);
+  // Имя разрешилось, а коммита в отчёте нет: это не «нет коммита» — коммит есть,
+  // и сказать надо именно это, иначе человек пойдёт искать проблему в истории.
+  if (resolved !== null && found.length === 0) {
+    refuseCause('коммит вне истории', '«' + target + '» — это коммит ' + resolved.slice(0, 7)
+      + ', но его нет в истории отчёта: строки строятся по коммитам текущей ветки'
+      + '\n  починка: посмотрите историю отчёта: git log --oneline'
+      + ' (всю историю репозитория показывает git log --all)');
+  }
   if (found.length === 0) {
-    refuseCause('нет такого коммита', 'в истории нет коммита «' + target + '»'
+    refuseCause('нет такого коммита', '«' + target + '» — не имя ревизии и не начало sha'
       + '\n  починка: посмотрите историю: git log --oneline');
   }
   if (found.length > 1) {

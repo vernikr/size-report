@@ -18,7 +18,9 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { CONFIG, hasStack, readJson, runFixture, runSize, sharedClone, tempDir } from '../tools/harness.js';
+import {
+  CONFIG, cloneFixture, gitIn, hasStack, readJson, runFixture, runSize, sharedClone, tempDir
+} from '../tools/harness.js';
 
 const tmp = tempDir('check');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
@@ -150,6 +152,50 @@ test('объяснение: слияние объясняется настрой
   assert.match(res.stdout, /"merges": true/, 'нет готового значения для починки');
 });
 
+/* Коммит зовут так, как его зовёт git: `HEAD`, ветка, `HEAD~1`. Пока инструмент
+ * понимал только sha, вопрос «почему у этого коммита нет строки?» требовал сначала
+ * узнать sha глазами, а ответ на имя ревизии был не «не понял имя», а «нет такого
+ * коммита» — то есть ложь о том, чего человек искал. */
+test('объяснение: коммит называется именем ревизии, и ответ тот же, что по sha', () => {
+  [['HEAD', 'HEAD'], ['HEAD~1', 'HEAD~1'], ['main', 'HEAD']].forEach(([name, rev]) => {
+    const sha = gitIn(dir, ['rev-parse', rev]).trim();
+    const byName = runFixture(dir, ['explain', name, '--json']);
+    const bySha = runFixture(dir, ['explain', sha, '--json']);
+    assert.equal(byName.code, 0, 'имя ревизии «' + name + '» не объяснилось (код '
+      + byName.code + '):\n' + byName.stdout + byName.stderr);
+    assert.deepEqual(JSON.parse(byName.stdout), JSON.parse(bySha.stdout),
+      'ответ по имени «' + name + '» разошёлся с ответом по sha ' + sha.slice(0, 7));
+  });
+});
+
+/* Две разные причины, которые легко свести в одну: имени нет вовсе и имя есть, а
+ * коммита нет в истории отчёта (другая ветка). Вторая — не «нет коммита»: коммит
+ * существует, и человеку нужно услышать именно это, вместе с его sha. */
+test('объяснение: несуществующее имя и коммит вне истории отчёта — разные причины', () => {
+  const typo = runFixture(dir, ['explain', 'maser']);
+  assert.equal(typo.code, 2, 'выдуманное имя не отказ:\n' + typo.stdout + typo.stderr);
+  assert.equal(hasStack(typo.stderr), false, 'отказ напечатал стек');
+  assert.match(typo.stderr, /не имя ревизии и не начало sha/,
+    'отказ не назвал настоящую причину:\n' + typo.stderr);
+  assert.match(typo.stderr, /git log/, 'отказ не даёт готовой команды');
+
+  // Ветка мимо текущей истории: коммит существует, но строк по нему отчёт не строит.
+  const side = cloneFixture(path.join(tmp, 'side'));
+  gitIn(side, ['checkout', '-q', '-b', 'side']);
+  gitIn(side, ['-c', 'user.name=fixture', '-c', 'user.email=fixture@local',
+    'commit', '-q', '--allow-empty', '-m', 'ветка мимо отчёта']);
+  const sha = gitIn(side, ['rev-parse', 'side']).trim();
+  gitIn(side, ['checkout', '-q', 'main']);
+
+  const away = runFixture(side, ['explain', 'side']);
+  assert.equal(away.code, 2, 'коммит вне истории отчёта не отказ:\n' + away.stdout + away.stderr);
+  assert.match(away.stderr, /нет в истории отчёта/, 'причина названа не та:\n' + away.stderr);
+  assert.ok(away.stderr.indexOf(sha.slice(0, 7)) >= 0,
+    'отказ не назвал sha коммита, о котором спросили:\n' + away.stderr);
+  assert.ok(!/нет такого коммита/.test(away.stderr),
+    'коммит, который есть, назван несуществующим:\n' + away.stderr);
+});
+
 test('отказы команд: неизвестное слово, неизвестный коммит, неоднозначный префикс', () => {
   const unknown = runFixture(dir, ['sizes']);
   assert.equal(unknown.code, 2, 'неизвестная команда не отказ:\n' + unknown.stdout + unknown.stderr);
@@ -158,6 +204,8 @@ test('отказы команд: неизвестное слово, неизве
   const absent = runFixture(dir, ['explain', 'zzzzzzz']);
   assert.equal(absent.code, 2);
   assert.equal(hasStack(absent.stderr), false, 'отказ напечатал стек');
+  assert.match(absent.stderr, /не имя ревизии и не начало sha/,
+    'отказ не назвал настоящую причину:\n' + absent.stderr);
   assert.match(absent.stderr, /git log/, 'отказ не даёт готовой команды');
 
   // Короткий префикс подходит нескольким коммитам фикстуры — здесь выбор за человеком.

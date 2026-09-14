@@ -236,7 +236,8 @@ function checkArgs(words, seen, values, modes) {
   }
   // Коммит либо не назван, либо назван не один раз — тупика два, а починка одна.
   if (verb === 'explain' && arg.length === 0) {
-    refuseCause('нет коммита', 'команде «explain» нужен коммит: смотрите на sha или его начало'
+    refuseCause('нет коммита', 'команде «explain» нужен коммит: имя ревизии (HEAD, ветка, тег),'
+      + ' sha или его начало'
       + '\n  починка: ' + cliCommand('explain <коммит>'));
   }
   if (verb === 'explain' && arg.length > 1) {
