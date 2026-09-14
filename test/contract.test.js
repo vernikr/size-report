@@ -6,9 +6,10 @@
  *      ревизией) — контракт обязан нести ту же правду, что и артефакт;
  *   2. в контракте нет ни одной производной величины (проверяется по составу
  *      полей, а не на слово);
- *   3. вычислительная часть страницы (`APP_MATH` — тот самый текст, что вклеен в
- *      страницу) прогоняется и её итоги сверяются с итогами артефакта, а сумма
- *      дельт по колонке — с текущим размером;
+ *   3. вычислительная часть страницы (`DERIVED_SRC` — исходники функций, которыми
+ *      считает артефакт) прогоняется и её итоги сверяются с итогами артефакта, а
+ *      сумма дельт по колонке — с текущим размером; оболочка страницы при этом не
+ *      имеет права заводить свои функции расчёта;
  *   4. страница собирается и работает в настоящем DOM (jsdom): включение метрик,
  *      категорий и файлов пересчитывает таблицу без обращения к движку.
  */
@@ -21,7 +22,9 @@ import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { JSDOM } from 'jsdom';
-import { APP_MATH, CATEGORY_ORDER, group } from '../src/size-table.js';
+import {
+  APP_DOM, APP_SCRIPT, CATEGORY_ORDER, DERIVED_SRC, rowModel, totalsOf, valueParts
+} from '../src/size-table.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SYNTH = path.join(ROOT, 'fixtures', 'synthetic');
@@ -56,15 +59,18 @@ function dataOf(dir) {
   return JSON.parse(res.stdout);
 }
 
-// Вычислительная часть страницы — тот же текст, что вклеен в страницу.
-function appMath() {
-  return new Function(APP_MATH + '\nreturn { appMetrics: appMetrics, appOn: appOn, appValue: appValue,'
-    + ' appTotals: appTotals, appDelta: appDelta, appGroup: appGroup };')();
+/* Вычислительная часть страницы — текст, вклеенный в страницу. Проверки ниже
+ * гоняют его в настоящем JS: если он перестанет исполняться или разойдётся с
+ * числами артефакта, станет видно из теста, а не из браузера. */
+const pageMath = new Function(DERIVED_SRC + '\nreturn { rowModel: rowModel, totalsOf: totalsOf };')();
+
+// Ключи включённых метрик — то, что вычислительная часть принимает на вход.
+function keysOn(view) {
+  return data.metrics.filter((m) => view.metrics[m.key]).map((m) => m.key);
 }
 
 const dir = cloneFixture();
 const data = dataOf(dir);
-const math = appMath();
 const allOn = () => data.files.map(() => true);
 const allMetrics = { raw: true, min: true };
 
@@ -142,10 +148,10 @@ test('у каждого файла есть категория, и она объ
 /* ---------- производные считает страница ---------- */
 
 test('итоги страницы сходятся с итогами артефакта', () => {
-  const metrics = math.appMetrics(data, { metrics: allMetrics, files: allOn() });
-  const on = math.appOn(data, { metrics: allMetrics, files: allOn() });
+  const metrics = keysOn({ metrics: allMetrics });
+  const on = allOn();
   data.rows.forEach((row, r) => {
-    assert.deepEqual(math.appTotals(row.values, metrics, on), golden.rows[r].totals,
+    assert.deepEqual(pageMath.totalsOf(row.values, metrics, on), golden.rows[r].totals,
       'строка ' + (r + 1) + ': итог по контракту не совпал с итогом артефакта');
   });
 });
@@ -157,8 +163,12 @@ test('итоги страницы сходятся с итогами артеф�
  * делать — в `BLOCKERS.md` §N4. */
 const GAPS = ['crlf.txt'];
 
+// Строки таблицы в терминах вычислительной части: то же, из чего рисуется отчёт.
+const models = data.rows.map((row, r) => rowModel(row.values, r === 0 ? null : data.rows[r - 1].values,
+  keysOn({ metrics: allMetrics }), allOn()));
+
 test('сумма дельт по колонке сходится с текущим размером, если файл не исчезал', () => {
-  const metrics = math.appMetrics(data, { metrics: allMetrics, files: allOn() });
+  const metrics = keysOn({ metrics: allMetrics });
   const found = [];
   data.files.forEach((f, i) => {
     let deleted = false;
@@ -166,14 +176,11 @@ test('сумма дельт по колонке сходится с текущи
       if (r > 0 && data.rows[r - 1].values[i] !== null && row.values[i] === null) deleted = true;
     });
     if (deleted) { found.push(f.label); return; }
-    metrics.forEach((m) => {
+    metrics.forEach((m, mi) => {
       let sum = 0;
-      data.rows.forEach((row, r) => {
-        const before = r === 0 ? null : math.appValue(data.rows[r - 1], i, m.key);
-        sum += math.appDelta(math.appValue(row, i, m.key), before) || 0;
-      });
-      assert.equal(sum, data.now[i] === null ? 0 : data.now[i][m.key],
-        'колонка «' + f.label + '»/' + m.key + ': дельты не сходятся с текущим размером');
+      models.forEach((model) => { sum += model.files[i][mi].delta || 0; });
+      assert.equal(sum, data.now[i] === null ? 0 : data.now[i][m],
+        'колонка «' + f.label + '»/' + m + ': дельты не сходятся с текущим размером');
     });
   });
   assert.deepEqual(found, GAPS,
@@ -184,10 +191,7 @@ test('у возвращённого файла сумма дельт больш�
   GAPS.forEach((label) => {
     const i = data.files.findIndex((f) => f.label === label);
     let sum = 0;
-    data.rows.forEach((row, r) => {
-      const before = r === 0 ? null : math.appValue(data.rows[r - 1], i, 'raw');
-      sum += math.appDelta(math.appValue(row, i, 'raw'), before) || 0;
-    });
+    models.forEach((model) => { sum += model.files[i][0].delta || 0; });
     assert.equal(sum, 117, 'сумма дельт колонки «' + label + '» изменилась');
     assert.equal(data.now[i].raw, 63, 'текущий размер колонки «' + label + '» изменился');
     assert.ok(sum > data.now[i].raw, 'возврат файла обязан выглядеть как рост');
@@ -199,32 +203,27 @@ test('у возвращённого файла сумма дельт больш�
  * нет), а из итога его объём уходит. Поэтому на такой строке сверяется само
  * правило: дельта итога = сумма дельт минус объём исчезнувшего (BLOCKERS.md §N4). */
 test('дельта итога равна сумме дельт по файлам', () => {
-  const view = { metrics: allMetrics, files: allOn() };
-  const metrics = math.appMetrics(data, view);
-  const on = math.appOn(data, view);
+  const metrics = keysOn({ metrics: allMetrics });
+  const on = allOn();
   const withGone = [];
   data.rows.forEach((row, r) => {
     const prev = r === 0 ? null : data.rows[r - 1];
-    const totals = math.appTotals(row.values, metrics, on);
-    const prevTotals = prev === null ? null : math.appTotals(prev.values, metrics, on);
+    const model = models[r];
     const gone = {};
-    metrics.forEach((m) => { gone[m.key] = 0; });
+    metrics.forEach((m) => { gone[m] = 0; });
     let vanished = false;
     data.files.forEach((_f, i) => {
       if (!on[i] || prev === null || prev.values[i] === null || row.values[i] !== null) return;
       vanished = true;
-      metrics.forEach((m) => { gone[m.key] += prev.values[i][m.key]; });
+      metrics.forEach((m) => { gone[m] += prev.values[i][m]; });
     });
     if (vanished) withGone.push(row.subject);
-    metrics.forEach((m) => {
+    metrics.forEach((m, mi) => {
       let sum = 0;
-      data.files.forEach((_f, i) => {
-        sum += math.appDelta(math.appValue(row, i, m.key),
-          prev === null ? null : math.appValue(prev, i, m.key)) || 0;
-      });
-      sum -= gone[m.key];
-      assert.equal(math.appDelta(totals[m.key], prevTotals === null ? null : prevTotals[m.key]), sum,
-        'строка ' + (r + 1) + '/' + m.key + ': дельта итога разошлась с суммой дельт по файлам');
+      model.files.forEach((cells) => { sum += cells[mi].delta || 0; });
+      sum -= gone[m];
+      assert.equal(model.total[mi].delta, sum,
+        'строка ' + (r + 1) + '/' + m + ': дельта итога разошлась с суммой дельт по файлам');
     });
   });
   assert.deepEqual(withGone, ['fixture: удаление файла'],
@@ -232,22 +231,48 @@ test('дельта итога равна сумме дельт по файлам
 });
 
 test('выключенное не участвует ни в таблице, ни в сумме', () => {
-  const view = { metrics: { raw: true, min: false }, files: allOn() };
-  view.files[0] = false;
-  const metrics = math.appMetrics(data, view);
-  const on = math.appOn(data, view);
-  assert.deepEqual(metrics.map((m) => m.key), ['raw'], 'выключенная метрика осталась в выборке');
+  const metrics = keysOn({ metrics: { raw: true, min: false } });
+  const on = allOn();
+  on[0] = false;
+  assert.deepEqual(metrics, ['raw'], 'выключенная метрика осталась в выборке');
 
-  const totals = math.appTotals(data.now, metrics, on);
+  const totals = totalsOf(data.now, metrics, on);
   let expected = 0;
   data.files.forEach((f, i) => {
     if (!on[i] || data.now[i] === null) return;
     expected += data.now[i].raw;
   });
   assert.equal(totals.raw, expected, 'итог считает выключенные файлы');
-  assert.notEqual(totals.raw, math.appTotals(data.now, math.appMetrics(data, { metrics: allMetrics, files: allOn() }),
-    math.appOn(data, { metrics: allMetrics, files: allOn() })).raw,
-  'выключение файла ничего не изменило: сумма не зависит от выбора');
+  assert.equal(rowModel(data.now, null, metrics, on).files.length, data.files.length - 1,
+    'выключенный файл остался в таблице');
+  assert.notEqual(totals.raw, totalsOf(data.now, metrics, allOn()).raw,
+    'выключение файла ничего не изменило: сумма не зависит от выбора');
+});
+
+/* Второй независимый расчёт не должен появиться тихо. Страница получает текст
+ * вычислительной части у самого движка, а оболочка страницы обязана только
+ * строить узлы: свои итоги, дельты или форматирование в ней — уже второй расчёт. */
+test('вычислительная часть страницы — код движка, а не копия', () => {
+  ['group', 'totalsOf', 'deltaOf', 'cellParts', 'valueParts', 'rowModel', 'nowModel', 'commitParts']
+    .forEach((name) => {
+      assert.ok(new RegExp('function ' + name + '\\(').test(DERIVED_SRC),
+        'в вычислительной части страницы нет ' + name);
+    });
+  assert.equal(APP_SCRIPT.indexOf(DERIVED_SRC), 0, 'программа страницы начинается не с общего расчёта');
+  assert.ok(pageHtml.indexOf(APP_SCRIPT) > 0, 'страница собрана не из общей программы');
+
+  /* Список функций оболочки закрыт: любая новая функция в ней — это либо
+   * разметка, либо вернувшийся своим путём расчёт; первое правится здесь же,
+   * второе лучше не делать вовсе. */
+  const defined = [...APP_DOM.matchAll(/function\s+(\w+)/g)].map((m) => m[1]).sort();
+  assert.deepEqual(defined, [
+    'appBox', 'appCell', 'appCommit', 'appEl', 'appPanel', 'appRender', 'appSubHead', 'appTable', 'appValueCell'
+  ], 'оболочка страницы завела свою функцию: расчёт должен жить в вычислительной части');
+  assert.equal(/\breduce\(|Math\.abs/.test(APP_DOM), false,
+    'оболочка страницы считает итоги или знак дельты сама');
+  ['rowModel', 'nowModel', 'commitParts', 'cellParts', 'valueParts'].forEach((name) => {
+    assert.ok(APP_DOM.indexOf(name + '(') >= 0, 'оболочка страницы не пользуется ' + name);
+  });
 });
 
 /* ---------- страница ---------- */
@@ -286,8 +311,8 @@ test('страница считает то же, что артефакт, и п�
   const metricsCount = data.metrics.length;
   assert.equal(nowCells.length, (data.files.length + 1) * metricsCount,
     'в строке «сейчас» не все колонки');
-  const totalRaw = math.appTotals(data.now, data.metrics, allOn()).raw;
-  assert.equal(nowCells[0].textContent, group(totalRaw),
+  const totalRaw = pageMath.totalsOf(data.now, ['raw'], allOn()).raw;
+  assert.equal(nowCells[0].textContent, valueParts(totalRaw).text,
     'итог на странице не совпал с итогом артефакта: ' + nowCells[0].textContent);
 
   /* Выключаем метрику min: её колонки обязаны исчезнуть, а raw — остаться тем же. */
@@ -302,7 +327,7 @@ test('страница считает то же, что артефакт, и п�
   const afterNow = afterRows[0].querySelectorAll('td');
   assert.equal(afterNow.length, data.files.length + 1,
     'выключенная метрика осталась в таблице');
-  assert.equal(afterNow[0].textContent, group(totalRaw),
+  assert.equal(afterNow[0].textContent, valueParts(totalRaw).text,
     'выключение метрики сдвинуло чужой итог');
 
   /* Выключаем файл: он уходит из таблицы, и итог уменьшается ровно на него. */
@@ -315,6 +340,6 @@ test('страница считает то же, что артефакт, и п�
   const lastNow = doc.querySelectorAll('#grid tbody tr')[0].querySelectorAll('td');
   assert.equal(lastNow.length, data.files.length, 'выключенный файл остался в таблице');
   const expected = totalRaw - data.now[fileIndex].raw;
-  assert.equal(lastNow[0].textContent, group(expected),
+  assert.equal(lastNow[0].textContent, valueParts(expected).text,
     'итог после выключения файла не совпал с суммой без него');
 });

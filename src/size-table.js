@@ -901,14 +901,6 @@ function measureHistory(cfg, root) {
   return { rows, skipped, mixed, state };
 }
 
-function totalsOf(cells, metrics) {
-  const out = {};
-  metrics.forEach((m) => {
-    out[m] = cells.reduce((acc, c) => (c === null ? acc : acc + c[m]), 0);
-  });
-  return out;
-}
-
 /* Сверка с рабочим деревом отвечает на два вопроса, и оба обязательны: состояние
  * движка на HEAD совпадает с деревом коммита, и файл на диске соответствует тому
  * же содержимому. Первый ловит правку, потерянную при переносе состояния между
@@ -1026,6 +1018,121 @@ function reportData(cfg, root) {
   };
 }
 
+// --- производные величины ----------------------------------------------------
+
+/* Единственное место, где из абсолютных значений получаются производные: итоги,
+ * дельты, содержимое клетки и подпись коммита. Оба вывода — статический артефакт
+ * и страница — идут через эти функции, причём страница получает их же текст
+ * (`DERIVED_SRC`), а не свою копию: второго расчёта той же таблицы нет вовсе,
+ * поэтому разойтись молча двум отчётам нечем. Это стережёт проверка в
+ * `test/contract.test.js`.
+ *
+ * Функции самодостаточны: ни импортов, ни состояния модуля — иначе текст было бы
+ * нельзя вклеить в страницу. */
+
+// Разряды тонкими пробелами: toLocaleString зависит от ICU сборки Node, а строка
+// таблицы обязана совпадать побайтово на любой машине.
+function group(n) {
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '\u2009');
+}
+
+/* Итог: сумма по включённым файлам. Выключенный файл не участвует ни в таблице,
+ * ни в сумме, — иначе «итого» отвечало бы не про то, что видно. */
+function totalsOf(values, metrics, on) {
+  const out = {};
+  metrics.forEach((m) => { out[m] = 0; });
+  values.forEach((v, i) => {
+    if (v === null || (on !== undefined && !on[i])) return;
+    metrics.forEach((m) => { out[m] += v[m]; });
+  });
+  return out;
+}
+
+/* Дельта к предыдущему коммиту. Появление файла — рост на весь его объём: иначе
+ * сумма дельт по колонке не сходилась бы с текущим размером. */
+function deltaOf(now, before) {
+  return before === null || before === undefined ? now : now - before;
+}
+
+/* Содержимое клетки строки-коммита: что в ней написано и каким цветом. Разметку
+ * из этого делает каждый вывод сам (строка HTML или узел DOM), а правила одни.
+ * Пустая клетка — «не менялось», `—` — файла в ревизии нет.
+ * `minus` — знак минуса: у артефакта он заморожен эталоном побайтово, страница
+ * ставит типографский. */
+function cellParts(value, delta, minus) {
+  if (value === null) return { text: '—', dir: null, miss: true };
+  if (!delta) return { text: '', dir: null, miss: false };
+  return {
+    text: (delta > 0 ? '+' : minus) + group(Math.abs(delta)),
+    dir: delta > 0 ? 'up' : 'down',
+    miss: false
+  };
+}
+
+// Клетка верхней строки: абсолютный размер, без дельты.
+function valueParts(value) {
+  return value === null ? { text: '—', miss: true } : { text: group(value), miss: false };
+}
+
+/* Строка-коммит: блок «общий объём» и по блоку на включённый файл, в каждом —
+ * клетка на метрику. Отбор включённых файлов происходит здесь, поэтому и таблица,
+ * и суммы считаются от одного выбора. */
+function rowModel(values, prev, metrics, on) {
+  const total = totalsOf(values, metrics, on);
+  const prevTotal = prev === null ? null : totalsOf(prev, metrics, on);
+  const out = {
+    total: metrics.map((m) => ({
+      value: total[m],
+      delta: deltaOf(total[m], prevTotal === null ? null : prevTotal[m])
+    })),
+    files: []
+  };
+  values.forEach((v, i) => {
+    if (on !== undefined && !on[i]) return;
+    const before = prev === null || prev[i] === null ? null : prev[i];
+    out.files.push(metrics.map((m) => {
+      const value = v === null ? null : v[m];
+      const was = value === null || before === null ? null : before[m];
+      return { value: value, delta: value === null ? null : deltaOf(value, was) };
+    }));
+  });
+  return out;
+}
+
+/* Верхняя строка — абсолютные размеры на HEAD: абсолютное число стоит в таблице
+ * один раз, и именно с ним сходятся все дельты под ним. */
+function nowModel(values, metrics, on) {
+  const total = totalsOf(values, metrics, on);
+  const files = [];
+  values.forEach((v, i) => {
+    if (on !== undefined && !on[i]) return;
+    files.push(metrics.map((m) => (v === null ? null : v[m])));
+  });
+  return { total: metrics.map((m) => total[m]), files: files };
+}
+
+/* Подпись коммита в терминах данных: что показать и куда вести. Ссылку считает
+ * `rowHref` — то же место, откуда её берёт контракт для страницы, поэтому оба
+ * вывода ведут туда же. */
+function commitParts(row, showSha, href) {
+  const short = showSha ? row.sha.slice(0, 7) : '';
+  return {
+    when: row.when,
+    subject: row.subject,
+    short: short,
+    href: href || null,
+    mark: row.section === null
+      ? { text: '—', title: null }
+      : { text: '§' + row.section.id + (row.section.added ? '' : '*'), title: row.section.head }
+  };
+}
+
+/* Текст вычислительной части страницы — это исходники тех же функций, что
+ * считают артефакт. Страница исполняет их, а не пересказ: второй реализации не
+ * существует, поэтому и разойтись двум отчётам нечем. */
+const DERIVED_SRC = [group, totalsOf, deltaOf, cellParts, valueParts, rowModel, nowModel, commitParts]
+  .map((fn) => fn.toString()).join('\n');
+
 // --- рендер -----------------------------------------------------------------
 
 const CSS = `
@@ -1078,58 +1185,39 @@ function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-// Разряды тонкими пробелами: toLocaleString зависит от ICU сборки Node, а строка
-// таблицы обязана совпадать побайтово на любой машине.
-function group(n) {
-  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '\u2009');
+/* Разметка клетки строки-коммита: правила — в `cellParts`, здесь только тег и
+ * классы. Клетка-дельта: абсолютные числа стоят один раз в верхней строке, иначе
+ * крупное число повторялось бы в каждой строке и колонки расползались бы. */
+function cellHtml(cell, first) {
+  const parts = cellParts(cell.value, cell.delta, '-');
+  const cls = 'num' + (first ? ' g' : '') + (parts.miss ? ' miss' : '');
+  if (parts.dir === null) return '<td class="' + cls + '">' + parts.text + '</td>';
+  return '<td class="' + cls + '"><span class="delta ' + parts.dir + '">' + parts.text + '</span></td>';
 }
 
-/* Клетка строки-коммита — только дельта: абсолютные числа стоят один раз в
- * верхней строке, иначе крупное число повторялось бы в каждой строке и колонки
- * расползались бы. Пустая клетка — «не менялось», `—` — файла в ревизии нет. */
-function cell(value, delta, cls) {
-  const classes = 'num' + (cls ? ' ' + cls : '');
-  if (value === null) return '<td class="' + classes + ' miss">—</td>';
-  if (!delta) return '<td class="' + classes + '"></td>';
-  const dir = delta > 0 ? 'up' : 'down';
-  return '<td class="' + classes + '"><span class="delta ' + dir + '">'
-    + (delta > 0 ? '+' : '-') + group(Math.abs(delta)) + '</span></td>';
-}
-
-// Клетка верхней строки: текущий размер, без дельты.
-function cellNow(value, cls) {
-  const classes = 'num' + (cls ? ' ' + cls : '');
-  if (value === null) return '<td class="' + classes + ' miss">—</td>';
-  return '<td class="' + classes + '">' + group(value) + '</td>';
+// Разметка клетки верхней строки: правила — в `valueParts`.
+function valueHtml(value, first) {
+  const parts = valueParts(value);
+  return '<td class="num' + (first ? ' g' : '') + (parts.miss ? ' miss' : '') + '">' + parts.text + '</td>';
 }
 
 function commitCell(row, index, cfg) {
   const loc = LOCALES[cfg.locale];
-  const short = cfg.rows.sha ? row.sha.slice(0, 7) : '';
-  const when = '<span class="when">' + esc(row.when) + '</span>';
-  const title = esc(short ? row.subject + ' · ' + short : row.subject);
-  const href = sectionLink(row.section, cfg);
-  let body;
-  let mark;
-  if (row.section) {
-    body = href
-      ? '<a class="subj" title="' + title + '" href="' + href + '">' + esc(row.subject) + '</a>'
-      : '<span class="subj" title="' + title + '">' + esc(row.subject) + '</span>';
-    mark = '<span class="sect" title="' + esc(row.section.head) + '">§' + esc(row.section.id)
-      + (row.section.added ? '' : '*') + '</span>';
-  } else {      const commitHref = rowHref(null, row.sha, cfg) || '';
-      body = commitHref
-      ? '<a class="subj" title="' + title + '" href="' + esc(commitHref) + '">' + esc(row.subject) + '</a>'
-      : '<span class="subj plain" title="' + title + '">' + esc(row.subject) + '</span>';
-    mark = '<span class="sect" title="'
-      + (cfg.journal
-        ? esc(fill(loc.note.noJournalMark, { journal: cfg.journal.path }))
-        : esc(loc.note.noJournal))
-      + '">—</span>';
-  }
+  const parts = commitParts(row, cfg.rows.sha, rowHref(row.section, row.sha, cfg));
+  const when = '<span class="when">' + esc(parts.when) + '</span>';
+  const title = esc(parts.short ? parts.subject + ' · ' + parts.short : parts.subject);
+  const plain = row.section === null && parts.href === null;
+  const body = parts.href
+    ? '<a class="subj" title="' + title + '" href="' + esc(parts.href) + '">' + esc(parts.subject) + '</a>'
+    : '<span class="subj' + (plain ? ' plain' : '') + '" title="' + title + '">' + esc(parts.subject) + '</span>';
+  const markTitle = parts.mark.title === null
+    ? (cfg.journal ? fill(loc.note.noJournalMark, { journal: cfg.journal.path }) : loc.note.noJournal)
+    : parts.mark.title;
   const id = cfg.rows.sha ? 'c-' + row.sha.slice(0, 7) : 'c-' + (index + 1);
   return '<th class="c-commit" id="' + id + '">'
-    + '<div class="clip">' + when + body + mark + '</div></th>';
+    + '<div class="clip">' + when + body
+    + '<span class="sect" title="' + esc(markTitle) + '">' + esc(parts.mark.text) + '</span>'
+    + '</div></th>';
 }
 
 function noteText(rows, cfg) {
@@ -1140,17 +1228,6 @@ function noteText(rows, cfg) {
     + (cfg.journal ? fill(journal, { journal: cfg.journal.path }) : journal)
     + fill(loc.note.columns, { columns: cfg.columns.map((c) => c.label).join(', ') })
     + fill(loc.note.rows, { rows: rows.length, command: cfg.fixCommand });
-}
-
-/* Верхняя строка — текущие размеры: абсолютное число стоит в таблице один раз,
- * и именно с ним сходятся все дельты под ним. */
-function nowCells(row, metrics) {
-  const total = totalsOf(row.cells, metrics);
-  const cells = metrics.map((m, mi) => cellNow(total[m], mi === 0 ? 'g' : ''));
-  row.cells.forEach((c) => {
-    metrics.forEach((m, mi) => cells.push(cellNow(c === null ? null : c[m], mi === 0 ? 'g' : '')));
-  });
-  return cells.join('');
 }
 
 function render(rows, cfg) {
@@ -1170,28 +1247,22 @@ function render(rows, cfg) {
 
   /* Дельта считается к предыдущему коммиту (в списке ниже он идёт строкой ниже),
    * а появление файла — рост на весь его объём: иначе сумма дельт по колонке не
-   * сходилась бы с текущим размером, и верхняя строка была бы недоказуемой. */
-  const d = (now, before) => (before === null || before === undefined ? now : now - before);
+   * сходилась бы с текущим размером, и верхняя строка была бы недоказуемой. Всё
+   * это считает `rowModel` — тот же, что и на странице. */
+  const cellsHtml = (make) => (cells) => cells.map((c, mi) => make(c, mi === 0)).join('');
+  const rowCells = cellsHtml((c, first) => cellHtml(c, first));
+  const nowCells = cellsHtml((v, first) => valueHtml(v, first));
+  const blocksHtml = (model, one) => one(model.total) + model.files.map(one).join('');
   const body = rows.map((row, i) => {
     const prev = i === 0 ? null : rows[i - 1];
-    const total = totalsOf(row.cells, metrics);
-    const prevTotal = prev === null ? null : totalsOf(prev.cells, metrics);
-    const cells = metrics.map((m, mi) => cell(total[m],
-      d(total[m], prevTotal === null ? null : prevTotal[m]), mi === 0 ? 'g' : ''));
-    row.cells.forEach((c, ci) => {
-      const p = prev === null ? null : prev.cells[ci];
-      metrics.forEach((m, mi) => {
-        const value = c === null ? null : c[m];
-        cells.push(cell(value,
-          value === null ? null : d(value, p === null ? null : p[m]), mi === 0 ? 'g' : ''));
-      });
-    });
-    return '<tr>' + commitCell(row, i, cfg) + cells.join('') + '</tr>';
+    return '<tr>' + commitCell(row, i, cfg)
+      + blocksHtml(rowModel(row.cells, prev === null ? null : prev.cells, metrics), rowCells)
+      + '</tr>';
   }).reverse().join('\n');
 
   const nowRow = rows.length === 0 ? '' : '<tr class="now">'
     + '<th class="c-commit">' + esc(loc.now) + '</th>'
-    + nowCells(rows[rows.length - 1], metrics)
+    + blocksHtml(nowModel(rows[rows.length - 1].cells, metrics), nowCells)
     + '</tr>';
 
   /* Подпись называет только то, что не меняется от самих служебных коммитов:
@@ -1226,51 +1297,11 @@ ${body}
 
 // --- страница отчёта --------------------------------------------------------
 
-/* Вычислительная часть страницы: из абсолютных значений контракта получаются все
- * производные — дельты, итоги, «сейчас». Живёт текстом, потому что страница —
- * один файл без внешних ссылок: скрипт в неё вклеивается, а не подключается. Тест
- * прогоняет именно этот текст (`test/contract.test.js`), поэтому числа страницы
- * проверены не на глаз, а сверены с числами артефакта. */
-const APP_MATH = `
-function appMetrics(data, view) {
-  return data.metrics.filter(function (m) { return view.metrics[m.key]; });
-}
-function appOn(data, view) {
-  return data.files.map(function (f, i) { return view.files[i]; });
-}
-function appValue(row, i, key) {
-  const v = row.values[i];
-  return v === null ? null : v[key];
-}
-/* Итог: сумма по включённым файлам. Выключенный файл не участвует ни в таблице,
- * ни в сумме. */
-function appTotals(values, metrics, on) {
-  const total = {};
-  metrics.forEach(function (m) { total[m.key] = 0; });
-  values.forEach(function (v, i) {
-    if (v === null || !on[i]) return;
-    metrics.forEach(function (m) { total[m.key] += v[m.key]; });
-  });
-  return total;
-}
-/* Дельта к предыдущему коммиту; появление файла — рост на весь его объём, иначе
- * сумма дельт по колонке не сошлась бы с текущим размером. */
-function appDelta(now, before) {
-  if (now === null) return null;
-  if (before === null || before === undefined) return now;
-  return now - before;
-}
-// Разряды тонкими пробелами: toLocaleString зависит от машины, а страница обязана
-// показывать те же числа, что артефакт.
-function appGroup(n) {
-  return String(n).replace(/\\B(?=(\\d{3})+(?!\\d))/g, '\\u2009');
-}
-`;
-
-/* Оболочка страницы: панель выбора и таблица. Всё производное берётся из функций
- * выше, поэтому включение метрики, категории или файла пересчитывает и дельты, и
- * итоги — без обращения к движку. Отделка (дерево папок, запоминание выбора,
- * тёмная схема) — следующий проход. */
+/* Оболочка страницы: панель выбора и таблица. Производные величины берёт
+ * вычислительная часть (`DERIVED_SRC` — тот же код, что считает артефакт), а
+ * здесь только состояние выбора и разметка: включение метрики, категории или
+ * файла заново зовёт тот же расчёт и потому не может дать других чисел. Отделка
+ * (дерево папок, запоминание выбора, тёмная схема) — следующий проход. */
 const APP_DOM = `
 const appData = JSON.parse(document.getElementById('data').textContent);
 const appUi = JSON.parse(document.getElementById('ui').textContent);
@@ -1333,29 +1364,32 @@ function appPanel() {
   });
 }
 
-function appDeltaCell(value, before, cls) {
-  const td = appEl('td', 'num' + (cls ? ' ' + cls : ''));
-  if (value === null) { td.className += ' miss'; td.textContent = '—'; return td; }
-  const delta = appDelta(value, before);
-  if (delta === 0) return td;
-  const span = appEl('span', 'delta ' + (delta > 0 ? 'up' : 'down'),
-    (delta > 0 ? '+' : '−') + appGroup(Math.abs(delta)));
-  td.appendChild(span);
+// Разметка клетки строки-коммита: правила — в cellParts, здесь только узел.
+function appCell(cell, first) {
+  const parts = cellParts(cell.value, cell.delta, '−');
+  const td = appEl('td', 'num' + (first ? ' g' : '') + (parts.miss ? ' miss' : ''));
+  if (parts.dir === null) td.textContent = parts.text;
+  else td.appendChild(appEl('span', 'delta ' + parts.dir, parts.text));
+  return td;
+}
+
+// Разметка клетки верхней строки: правила — в valueParts.
+function appValueCell(value, first) {
+  const parts = valueParts(value);
+  const td = appEl('td', 'num' + (first ? ' g' : '') + (parts.miss ? ' miss' : ''));
+  td.textContent = parts.text;
   return td;
 }
 
 function appCommit(row) {
   const th = appEl('th', 'c-commit');
-  const short = appData.report.showSha ? ' ' + row.sha.slice(0, 7) : '';
-  const name = row.href ? appEl('a', 'subj', row.subject) : appEl('span', 'subj', row.subject);
-  if (row.href) name.href = row.href;
-  name.title = row.subject + short;
-  th.appendChild(appEl('span', 'when', row.when));
+  const parts = commitParts(row, appData.report.showSha, row.href);
+  const name = parts.href ? appEl('a', 'subj', parts.subject) : appEl('span', 'subj', parts.subject);
+  if (parts.href) name.href = parts.href;
+  name.title = parts.subject + (parts.short ? ' ' + parts.short : '');
+  th.appendChild(appEl('span', 'when', parts.when));
   th.appendChild(name);
-  const mark = row.section === null
-    ? '—'
-    : '§' + row.section.id + (row.section.added ? '' : '*');
-  th.appendChild(appEl('span', 'sect', mark));
+  th.appendChild(appEl('span', 'sect', parts.mark.text));
   return th;
 }
 
@@ -1366,8 +1400,9 @@ function appSubHead(metrics) {
 }
 
 function appTable() {
-  const metrics = appMetrics(appData, appView);
-  const on = appOn(appData, appView);
+  const shown = appData.metrics.filter((m) => appView.metrics[m.key]);
+  const metrics = shown.map((m) => m.key);
+  const on = appView.files;
   const files = [];
   appData.files.forEach((f, i) => { if (on[i]) files.push(i); });
   const table = document.getElementById('grid');
@@ -1385,9 +1420,9 @@ function appTable() {
     th.colSpan = metrics.length;
     head.appendChild(th);
   });
-  const subs = appSubHead(metrics);
+  const subs = appSubHead(shown);
   files.forEach(() => {
-    const more = appSubHead(metrics);
+    const more = appSubHead(shown);
     while (more.firstChild) subs.appendChild(more.firstChild);
   });
   const thead = appEl('thead');
@@ -1398,20 +1433,11 @@ function appTable() {
   for (let r = appData.rows.length - 1; r >= 0; r--) {
     const row = appData.rows[r];
     const prev = r === 0 ? null : appData.rows[r - 1];
-    const totals = appTotals(row.values, metrics, on);
-    const prevTotals = prev === null ? null : appTotals(prev.values, metrics, on);
+    const model = rowModel(row.values, prev === null ? null : prev.values, metrics, on);
     const tr = appEl('tr');
     tr.appendChild(appCommit(row));
-    metrics.forEach((m, mi) => {
-      tr.appendChild(appDeltaCell(totals[m.key], prevTotals === null ? null : prevTotals[m.key],
-        mi === 0 ? 'g' : ''));
-    });
-    files.forEach((i) => {
-      metrics.forEach((m, mi) => {
-        tr.appendChild(appDeltaCell(appValue(row, i, m.key),
-          prev === null ? null : appValue(prev, i, m.key), mi === 0 ? 'g' : ''));
-      });
-    });
+    model.total.forEach((cell, mi) => tr.appendChild(appCell(cell, mi === 0)));
+    model.files.forEach((cells) => cells.forEach((cell, mi) => tr.appendChild(appCell(cell, mi === 0))));
     body.appendChild(tr);
   }
 
@@ -1419,16 +1445,9 @@ function appTable() {
    * с ней, поэтому она и стоит первой. */
   const now = appEl('tr', 'now');
   now.appendChild(appEl('th', 'c-commit', appUi.now));
-  const nowTotals = appTotals(appData.now, metrics, on);
-  metrics.forEach((m, mi) => { now.appendChild(appEl('td', 'num' + (mi === 0 ? ' g' : ''), appGroup(nowTotals[m.key]))); });
-  files.forEach((i) => {
-    metrics.forEach((m, mi) => {
-      const v = appData.now[i];
-      const td = appEl('td', 'num' + (mi === 0 ? ' g' : ''));
-      if (v === null) { td.className += ' miss'; td.textContent = '—'; } else { td.textContent = appGroup(v[m.key]); }
-      now.appendChild(td);
-    });
-  });
+  const nowCells = nowModel(appData.now, metrics, on);
+  nowCells.total.forEach((v, mi) => now.appendChild(appValueCell(v, mi === 0)));
+  nowCells.files.forEach((cells) => cells.forEach((v, mi) => now.appendChild(appValueCell(v, mi === 0))));
   body.insertBefore(now, body.firstChild);
 
   table.appendChild(thead);
@@ -1442,6 +1461,11 @@ function appRender() {
 }
 appRender();
 `;
+
+/* Программа страницы: вычислительная часть — исходники функций, считающих
+ * артефакт, затем оболочка. Читает её `pageHtml`, а «второго расчёта» здесь нет
+ * ровно потому, что текст берётся у самих функций. */
+const APP_SCRIPT = DERIVED_SRC + '\n' + APP_DOM;
 
 const APP_CSS = `
 :root { color-scheme: light dark; }
@@ -1488,7 +1512,7 @@ function pageHtml(data, cfg) {
       metrics: loc.page.metrics,
       note: loc.page.note.replace(/\{now\}/g, loc.now) // {command} подставляет страница
     })
-    + '</script>\n<script>\n' + APP_MATH + APP_DOM + '</script>\n</body>\n</html>\n';
+    + '</script>\n<script>\n' + APP_SCRIPT + '</script>\n</body>\n</html>\n';
 }
 
 /* JSON внутри страницы: `<` экранируется, иначе подпись коммита или путь закрыли
@@ -1751,7 +1775,8 @@ export {
   stripJs, stripHtml, stripCss, stripLines, compactJson, minifyForm, strategyFor,
   parseSections, touchedSection, anchor, sectionLink, rowHref,
   CATEGORY_EXTS, CATEGORY_ORDER, categoryOf,
-  reportData, dataMode, pageMode, pageHtml, APP_MATH, APP_DOM,
-  measureHistory, totalsOf, render, noteText, initMode, sniffColumns,
-  group, check, main
+  reportData, dataMode, pageMode, pageHtml, DERIVED_SRC, APP_SCRIPT, APP_DOM,
+  measureHistory, render, noteText, initMode, sniffColumns, check, main,
+  group, totalsOf, deltaOf, cellParts, valueParts, rowModel, nowModel, commitParts,
+  cellHtml, valueHtml
 };
