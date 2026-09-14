@@ -44,17 +44,20 @@ export function measureHistory(cfg, root) {
 
   const plan = commits.map((c) => {
     const changed = new Set(c.files);
-    const picks = cfg.columns.map((col) => {
-      const p = col.paths.find((cand) => changed.has(cand));
-      return p === undefined ? null : { path: p, spec: c.sha + ':' + p };
-    });
+    /* Псевдонимов колонки, которых коммит коснулся, может быть и два: при
+     * выключенном распознавании переименований git отдаёт в одном коммите и старое
+     * имя, и новое. Собираются все — какой из них в коммите действительно есть,
+     * решается потом, по прочитанным блобам. */
+    const picks = cfg.columns.map((col) => col.paths
+      .filter((cand) => changed.has(cand))
+      .map((path) => ({ path: path, spec: c.sha + ':' + path })));
     const journal = cfg.journal && changed.has(cfg.journal.path) ? c.sha + ':' + cfg.journal.path : null;
     return { picks: picks, journal: journal };
   });
 
   const specs = [];
   plan.forEach((p) => {
-    p.picks.forEach((pick) => { if (pick !== null) specs.push(pick.spec); });
+    p.picks.forEach((candidates) => { candidates.forEach((cand) => specs.push(cand.spec)); });
     if (p.journal !== null) specs.push(p.journal);
   });
   const blobs = readBlobs(root, specs, needText);
@@ -79,10 +82,17 @@ export function measureHistory(cfg, root) {
     }
 
     const before = state.slice();
-    plan[ci].picks.forEach((pick, i) => {
-      if (pick === null) return;
+    plan[ci].picks.forEach((candidates, i) => {
+      /* Из псевдонимов берётся тот, который в коммите есть, а не первый по
+       * порядку настроек: исчезнувшее имя в коммите отсутствует, и состояние,
+       * взятое по порядку, теряло файл (а сверка с деревом — отказывала). */
+      const pick = candidates.find((cand) => blobs.get(cand.spec) !== undefined);
+      if (pick === undefined) {
+        // Путь в коммите есть, а файла по нему нет — файл удалён.
+        if (candidates.length > 0) state[i] = null;
+        return;
+      }
       const blob = blobs.get(pick.spec);
-      if (blob === undefined) { state[i] = null; return; }
       const cells = {};
       metrics.forEach((m) => { cells[m] = measure(m, blob, pick.path, c.sha); });
       state[i] = { path: pick.path, sha: blob.sha, cells: cells };
