@@ -2,6 +2,7 @@ import zlib from 'zlib';
 import path from 'path';
 import { EXACT_STRATEGIES, assertCompilable, byteLen, minifyForm, strategyFor } from './strip.js';
 import { MINIFY_LOADERS, minifier, minifyWithEsbuild } from './minify.js';
+import { CHARS_PER_TOKEN, binaryFormats, tokenCount, tokenizer } from './tokens.js';
 
 /* Реестр метрик: что измеряется, нужен ли метрике текст и насколько честна цифра.
  * Отдельно от способов снятия балласта: метрика — это обещание про число, а не
@@ -9,7 +10,8 @@ import { MINIFY_LOADERS, minifier, minifyWithEsbuild } from './minify.js';
  *
  * Описание метрики для читателя берётся не из полей реестра, а из `metricView`:
  * у одной и той же метрики оно зависит от настроек (`min` — это настоящее сжатие
- * или упрощение), и разойтись двум ответам на один вопрос негде. */
+ * или упрощение, `tok` — точный словарь или оценка), и разойтись двум ответам на
+ * один вопрос негде. */
 
 /* Способы получить метрику `min`: снятие балласта и настоящее сжатие. Механизм у
  * них разный, и обещание тоже, поэтому у каждого свой способ, своя честность и своё
@@ -37,6 +39,21 @@ const STYLES = {
     unavailable: {
       ru: ' (минификатор esbuild недоступен — счёт упрощением, то есть приближением)',
       en: ' (the esbuild minifier is unavailable — comments and indentation are stripped: an approximation)'
+    }
+  },
+  tok: {
+    note: {
+      ru: 'вес для языковой модели: на сколько единиц текста (токенов) он разбирается',
+      en: 'weight for a language model: how many text units (tokens) it splits into'
+    },
+    method: { ru: '{tool} {version}, {encoding} (BPE)', en: '{tool} {version}, {encoding} (BPE)' },
+    binary: {
+      ru: '; для бинарных форматов ({exts}) это счёт байтов, а не текста — приближение',
+      en: '; binary formats ({exts}) are counted by bytes rather than text — an approximation'
+    },
+    estimate: {
+      ru: 'оценка по длине: 1 токен ≈ {chars} знака ({encoding} недоступен) — приближение',
+      en: 'length-based estimate: 1 token ≈ {chars} characters ({encoding} is unavailable) — an approximation'
     }
   }
 };
@@ -74,6 +91,12 @@ export const METRICS = {
       }
       return byteLen(min);
     }
+  },
+  tok: {
+    label: 'tok',
+    needsText: true,
+    view: tokView,
+    measure: (text, _file, cfg) => tokenCount(text, cfg.tokens)
   },
   gzip: {
     label: 'gzip',
@@ -124,6 +147,36 @@ function minView(cfg) {
   };
 }
 
+/* Подпись метрики `tok`. Соглашение о честности то же, что у `min`: способ говорит,
+ * каким словарём снято число (семейство и кодировка — часть счёта, а не подробность),
+ * а `accuracy` — точное оно или приближённое. Приближённым оно становится в двух
+ * случаях, и оба названы словами: форматы, для которых токены не считаются (у них
+ * число идёт по байтам), и отсутствие словаря (тогда счёт идёт оценкой по длине). */
+function tokView(cfg) {
+  const loc = cfg.locale;
+  const settings = cfg.tokens;
+  const { tool, version } = tokenizer(settings);
+  if (tool === null) {
+    return {
+      label: METRICS.tok.label,
+      note: STYLES.tok.note[loc],
+      method: STYLES.tok.estimate[loc]
+        .replace('{chars}', CHARS_PER_TOKEN).replace('{encoding}', settings.encoding),
+      accuracy: 'approximate'
+    };
+  }
+  const binary = binaryFormats(cfg);
+  let method = STYLES.tok.method[loc]
+    .replace('{tool}', 'gpt-tokenizer').replace('{version}', version).replace('{encoding}', settings.encoding);
+  if (binary.length > 0) method += STYLES.tok.binary[loc].replace('{exts}', binary.join(' '));
+  return {
+    label: METRICS.tok.label,
+    note: STYLES.tok.note[loc],
+    method: method,
+    accuracy: binary.length === 0 ? 'exact' : 'approximate'
+  };
+}
+
 /* Форматы этого отчёта, которые будут измерены упрощением. Список выводится из
  * настроек и таблицы минификатора, а не пишется руками: подпись не может
  * разойтись с тем, что происходит. */
@@ -156,23 +209,36 @@ function esbuildLoader(file, cfg) {
 }
 
 /* Действующий способ: запрошенный может быть недоступен — тогда метрика отступает
- * к упрощению, а отступление объявляется наружу (`sensorGap`), иначе приближение
- * ушло бы как точное число. */
+ * к другому счёту, а отступление объявляется наружу (`sensorGaps`), иначе
+ * приближение ушло бы как точное число. */
 export function minEngine(cfg) {
   if (cfg.minify.engine !== 'esbuild') return 'strip';
   return minifier().tool === null ? 'strip' : 'esbuild';
 }
 
-/* Чего не хватает для запрошенного способа: причина и починка для человека.
- * Причина минификатора уходит только сюда — в подписи метрики она была бы
+/* Чего не хватает для того, что просили: причина и починка для человека, по одной
+ * на датчик. Причина загрузчика уходит только сюда — в подписи метрики она была бы
  * машинной строкой (путём чужого `node_modules`), от которой вывод перестал бы
- * быть одинаковым на разных машинах и в подписи отчёта не было бы смысла. */
-export function sensorGap(cfg) {
-  if (cfg.minify.engine !== 'esbuild' || minifier().tool !== null) return null;
-  return {
-    why: 'метрика «min» считает упрощением: минификатор недоступен — ' + minifier().why,
-    fix: 'поставьте необязательные зависимости заново или задайте "minify": {"engine": "strip"}'
-  };
+ * быть одинаковым на разных машинах, а в подписи отчёта — понятным. */
+export function sensorGaps(cfg) {
+  const gaps = [];
+  const minify = minifier();
+  if (cfg.minify.engine === 'esbuild' && minify.tool === null) {
+    gaps.push({
+      why: 'метрика «min» считает упрощением: минификатор недоступен — ' + minify.why,
+      fix: 'поставьте необязательные зависимости заново или задайте "minify": {"engine": "strip"}'
+    });
+  }
+  if (cfg.metrics.indexOf('tok') >= 0) {
+    const tokens = tokenizer(cfg.tokens);
+    if (tokens.tool === null) {
+      gaps.push({
+        why: 'метрика «tok» считает оценкой по длине: словаря нет — ' + tokens.why,
+        fix: 'поставьте необязательные зависимости заново или уберите "tok" из metrics'
+      });
+    }
+  }
+  return gaps;
 }
 
 /* Одно место, где решается, читать метрику из размера объекта или из текста:

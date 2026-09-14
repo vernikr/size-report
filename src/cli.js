@@ -7,7 +7,7 @@ import { MAX_BUF, git, gitArgv, gitEnv } from './git.js';
 import { byteLen } from './strip.js';
 import { build } from './history.js';
 import { reportData } from './data.js';
-import { sensorGap } from './metrics.js';
+import { sensorGaps } from './metrics.js';
 import { render } from './render.js';
 import { totalsOf } from './derived.js';
 import { pageHtml } from './page/build.js';
@@ -20,14 +20,14 @@ function kmb(bytes) {
   return Math.round(bytes / 1024) + ' КБ';
 }
 
-/* Деградация — не ошибка, а факт отчёта: числа получены упрощением, потому что
- * необязательный минификатор недоступен. Факт печатается один раз и становится
- * кодом 4 — иначе приближение уезжало бы в CI как успех. */
+/* Деградация — не ошибка, а факт отчёта: числа получены другим счётом (упрощение
+ * вместо сжатия, оценка вместо точного счёта), потому что необязательной
+ * зависимости нет. Факт печатается один раз на датчик и становится кодом 4 — иначе
+ * приближение уезжало бы в CI как успех. */
 function sensorNote(cfg) {
-  const gap = sensorGap(cfg);
-  if (gap === null) return EXIT.OK;
-  console.error('! ' + gap.why + '\n  починка: ' + gap.fix);
-  return EXIT.SENSOR;
+  const gaps = sensorGaps(cfg);
+  gaps.forEach((gap) => console.error('! ' + gap.why + '\n  починка: ' + gap.fix));
+  return gaps.length === 0 ? EXIT.OK : EXIT.SENSOR;
 }
 
 export function check(cfg, want, root) {
@@ -201,11 +201,13 @@ export function initMode(root, file, force) {
     title: 'Объём файлов по коммитам',
     heading: 'Объём файлов по коммитам',
     fixCommand: hasPkg ? manager + ' run sizes' : 'npx size-report --write',
-    metrics: ['raw', 'min'],
-    // Настоящее сжатие, а не упрощение: новый проект не должен начинать с
-    // приближённых чисел. Плата названа в подсказке ниже: без необязательной
-    // зависимости метрика честно отступает к упрощению и прогон возвращает код 4.
+    metrics: ['raw', 'min', 'tok'],
+    // Настоящее сжатие и настоящий словарь, а не приближения: новый проект не
+    // должен начинать с приближённых чисел. Плата названа в подсказке ниже: без
+    // необязательной зависимости метрика честно отступает к другому счёту и
+    // прогон возвращает код 4.
     minify: { engine: 'esbuild' },
+    tokens: { family: 'openai', encoding: 'o200k_base' },
     columns: sniffed.columns,
     journal: journalPath
       ? { path: journalPath, url: '../' + journalPath, pattern: '^## (?<id>\\S+)\\s+(?<title>.+?)\\s*$', anchor: 'heading' }
@@ -223,6 +225,7 @@ export function initMode(root, file, force) {
   console.log('  расширения в проекте: ' + (sniffed.exts.join(' ') || '—'));
   console.log('  колонок: ' + sniffed.columns.length + ' (крупнейшие файлы по расширениям)');
   console.log('  метрика min: настоящее сжатие (esbuild); без него — честное упрощение и код 4');
+  console.log('  метрика tok: словарь o200k_base (gpt-tokenizer); без него — оценка по длине и код 4');
   console.log('  журнал: ' + (journalPath || 'не найден — ссылки строк будут без разделов'));
   console.log('  дальше: 1) поправьте колонки и метрики — какие файлы важны, знает только проект');
   console.log('          2) ' + (hasPkg

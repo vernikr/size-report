@@ -65,14 +65,16 @@ function engineCopy(name) {
   return { dir: dir, target: { name: 'движок из копии', file: path.join(dir, 'bin', 'size.js'), env: null } };
 }
 
-/* Способ минификации в черновике: черновик ведёт новый проект на минификатор, а
- * предпроектные проверки (гард стриппера, разметка в `.js`) стерегут снятие
- * балласта, поэтому способ они называют явно — иначе проверяли бы не то, что
- * называют. */
-function setEngine(dir, engine) {
+/* Черновик без необязательных зависимостей: способ снятия балласта назван явно, а
+ * словарь токенов не запрошен. Черновик ведёт новый проект на минификатор и
+ * токенизатор, но предпроектные проверки (гард стриппера, разметка в `.js`)
+ * стерегут снятие балласта — иначе они проверяли бы не то, что называют, — а
+ * движок из копии идёт без `node_modules`, где обе зависимости и лежат. */
+function plainDraft(dir) {
   const file = path.join(dir, 'size-table.config.json');
   const cfg = JSON.parse(fs.readFileSync(file, 'utf8'));
-  cfg.minify = Object.assign({}, cfg.minify, { engine: engine });
+  cfg.minify = Object.assign({}, cfg.minify, { engine: 'strip' });
+  cfg.metrics = cfg.metrics.filter((key) => key !== 'tok');
   fs.writeFileSync(file, JSON.stringify(cfg, null, 2) + '\n');
 }
 
@@ -114,7 +116,7 @@ test('гард жив: сломанный стриппер не проходит
   const dir = makeRepo('broken-stripper', { name: 'broken-stripper', version: '1.0.0', private: true });
   const init = runSize(dir, ['--init']);
   assert.equal(init.code, 0, 'черновик настроек не создался: ' + firstLine(init.stderr));
-  setEngine(dir, 'strip');
+  plainDraft(dir);
   const engine = engineCopy('broken-engine');
   const ok = runTool(engine.target, dir, ['--write']);
   assert.equal(ok.code, 0, 'до мутации проект не собрался: ' + firstLine(ok.stderr));
@@ -168,7 +170,7 @@ test('не JavaScript в графе — отказ с командой почи�
   assert.equal(hasStack(res.stderr), false, 'отказ напечатал стек:\n' + res.stderr);
 
   // Тем же проектом, но прежним способом: причину называет гард снятия балласта.
-  setEngine(dir, 'strip');
+  plainDraft(dir);
   const guarded = runSize(dir, ['--write']);
   assert.equal(guarded.code, 2, 'способ из настроек не назвал настоящую причину: '
     + firstLine(guarded.stderr || guarded.stdout));

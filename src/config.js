@@ -4,6 +4,7 @@ import { MAX_BUF, gitArgv, gitEnv } from './git.js';
 import { EXIT, cliCommand, refuse } from './refusal.js';
 import { LOCALES } from './locales.js';
 import { METRICS, MINIFY_ENGINES } from './metrics.js';
+import { TOKEN_DEFAULTS, TOKEN_FAMILIES } from './tokens.js';
 import { CATEGORY_ORDER } from './data.js';
 
 /* Настройки проекта-потребителя: значения по умолчанию, чтение и проверка.
@@ -23,6 +24,8 @@ export const DEFAULT_CONFIG = {
   // `engine` — чем считается метрика `min`: снятием балласта (умолчание, под ним
   // сняты замороженные эталоны) или настоящим сжатием минификатором.
   minify: { engine: 'strip', ext: {}, guard: ['.js', '.mjs', '.cjs'] },
+  // Токены: каким словарём считать. Семейство — про модели, кодировка — про число.
+  tokens: Object.assign({}, TOKEN_DEFAULTS),
   journal: null,
   links: { commitUrl: '' },
   // Слияние — обычный коммит: у него есть правки разрешения конфликта, и без
@@ -64,6 +67,7 @@ export function loadConfig(file) {
   }
   const cfg = Object.assign({}, DEFAULT_CONFIG, raw);
   cfg.minify = Object.assign({}, DEFAULT_CONFIG.minify, raw.minify);
+  cfg.tokens = Object.assign({}, DEFAULT_CONFIG.tokens, raw.tokens);
   cfg.links = Object.assign({}, DEFAULT_CONFIG.links, raw.links);
   cfg.rows = Object.assign({}, DEFAULT_CONFIG.rows, raw.rows);
   cfg.path = file;
@@ -92,6 +96,15 @@ export function validateConfig(cfg) {
   });
   if (MINIFY_ENGINES.indexOf(cfg.minify.engine) < 0) {
     fail('неизвестный способ минификации «' + cfg.minify.engine + '» (есть: ' + MINIFY_ENGINES.join(', ') + ')');
+  }
+  const family = TOKEN_FAMILIES[cfg.tokens.family];
+  if (family === undefined) {
+    fail('неизвестное семейство токенизатора «' + cfg.tokens.family + '» (есть: '
+      + Object.keys(TOKEN_FAMILIES).join(', ') + ')');
+  }
+  if (family.encodings.indexOf(cfg.tokens.encoding) < 0) {
+    fail('неизвестная кодировка токенизатора «' + cfg.tokens.encoding + '» у семейства '
+      + cfg.tokens.family + ' (есть: ' + family.encodings.join(', ') + ')');
   }
   if (!LOCALES[cfg.locale]) fail('неизвестная локаль «' + cfg.locale + '» (есть: ' + Object.keys(LOCALES).join(', ') + ')');
   // Файл таблицы не может быть её колонкой: размер артефакта зависит от числа

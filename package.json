@@ -43,6 +43,7 @@
     "jsdom": "~26"
   },
   "optionalDependencies": {
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "gpt-tokenizer": "4.0.0"
   }
 }
