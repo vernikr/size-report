@@ -11,7 +11,9 @@
  *      сумма дельт по колонке — с текущим размером; оболочка страницы при этом не
  *      имеет права заводить свои функции расчёта;
  *   4. страница собирается и работает в настоящем DOM (jsdom): включение метрик,
- *      категорий и файлов пересчитывает таблицу без обращения к движку.
+ *      категорий и файлов пересчитывает таблицу без обращения к движку;
+ *   5. оформление таблицы у двух выводов одно, и цвет дельт задан один раз;
+ *   6. состояния пустоты (сняты все метрики или все файлы) объясняются словами.
  */
 
 import { test, after } from 'node:test';
@@ -20,6 +22,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { JSDOM } from 'jsdom';
 import { CATEGORY_ORDER, pageScript, rowModel, stripModules, totalsOf, valueParts } from '../src/size-table.js';
+import { ARTIFACT_CSS, PAGE_CSS, TABLE_CSS } from '../src/css.js';
 import { ROOT, SYNTH, cloneFixture, runFixture, tempDir } from '../tools/harness.js';
 
 const goldenText = fs.readFileSync(path.join(SYNTH, 'golden.json'), 'utf8');
@@ -258,7 +261,8 @@ test('вычислительная часть страницы — код дви
    * разметка, либо вернувшийся своим путём расчёт; первое правится здесь же,
    * второе лучше не делать вовсе. */
   assert.deepEqual(defined('\n' + appSrc).sort(), [
-    'appBox', 'appCell', 'appCommit', 'appEl', 'appPanel', 'appRender', 'appSubHead', 'appTable', 'appValueCell'
+    'appBox', 'appCell', 'appCommit', 'appEl', 'appLegend', 'appPanel', 'appRender', 'appState',
+    'appSubHead', 'appTable', 'appValueCell'
   ], 'оболочка страницы завела свою функцию: расчёт должен жить в вычислительной части');
   assert.equal(/\breduce\(|Math\.abs/.test(appSrc), false,
     'оболочка страницы считает итоги или знак дельты сама');
@@ -346,4 +350,95 @@ test('страница считает то же, что артефакт, и п�
   const expected = totalRaw - data.now[fileIndex].raw;
   assert.equal(lastNow[0].textContent, valueParts(expected).text,
     'итог после выключения файла не совпал с суммой без него');
+});
+
+/* Оформление: общая часть таблицы у двух выводов одна, и цвет дельт задан один раз.
+ * Проверяется по файлам и по собранной странице, а не на слово: второй набор стилей
+ * или второй цвет дельт — это ровно то, из-за чего два отчёта одной истории
+ * расходятся на вид. */
+test('оформление таблицы одно на оба вывода, и цвет дельт задан в одном месте', () => {
+  assert.ok(pageText.indexOf(TABLE_CSS) > 0, 'страница не несёт общую часть оформления дословно');
+  assert.equal(pageText.indexOf(TABLE_CSS), pageText.lastIndexOf(TABLE_CSS),
+    'общая часть оформления вклеена в страницу дважды');
+  assert.ok(pageText.indexOf(PAGE_CSS) > 0, 'страница собрана не из своего оформления');
+
+  /* Своё оформление страницы обязано не заводить правил для того, что уже задано
+   * общей частью, — иначе это второй набор той же таблицы. Список общих селекторов
+   * берётся из самой общей части, а не переписывается сюда: правило, добавленное
+   * там, стережётся здесь же. Исключение — адаптации под узкое окно: там
+   * расхождение осознанное (общая часть заморожена байтами артефакта), и оно должно
+   * быть внутри `@media`, поэтому блоки `@media` из сверки выпадают. */
+  const own = fs.readFileSync(path.join(ROOT, 'src', 'page', 'app.css'), 'utf8')
+    .replace(/@media[^{]*\{(?:[^{}]|\{[^{}]*\})*\}/g, '');
+  const heads = (css) => [...css.matchAll(/(?:^|\})\s*([^{}@]+)\{/g)].map((m) => m[1].trim());
+  const clash = heads(own).filter((head) => heads(TABLE_CSS).indexOf(head) >= 0);
+  assert.deepEqual(clash, [],
+    'своё оформление страницы повторило правила общей части: ' + clash.join(' | '));
+
+  // Цвет дельт: пара значений живёт в общей части, а больше цветов в стилях нет.
+  const hex = (text) => [...text.matchAll(/#[0-9a-f]{6}\b/gi)].map((m) => m[0].toLowerCase());
+  assert.deepEqual([...new Set(hex(TABLE_CSS))].sort(), ['#1e8449', '#c0392b'],
+    'соглашение о цвете дельт изменилось — его надо записать заново (src/css.js)');
+  assert.deepEqual(hex(ARTIFACT_CSS + PAGE_CSS), [],
+    'оформление артефакта или страницы завело свой цвет: цвет дельт должен быть один на пакет');
+  hex(TABLE_CSS).forEach((color) => assert.equal(pageText.split(color).length - 1, 1,
+    'цвет ' + color + ' встречается в странице не один раз: он уехал из общей части'));
+});
+
+/* Состояния пустоты: без метрик таблицу не из чего собрать — страница говорит об
+ * этом словами, а не сеткой без колонок; без файлов остаётся общий объём, и это
+ * тоже сказано. Ни в одном из состояний не должно остаться `colspan="0"`. */
+test('состояния пустоты: без метрик — слова вместо сетки, без файлов — только общий объём', () => {
+  const dom = new JSDOM(pageText, { runScripts: 'dangerously' });
+  const doc = dom.window.document;
+  const ui = JSON.parse(doc.getElementById('ui').textContent);
+  const inputs = [...doc.querySelectorAll('#panel input')];
+  const isMetric = (b) => b.title.indexOf('· способ:') >= 0;
+  const toggle = (b, checked) => {
+    b.checked = checked;
+    b.dispatchEvent(new dom.window.Event('change'));
+  };
+
+  inputs.filter(isMetric).forEach((b) => toggle(b, false));
+  assert.equal(doc.getElementById('state').hidden, false,
+    'без метрик страница молчит вместо того, чтобы объяснить пустоту');
+  assert.equal(doc.getElementById('state').textContent, ui.empty, 'объяснение пустоты не то');
+  assert.equal(doc.getElementById('shell').hidden, true, 'сетка без метрик осталась на виду');
+  assert.equal(doc.querySelectorAll('#grid tbody tr').length, 0, 'таблица без метрик всё ещё строится');
+  assert.equal(doc.querySelectorAll('[colspan="0"]').length, 0, 'в разметке остался colspan="0"');
+
+  inputs.filter(isMetric).forEach((b) => toggle(b, true));
+  inputs.filter((b) => !isMetric(b)).forEach((b) => toggle(b, false));
+  assert.equal(doc.getElementById('shell').hidden, false, 'сетка пропала, хотя метрики выбраны');
+  assert.equal(doc.getElementById('state').textContent, ui.noFiles, 'про пустой выбор файлов не сказано');
+  const onlyTotal = doc.querySelectorAll('#grid tbody tr');
+  assert.equal(onlyTotal.length, data.rows.length + 1, 'без файлов таблица перестала строиться');
+  assert.equal(onlyTotal[0].querySelectorAll('td').length, data.metrics.length,
+    'с выключенными файлами в строке остались чужие колонки');
+  assert.equal(doc.querySelectorAll('[colspan="0"]').length, 0, 'в разметке остался colspan="0"');
+});
+
+/* Переключатели панели глазами клавиатуры: поле ввода лежит внутри метки (одна цель
+ * для мыши и для клавиатуры) и достижимо с Tab, а полная пересборка панели не
+ * отбирает фокус — иначе каждое переключение начиналось бы с обхода панели заново. */
+test('переключатели панели: одна цель нажатия и фокус, который не теряется', () => {
+  const dom = new JSDOM(pageText, { runScripts: 'dangerously' });
+  const doc = dom.window.document;
+  const inputs = () => [...doc.querySelectorAll('#panel input')];
+  const first = inputs();
+
+  first.forEach((b) => {
+    const label = b.closest('label');
+    assert.ok(label && label.querySelector('input') === b,
+      'переключатель вне метки: подпись и поле — две разные цели нажатия');
+    assert.equal(b.tabIndex, 0, 'переключатель недостижим с клавиатуры');
+  });
+
+  inputs()[2].focus();
+  assert.equal(doc.activeElement, inputs()[2], 'фокус не встал на переключатель');
+  inputs()[2].checked = false;
+  inputs()[2].dispatchEvent(new dom.window.Event('change'));
+  assert.equal(inputs().length, first.length, 'пересборка панели изменила набор переключателей');
+  assert.equal(doc.activeElement, inputs()[2],
+    'после пересборки панели фокус потерян: клавиатура начинает обход заново');
 });

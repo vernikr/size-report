@@ -12,10 +12,22 @@ export const LOCALES = {
     total: 'Общий объём',
     now: 'сейчас',
     categories: { code: 'Код', docs: 'Документация', chore: 'Служебные', assets: 'Ресурсы' },
+    /* Тексты страницы отчёта: в артефакт они не попадают, поэтому меняются
+     * независимо от его заморожённых байтов. */
     page: {
       metrics: 'Метрики',
-      note: 'В клетке — изменение к предыдущему коммиту, пустая клетка — не менялось, '
-        + '«—» — файла в той ревизии ещё нет. Абсолютные размеры стоят один раз, в строке «{now}». '
+      all: 'все',
+      sub: '{tool} {version} · рядом со страницей — статическая таблица: {artifact}',
+      legendUp: 'рост',
+      legendDown: 'спад',
+      legendSame: 'пустая клетка — не менялось',
+      legendMiss: '«—» — файла в этой ревизии ещё нет',
+      emptyMetrics: 'Ни одна метрика не выбрана — таблицу не из чего собрать. '
+        + 'Включите хотя бы одну в панели выше: без метрик нет ни одной колонки с числом.',
+      noFiles: 'Ни один файл не выбран: в таблице остался только общий объём. '
+        + 'Включите файл в панели выше, чтобы увидеть его колонки.',
+      note: 'Абсолютные размеры стоят один раз — в строке «{now}». Строк: {rows}: коммиты без '
+        + 'изменения объёма и коммиты, тронувшие только выключенные файлы, строк не получают. '
         + 'Собрано из истории git: {command}.'
     },
     note: {
@@ -44,9 +56,19 @@ export const LOCALES = {
     categories: { code: 'Code', docs: 'Documentation', chore: 'Chores', assets: 'Assets' },
     page: {
       metrics: 'Metrics',
-      note: 'A cell holds the change against the previous commit, an empty cell — no change, '
-        + '“—” — the file does not exist in that revision yet. Absolute sizes appear once, in the '
-        + '“{now}” row. Collected from git history: {command}.'
+      all: 'all',
+      sub: '{tool} {version} · a static table sits next to this page: {artifact}',
+      legendUp: 'growth',
+      legendDown: 'fall',
+      legendSame: 'an empty cell — no change',
+      legendMiss: '“—” — the file does not exist in that revision yet',
+      emptyMetrics: 'No metric is selected — there is nothing to build the table from. '
+        + 'Turn on at least one above: without metrics there is no column holding a number.',
+      noFiles: 'No file is selected: the table shows the total only. '
+        + 'Turn on a file above to see its columns.',
+      note: 'Absolute sizes appear once — in the “{now}” row. Rows: {rows}: commits that change '
+        + 'no number, and commits touching only the disabled files, get no row. '
+        + 'Collected from git history: {command}.'
     },
     note: {
       intro: 'A row is a commit, a column is a file. ',

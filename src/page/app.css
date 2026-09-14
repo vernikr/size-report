@@ -1,0 +1,132 @@
+/* Оформление страницы отчёта — то, что стоит сверх общей таблицы (`src/table.css`):
+ * холст и типографика, панель выбора с легендой, состояния пустоты и адаптации под
+ * узкое окно. Чисел и цвета дельт здесь нет намеренно: их задаёт общая часть, и она
+ * же попадает в статический артефакт, поэтому двух наборов одной таблицы не
+ * бывает. Страница открывается с диска, без сервера и без сети, поэтому ни одной
+ * внешней ссылки в ней быть не может: только системные семейства шрифтов
+ * (`ui-sans-serif`) и системные цвета (`Canvas`, `CanvasText`, `AccentColor`),
+ * которые есть в любой теме.
+ *
+ * Общая часть заморожена байтами артефакта (`src/css.js`), поэтому всё, где
+ * страница расходится с её геометрией, собрано в разделе «адаптации» с причиной:
+ * растить общую часть нельзя, а на узком экране колонка коммита в 300px съедает
+ * весь экран. */
+
+:root {
+  color-scheme: light dark;
+  --gap: 12px;
+  --pad: clamp(16px, 3vw, 34px);
+  --radius: 10px;
+  --muted: rgba(127, 127, 127, .85);
+  --line: rgba(127, 127, 127, .32);
+  --tint: rgba(127, 127, 127, .07);
+}
+
+/* Типографика и ритм: один шаг между блоками (--gap), крупный заголовок,
+ * приглушённая подпись — чтобы взгляд доходил до чисел, а не до служебного текста. */
+body {
+  margin: 0;
+  padding: var(--pad) var(--pad) 48px;
+  background: Canvas;
+  color: CanvasText;
+  font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em; }
+.sub { margin: 0 0 calc(var(--gap) + 4px); color: var(--muted); font-size: 12.5px; }
+
+/* Панель выбора — карточка: она отделяет управление от данных и не сливается с
+ * таблицей, которая начинается ниже. */
+.panel {
+  margin: 0 0 var(--gap);
+  padding: 12px 14px 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--tint);
+}
+.panel fieldset { margin: 0; padding: 0; border: 0; }
+.panel fieldset + fieldset { margin-top: 10px; }
+.panel legend, .panel .cap {
+  padding: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+.panel .cap { display: block; margin-bottom: 4px; }
+.panel .row { display: flex; flex-wrap: wrap; gap: 3px 6px; align-items: center; }
+
+/* Переключатель — метка вокруг поля ввода: и подпись, и цель нажатия одна, поэтому
+ * по нему попадает и мышь, и клавиатура (Space на поле ввода), и вспомогательные
+ * технологии. */
+.box {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 3px 9px 3px 7px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.box:hover { background: var(--tint); }
+.box input { margin: 0; accent-color: AccentColor; }
+.box.all { font-weight: 600; }
+
+/* Легенда: те же классы цвета, что и в клетках (.up/.down из общей части), поэтому
+ * образец в легенде не может разойтись с цветом числа. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 18px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+.legend li { display: inline-flex; gap: 6px; align-items: center; }
+.swatch { width: 10px; height: 10px; border-radius: 3px; background: currentColor; }
+.swatch.same { background: none; border: 1px dashed currentColor; }
+.swatch.miss { background: none; border: 1px solid currentColor; border-radius: 0; }
+
+/* Таблица — в своей рамке и со своим скроллом: шапка и колонка коммита липнут к ней
+ * (правила липкости — в общей части), а не к странице, поэтому при прокрутке вбок
+ * видно, чей это ряд, а при прокрутке вниз — что за колонка. */
+.shell {
+  overflow: auto;
+  max-height: calc(100vh - 300px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: Canvas;
+}
+/* Числа плотнее текста страницы: их больше и они короче, а читаются по разрядам. */
+#grid { font-size: 12.5px; }
+
+/* Состояния пустоты: когда таблицу не из чего собрать, страница говорит об этом
+ * словами, а не пустой сеткой. */
+.state {
+  margin: var(--gap) 0 0;
+  padding: 11px 13px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.state[hidden], .shell[hidden] { display: none; }
+
+.note { margin: 14px 0 0; max-width: 90em; color: var(--muted); font-size: 12px; }
+.note code { background: var(--tint); padding: 0 3px; border-radius: 3px; }
+
+/* Клавиатура: рамка фокуса видна на любом фоне (системный цвет акцента) и не
+ * сдвигает разметку. Ссылки журнала и все переключатели доступны с Tab. */
+:focus-visible { outline: 2px solid AccentColor; outline-offset: 2px; border-radius: 3px; }
+
+/* Адаптации: единственное место, где страница правит общую геометрию, — потому что
+ * общая часть заморожена байтами артефакта, а не потому что так удобнее. */
+@media (max-width: 900px) {
+  body { padding: 14px 14px 32px; }
+  h1 { font-size: 18px; }
+  #grid { font-size: 12px; }
+  .shell { max-height: calc(100vh - 260px); }
+  .clip { width: 190px; }
+}

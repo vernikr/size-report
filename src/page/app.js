@@ -1,4 +1,4 @@
-/* Программа страницы отчёта: панель выбора и таблица.
+/* Программа страницы отчёта: панель выбора с легендой и таблица.
  *
  * Это обычный исходник, а не строка в движке: его видит линтер, и он же
  * вклеивается в собранную страницу (`pageScript` снимает модульный синтаксис —
@@ -7,9 +7,11 @@
  * же расчёт, что считает статическую таблицу, и не может дать других чисел.
  *
  * Страница — один файл без внешних ссылок, поэтому здесь нет ни `import()` по
- * требованию, ни загрузки чего-либо по сети.
+ * требованию, ни загрузки чего-либо по сети: оформление приходит тем же файлом,
+ * а разметка клеток повторяет статическую таблицу (`clip` и подпись коммита —
+ * правила общей части оформления).
  *
- * Отделка (дерево папок, запоминание выбора, тёмная схема) — следующий проход. */
+ * Отделка (дерево папок, запоминание выбора в браузере) — следующий проход. */
 
 /* Импорт — одной строкой: модульный синтаксис снимается при вклейке построчно,
  * и оставшаяся строка `import` попала бы в страницу (её ловит проверка). */
@@ -28,8 +30,11 @@ function appEl(tag, cls, text) {
   return el;
 }
 
-function appBox(label, title, checked, onChange) {
-  const box = appEl('label', 'box');
+/* Переключатель — метка вокруг поля ввода: цель нажатия одна, поэтому по нему
+ * попадают и мышь, и клавиатура (`Space` на поле ввода), и вспомогательные
+ * технологии. Подпись видимая, подробности — во всплывающей строке. */
+function appBox(label, title, checked, onChange, cls) {
+  const box = appEl('label', 'box' + (cls ? ' ' + cls : ''));
   const input = document.createElement('input');
   input.type = 'checkbox';
   input.checked = checked;
@@ -40,13 +45,28 @@ function appBox(label, title, checked, onChange) {
   return box;
 }
 
+/* Легенда: образцы — теми же классами, что и числа в клетках (`up`/`down` из
+ * общей части оформления), поэтому образец не может разойтись с цветом числа. */
+function appLegend() {
+  const list = appEl('ul', 'legend');
+  appUi.legend.forEach((item) => {
+    const li = appEl('li');
+    li.appendChild(appEl('span', 'swatch ' + item.cls));
+    li.appendChild(appEl('span', null, item.text));
+    list.appendChild(li);
+  });
+  return list;
+}
+
 /* Категория — не отдельное состояние, а способ переставить галочки файлов сразу:
  * сама она ничего не помнит, иначе одно и то же решалось бы в двух местах. */
 function appPanel() {
   const panel = document.getElementById('panel');
   panel.textContent = '';
+
+  const metrics = appEl('fieldset');
+  metrics.appendChild(appEl('legend', null, appUi.metrics));
   const mrow = appEl('div', 'row');
-  mrow.appendChild(appEl('span', 'cap', appUi.metrics));
   appData.metrics.forEach((m) => {
     mrow.appendChild(appBox(m.label, m.note + ' · способ: ' + m.method + ' (' + m.accuracy + ')',
       appView.metrics[m.key], (e) => {
@@ -54,15 +74,19 @@ function appPanel() {
         appRender();
       }));
   });
-  panel.appendChild(mrow);
+  metrics.appendChild(mrow);
+  panel.appendChild(metrics);
+
   appData.categories.forEach((cat) => {
     const idx = [];
     appData.files.forEach((f, i) => { if (f.category === cat.key) idx.push(i); });
+    const group = appEl('fieldset');
+    group.appendChild(appEl('legend', null, cat.label));
     const row = appEl('div', 'row');
-    row.appendChild(appBox(cat.label, 'все файлы категории', idx.every((i) => appView.files[i]), (e) => {
+    row.appendChild(appBox(appUi.all, 'все файлы категории', idx.every((i) => appView.files[i]), (e) => {
       idx.forEach((i) => { appView.files[i] = e.target.checked; });
       appRender();
-    }));
+    }, 'all'));
     idx.forEach((i) => {
       const f = appData.files[i];
       const where = f.path === null ? f.paths[0] + ' (нет на HEAD)' : f.path;
@@ -72,8 +96,11 @@ function appPanel() {
         appRender();
       }));
     });
-    panel.appendChild(row);
+    group.appendChild(row);
+    panel.appendChild(group);
   });
+
+  panel.appendChild(appLegend());
 }
 
 // Разметка клетки строки-коммита: правила — в cellParts, здесь только узел.
@@ -93,15 +120,23 @@ function appValueCell(value, first) {
   return td;
 }
 
+/* Подпись коммита — той же разметкой, что в статической таблице: дата, тема,
+ * метка раздела журнала. Ширину колонки и обрезку длинной темы задаёт общая часть
+ * оформления, поэтому колонка не прыгает при переключении файлов. */
 function appCommit(row) {
-  const th = appEl('th', 'c-commit');
   const parts = commitParts(row, appData.report.showSha, row.href);
   const name = parts.href ? appEl('a', 'subj', parts.subject) : appEl('span', 'subj', parts.subject);
   if (parts.href) name.href = parts.href;
-  name.title = parts.subject + (parts.short ? ' ' + parts.short : '');
-  th.appendChild(appEl('span', 'when', parts.when));
-  th.appendChild(name);
-  th.appendChild(appEl('span', 'sect', parts.mark.text));
+  name.title = parts.title;
+  const mark = appEl('span', 'sect', parts.mark.text);
+  if (parts.mark.title) mark.title = parts.mark.title;
+
+  const clip = appEl('div', 'clip');
+  clip.appendChild(appEl('span', 'when', parts.when));
+  clip.appendChild(name);
+  clip.appendChild(mark);
+  const th = appEl('th', 'c-commit');
+  th.appendChild(clip);
   return th;
 }
 
@@ -109,6 +144,17 @@ function appSubHead(metrics) {
   const tr = appEl('tr');
   metrics.forEach((m, mi) => tr.appendChild(appEl('th', mi === 0 ? 'g' : '', m.label)));
   return tr;
+}
+
+/* Состояния пустоты: когда чисел не будет вовсе, страница говорит об этом словами,
+ * а не сеткой без колонок. Файлы можно выключить все — тогда остаётся общий объём,
+ * и подсказка объясняет, почему колонок нет. */
+function appState(metricsCount, filesCount) {
+  const state = document.getElementById('state');
+  const text = metricsCount === 0 ? appUi.empty : (filesCount === 0 ? appUi.noFiles : '');
+  state.textContent = text;
+  state.hidden = text === '';
+  document.getElementById('shell').hidden = metricsCount === 0;
 }
 
 function appTable() {
@@ -119,6 +165,8 @@ function appTable() {
   appData.files.forEach((f, i) => { if (on[i]) files.push(i); });
   const table = document.getElementById('grid');
   table.textContent = '';
+  appState(metrics.length, files.length);
+  if (metrics.length === 0) return;
 
   const head = appEl('tr');
   const commit = appEl('th', 'c-commit', appUi.commit);
@@ -164,11 +212,19 @@ function appTable() {
 
   table.appendChild(thead);
   table.appendChild(body);
-  document.getElementById('note').textContent = appUi.note.replace('{command}', appData.report.fixCommand);
+  document.getElementById('note').textContent = appUi.note
+    .replace('{rows}', appData.rows.length)
+    .replace('{command}', appData.report.fixCommand);
 }
 
+/* Панель перерисовывается целиком, поэтому поле, стоящее под клавиатурой, после
+ * каждой пересборки возвращается на своё место: иначе переключение с Tab и Space
+ * требовало бы начинать обход панели заново. Место опознаётся порядковым номером
+ * поля — порядок полей панели от данных не зависит. */
 function appRender() {
+  const at = Array.from(document.querySelectorAll('#panel input')).indexOf(document.activeElement);
   appPanel();
+  if (at >= 0) document.querySelectorAll('#panel input')[at].focus();
   appTable();
 }
 appRender();

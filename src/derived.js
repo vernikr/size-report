@@ -96,15 +96,17 @@ export function nowModel(values, metrics, on) {
   return { total: metrics.map((m) => total[m]), files: files };
 }
 
-/* Подпись коммита в терминах данных: что показать и куда вести. Ссылку считает
- * `rowHref` движка — то же место, откуда её берёт контракт для страницы, поэтому
- * оба вывода ведут туда же. */
+/* Подпись коммита в терминах данных: что показать, чем подписать и куда вести.
+ * Ссылку считает `rowHref` движка — то же место, откуда её берёт контракт для
+ * страницы, поэтому оба вывода ведут туда же. Подпись всплывающей строки тоже
+ * здесь: два вывода не должны подписывать один коммит по-разному. */
 export function commitParts(row, showSha, href) {
   const short = showSha ? row.sha.slice(0, 7) : '';
   return {
     when: row.when,
     subject: row.subject,
     short: short,
+    title: short === '' ? row.subject : row.subject + ' · ' + short,
     href: href || null,
     mark: row.section === null
       ? { text: '—', title: null }
