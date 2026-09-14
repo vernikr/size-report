@@ -24,6 +24,14 @@ export const LOCALES = {
       legendDown: 'спад',
       legendSame: 'пустая клетка — не менялось',
       legendMiss: '«—» — файла в этой ревизии ещё нет',
+      legendApprox: 'подчёркнутое число — приближённое: способ назван под метриками',
+      /* Слова точности: подпись метрики говорит про худшее в колонке, а клетки —
+       * про своё число. Одно слово на подпись и на подсказку клетки, чтобы не
+       * разошлось и не звучало по-разному. */
+      exact: 'точное число',
+      approximate: 'приближение',
+      approximateCell: 'приближённое число: ',
+      panelMethod: 'способ:',
       emptyMetrics: 'Ни одна метрика не выбрана — таблицу не из чего собрать. '
         + 'Включите хотя бы одну в панели выше: без метрик нет ни одной колонки с числом.',
       noFiles: 'Ни один файл не выбран: в таблице остался только общий объём. '
@@ -72,6 +80,11 @@ export const LOCALES = {
       legendDown: 'fall',
       legendSame: 'an empty cell — no change',
       legendMiss: '“—” — the file does not exist in that revision yet',
+      legendApprox: 'an underlined number is approximate: its way of measuring is named under the metrics',
+      exact: 'an exact number',
+      approximate: 'an approximation',
+      approximateCell: 'an approximate number: ',
+      panelMethod: 'method:',
       emptyMetrics: 'No metric is selected — there is nothing to build the table from. '
         + 'Turn on at least one above: without metrics there is no column holding a number.',
       noFiles: 'No file is selected: the table shows the total only. '

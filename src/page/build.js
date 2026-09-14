@@ -52,9 +52,16 @@ function uiText(page, loc) {
     linkForeign: page.linkForeign,
     linkBroken: page.linkBroken,
     linkExtra: page.linkExtra,
+    /* Точность — двумя словами: подпись метрики говорит про худшее в колонке,
+     * подсказка клетки — про её собственное число. */
+    exact: page.exact,
+    approximate: page.approximate,
+    approxCell: page.approximateCell,
+    methodLabel: page.panelMethod,
     legend: [
       { cls: 'up', text: page.legendUp },
       { cls: 'down', text: page.legendDown },
+      { cls: 'approx', text: page.legendApprox },
       { cls: 'same', text: page.legendSame },
       { cls: 'miss', text: page.legendMiss }
     ],

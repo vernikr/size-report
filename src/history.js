@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { assertFullHistory, diskForm, diskHashes, git, headTree, readBlobs, readHistory } from './git.js';
-import { METRICS, measureBlob } from './metrics.js';
+import { METRICS, measureBlob, pointExact } from './metrics.js';
 import { touchedSection } from './journal.js';
 import { EXIT, refuse } from './refusal.js';
 
@@ -94,8 +94,15 @@ export function measureHistory(cfg, root) {
       }
       const blob = blobs.get(pick.spec);
       const cells = {};
-      metrics.forEach((m) => { cells[m] = measure(m, blob, pick.path, c.sha); });
-      state[i] = { path: pick.path, sha: blob.sha, cells: cells };
+      /* Приближённость числа — свойство пути, а не блоба: от расширения зависит,
+       * возьмёт ли формат минификатор. Поэтому она считается здесь, вместо с
+       * замером, и в кэш содержимого не попадает. */
+      const approx = {};
+      metrics.forEach((m) => {
+        cells[m] = measure(m, blob, pick.path, c.sha);
+        approx[m] = !pointExact(m, pick.path, cfg);
+      });
+      state[i] = { path: pick.path, sha: blob.sha, cells: cells, approx: approx };
     });
 
     if (c.parents.length > 1 && !cfg.rows.merges) { skipped.push(c.sha.slice(0, 7) + ' (merge)'); return; }
@@ -114,7 +121,8 @@ export function measureHistory(cfg, root) {
       when: c.when,
       subject: c.subject,
       section: section,
-      cells: state.map((s) => (s === null ? null : s.cells))
+      cells: state.map((s) => (s === null ? null : s.cells)),
+      approx: state.map((s) => (s === null ? null : s.approx))
     });
   });
 

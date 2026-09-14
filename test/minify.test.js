@@ -124,6 +124,51 @@ test('подпись метрики называет приближение по
     'отчёт целиком из минифицируемых форматов объявлен приближённым: ' + pureMin.method);
   assert.ok(pureMin.method.indexOf('приближение') < 0,
     'в способе осталось предупреждение о приближении: ' + pureMin.method);
+
+  /* То же правило с другой стороны: точность берётся у клеток, а не у названия
+   * способа. Отчёт из одного JSON точен и под снятием балласта — разбор теряет
+   * только незначащие пробелы, короче его не сделать, — поэтому и подпись
+   * обязана сказать «точное», а не обещать приближение за название способа. */
+  const onlyJson = configAs('strip-json', (cfg) => {
+    cfg.minify = { engine: 'strip' };
+    cfg.columns = cfg.columns.filter((c) => c.label === 'package.json');
+  });
+  const jsoned = JSON.parse(runSize(PLAIN, ['--config', onlyJson, '--data']).stdout);
+  const jsonMin = jsoned.metrics.find((m) => m.key === 'min');
+  assert.equal(jsonMin.accuracy, 'exact',
+    'точный формат под снятием балласта объявлен приближённым: подпись смотрит на название способа, а не на клетки');
+  assert.equal(jsoned.approx.min, undefined, 'точная колонка получила пометки приближения');
+});
+
+/* Точность доезжает и до самой клетки, а не только до подписи метрики: там, где
+ * минификатор файл взял, число точное, а там, где формат ему незнаком, — нет.
+ * Ряд пометок берётся из контракта (`--data`), а не из внутренностей движка,
+ * и сверяется с теми же колонками, по которым проверено падение чисел. */
+test('с настоящим сжатием точность объявлена по клетке', () => {
+  const all = runSize(PLAIN, ['--config', configAs('esbuild-cells', () => {}), '--data']);
+  assert.equal(all.code, 0, 'прогон со сжатием упал: ' + all.stderr.trim());
+  const data = JSON.parse(all.stdout);
+  const min = (data.approx || {}).min;
+  assert.ok(min, 'приближённые клетки не объявлены, хотя часть форматов минификатор не берёт');
+  assert.equal(data.approx.raw, undefined, 'размер объекта git помечен приближением');
+  const where = (label) => data.files.findIndex((f) => f.label === label);
+  const cell = (r, i) => min.rows.charAt(r * data.files.length + i);
+
+  MINIFIED.forEach((label) => {
+    const i = where(label);
+    assert.equal(min.now.charAt(i), '0', 'клетка «' + label + '» названа приближённой без причины');
+    data.rows.forEach((row, r) => {
+      if (row.values[i] === null) return;
+      assert.equal(cell(r, i), '0',
+        'строка ' + (r + 1) + '/«' + label + '»: число минификатора помечено приближённым');
+    });
+  });
+
+  ['заметки.md', 'table.toml', 'crlf.txt'].forEach((label) => {
+    const i = where(label);
+    assert.equal(min.now.charAt(i), '1',
+      'число «' + label + '» снято без минификатора, а объявлено точным');
+  });
 });
 
 test('без необязательной зависимости метрика отступает к упрощению — без падения', () => {

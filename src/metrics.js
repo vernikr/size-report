@@ -2,7 +2,7 @@ import zlib from 'zlib';
 import path from 'path';
 import { EXACT_STRATEGIES, assertCompilable, byteLen, minifyForm, strategyFor } from './strip.js';
 import { MINIFY_LOADERS, minifier, minifyWithEsbuild } from './minify.js';
-import { CHARS_PER_TOKEN, binaryFormats, tokenCount, tokenizer } from './tokens.js';
+import { CHARS_PER_TOKEN, isBinary, tokenCount, tokenizer } from './tokens.js';
 
 /* Реестр метрик: что измеряется, нужен ли метрике текст и насколько честна цифра.
  * Отдельно от способов снятия балласта: метрика — это обещание про число, а не
@@ -124,18 +124,20 @@ export function metricView(name, cfg) {
 /* Подпись метрики `min`. Соглашение о честности: `accuracy` говорит про худшее в
  * колонке, а способ называет, где именно приближение, — поэтому один формат без
  * минификатора делает метрику приближённой целиком, а не прячется за «exact»
- * соседнего файла. */
+ * соседнего файла. Худшее берётся по тому же правилу, что и пометки клеток
+ * (`pointExact`), а не по названию способа: отчёт, где нет ни одного
+ * приближённого формата, точен и со снятым балластом. */
 function minView(cfg) {
   const loc = cfg.locale;
+  const rough = approximateFormats('min', cfg);
   if (minEngine(cfg) === 'esbuild') {
-    const stripped = strippedFormats(cfg);
     let method = STYLES.esbuild.method[loc].replace('{version}', minifier().version);
-    if (stripped.length > 0) method += STYLES.esbuild.fallback[loc].replace('{exts}', stripped.join(' '));
+    if (rough.length > 0) method += STYLES.esbuild.fallback[loc].replace('{exts}', rough.join(' '));
     return {
       label: METRICS.min.label,
       note: STYLES.esbuild.note[loc],
       method: method,
-      accuracy: stripped.length === 0 ? 'exact' : 'approximate'
+      accuracy: rough.length === 0 ? 'exact' : 'approximate'
     };
   }
   const degraded = cfg.minify.engine === 'esbuild';
@@ -143,7 +145,7 @@ function minView(cfg) {
     label: METRICS.min.label,
     note: STYLES.strip.note[loc],
     method: STYLES.strip.method[loc] + (degraded ? STYLES.esbuild.unavailable[loc] : ''),
-    accuracy: 'approximate'
+    accuracy: rough.length === 0 ? 'exact' : 'approximate'
   };
 }
 
@@ -165,7 +167,7 @@ function tokView(cfg) {
       accuracy: 'approximate'
     };
   }
-  const binary = binaryFormats(cfg);
+  const binary = approximateFormats('tok', cfg);
   let method = STYLES.tok.method[loc]
     .replace('{tool}', 'gpt-tokenizer').replace('{version}', version).replace('{encoding}', settings.encoding);
   if (binary.length > 0) method += STYLES.tok.binary[loc].replace('{exts}', binary.join(' '));
@@ -177,14 +179,29 @@ function tokView(cfg) {
   };
 }
 
-/* Форматы этого отчёта, которые будут измерены упрощением. Список выводится из
- * настроек и таблицы минификатора, а не пишется руками: подпись не может
- * разойтись с тем, что происходит. */
-function strippedFormats(cfg) {
+/* Точное ли число у конкретной клетки — одно правило и для подписи метрики, и для
+ * пометки клетки. Поэтому подпись не может разойтись с клетками, а список
+ * приближённых форматов считается здесь же, по тому же правилу.
+ *
+ * `min` точен там, где файл действительно минифицируется: минификатором или
+ * разбором формата, который короче уже не станет (JSON теряет только незначащие
+ * пробелы — список точных стратегий ведёт `strip.js`, потому что стратегии живут
+ * там). `tok` точен там, где есть словарь и формат текстовый: «токены» картинки
+ * или шрифта — это её байты. `raw` и `gzip` точны всегда: это однозначные
+ * величины. */
+export function pointExact(name, file, cfg) {
+  if (name === 'min') return minifiedForm(file, cfg);
+  if (name === 'tok') return tokenizer(cfg.tokens).tool !== null && !isBinary(file);
+  return true;
+}
+
+/* Форматы этого отчёта, которые будут измерены приближённо. Список выводится из
+ * настроек и правила точности, а не пишется руками. */
+function approximateFormats(name, cfg) {
   const exts = [];
   cfg.columns.forEach((col) => {
     col.paths.forEach((p) => {
-      if (minifiedForm(p, cfg)) return;
+      if (pointExact(name, p, cfg)) return;
       const ext = path.extname(p).toLowerCase();
       if (exts.indexOf(ext) < 0) exts.push(ext);
     });
@@ -192,8 +209,6 @@ function strippedFormats(cfg) {
   return exts.sort();
 }
 
-/* Упрощение бывает и точной минификацией: JSON теряет только незначащие пробелы
- * (список точных стратегий ведёт `strip.js`, потому что стратегии живут там). */
 function minifiedForm(file, cfg) {
   return esbuildLoader(file, cfg) !== null || EXACT_STRATEGIES.indexOf(strategyFor(file, cfg)) >= 0;
 }

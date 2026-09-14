@@ -125,6 +125,44 @@ test('метрика, которая не минификация, помечен
     'снятие комментариев выдаётся за минификацию: у метрики нет пометки приближения');
 });
 
+/* Точность объявлена дважды, и это не два ответа на один вопрос: у метрики —
+ * худшее в колонке, у клетки — её собственное число. Фикстура для этого и нужна
+ * смешанная: в ней рядом стоят точный формат (`package.json` — JSON теряет
+ * только незначащие пробелы) и приближённые (`.js`, `.md`, `.toml`, `.txt`).
+ *
+ * Проверяется согласие двух ответов, а не наличие поля: у метрики без единой
+ * пометки не может стоять «приблизительно», а ряд пометок обязан покрывать ровно
+ * все клетки — строки и «сейчас» порознь. */
+test('точность объявлена по клетке, а подпись метрики — худшее в колонке', () => {
+  data.metrics.forEach((m) => {
+    const marks = data.approx[m.key];
+    if (marks === undefined) {
+      assert.equal(m.accuracy, 'exact',
+        'метрика «' + m.key + '» обещает точность, не назвав ни одной приближённой клетки');
+      return;
+    }
+    assert.equal(m.accuracy, 'approximate',
+      'у метрики «' + m.key + '» есть приближённые клетки, а подпись обещает точность');
+    assert.equal(marks.rows.length, data.rows.length * data.files.length,
+      'ряд пометок не покрывает клетки строк');
+    assert.equal(marks.now.length, data.files.length, 'ряд пометок не покрывает строку «сейчас»');
+    assert.equal(/[^01]/.test(marks.rows + marks.now), false,
+      'в пометках есть знак кроме «точное/приближённое»: ' + marks.rows.slice(0, 40));
+  });
+
+  /* Смешанность отчёта — то, ради чего этот ряд и заведён: если бы все клетки
+   * были одного знака, пометка по клетке ничего не добавляла бы к подписи. */
+  const min = (data.approx || {}).min;
+  assert.ok(min, 'в контракте нет пометок приближённых клеток');
+  const json = data.files.findIndex((f) => f.label === 'package.json');
+  const md = data.files.findIndex((f) => f.label === 'заметки.md');
+  assert.equal(min.now.charAt(json), '0',
+    'точный формат (JSON разбирается целиком) помечен приближением');
+  assert.equal(min.now.charAt(md), '1', 'упрощение снято за точную минификацию');
+  assert.ok(min.rows.indexOf('0') >= 0 && min.rows.indexOf('1') >= 0,
+    'в отчёте нет клеток обоих знаков — проверять по клетке не на чем');
+});
+
 test('у каждого файла есть категория, и она объявлена в данных', () => {
   const declared = data.categories.map((c) => c.key);
   data.categories.forEach((c) => assert.ok(c.label, 'категория «' + c.key + '» без подписи'));
@@ -264,7 +302,7 @@ test('вычислительная часть страницы — код дви
    * разметка, либо вернувшийся своим путём расчёт; первое правится здесь же,
    * второе лучше не делать вовсе. */
   assert.deepEqual(defined('\n' + appSrc).sort(), [
-    'appAll', 'appApply', 'appBox', 'appCell', 'appCommit', 'appEl', 'appFileAt', 'appFileBox',
+    'appAll', 'appApply', 'appApprox', 'appBox', 'appCell', 'appCellClass', 'appCommit', 'appEl', 'appFileAt', 'appFileBox',
     'appHash', 'appIndexes', 'appLegend', 'appLinkRead', 'appLinkUse', 'appNotice', 'appPanel',
     'appPassport', 'appRead', 'appRecord', 'appRecordOk', 'appRender', 'appState', 'appSubHead',
     'appTable', 'appTree', 'appTreeList', 'appUnknown', 'appValueCell', 'appWrite'
@@ -316,7 +354,11 @@ function stored(dom) {
 }
 
 const panelInputs = (doc) => [...doc.querySelectorAll('#panel input')];
-const metricBox = (doc) => panelInputs(doc).find((b) => b.title.indexOf('approximate') >= 0);
+/* Переключатель метрики — по видимой подписи: она не зависит от того, какими
+ * словами названы способ и точность. Что слова эти есть и что они совпадают с
+ * клетками — отдельная проверка ниже. */
+const metricBox = (doc) => [...doc.querySelectorAll('#panel .box.metric')]
+  .find((b) => b.textContent === 'min').querySelector('input');
 const fileBox = (doc, path) => panelInputs(doc).find((b) => b.title.indexOf(path) === 0);
 const nowTotalCell = (doc) => doc.querySelectorAll('#grid tbody tr')[0].querySelectorAll('td')[0].textContent;
 const nowCells = (doc) => doc.querySelectorAll('#grid tbody tr')[0].querySelectorAll('td').length;
@@ -375,7 +417,7 @@ test('страница считает то же, что артефакт, и п�
 
   /* Выключаем метрику min: её колонки обязаны исчезнуть, а raw — остаться тем же. */
   const boxes = doc.querySelectorAll('#panel input');
-  const minBox = Array.prototype.find.call(boxes, (b) => b.title.indexOf('не минификация') >= 0);
+  const minBox = metricBox(doc);
   assert.ok(minBox, 'в панели нет переключателя метрики min');
   minBox.checked = false;
   minBox.dispatchEvent(new dom.window.Event('change'));
@@ -400,6 +442,70 @@ test('страница считает то же, что артефакт, и п�
   const expected = totalRaw - data.now[fileIndex].raw;
   assert.equal(lastNow[0].textContent, valueParts(expected).text,
     'итог после выключения файла не совпал с суммой без него');
+});
+
+/* Пометка точности на странице: приближённая клетка подчёркнута и объясняется
+ * словами, точная — не тронута, а у итога знак — худшее из включённых в него
+ * файлов (сумма не может обещать точность, которой нет у слагаемых). Знаки
+ * страница берёт из данных движка, поэтому число помеченных клеток сверяется не с
+ * разметкой, а с рядом пометок, который движок отдал. */
+test('приближённые клетки помечены, а итог берёт худшее из включённых', () => {
+  const dom = new JSDOM(pageText, { runScripts: 'dangerously' });
+  const doc = dom.window.document;
+  const ui = JSON.parse(doc.getElementById('ui').textContent);
+  const metrics = data.metrics.length;
+  const first = () => doc.querySelectorAll('#grid tbody tr')[0];
+  const cellsOf = (tr) => [...tr.querySelectorAll('td')];
+  /* Клетки строки: сперва итог по метрике, затем по блоку на файл, в каждом —
+   * по метрике (тот же порядок, что в шапке таблицы). */
+  const at = (tr, file, mi) => cellsOf(tr)[(file + 1) * metrics + mi];
+  const total = (tr, mi) => cellsOf(tr)[mi];
+  const where = (f) => (f.path === null ? f.paths[0] : f.path);
+
+  /* Знаки страницы — ровно знаки движка, клетка за клеткой, и знак итога —
+   * по слагаемым. */
+  data.metrics.forEach((m, mi) => {
+    const marks = data.approx[m.key];
+    const ones = marks === undefined ? 0 : (marks.now.match(/1/g) || []).length;
+    let marked = 0;
+    data.files.forEach((_f, i) => { if (at(first(), i, mi).classList.contains('approx')) marked++; });
+    assert.equal(marked, ones,
+      'метрика «' + m.key + '»: помечено ' + marked + ' клеток вместо ' + ones);
+    assert.equal(total(first(), mi).classList.contains('approx'), ones > 0,
+      'знак итога метрики «' + m.key + '» разошёлся с её слагаемыми');
+  });
+
+  /* Смешанная фикстура: точная клетка не помечена, приближённая помечена и
+   * называет способ, которым число получено. */
+  const md = data.files.findIndex((f) => f.label === 'заметки.md');
+  const json = data.files.findIndex((f) => f.label === 'package.json');
+  const minAt = data.metrics.findIndex((m) => m.key === 'min');
+  const min = data.metrics[minAt];
+  assert.equal(at(first(), json, minAt).classList.contains('approx'), false,
+    'точная клетка помечена приближением');
+  assert.equal(at(first(), md, minAt).classList.contains('approx'), true,
+    'приближённая клетка не помечена: точность метрики до клетки не доехала');
+  assert.equal(at(first(), md, minAt).title, ui.approxCell + min.method,
+    'пометка клетки не называет способ, которым получено число');
+
+  /* Способ и точность видны в панели текстом, а не только во всплывающей строке:
+   * словарь и минификатор выбираются настройками запуска, и читателю нечем
+   * переключить их на странице. */
+  const about = [...doc.querySelectorAll('#panel .about')].map((p) => p.textContent);
+  assert.equal(about.length, data.metrics.length, 'под метриками нет подписи способа');
+  assert.ok(about.some((line) => line.indexOf(min.method) >= 0),
+    'способ метрики min назван не тот: ' + about.join(' | '));
+  const legend = [...doc.querySelectorAll('.legend li')].map((li) => li.textContent);
+  assert.ok(legend.indexOf(ui.legend.find((l) => l.cls === 'approx').text) >= 0,
+    'в легенде не сказано, что значит подчёркнутое число');
+
+  /* Итог пересчитывается по выбору: оставим один точный файл — и знак с итога
+   * снимется. Иначе «худшее из включённых» было бы сказано, но не сделано. */
+  data.files.forEach((f, i) => { if (i !== json) toggleCheck(doc, fileBox(doc, where(f)), false); });
+  assert.equal(total(first(), minAt).classList.contains('approx'), false,
+    'итог остался приближённым, хотя все слагаемые точные');
+  assert.equal(cellsOf(first()).filter((td) => td.classList.contains('approx')).length, 0,
+    'с точными слагаемыми остались помеченные клетки');
 });
 
 /* Дерево файлов: папки повторяют пути данных, у папки три состояния, а её
@@ -749,13 +855,13 @@ test('состояния пустоты: без метрик — слова вм
   const doc = dom.window.document;
   const ui = JSON.parse(doc.getElementById('ui').textContent);
   const inputs = [...doc.querySelectorAll('#panel input')];
-  const isMetric = (b) => b.title.indexOf('· способ:') >= 0;
+  const metricsOn = [...doc.querySelectorAll('#panel .box.metric input')];
   const toggle = (b, checked) => {
     b.checked = checked;
     b.dispatchEvent(new dom.window.Event('change'));
   };
 
-  inputs.filter(isMetric).forEach((b) => toggle(b, false));
+  metricsOn.forEach((b) => toggle(b, false));
   assert.equal(doc.getElementById('state').hidden, false,
     'без метрик страница молчит вместо того, чтобы объяснить пустоту');
   assert.equal(doc.getElementById('state').textContent, ui.empty, 'объяснение пустоты не то');
@@ -763,8 +869,8 @@ test('состояния пустоты: без метрик — слова вм
   assert.equal(doc.querySelectorAll('#grid tbody tr').length, 0, 'таблица без метрик всё ещё строится');
   assert.equal(doc.querySelectorAll('[colspan="0"]').length, 0, 'в разметке остался colspan="0"');
 
-  inputs.filter(isMetric).forEach((b) => toggle(b, true));
-  inputs.filter((b) => !isMetric(b)).forEach((b) => toggle(b, false));
+  metricsOn.forEach((b) => toggle(b, true));
+  inputs.filter((b) => metricsOn.indexOf(b) < 0).forEach((b) => toggle(b, false));
   assert.equal(doc.getElementById('shell').hidden, false, 'сетка пропала, хотя метрики выбраны');
   assert.equal(doc.getElementById('state').textContent, ui.noFiles, 'про пустой выбор файлов не сказано');
   const onlyTotal = doc.querySelectorAll('#grid tbody tr');

@@ -14,7 +14,11 @@
  * Панель помнит выбор читателя между открытиями и умеет передать его ссылкой
  * («Память выбора» ниже): запись привязана к паспорту отчёта и хранит только
  * выключенное по именам, поэтому чужая запись не применяется, а исчезнувшее имя
- * просто ничего не значит. Та же запись ложится в адрес — его и отправляют коллеге. */
+ * просто ничего не значит. Та же запись ложится в адрес — его и отправляют коллеге.
+ *
+ * Точность числа страница не выводит сама: пометки приближённых клеток приходят в
+ * данных, от того же правила, по которому названа точность метрики. Из путей и
+ * форматов страница такого вывода не делает — второго правила точности не будет. */
 
 /* Импорт — одной строкой: модульный синтаксис снимается при вклейке построчно,
  * и оставшаяся строка `import` попала бы в страницу (её ловит проверка). */
@@ -25,6 +29,12 @@ const appUi = JSON.parse(document.getElementById('ui').textContent);
 const appView = { metrics: {}, files: [] };
 appData.metrics.forEach((m) => { appView.metrics[m.key] = true; });
 appData.files.forEach(() => { appView.files.push(true); });
+
+/* Описание метрики по ключу: подсказка приближённой клетки называет способ её
+ * числа — тот же, что стоит в подписи метрики, поэтому двух ответов про «чем
+ * посчитано» у страницы нет. */
+const appMetric = {};
+appData.metrics.forEach((m) => { appMetric[m.key] = m; });
 
 /* Ссылка — это тот же выбор в адресе, под своим именем: чужой якорь страницы
  * ссылкой не считается, и спорить с ним нечем. */
@@ -326,13 +336,19 @@ function appPanel() {
   metrics.appendChild(appEl('legend', null, appUi.metrics));
   const mrow = appEl('div', 'row');
   appData.metrics.forEach((m) => {
-    mrow.appendChild(appBox(m.label, m.note + ' · способ: ' + m.method + ' (' + m.accuracy + ')',
-      appView.metrics[m.key], (e) => {
-        appView.metrics[m.key] = e.target.checked;
-        appRender();
-      }));
+    const word = m.accuracy === 'exact' ? appUi.exact : appUi.approximate;
+    mrow.appendChild(appBox(m.label, m.note + ' · ' + word, appView.metrics[m.key], (e) => {
+      appView.metrics[m.key] = e.target.checked;
+      appRender();
+    }, 'metric'));
   });
   metrics.appendChild(mrow);
+  /* Чем получено каждое число — видно, а не только во всплывающей строке: словарь
+   * токенов и способ сжатия выбираются настройками запуска, переключить их
+   * странице нечем, и читателю важно знать это, не наводя мышь. */
+  appData.metrics.forEach((m) => {
+    metrics.appendChild(appEl('p', 'about', m.label + ' — ' + appUi.methodLabel + ' ' + m.method));
+  });
   panel.appendChild(metrics);
 
   const files = appEl('fieldset', 'files');
@@ -354,19 +370,43 @@ function appPanel() {
   panel.appendChild(appLegend());
 }
 
+/* Приближённая клетка: пометка берётся из данных движка, а не выводится здесь из
+ * пути файла, — правило точности живёт там же, где считаются числа. У клетки
+ * файла это её собственное число, у итога — худшее из вошедших в него, иначе
+ * сумма обещала бы точность, которой нет у слагаемых. Возвращается описание
+ * метрики (её способ и идёт в подсказку клетки) либо ничего. */
+function appApprox(where, files, key) {
+  const marks = appData.approx[key];
+  if (marks === undefined) return null;
+  const row = where === 'now' ? marks.now : marks.rows;
+  const base = where === 'now' ? 0 : where * appData.files.length;
+  for (let i = 0; i < files.length; i++) {
+    if (row.charAt(base + files[i]) === '1') return appMetric[key];
+  }
+  return null;
+}
+
+/* Класс клетки собирается в одном месте: и пометка приближения, и пропуск
+ * («файла нет») — свойства самой клетки, а не её содержимого. */
+function appCellClass(first, miss, approx) {
+  return 'num' + (first ? ' g' : '') + (miss ? ' miss' : '') + (approx === null ? '' : ' approx');
+}
+
 // Разметка клетки строки-коммита: правила — в cellParts, здесь только узел.
-function appCell(cell, first) {
+function appCell(cell, first, approx) {
   const parts = cellParts(cell.value, cell.delta, '−');
-  const td = appEl('td', 'num' + (first ? ' g' : '') + (parts.miss ? ' miss' : ''));
+  const td = appEl('td', appCellClass(first, parts.miss, approx));
+  if (approx !== null) td.title = appUi.approxCell + approx.method;
   if (parts.dir === null) td.textContent = parts.text;
   else td.appendChild(appEl('span', 'delta ' + parts.dir, parts.text));
   return td;
 }
 
 // Разметка клетки верхней строки: правила — в valueParts.
-function appValueCell(value, first) {
+function appValueCell(value, first, approx) {
   const parts = valueParts(value);
-  const td = appEl('td', 'num' + (first ? ' g' : '') + (parts.miss ? ' miss' : ''));
+  const td = appEl('td', appCellClass(first, parts.miss, approx));
+  if (approx !== null) td.title = appUi.approxCell + approx.method;
   td.textContent = parts.text;
   return td;
 }
@@ -447,8 +487,10 @@ function appTable() {
     const model = rowModel(row.values, prev === null ? null : prev.values, metrics, on);
     const tr = appEl('tr');
     tr.appendChild(appCommit(row));
-    model.total.forEach((cell, mi) => tr.appendChild(appCell(cell, mi === 0)));
-    model.files.forEach((cells) => cells.forEach((cell, mi) => tr.appendChild(appCell(cell, mi === 0))));
+    model.total.forEach((cell, mi) => tr.appendChild(appCell(cell, mi === 0, appApprox(r, files, metrics[mi]))));
+    model.files.forEach((cells, fi) => cells.forEach((cell, mi) => {
+      tr.appendChild(appCell(cell, mi === 0, appApprox(r, [files[fi]], metrics[mi])));
+    }));
     body.appendChild(tr);
   }
 
@@ -457,8 +499,11 @@ function appTable() {
   const now = appEl('tr', 'now');
   now.appendChild(appEl('th', 'c-commit', appUi.now));
   const nowCells = nowModel(appData.now, metrics, on);
-  nowCells.total.forEach((v, mi) => now.appendChild(appValueCell(v, mi === 0)));
-  nowCells.files.forEach((cells) => cells.forEach((v, mi) => now.appendChild(appValueCell(v, mi === 0))));
+  nowCells.total.forEach((v, mi) => now.appendChild(appValueCell(v, mi === 0,
+    appApprox('now', files, metrics[mi]))));
+  nowCells.files.forEach((cells, fi) => cells.forEach((v, mi) => {
+    now.appendChild(appValueCell(v, mi === 0, appApprox('now', [files[fi]], metrics[mi])));
+  }));
   body.insertBefore(now, body.firstChild);
 
   table.appendChild(thead);

@@ -68,16 +68,9 @@ export function estimate(text) {
   return Math.ceil(chars / CHARS_PER_TOKEN);
 }
 
-/* Форматы отчёта, для которых счёт идёт по байтам, а не по тексту: их и называет
- * подпись метрики. Считается по настройкам, как и список приближённых форматов у
- * минификатора, — чтобы подпись не могла разойтись с тем, что происходит. */
-export function binaryFormats(cfg) {
-  const exts = [];
-  cfg.columns.forEach((col) => {
-    col.paths.forEach((p) => {
-      const ext = path.extname(p).toLowerCase();
-      if (BINARY_EXTS.indexOf(ext) >= 0 && exts.indexOf(ext) < 0) exts.push(ext);
-    });
-  });
-  return exts.sort();
+/* Бинарный ли файл: счёт токенов для него смысла не имеет. Список форматов ведёт
+ * этот модуль, поэтому и подпись метрики, и пометка клетки спрашивают о файле
+ * здесь, а не повторяют список у себя. */
+export function isBinary(file) {
+  return BINARY_EXTS.indexOf(path.extname(file).toLowerCase()) >= 0;
 }

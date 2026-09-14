@@ -56,6 +56,10 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
 }
 .panel .cap { display: block; margin-bottom: 4px; }
 .panel .row { display: flex; flex-wrap: wrap; gap: 3px 6px; align-items: center; }
+/* Способ замера — видимым текстом под переключателями: словарь токенов и способ
+ * сжатия выбираются настройками запуска, а не галочкой, поэтому читателю мало
+ * навести мышь — он должен видеть, чем получено число. */
+.panel .about { margin: 5px 0 0; color: var(--muted); font-size: 11.5px; }
 
 /* Дерево файлов: вложенность показана отступом и линией уровня, папка — такой же
  * переключатель, как файл, только его галочка отвечает за всё поддерево, а число
@@ -99,6 +103,11 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
 .swatch { width: 10px; height: 10px; border-radius: 3px; background: currentColor; }
 .swatch.same { background: none; border: 1px dashed currentColor; }
 .swatch.miss { background: none; border: 1px solid currentColor; border-radius: 0; }
+.swatch.approx { background: none; border-bottom: 2px dotted currentColor; }
+
+/* Приближённое число помечено пунктиром, а не цветом: цвет в таблице занят дельтой
+ * (рост и спад), и второй смысл на том же признаке читался бы как первый. */
+#grid td.approx { text-decoration: underline dotted; text-underline-offset: 2.5px; }
 
 /* Таблица — в своей рамке и со своим скроллом: шапка и колонка коммита липнут к ней
  * (правила липкости — в общей части), а не к странице, поэтому при прокрутке вбок

@@ -74,8 +74,28 @@ export function reportData(cfg, root) {
       values: r.cells
     })),
     now: state.map((s) => (s === null ? null : s.cells)),
+    approx: approxMarks(rows, state, cfg),
     skipped: skipped
   };
+}
+
+/* Пометки приближённых клеток — по одной записи на метрику: строка знаков по
+ * клеткам строк и строка знаков по верхней строке «сейчас». '1' — число получено
+ * упрощением или оценкой, '0' — точное. Метрика без ни одной пометки в отчёте не
+ * появляется вовсе: все числа точны — молчание.
+ *
+ * Знак ставит движок там же, где считает число, — из того же правила, что и
+ * подпись метрики. Поэтому страница ничего про пути и форматы не выводит: она
+ * только показывает то, что сказано, и второго правила точности не заводит. */
+function approxMarks(rows, state, cfg) {
+  const out = {};
+  cfg.metrics.forEach((m) => {
+    const mark = (flags) => (flags !== null && flags[m] ? '1' : '0');
+    const inRows = rows.map((r) => r.approx.map(mark).join('')).join('');
+    const now = state.map((s) => mark(s === null ? null : s.approx)).join('');
+    if (inRows.indexOf('1') >= 0 || now.indexOf('1') >= 0) out[m] = { rows: inRows, now: now };
+  });
+  return out;
 }
 
 /* Производные величины живут в `src/derived.js`: их считает и артефакт (импорт
