@@ -43,12 +43,17 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_PROJECT = path.join(ROOT, '..', 'figma', 'safe-resets');
 const DEFAULT_OUT = path.join(ROOT, 'fixtures', 'parity');
 
+/* stderr задан явно, хотя он и не читается: без этого `execFileSync` дублирует его
+ * в наш stderr, и замечание самого git (`hint: Using 'master' …`) становится
+ * первой строкой нашего сообщения об отказе, а причина — невидимой. */
 function git(dir, args) {
-  return execFileSync('git', args, { cwd: dir, encoding: 'utf8', maxBuffer: MAX_BUF }).trim();
+  return execFileSync('git', args,
+    { cwd: dir, encoding: 'utf8', maxBuffer: MAX_BUF, stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 }
 
 function gitBytes(dir, args) {
-  return execFileSync('git', args, { cwd: dir, maxBuffer: MAX_BUF });
+  return execFileSync('git', args,
+    { cwd: dir, maxBuffer: MAX_BUF, stdio: ['ignore', 'pipe', 'pipe'] });
 }
 
 /* Копия запускается закреплённым окружением — тем же, что у проверок

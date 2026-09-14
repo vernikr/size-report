@@ -16,13 +16,17 @@
 артефакт с блобом из этой же ревизии, поэтому подменить историю и не заметить
 этого нельзя.
 
+В бандле обязана быть ещё и `HEAD`: без неё клон сам угадывает, какую ветку
+выложить, и разные версии git угадывают по-разному — одна выкладывает `main`, а
+другая `master` и печатает `hint: Using 'master' as the name for the initial
+branch`. Бандл без `HEAD` заменой проекта не является, и `pnpm run check:standards`
+это стережёт.
+
 Пересобирать не нужно: ревизия эталона неподвижна. Если её всё же сдвигают
 (`--at <sha>`), бандл пересобирают так:
 
 ```bash
 git clone --no-hardlinks ../figma/safe-resets /tmp/live
-git -C /tmp/live checkout <новая-ревизия>
-git -C /tmp/live branch -f main <новая-ревизия>
-git -C /tmp/live checkout main
-git -C /tmp/live bundle create fixtures/live/history.bundle main
+git -C /tmp/live checkout -B main <новая-ревизия>
+git -C /tmp/live bundle create fixtures/live/history.bundle HEAD main
 ```
