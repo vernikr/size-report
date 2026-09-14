@@ -114,29 +114,37 @@ export function measureHistory(cfg, root) {
 /* Сверка с рабочим деревом отвечает на два вопроса, и оба обязательны: состояние
  * движка на HEAD совпадает с деревом коммита, и файл на диске соответствует тому
  * же содержимому. Первый ловит правку, потерянную при переносе состояния между
- * коммитами (например, у merge-коммита, которого нет в списке изменённых путей),
- * — и по содержимому, и по составу: колонка, у которой в состоянии файла нет,
- * обязана быть пустой и в дереве (иначе потеряно создание файла). Второй — правку,
- * которой в истории нет вовсе. Размеры для этого не годятся: на
- * диске они зависят от выкладки (при `core.autocrlf=true` — значение по умолчанию
- * в установке Git для Windows — CRLF против LF), и инструмент отказывался
- * работать там, где всё в порядке. Файлы, изменённые в дереве, из сверки с диском
- * выпадают: их содержимое в коммите и на диске различается законно. */
+ * коммитами (например, у merge-коммита, которого нет в списке изменённых путей): и
+ * потерянное создание файла (в дереве он есть, а состояние о нём не знает), и
+ * потерянное изменение (файл есть с обеих сторон, содержимое разное), и потерянное
+ * удаление (состояние о файле знает, а в дереве его нет). Сравнение при этом идёт
+ * с расхождением, а не с пустотой: колонка, чей файл жил в истории и был удалён до
+ * HEAD, пуста с обеих сторон — это не потеря, а её видно в отчёте. Второй вопрос —
+ * правка, которой в истории нет вовсе. Размеры для этого не годятся: на диске они
+ * зависят от выкладки (при `core.autocrlf=true` — значение по умолчанию в установке
+ * Git для Windows — CRLF против LF), и инструмент отказывался работать там, где всё
+ * в порядке. Файлы, изменённые в дереве, из сверки с диском выпадают: их
+ * содержимое в коммите и на диске различается законно. */
 function assertMatchesDisk(state, cfg, root) {
   const dirty = new Set(git(root, ['status', '--porcelain']).split('\n')
     .map((l) => l.trim()).filter((l) => l !== '').map((l) => l.replace(/^\S+\s+/, '').replace(/^.* -> /, '')));
   const tree = headTree(root);
   const clean = [];
   cfg.columns.forEach((col, i) => {
-    const p = state[i] === null ? col.paths.filter((alias) => tree.has(alias))[0] : state[i].path;
-    if (p === undefined || tree.get(p) !== (state[i] === null ? null : state[i].sha)) {
-      refuse(EXIT.VIOLATION, 'состояние «' + col.label + '» на HEAD не совпало с деревом коммита ('
-        + (p === undefined ? 'файла нет' : p + ' ' + tree.get(p).slice(0, 7)) + ' вместо '
-        + (state[i] === null ? 'файла нет' : state[i].path + ' ' + state[i].sha.slice(0, 7))
+    const s = state[i];
+    const aliases = col.paths.filter((alias) => tree.has(alias));
+    const p = s === null ? aliases[0] : s.path;
+    const inTree = p === undefined ? undefined : tree.get(p);
+    const lost = s === null ? aliases.length > 0 : inTree !== s.sha;
+    if (lost) {
+      refuse(EXIT.VIOLATION, 'состояние «' + col.label + '» на HEAD не совпало с деревом коммита (в дереве '
+        + (aliases.length === 0 ? 'файла нет'
+          : aliases.map((alias) => alias + ' ' + tree.get(alias).slice(0, 7)).join(', '))
+        + ', в состоянии ' + (s === null ? 'файла нет' : s.path + ' ' + s.sha.slice(0, 7))
         + '): перенос состояния между коммитами пропустил правку'
         + '\n  починка: пересоберите таблицу (' + cfg.fixCommand + ') и закоммитьте ' + cfg.output);
     }
-    if (!dirty.has(p) && clean.indexOf(p) < 0) clean.push(p);
+    if (p !== undefined && !dirty.has(p) && clean.indexOf(p) < 0) clean.push(p);
   });
   if (clean.length === 0) return;
   const onDisk = diskHashes(root, clean);
