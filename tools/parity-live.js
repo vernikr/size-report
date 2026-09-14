@@ -13,7 +13,13 @@
  * Одного зелёного прогона мало — он доказывает, что числа совпали *здесь*, а не
  * что они не зависят от того, у кого какие настройки git.
  *
- * Работает на клоне: проект-потребитель не открывается на запись — иначе проверка
+ * Окружения идут вперемешку (у каждого свой клон), потому что каждое — это
+ * отдельный процесс на своём ядре, а команды внутри окружения ждут друг друга:
+ * проверка контрольного режима смотрит на артефакт, который только что собрал
+ * `--write`. Клон у каждого окружения свой именно поэтому — общий клон и запись в
+ * него из двух окружений одновременно были бы гонкой.
+ *
+ * Работает на клонах: проект-потребитель не открывается на запись — иначе проверка
  * подменяла бы в нём собранный отчёт.
  *
  * Запуск:
@@ -26,7 +32,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -72,11 +78,23 @@ function firstDiff(a, b) {
   return 'различие в байтах при одинаковых строках';
 }
 
+/* Запуск без ожидания: окружения идут вперемешку, поэтому `spawn`, а не
+ * `spawnSync`. Вывод собирается целиком — сверяется он побайтово. */
 function runCli(bin, dir, args, env) {
-  const res = spawnSync(process.execPath, [bin, '--config', CONFIG].concat(args), {
-    cwd: dir, encoding: 'utf8', maxBuffer: MAX_BUF, env: Object.assign({}, process.env, env || {})
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, [bin, '--config', CONFIG].concat(args), {
+      cwd: dir,
+      env: Object.assign({}, process.env, env || {})
+    });
+    let out = '';
+    let err = '';
+    child.stdout.on('data', (chunk) => {
+      if (out.length + err.length < MAX_BUF) out += chunk;
+      else child.kill();
+    });
+    child.stderr.on('data', (chunk) => { err += chunk; });
+    child.on('close', (code) => resolve({ code: code, stdout: out, stderr: err }));
   });
-  return { code: res.status, stdout: res.stdout || '', stderr: res.stderr || '' };
 }
 
 /* Контракт данных обязан нести ту же правду, что замороженные числа: это одна и та
@@ -84,8 +102,8 @@ function runCli(bin, dir, args, env) {
  * фикстура не может: строки, абсолютные значения, «сейчас» и итоги, которые
  * страница считает сама. Колонки, где файл удаляли и возвращали, из сверки дельт
  * выпадают и называются вслух (`BLOCKERS.md` §N4). */
-function checkContract(bin, dir, env, frozen) {
-  const res = runCli(bin, dir, ['--data'], env);
+async function checkContract(bin, dir, env, frozen) {
+  const res = await runCli(bin, dir, ['--data'], env);
   if (res.code !== 0) return { errors: ['--data не отдался (код ' + res.code + '): ' + res.stderr.trim()] };
   const got = JSON.parse(res.stdout);
   const errors = [];
@@ -139,7 +157,67 @@ function checkContract(bin, dir, env, frozen) {
   return { errors: errors, gaps: gaps, rows: got.rows.length, files: got.files.length };
 }
 
-function main() {
+/* Одно окружение целиком: свой клон, свои прогоны, свой список строк вывода.
+ * Строки копятся, а не печатаются по ходу: окружения идут вперемешку, и живая
+ * печать перемешала бы два отчёта в один нечитаемый. */
+async function checkProfile(profile, expected, tmp) {
+  const { bin, repo, head, data, frozen, artifactSha, artifactRel } = expected;
+  const lines = ['— ' + profile.label];
+  const say = (text) => lines.push(text);
+  let bad = 0;
+
+  const dir = path.join(tmp, 'clone-' + PROFILES.indexOf(profile));
+  execFileSync('git', ['clone', '-q', '--no-hardlinks', repo, dir], { encoding: 'utf8', maxBuffer: MAX_BUF });
+  execFileSync('git', ['checkout', '-q', head], { cwd: dir, encoding: 'utf8', maxBuffer: MAX_BUF });
+
+  const json = await runCli(bin, dir, ['--json'], profile.env);
+  if (json.code !== 0) {
+    say('    ✗ движок не отдал --json (код ' + json.code + '): ' + json.stderr.trim());
+    return { bad: bad + 1, lines: lines };
+  }
+  if (json.stdout === data) {
+    say('    ✓ числа совпали с эталоном побайтово');
+  } else {
+    bad++;
+    say('    ✗ числа разошлись с эталоном: ' + firstDiff(json.stdout, data));
+  }
+
+  const wrote = await runCli(bin, dir, ['--write'], profile.env);
+  if (wrote.code !== 0) {
+    say('    ✗ движок не собрал артефакт: ' + wrote.stderr.trim());
+    return { bad: bad + 1, lines: lines };
+  }
+  const artifact = fs.readFileSync(path.join(dir, artifactRel));
+  if (sha256(artifact) === artifactSha) {
+    say('    ✓ артефакт совпал побайтово: ' + artifact.length + ' Б, sha256 ' + artifactSha.slice(0, 12));
+  } else {
+    bad++;
+    say('    ✗ артефакт разошёлся: sha256 ' + sha256(artifact).slice(0, 12)
+      + ' против эталонного ' + artifactSha.slice(0, 12));
+  }
+
+  const checked = await runCli(bin, dir, [], profile.env);
+  if (checked.code === 0) {
+    say('    ✓ контрольный режим на своём артефакте зелёный');
+  } else {
+    bad++;
+    say('    ✗ контрольный режим красный: ' + checked.stderr.trim());
+  }
+
+  const contract = await checkContract(bin, dir, profile.env, frozen);
+  if (contract.errors.length === 0) {
+    say('    ✓ контракт данных несёт те же числа: ' + contract.rows + ' строк, '
+      + contract.files + ' файлов, итоги и дельты сходятся с «сейчас»'
+      + (contract.gaps.length === 0 ? '' : ' (кроме колонок с возвратом файла: ' + contract.gaps.join(', ') + ')'));
+  } else {
+    bad++;
+    contract.errors.slice(0, 3).forEach((e) => say('    ✗ контракт данных: ' + e));
+  }
+
+  return { bad: bad, lines: lines };
+}
+
+async function main() {
   const args = parseArgs(process.argv.slice(2));
   const repo = path.resolve(typeof args.flags['--repo'] === 'string' ? args.flags['--repo'] : DEFAULT_REPO);
   const bin = path.resolve(typeof args.flags['--bin'] === 'string' ? args.flags['--bin'] : DEFAULT_BIN);
@@ -162,68 +240,17 @@ function main() {
   const frozen = JSON.parse(data);
   const artifactSha = fs.readFileSync(path.join(PARITY, 'artifact.sha256'), 'utf8').split(/\s+/)[0];
   const rows = frozen.rows.length;
+  const expected = {
+    bin: bin, repo: repo, head: head, data: data, frozen: frozen,
+    artifactSha: artifactSha, artifactRel: manifest.artifact.path
+  };
 
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'size-report-live-'));
   try {
-    // Клон без жёстких ссылок: проверка только читает проект и не должна делить с
-    // ним объекты даже формально.
-    execFileSync('git', ['clone', '-q', '--no-hardlinks', repo, path.join(tmp, 'c')],
-      { encoding: 'utf8', maxBuffer: MAX_BUF });
-    const dir = path.join(tmp, 'c');
-    execFileSync('git', ['checkout', '-q', head], { cwd: dir, encoding: 'utf8', maxBuffer: MAX_BUF });
+    const results = await Promise.all(PROFILES.map((profile) => checkProfile(profile, expected, tmp)));
+    results.forEach((r) => r.lines.forEach((line) => console.log(line)));
 
-    let bad = 0;
-
-    PROFILES.forEach((profile) => {
-      console.log('— ' + profile.label);
-
-      const json = runCli(bin, dir, ['--json'], profile.env);
-      if (json.code !== 0) {
-        bad++;
-        console.error('    ✗ движок не отдал --json (код ' + json.code + '): ' + json.stderr.trim());
-        return;
-      }
-      if (json.stdout === data) {
-        console.log('    ✓ числа совпали с эталоном побайтово');
-      } else {
-        bad++;
-        console.error('    ✗ числа разошлись с эталоном: ' + firstDiff(json.stdout, data));
-      }
-
-      const wrote = runCli(bin, dir, ['--write'], profile.env);
-      if (wrote.code !== 0) {
-        bad++;
-        console.error('    ✗ движок не собрал артефакт: ' + wrote.stderr.trim());
-        return;
-      }
-      const artifact = fs.readFileSync(path.join(dir, manifest.artifact.path));
-      if (sha256(artifact) === artifactSha) {
-        console.log('    ✓ артефакт совпал побайтово: ' + artifact.length + ' Б, sha256 ' + artifactSha.slice(0, 12));
-      } else {
-        bad++;
-        console.error('    ✗ артефакт разошёлся: sha256 ' + sha256(artifact).slice(0, 12)
-          + ' против эталонного ' + artifactSha.slice(0, 12));
-      }
-
-      const checked = runCli(bin, dir, [], profile.env);
-      if (checked.code === 0) {
-        console.log('    ✓ контрольный режим на своём артефакте зелёный');
-      } else {
-        bad++;
-        console.error('    ✗ контрольный режим красный: ' + checked.stderr.trim());
-      }
-
-      const contract = checkContract(bin, dir, profile.env, frozen);
-      if (contract.errors.length === 0) {
-        console.log('    ✓ контракт данных несёт те же числа: ' + contract.rows + ' строк, '
-          + contract.files + ' файлов, итоги и дельты сходятся с «сейчас»'
-          + (contract.gaps.length === 0 ? '' : ' (кроме колонок с возвратом файла: ' + contract.gaps.join(', ') + ')'));
-      } else {
-        bad++;
-        contract.errors.slice(0, 3).forEach((e) => console.error('    ✗ контракт данных: ' + e));
-      }
-    });
-
+    const bad = results.reduce((sum, r) => sum + r.bad, 0);
     console.log((bad === 0 ? '✓ паритет с живым проектом' : '✗ паритет с живым проектом нарушен')
       + ': проект ' + manifest.project.name + ' на ' + head.slice(0, 7) + ', '
       + rows + ' строк × ' + manifest.data.columns + ' колонок, сред ' + PROFILES.length);
@@ -233,9 +260,7 @@ function main() {
   }
 }
 
-try {
-  process.exitCode = main();
-} catch (e) {
+main().then((code) => { process.exitCode = code; }).catch((e) => {
   console.error('✗ ' + (e && e.message ? e.message : e));
   process.exitCode = 2;
-}
+});

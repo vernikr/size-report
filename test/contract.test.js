@@ -17,45 +17,23 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-import { execFileSync, spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import { JSDOM } from 'jsdom';
 import { CATEGORY_ORDER, pageScript, rowModel, stripModules, totalsOf, valueParts } from '../src/size-table.js';
-
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SYNTH = path.join(ROOT, 'fixtures', 'synthetic');
-const BUNDLE = path.join(SYNTH, 'history.bundle');
-const CONFIG = path.join(SYNTH, 'config.json');
-const PACKAGE_BIN = path.join(ROOT, 'bin', 'size.js');
-const MAX_BUF = 256 * 1024 * 1024;
+import { ROOT, SYNTH, cloneFixture, runFixture, tempDir } from '../tools/harness.js';
 
 const goldenText = fs.readFileSync(path.join(SYNTH, 'golden.json'), 'utf8');
 const golden = JSON.parse(goldenText);
 
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'size-report-contract-'));
+const tmp = tempDir('contract');
 let clones = 0;
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-function cloneFixture() {
-  const dir = path.join(tmp, 'fixture-' + (clones++));
-  execFileSync('git', ['clone', '-q', BUNDLE, dir], { encoding: 'utf8', maxBuffer: MAX_BUF });
-  return dir;
+function clone(name) {
+  return cloneFixture(path.join(tmp, 'fixture-' + (clones++) + '-' + name));
 }
 
-function runCli(dir, args) {
-  const res = spawnSync(process.execPath, [PACKAGE_BIN, '--config', CONFIG].concat(args), {
-    cwd: dir, encoding: 'utf8', maxBuffer: MAX_BUF
-  });
-  return { code: res.status, stdout: res.stdout || '', stderr: res.stderr || '' };
-}
 
-function dataOf(dir) {
-  const res = runCli(dir, ['--data']);
-  assert.equal(res.code, 0, 'инструмент не отдал --data (код ' + res.code + '): ' + res.stderr.trim());
-  return JSON.parse(res.stdout);
-}
 
 /* Программа страницы собирается из исходников на диске: общий расчёт
  * (`src/derived.js`) и оболочка (`src/page/app.js`). Проверки ниже читают те же
@@ -75,15 +53,19 @@ function keysOn(view) {
   return data.metrics.filter((m) => view.metrics[m.key]).map((m) => m.key);
 }
 
-const dir = cloneFixture();
-const data = dataOf(dir);
+/* Контракт снимается один раз на весь набор: он зависит только от фикстуры и
+ * настроек, а их одинаковость у разных клонов отдельно проверяет воспроизводимость. */
+const dir = clone('numbers');
+const dataRun = runFixture(dir, ['--data']);
+assert.equal(dataRun.code, 0, 'инструмент не отдал --data (код ' + dataRun.code + '): ' + dataRun.stderr.trim());
+const data = JSON.parse(dataRun.stdout);
 const allOn = () => data.files.map(() => true);
 const allMetrics = { raw: true, min: true };
 
 /* ---------- контракт ---------- */
 
 test('контракт воспроизводим: два прогона дают те же байты', () => {
-  assert.equal(runCli(cloneFixture(), ['--data']).stdout, runCli(dir, ['--data']).stdout,
+  assert.equal(runFixture(clone('repro'), ['--data']).stdout, dataRun.stdout,
     'данные зависят от запуска: в отчёте появятся «плавающие» значения');
 });
 
@@ -270,7 +252,7 @@ test('вычислительная часть страницы — код дви
     'программа страницы начинается не с общего расчёта');
   assert.equal(/^\s*(import|export)\s/m.test(script), false,
     'в вклеенной программе остался модульный синтаксис: страница с диска его не разрешит');
-  assert.ok(pageHtml.indexOf(script) > 0, 'страница собрана не из общей программы');
+  assert.ok(pageText.indexOf(script) > 0, 'страница собрана не из общей программы');
 
   /* Список функций оболочки закрыт: любая новая функция в ней — это либо
    * разметка, либо вернувшийся своим путём расчёт; первое правится здесь же,
@@ -287,40 +269,43 @@ test('вычислительная часть страницы — код дви
 
 /* ---------- страница ---------- */
 
-function pageHtmlOf(dir) {
-  const res = runCli(dir, ['--page']);
-  assert.equal(res.code, 0, 'инструмент не собрал страницу: ' + res.stderr.trim());
-  const file = path.join(dir, 'docs', 'size-report.html');
+/* Сборка страницы — один прогон на весь набор: страница зависит только от данных
+ * и настроек, а они здесь одни и те же (совпадение данных у двух клонов уже
+ * проверено выше, в проверке воспроизводимости). */
+const pageDir = clone('page');
+const pageRun = runFixture(pageDir, ['--page']);
+
+function pageHtml() {
+  assert.equal(pageRun.code, 0, 'инструмент не собрал страницу: ' + pageRun.stderr.trim());
+  const file = path.join(pageDir, 'docs', 'size-report.html');
   assert.ok(fs.existsSync(file), 'страница не появилась рядом с таблицей');
   return fs.readFileSync(file, 'utf8');
 }
 
-const pageDir = cloneFixture();
-const pageRun = runCli(pageDir, ['--page']);
-const pageHtml = pageHtmlOf(pageDir);
+const pageText = pageHtml();
 
 test('страница самодостаточна и несёт данные контракта', () => {
   assert.equal(pageRun.code, 0, 'сборка страницы не отчиталась: ' + pageRun.stderr.trim());
-  assert.equal(/https?:\/\//.test(pageHtml), false,
+  assert.equal(/https?:\/\//.test(pageText), false,
     'в странице есть внешняя ссылка: без сети она не откроется');
-  assert.equal(/<link|<img|src=/.test(pageHtml), false, 'страница тянет что-то со стороны');
+  assert.equal(/<link|<img|src=/.test(pageText), false, 'страница тянет что-то со стороны');
 
   /* Один файл и три тега: два с данными и программа. Программа вклеена ровно
    * так, как её отдаёт движок, и без модульного синтаксиса: страница открывается
    * с диска, а не с сервера, и разрешать `import` там нечем. */
-  assert.equal((pageHtml.match(/<script/g) || []).length, 3,
+  assert.equal((pageText.match(/<script/g) || []).length, 3,
     'в странице не три тега script: вклейка изменилась, и файлов могло стать больше одного');
-  assert.ok(pageHtml.indexOf('<script>\n' + pageScript() + '</script>') > 0,
+  assert.ok(pageText.indexOf('<script>\n' + pageScript() + '</script>') > 0,
     'программа страницы вклеена не целиком или не тем текстом, который отдаёт движок');
-  assert.equal(/type="module"/.test(pageHtml), false, 'программа страницы объявлена модулем');
+  assert.equal(/type="module"/.test(pageText), false, 'программа страницы объявлена модулем');
 
-  const dom = new JSDOM(pageHtml);
+  const dom = new JSDOM(pageText);
   const embedded = JSON.parse(dom.window.document.getElementById('data').textContent);
-  assert.deepEqual(embedded, dataOf(pageDir), 'в странице лежат не те данные, что отдаёт --data');
+  assert.deepEqual(embedded, data, 'в странице лежат не те данные, что отдаёт --data');
 });
 
 test('страница считает то же, что артефакт, и пересчитывается по выбору', () => {
-  const dom = new JSDOM(pageHtml, { runScripts: 'dangerously' });
+  const dom = new JSDOM(pageText, { runScripts: 'dangerously' });
   const doc = dom.window.document;
   const rows = doc.querySelectorAll('#grid tbody tr');
   assert.equal(rows.length, data.rows.length + 1,

@@ -3,9 +3,11 @@
  * человек читает команду). Стек наружу не идёт: он не подсказывает починку и
  * выдаёт пути машины.
  *
- * Проверки идут в каждом сценарии отказа: справка, нет настроек, настройки не
- * разобраны, обрезанная история, расхождение с рабочим деревом, вывод в каталог,
- * которого нет, запуск вне репозитория. */
+ * Здесь справка, настройки и коды выхода; где инструмент пишет и что проверяет —
+ * в соседнем наборе (`cli-paths.test.js`). Наборы разделены не по смыслу
+ * проверок, а по времени: внутри файла проверки идут последовательно, а работа
+ * здесь — запуск процессов, поэтому раскладка по файлам отдаёт проверкам ядра.
+ */
 
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,20 +15,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import {
-  CONFIG, MAX_BUF, cloneFixture, commandIn, firstLine,
-  gitIn, hasStack, runFixture, runSize, tempDir
+  CONFIG, MAX_BUF, cloneFixture, commandIn, firstLine, hasStack, refusal, runSize, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('cli');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
-
-function refusal(res, code, what) {
-  assert.equal(res.code, code, what + ': ожидался код ' + code + ', получен ' + res.code
-    + ' — ' + firstLine(res.stderr));
-  assert.equal(hasStack(res.stderr + res.stdout), false,
-    what + ': отказ напечатал стек вместо сообщения:\n' + res.stderr);
-  assert.notEqual(res.stderr.trim(), '', what + ': отказ ничего не объяснил');
-}
 
 /* ---------- справка ---------- */
 
@@ -108,67 +101,6 @@ test('сломанные настройки: код 2, назван файл и 
   const wrong = runSize(dir, ['--data']);
   refusal(wrong, 2, 'неизвестная метрика в настройках');
   assert.match(wrong.stderr, /nonexistent/, 'отказ не называет виновника:\n' + wrong.stderr);
-});
-
-/* ---------- обрезанная история ---------- */
-
-test('обрезанная история: код 3 и команда докачки', () => {
-  const base = cloneFixture(path.join(tmp, 'shallow-source'));
-  const dir = path.join(tmp, 'shallow');
-  const clone = spawnSync('git', ['clone', '-q', '--depth', '1', 'file://' + base, dir],
-    { encoding: 'utf8', maxBuffer: MAX_BUF });
-  assert.equal(clone.status, 0, 'не удалось собрать обрезанную выкладку: ' + firstLine(clone.stderr));
-  assert.equal(gitIn(dir, ['rev-parse', '--is-shallow-repository']).trim(), 'true',
-    'выкладка вышла полной: проверять нечего');
-
-  const res = runFixture(dir, ['--data']);
-  refusal(res, 3, 'запуск на обрезанной истории');
-  assert.match(res.stderr, /--unshallow/, 'отказ не называет команду докачки:\n' + res.stderr);
-});
-
-/* ---------- вывод в каталог, которого нет ---------- */
-
-test('--page создаёт недостающий каталог', () => {
-  const dir = cloneFixture(path.join(tmp, 'page-dir'));
-  const target = path.join('.size-report', 'report.html');
-  const res = runFixture(dir, ['--page', target]);
-  assert.equal(res.code, 0, '--page отказался работать: ' + firstLine(res.stderr));
-  assert.equal(hasStack(res.stderr), false, '--page упал стеком:\n' + res.stderr);
-  assert.ok(fs.existsSync(path.join(dir, target)), 'страницы нет по указанному пути: ' + target);
-});
-
-test('--write создаёт недостающий каталог, названный в настройках', () => {
-  const dir = cloneFixture(path.join(tmp, 'write-dir'));
-  const cfg = JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
-  cfg.output = path.join('.size-report', 'table.html');
-  fs.writeFileSync(path.join(dir, 'size-table.config.json'), JSON.stringify(cfg, null, 2));
-
-  const res = runSize(dir, ['--write']);
-  assert.equal(res.code, 0, '--write отказался работать: ' + firstLine(res.stderr));
-  assert.equal(hasStack(res.stderr), false, '--write упал стеком:\n' + res.stderr);
-  assert.ok(fs.existsSync(path.join(dir, cfg.output)), 'таблицы нет по указанному пути');
-});
-
-/* ---------- расхождение с рабочим деревом ---------- */
-
-test('правка только на диске: код 1 и что с ней делать', () => {
-  const dir = cloneFixture(path.join(tmp, 'disk-edit'));
-  gitIn(dir, ['update-index', '--assume-unchanged', 'src/code.js']);
-  fs.appendFileSync(path.join(dir, 'src', 'code.js'), '// правка, которой нет в git\n');
-  assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '',
-    'правка попала в статус git: файл выпал бы из сверки, и проверять нечего');
-
-  const res = runFixture(dir, ['--data']);
-  refusal(res, 1, 'правка, которой нет в истории');
-  assert.match(res.stderr, /правка есть только на диске/, 'отказ объясняет не то:\n' + res.stderr);
-  assert.match(res.stderr, /починка/, 'отказ не говорит, что делать:\n' + res.stderr);
-});
-
-/* ---------- запуск вне репозитория ---------- */
-
-test('вне git-репозитория отказ объясняется, а не падает стеком', () => {
-  const res = runSize(tmp, ['--data']);
-  refusal(res, 2, 'запуск вне репозитория');
 });
 
 /* ---------- таблица кодов ---------- */
