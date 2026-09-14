@@ -15,7 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import {
-  CONFIG, MAX_BUF, cloneFixture, commandIn, firstLine, hasStack, refusal, runSize, tempDir
+  CONFIG, MAX_BUF, cloneFixture, commandIn, firstLine, gitIn, hasStack, refusal, runSize, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('cli');
@@ -101,6 +101,54 @@ test('сломанные настройки: код 2, назван файл и 
   const wrong = runSize(dir, ['--data']);
   refusal(wrong, 2, 'неизвестная метрика в настройках');
   assert.match(wrong.stderr, /nonexistent/, 'отказ не называет виновника:\n' + wrong.stderr);
+});
+
+/* ---------- слова и ключи, которых инструмент не знает ---------- */
+
+test('незнакомый ключ, ключ без значения и лишнее слово — отказ, а не тишина', () => {
+  const dir = cloneFixture(path.join(tmp, 'args'));
+
+  // Опечатка в ключе не имеет права выглядеть исправным прогоном: прежде такое
+  // слово просто не читалось, и инструмент отвечал нулём, ничего не сделав.
+  ['--wite', '--dta', '--forse'].forEach((typo) => {
+    const res = runSize(dir, [typo]);
+    refusal(res, 2, 'опечатка в ключе ' + typo);
+    assert.ok(res.stderr.indexOf(typo) >= 0, 'отказ не называет ключ ' + typo + ':\n' + res.stderr);
+    assert.ok(commandIn(res.stderr) !== null, 'в отказе нет команды починки:\n' + res.stderr);
+  });
+
+  // Ключ со значением без значения — тоже молчаливый пропуск: настройки были бы
+  // взяты по умолчанию, а не те, что назвал человек.
+  const noValue = runSize(dir, ['--config']);
+  refusal(noValue, 2, 'ключ --config без значения');
+  assert.match(noValue.stderr, /«--config»/, 'отказ не называет ключ:\n' + noValue.stderr);
+
+  const force = runSize(dir, ['--force']);
+  refusal(force, 2, 'ключ --force без --init');
+  assert.match(force.stderr, /--force/, 'отказ не называет ключ:\n' + force.stderr);
+
+  // Слово после ключа со значением — лишнее, и обвинять его как «неизвестную
+  // команду» значит назвать не ту причину.
+  const extra = runSize(dir, ['--page', 'a.html', 'b.html']);
+  refusal(extra, 2, 'лишнее слово после ключа со значением');
+  assert.match(extra.stderr, /лишнее слово «b\.html»/, 'отказ назвал не то слово:\n' + extra.stderr);
+
+  const stray = runSize(dir, ['check', 'extra']);
+  refusal(stray, 2, 'лишнее слово у команды');
+  assert.match(stray.stderr, /«extra» лишний/, 'отказ назвал не причину:\n' + stray.stderr);
+
+  // Обратная сторона: законные зовы остаются законными — значение ключа не
+  // путается с лишним словом, а команда читается в любом месте строки.
+  const legal = [
+    ['--init', 'draft.json', '--force'],
+    ['--page', 'out.html', '--config', CONFIG],
+    ['explain', gitIn(dir, ['rev-parse', 'HEAD']).trim(), '--config', CONFIG]
+  ];
+  legal.forEach((args) => {
+    const res = runSize(dir, args);
+    assert.equal(res.code, 0, 'законный зов «' + args.join(' ') + '» отвергнут: ' + firstLine(res.stderr));
+  });
+  assert.ok(fs.existsSync(path.join(dir, 'out.html')), 'значение «--page» не дошло до записи');
 });
 
 /* ---------- таблица кодов ---------- */

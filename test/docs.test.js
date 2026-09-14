@@ -21,7 +21,7 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT, gitIn, sharedClone, tempDir } from '../tools/harness.js';
+import { ROOT, gitIn, gitTry, sharedClone, tempDir } from '../tools/harness.js';
 import { USAGE } from '../src/size-table.js';
 
 const tmp = tempDir('docs');
@@ -197,6 +197,55 @@ test('документация зовёт только существующие 
     });
   });
   assert.deepEqual(bad, [], 'документация зовёт то, чего инструмент не знает:\n  ' + bad.join('\n  '));
+});
+
+/* Команды, которые зовёт инструкция: первое слово зова — только оно и может быть
+ * командой. Список берётся из тех же зовов, что проверяет соседний тест: второй
+ * парсер неизбежно разошёлся бы с первым. */
+function calledCommands() {
+  const out = new Set();
+  ['README.md', 'templates/README.md'].forEach((doc) => {
+    invocations(facts(doc, NOT_TODAY[doc])).forEach((call) => {
+      const words = call.replace(/^pnpm exec /, '').replace(/^npx size-report/, 'size')
+        .replace(/^node bin\/size\.js/, 'size').trim().split(/\s+/).slice(1);
+      if (words.length > 0 && usageCommands.indexOf(words[0]) >= 0) out.add(words[0]);
+    });
+  });
+  return out;
+}
+
+/* Команды из справки закреплённой ревизии: файл читается из истории git, а не из
+ * дерева, потому что справка там — другая. Секция «Команды» — список строковых
+ * литералов, и имя команды в каждом — первое слово. */
+function commandsAt(rev) {
+  const src = gitIn(ROOT, ['show', rev + ':src/refusal.js']);
+  const section = src.split("'Команды:'")[1];
+  if (section === undefined) return null;
+  return [...section.split("'Режимы:'")[0].matchAll(/^\s*'\s+([a-z][a-z-]*)/gm)].map((m) => m[1]);
+}
+
+/* Пример установки — тоже утверждение о репозитории, и проверяемое: пин обязан
+ * вести на ревизию этого репозитория, в справке которой есть все команды,
+ * названные в тексте. Иначе документированный путь ведёт в пустоту: инструмент той
+ * ревизии лишнего слова не читает, и `size doctor` отвечает нулём, ничего не сделав. */
+test('пример установки ведёт на ревизию, чья справка знает названные команды', () => {
+  const pin = read('README.md').match(/github:vernikr\/size-report#([\w./-]+)/);
+  assert.ok(pin, 'README не называет ревизию в примере установки — сверить нечего');
+  const rev = pin[1];
+
+  const type = gitTry(ROOT, ['cat-file', '-t', rev]).stdout.trim();
+  assert.ok(type === 'commit' || type === 'tag',
+    'пример установки ссылается на «' + rev + '», а такой ревизии в этом репозитории нет');
+  const commit = gitIn(ROOT, ['rev-parse', rev + '^{commit}']).trim();
+
+  const commands = commandsAt(commit);
+  assert.ok(commands !== null && commands.length > 0,
+    'у ревизии «' + rev + '» нет справки с разделом «Команды» — она старше того, чему учит текст');
+
+  const unknown = [...calledCommands()].filter((c) => commands.indexOf(c) < 0);
+  assert.deepEqual(unknown, [],
+    'ревизия «' + rev + '» не знает команд, которым учит текст: ' + unknown.join(', ')
+      + '\n  в справке той ревизии: ' + commands.join(', '));
 });
 
 test('числа проверок и целей в документации совпадают с фактом', () => {
