@@ -246,8 +246,13 @@ test('пример установки ведёт на ревизию, чья с�
   }
 
   const type = gitTry(ROOT, ['cat-file', '-t', rev]).stdout.trim();
+  const shallow = gitTry(ROOT, ['rev-parse', '--is-shallow-repository']).stdout.trim() === 'true';
   assert.ok(type === 'commit' || type === 'tag',
-    'пример установки ссылается на «' + rev + '», а такой ревизии в этом репозитории нет');
+    'пример установки ссылается на «' + rev + '», а такой ревизии в этом репозитории нет'
+      + (shallow
+        ? ' — но клон обрезан, поэтому и не найдётся: сторожу нужна история'
+          + ' (`fetch-depth: 0` у checkout, `git fetch --unshallow` руками)'
+        : ''));
   const commit = gitIn(ROOT, ['rev-parse', rev + '^{commit}']).trim();
 
   const commands = commandsAt(commit);
