@@ -79,35 +79,43 @@ function plainDraft(dir) {
 }
 
 /* Оба варианта — один и тот же модуль в `.js`: манифест лишь сообщает Node, как
- * читать `.js`, а генератор должен измерять файл в обоих случаях. */
-for (const withType of [true, false]) {
-  const name = withType ? 'type-module' : 'no-type';
-  test('модуль в .js измеряется без правок настроек: ' + name, () => {
-    const pkg = { name: name, version: '1.0.0', private: true };
-    if (withType) pkg.type = 'module';
-    const dir = makeRepo(name, pkg);
+ * читать `.js`, а генератор должен измерять файл в обоих случаях. Проверок две, и
+ * объявлены они каждая своей строкой, а не циклом: число проверок в наборе
+ * читается по файлам — по нему сверяется документация (`test/docs.test.js`),
+ * а объявление в цикле делает счёт выводом из кода, а не фактом файла. */
+function moduleInJs(name, withType) {
+  const pkg = { name: name, version: '1.0.0', private: true };
+  if (withType) pkg.type = 'module';
+  const dir = makeRepo(name, pkg);
 
-    const init = runSize(dir, ['--init']);
-    assert.equal(init.code, 0, 'черновик настроек не создался: ' + firstLine(init.stderr));
-    const cfg = JSON.parse(fs.readFileSync(path.join(dir, 'size-table.config.json'), 'utf8'));
-    assert.equal(cfg.minify && cfg.minify.engine, 'esbuild',
-      'черновик не ведёт новый проект на настоящее сжатие: ' + JSON.stringify(cfg.minify));
-    assert.equal(cfg.metrics.indexOf('min') >= 0, true, 'черновик потерял метрику min');
+  const init = runSize(dir, ['--init']);
+  assert.equal(init.code, 0, 'черновик настроек не создался: ' + firstLine(init.stderr));
+  const cfg = JSON.parse(fs.readFileSync(path.join(dir, 'size-table.config.json'), 'utf8'));
+  assert.equal(cfg.minify && cfg.minify.engine, 'esbuild',
+    'черновик не ведёт новый проект на настоящее сжатие: ' + JSON.stringify(cfg.minify));
+  assert.equal(cfg.metrics.indexOf('min') >= 0, true, 'черновик потерял метрику min');
 
-    const res = runSize(dir, ['--write']);
-    assert.equal(res.code, 0, 'проект с модулем в .js не собрался ('
-      + name + '): ' + firstLine(res.stderr || res.stdout));
-    assert.equal(/стриппер/.test(res.stderr), false,
-      'отчёт собрался, но гард на чём-то споткнулся:\n' + res.stderr);
-    assert.ok(fs.existsSync(path.join(dir, cfg.output)), 'таблица не написалась: ' + cfg.output);
+  const res = runSize(dir, ['--write']);
+  assert.equal(res.code, 0, 'проект с модулем в .js не собрался ('
+    + name + '): ' + firstLine(res.stderr || res.stdout));
+  assert.equal(/стриппер/.test(res.stderr), false,
+    'отчёт собрался, но гард на чём-то споткнулся:\n' + res.stderr);
+  assert.ok(fs.existsSync(path.join(dir, cfg.output)), 'таблица не написалась: ' + cfg.output);
 
-    // Число снятого балласта тоже посчитано: без min прогон бы упал, но проверяем
-    // не «не упало», а что в данных есть все объявленные метрики.
-    const data = JSON.parse(runSize(dir, ['--data']).stdout);
-    assert.ok(data.now.some((v) => v !== null && v.min !== undefined),
-      'в данных нет ни одного числа по метрике min');
-  });
+  // Число снятого балласта тоже посчитано: без min прогон бы упал, но проверяем
+  // не «не упало», а что в данных есть все объявленные метрики.
+  const data = JSON.parse(runSize(dir, ['--data']).stdout);
+  assert.ok(data.now.some((v) => v !== null && v.min !== undefined),
+    'в данных нет ни одного числа по метрике min');
 }
+
+test('модуль в .js измеряется без правок настроек: type-module', () => {
+  moduleInJs('type-module', true);
+});
+
+test('модуль в .js измеряется без правок настроек: no-type', () => {
+  moduleInJs('no-type', false);
+});
 
 /* Гард обязан остаться гардом: ломаем стриппер так, как он ломается на самом деле
  * (перестаёт понимать строки в одинарных кавычках), и прогон должен упасть с
