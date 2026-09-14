@@ -10,6 +10,18 @@ import { EXIT, refuse } from './refusal.js';
  * которой состояние и строки попадают наружу. Верхний этаж чтения: ниже — git и
  * метрики, выше — только уже собранные значения. */
 
+/* Причина, по которой коммит не получил строки, — ключ, а не текст: по нему и
+ * считается сводка, и отвечает `explain`. Слова для человека — в `skipLine`, и
+ * они те же, что были строкой раньше: «без изменения объёма» накрывает и тот
+ * случай, когда коммит не тронул ни одного файла колонок, — в отчёте эта разница
+ * не проводилась, и эталон контракта её сохраняет; отличие видно в `explain`, где
+ * оно и нужно. */
+const SKIP_WORDS = { merge: 'merge', report: 'только таблица', flat: 'без изменения объёма' };
+
+export function skipLine(dropped) {
+  return dropped.sha.slice(0, 7) + ' (' + SKIP_WORDS[dropped.reason] + ')';
+}
+
 /* Сдвинул ли коммит хотя бы одно число. Сравниваются числа, а не список файлов:
  * правка в пробелах или комментариях размера не меняет, и строка про неё была бы
  * пустой, а у слияния клетки выходят нулевыми всегда, когда разрешение конфликта
@@ -29,16 +41,19 @@ function changesVolume(state, before, columns, metrics) {
  * «какие пары ревизия:путь понадобятся», затем один поход в git (`readBlobs`),
  * затем собственно измерение — иначе на каждый коммит приходилось бы по
  * git-вызову на колонку. Значения метрик кэшируются по sha блоба: ревизия с тем
- * же содержимым (откат, повторный merge) не пересчитывается. */
-export function measureHistory(cfg, root) {
-  const commits = readHistory(root);
+ * же содержимым (откат, повторный merge) не пересчитывается.
+ *
+ * `known` — уже прочитанная история: проходам, которым она нужна ещё и сама по
+ * себе (полнота покрытия), незачем звать `git log` второй раз. */
+export function measureHistory(cfg, root, known) {
+  const commits = known === undefined ? readHistory(root) : known;
   const metrics = cfg.metrics;
   // Текст журнала нужен всегда: ссылка в раздел — не метрика, но тоже чтение.
   const needText = !!cfg.journal || metrics.some((m) => METRICS[m].needsText);
   const skipPaths = [cfg.output].concat(cfg.skip || []);
   const state = cfg.columns.map(() => null);
   const rows = [];
-  const skipped = [];
+  const dropped = [];
   const mixed = [];
   let journalPrev = '';
 
@@ -105,13 +120,13 @@ export function measureHistory(cfg, root) {
       state[i] = { path: pick.path, sha: blob.sha, cells: cells, approx: approx };
     });
 
-    if (c.parents.length > 1 && !cfg.rows.merges) { skipped.push(c.sha.slice(0, 7) + ' (merge)'); return; }
+    if (c.parents.length > 1 && !cfg.rows.merges) { dropped.push({ sha: c.sha, reason: 'merge' }); return; }
     if (c.files.length > 0 && c.files.every((f) => skipPaths.indexOf(f) >= 0)) {
-      skipped.push(c.sha.slice(0, 7) + ' (только таблица)');
+      dropped.push({ sha: c.sha, reason: 'report' });
       return;
     }
     if (!changesVolume(state, before, cfg.columns, metrics)) {
-      skipped.push(c.sha.slice(0, 7) + ' (без изменения объёма)');
+      dropped.push({ sha: c.sha, reason: 'flat' });
       return;
     }
     if (c.files.some((f) => f === cfg.output)) mixed.push(c.sha.slice(0, 7));
@@ -126,7 +141,7 @@ export function measureHistory(cfg, root) {
     });
   });
 
-  return { rows, skipped, mixed, state };
+  return { rows, dropped, mixed, state };
 }
 
 /* Сверка с рабочим деревом отвечает на два вопроса, и оба обязательны: состояние

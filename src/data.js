@@ -2,7 +2,7 @@ import path from 'path';
 import { LOCALES } from './locales.js';
 import { metricView } from './metrics.js';
 import { rowHref } from './journal.js';
-import { build } from './history.js';
+import { build, skipLine } from './history.js';
 import { TOOL_PKG } from './tool.js';
 
 /* Категории файлов и контракт со страницей: абсолютные значения и устройство
@@ -34,10 +34,11 @@ export function categoryOf(col) {
  * сумму он не может. Числа в контракте те же, что в артефакте, — это та же правда,
  * разложенная по полям.
  *
- * Причины пропущенных коммитов пока идут строками движка: разложить их по полям —
- * вместе с командой объяснения (план, §5, шаг 5). */
+ * Причины пропущенных коммитов идут строками — и остаются ими: у страницы нет
+ * вопроса, на который пригодилось бы поле («почему у коммита нет строки» задают
+ * командой `explain`, и там причина уже разложена). */
 export function reportData(cfg, root) {
-  const { rows, state, skipped } = build(cfg, root);
+  const { rows, state, dropped } = build(cfg, root);
   const loc = LOCALES[cfg.locale];
   const files = cfg.columns.map((col, i) => {
     const cat = categoryOf(col);
@@ -75,7 +76,7 @@ export function reportData(cfg, root) {
     })),
     now: state.map((s) => (s === null ? null : s.cells)),
     approx: approxMarks(rows, state, cfg),
-    skipped: skipped
+    skipped: dropped.map(skipLine)
   };
 }
 

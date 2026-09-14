@@ -5,16 +5,19 @@ import { EXIT, Refusal, USAGE, cliCommand, refuse } from './refusal.js';
 import { CONFIG_NAME, argValue, gitRoot, loadConfig, validateConfig } from './config.js';
 import { MAX_BUF, git, gitArgv, gitEnv } from './git.js';
 import { byteLen } from './strip.js';
-import { build } from './history.js';
+import { build, skipLine } from './history.js';
 import { reportData } from './data.js';
+import { coverage, coverageText } from './check.js';
+import { explainCommit, explainText } from './explain.js';
 import { sensorGaps } from './metrics.js';
 import { render } from './render.js';
 import { totalsOf } from './derived.js';
 import { pageHtml } from './page/build.js';
 
-/* Режимы командной строки: проверка, сборка, данные, страница, черновик настроек
- * и разбор аргументов. Единственный модуль, который знает про все остальные
- * сразу, — потому ему и позволено их связывать. */
+/* Режимы командной строки: проверка полноты, объяснение пропущенной строки,
+ * проверка таблицы, сборка, данные, страница, черновик настроек и разбор
+ * аргументов. Единственный модуль, который знает про все остальные сразу, — потому
+ * ему и позволено их связывать. */
 
 function kmb(bytes) {
   return Math.round(bytes / 1024) + ' КБ';
@@ -24,10 +27,13 @@ function kmb(bytes) {
  * вместо сжатия, оценка вместо точного счёта), потому что необязательной
  * зависимости нет. Факт печатается один раз на датчик и становится кодом 4 — иначе
  * приближение уезжало бы в CI как успех. */
-function sensorNote(cfg) {
-  const gaps = sensorGaps(cfg);
+function note(gaps) {
   gaps.forEach((gap) => console.error('! ' + gap.why + '\n  починка: ' + gap.fix));
   return gaps.length === 0 ? EXIT.OK : EXIT.SENSOR;
+}
+
+function sensorNote(cfg) {
+  return note(sensorGaps(cfg));
 }
 
 export function check(cfg, want, root) {
@@ -64,12 +70,12 @@ function writeFileEnsured(file, text) {
 }
 
 function writeMode(cfg, root) {
-  const { rows, skipped, state } = build(cfg, root);
+  const { rows, dropped, state } = build(cfg, root);
   const html = render(rows, cfg);
   writeFileEnsured(path.join(root, cfg.output), html);
   console.log('✓ ' + cfg.output + ': ' + rows.length + ' строк × ' + cfg.columns.length + ' файлов, '
-    + kmb(byteLen(html)) + ' (пропущено без строки: ' + skipped.length + ' — '
-    + skipped.join(', ') + ')');
+    + kmb(byteLen(html)) + ' (пропущено без строки: ' + dropped.length + ' — '
+    + dropped.map(skipLine).join(', ') + ')');
   console.log('  состояние на HEAD: ' + cfg.columns.map((c, i) => c.label + ' '
     + (state[i] === null ? '—' : cfg.metrics.map((m) => state[i].cells[m]).join('/'))).join(', '));
   return sensorNote(cfg);
@@ -85,6 +91,46 @@ function checkMode(cfg, root) {
     return sensorNote(cfg);
   }
   return code;
+}
+
+/* Полнота покрытия (`size check`): настройки, история, пути, датчики. Не путать с
+ * `checkMode` выше — тот про таблицу и историю («файл совпадает с тем, что
+ * сосчитано»), а этот про то, что сосчитано **всё**: ни один путь истории не
+ * прошёл мимо колонок. Разные вопросы, поэтому и разные команды: держать отчёт в
+ * git не обязательно, а вот полноту терять нельзя — она той же проверкой и
+ * заменяется. */
+function coverageMode(cfg, root, configFile, asJson) {
+  const rep = coverage(cfg, root, configFile);
+  if (asJson) process.stdout.write(JSON.stringify(rep, null, 2) + '\n');
+  else console.log(coverageText(rep));
+  if (!rep.ok) return EXIT.VIOLATION;
+  return note(rep.sensors);
+}
+
+/* Объяснение пропущенной строки (`size explain <коммит>`): ответ есть у любого
+ * коммита, поэтому код выхода 0 и у «строка есть», и у «строки нет»; 2 — только
+ * когда названного коммита в истории нет или префикс подходит нескольким. */
+function explainMode(cfg, root, target, asJson) {
+  const rep = explainCommit(cfg, root, target);
+  if (asJson) process.stdout.write(JSON.stringify(rep, null, 2) + '\n');
+  else console.log(explainText(rep));
+  return EXIT.OK;
+}
+
+/* Слова в аргументах: не ключи и не значения ключей. Ключ со значением
+ * (`--config <файл>`, `--init [файл]`, `--page [файл]`) забирает следующий
+ * аргумент, поэтому команда читается где угодно: и `size check --config x`, и
+ * `size --config x check` — одно и то же. */
+const VALUE_FLAGS = ['--config', '--init', '--page'];
+const MODE_FLAGS = ['--init', '--write', '--data', '--page'];
+
+function plainWords(args) {
+  const out = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i][0] === '-') { if (VALUE_FLAGS.indexOf(args[i]) >= 0) i++; continue; }
+    out.push(args[i]);
+  }
+  return out;
 }
 
 /* Данные контракта в stdout — для страницы и для агента: та же правда, что в
@@ -111,7 +157,7 @@ export function pageMode(cfg, root, file) {
 }
 
 function jsonMode(cfg, root) {
-  const { rows, skipped } = build(cfg, root);
+  const { rows, dropped } = build(cfg, root);
   process.stdout.write(JSON.stringify({
     columns: cfg.columns.map((c) => ({ label: c.label, paths: c.paths })),
     metrics: cfg.metrics,
@@ -121,7 +167,7 @@ function jsonMode(cfg, root) {
       cells: r.cells,
       totals: totalsOf(r.cells, cfg.metrics)
     })),
-    skipped: skipped
+    skipped: dropped.map(skipLine)
   }, null, 2) + '\n');
   return sensorNote(cfg);
 }
@@ -236,16 +282,53 @@ export function initMode(root, file, force) {
   return 0;
 }
 
+/* Команды — словами, режимы — ключами: словами называются те два ответа, которых
+ * у ключей не было («всё ли посчитано» и «почему нет строки»), а прежние ключи
+ * остаются собой. Слово, которого инструмент не знает, — отказ, а не молчаливый
+ * пропуск: прежде лишнее слово никто не читал, и ошибка в нём выглядела бы как
+ * обычный прогон. */
 export function main() {
   const args = process.argv.slice(2);
   if (args.indexOf('--help') >= 0 || args.indexOf('-h') >= 0) {
     process.stdout.write(USAGE);
     return EXIT.OK;
   }
+  const words = plainWords(args);
+  const verb = words.length > 0 ? words[0] : null;
+  const extra = words.length > 2 ? words.slice(2) : [];
+  if (verb !== null && verb !== 'check' && verb !== 'explain') {
+    console.error('✗ неизвестная команда «' + verb + '»\n  починка: ' + cliCommand('--help'));
+    return EXIT.CONFIG;
+  }
+  const mode = MODE_FLAGS.filter((f) => args.indexOf(f) >= 0)[0];
+  if (verb !== null && mode !== undefined) {
+    console.error('✗ команда «' + verb + '» и режим «' + mode + '» — разное, вместе они не работают'
+      + '\n  починка: ' + cliCommand(verb));
+    return EXIT.CONFIG;
+  }
   try {
     const root = gitRoot();
     if (args.indexOf('--init') >= 0) return initMode(root, argValue(args, '--init'), args.indexOf('--force') >= 0);
-    const cfg = loadConfig(argValue(args, '--config') ? path.resolve(argValue(args, '--config')) : path.join(root, CONFIG_NAME));
+    const configFile = argValue(args, '--config') ? path.resolve(argValue(args, '--config')) : path.join(root, CONFIG_NAME);
+    const cfg = loadConfig(configFile);
+    if (verb === 'check') {
+      if (words.length > 1) {
+        refuse(EXIT.CONFIG, 'команда «check» аргументов не принимает: «' + words[1] + '» лишний'
+          + '\n  починка: ' + cliCommand('check'));
+      }
+      return coverageMode(cfg, root, configFile, args.indexOf('--json') >= 0);
+    }
+    if (verb === 'explain') {
+      if (words.length < 2) {
+        refuse(EXIT.CONFIG, 'команде «explain» нужен коммит: смотрите на sha или его начало'
+          + '\n  починка: ' + cliCommand('explain <коммит>'));
+      }
+      if (extra.length > 0) {
+        refuse(EXIT.CONFIG, 'команда «explain» принимает один коммит, а не ' + words.length
+          + ': «' + extra.join('», «') + '» лишние\n  починка: ' + cliCommand('explain <коммит>'));
+      }
+      return explainMode(cfg, root, words[1], args.indexOf('--json') >= 0);
+    }
     if (args.indexOf('--json') >= 0) return jsonMode(cfg, root);
     if (args.indexOf('--data') >= 0) return dataMode(cfg, root);
     if (args.indexOf('--page') >= 0) return pageMode(cfg, root, argValue(args, '--page'));
