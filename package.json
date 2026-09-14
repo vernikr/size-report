@@ -30,6 +30,7 @@
     "lint:strict": "eslint .",
     "parity": "node tools/parity-freeze.js",
     "parity:live": "node tools/parity-live.js",
+    "pack:check": "node tools/pack-check.js",
     "fixture": "node tools/make-fixture.js"
   },
   "keywords": [

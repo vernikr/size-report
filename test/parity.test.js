@@ -43,7 +43,11 @@ const LEGACY = path.join(ROOT, 'fixtures', 'legacy', 'size-table.cjs');
 const BUNDLE = path.join(SYNTH, 'history.bundle');
 const CONFIG = path.join(SYNTH, 'config.json');
 const PACKAGE_BIN = path.join(ROOT, 'bin', 'size.js');
-const PACKAGE_SRC = path.join(ROOT, 'src', 'size-table.js');
+/* Файл, в котором живёт чтение истории: мутация правит именно его. После
+ * разбиения движка это не точка входа пакета (`size-table.js` — только
+ * реэкспорт), а модуль доступа к git; если чтение истории переедет, тест упадёт
+ * на неприменившейся мутации и об этом скажет (проверка ниже). */
+const PACKAGE_SRC = path.join(ROOT, 'src', 'git.js');
 const MAX_BUF = 256 * 1024 * 1024;
 
 /* Настройки git через окружение (git ≥ 2.31): так тест задаёт машине чужие
@@ -340,7 +344,7 @@ test('потерянная правка merge-коммита ловится со
   const dir = path.join(tmp, 'engine-without-merge-paths');
   fs.mkdirSync(path.join(dir, 'bin'), { recursive: true });
   fs.cpSync(path.join(ROOT, 'src'), path.join(dir, 'src'), { recursive: true });
-  fs.writeFileSync(path.join(dir, 'src', 'size-table.js'), mutated);
+  fs.writeFileSync(path.join(dir, 'src', 'git.js'), mutated);
   fs.copyFileSync(PACKAGE_BIN, path.join(dir, 'bin', 'size.js'));
 
   const res = runCli({ name: 'мутированный движок', file: path.join(dir, 'bin', 'size.js'), env: null },
