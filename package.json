@@ -1,6 +1,6 @@
 {
   "name": "size-report",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Учёт роста объёма кода и документов по истории git: raw / min / токены, интерактивный отчёт вне git",
   "type": "module",
