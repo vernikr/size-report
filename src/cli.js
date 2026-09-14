@@ -9,6 +9,7 @@ import { build, skipLine } from './history.js';
 import { reportData } from './data.js';
 import { coverage, coverageText } from './check.js';
 import { explainCommit, explainText } from './explain.js';
+import { doctor, doctorText } from './doctor.js';
 import { sensorGaps } from './metrics.js';
 import { render } from './render.js';
 import { totalsOf } from './derived.js';
@@ -105,6 +106,17 @@ function coverageMode(cfg, root, configFile, asJson) {
   else console.log(coverageText(rep));
   if (!rep.ok) return EXIT.VIOLATION;
   return note(rep.sensors);
+}
+
+/* Диагностика одним ответом (`size doctor`): окружение, зависимости, настройки и
+ * покрытие — сборкой из тех же кусков, что и остальные режимы. Код выхода — не
+ * «что-то не так», а первый по важности (настройки → история → покрытие →
+ * приближение): по нему агент ветвится, а текст читает человек. */
+function doctorMode(root, configFile, asJson) {
+  const rep = doctor(root, configFile);
+  if (asJson) process.stdout.write(JSON.stringify(rep, null, 2) + '\n');
+  else console.log(doctorText(rep));
+  return rep.exit;
 }
 
 /* Объяснение пропущенной строки (`size explain <коммит>`): ответ есть у любого
@@ -296,7 +308,7 @@ export function main() {
   const words = plainWords(args);
   const verb = words.length > 0 ? words[0] : null;
   const extra = words.length > 2 ? words.slice(2) : [];
-  if (verb !== null && verb !== 'check' && verb !== 'explain') {
+  if (verb !== null && verb !== 'check' && verb !== 'explain' && verb !== 'doctor') {
     console.error('✗ неизвестная команда «' + verb + '»\n  починка: ' + cliCommand('--help'));
     return EXIT.CONFIG;
   }
@@ -310,6 +322,13 @@ export function main() {
     const root = gitRoot();
     if (args.indexOf('--init') >= 0) return initMode(root, argValue(args, '--init'), args.indexOf('--force') >= 0);
     const configFile = argValue(args, '--config') ? path.resolve(argValue(args, '--config')) : path.join(root, CONFIG_NAME);
+    if (verb === 'doctor') {
+      if (words.length > 1) {
+        refuse(EXIT.CONFIG, 'команда «doctor» аргументов не принимает: «' + words[1] + '» лишний'
+          + '\n  починка: ' + cliCommand('doctor'));
+      }
+      return doctorMode(root, configFile, args.indexOf('--json') >= 0);
+    }
     const cfg = loadConfig(configFile);
     if (verb === 'check') {
       if (words.length > 1) {
