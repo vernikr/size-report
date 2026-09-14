@@ -49,6 +49,9 @@ function uiText(page, loc) {
     files: page.files,
     dir: page.dir,
     all: page.all,
+    linkForeign: page.linkForeign,
+    linkBroken: page.linkBroken,
+    linkExtra: page.linkExtra,
     legend: [
       { cls: 'up', text: page.legendUp },
       { cls: 'down', text: page.legendDown },
@@ -75,6 +78,7 @@ export function pageHtml(data, cfg) {
     + '<header>\n<h1>' + esc(data.report.heading) + '</h1>\n'
     + '<p class="sub">' + esc(subText(data, loc.page)) + '</p>\n</header>\n'
     + '<div id="panel" class="panel"></div>\n'
+    + '<p id="notice" class="notice" hidden></p>\n'
     + '<div id="shell" class="shell"><table id="grid"></table></div>\n'
     + '<p id="state" class="state" hidden></p>\n'
     + '<p id="note" class="note"></p>\n'

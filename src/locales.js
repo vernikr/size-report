@@ -28,6 +28,12 @@ export const LOCALES = {
         + 'Включите хотя бы одну в панели выше: без метрик нет ни одной колонки с числом.',
       noFiles: 'Ни один файл не выбран: в таблице остался только общий объём. '
         + 'Включите файл в панели выше, чтобы увидеть его колонки.',
+      linkForeign: 'Ссылка собрана в другом отчёте и не применена: показано то, что '
+        + 'выбрано в этом браузере. Адрес не тронут.',
+      linkBroken: 'В адресе испорченный выбор — прочитать его не удалось. Показано то, '
+        + 'что выбрано в этом браузере.',
+      linkExtra: 'Часть ссылки пропущена: в этом отчёте нет {n} названных имён. '
+        + 'Остальное применено.',
       note: 'Абсолютные размеры стоят один раз — в строке «{now}». Строк: {rows}: коммиты без '
         + 'изменения объёма и коммиты, тронувшие только выключенные файлы, строк не получают. '
         + 'Собрано из истории git: {command}.'
@@ -70,6 +76,12 @@ export const LOCALES = {
         + 'Turn on at least one above: without metrics there is no column holding a number.',
       noFiles: 'No file is selected: the table shows the total only. '
         + 'Turn on a file above to see its columns.',
+      linkForeign: 'The link was built for another report, so it is not applied: you '
+        + 'see what this browser has. The address is left as it is.',
+      linkBroken: 'The choice in the address is unreadable. You see what this browser '
+        + 'has.',
+      linkExtra: 'Part of the link is skipped: this report has none of the {n} names '
+        + 'it mentions. The rest is applied.',
       note: 'Absolute sizes appear once — in the “{now}” row. Rows: {rows}: commits that change '
         + 'no number, and commits touching only the disabled files, get no row. '
         + 'Collected from git history: {command}.'

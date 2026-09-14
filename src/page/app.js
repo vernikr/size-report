@@ -6,14 +6,15 @@
  * производных величин, поэтому включение метрики, категории или файла зовёт тот
  * же расчёт, что считает статическую таблицу, и не может дать других чисел.
  *
- * Страница — один файл без внешних ссылок, поэтому здесь нет ни `import()` по
- * требованию, ни загрузки чего-либо по сети: оформление приходит тем же файлом,
+ * Страница — один файл без внешних ссылок, поэтому здесь нет ни динамического
+ * импорта, ни загрузки чего-либо по сети: оформление приходит тем же файлом,
  * а разметка клеток повторяет статическую таблицу (`clip` и подпись коммита —
  * правила общей части оформления).
  *
- * Панель помнит выбор читателя между открытиями («Память выбора» ниже): запись
- * привязана к паспорту отчёта и хранит только выключенное по именам, поэтому
- * чужая запись не применяется, а исчезнувшее имя просто ничего не значит. */
+ * Панель помнит выбор читателя между открытиями и умеет передать его ссылкой
+ * («Память выбора» ниже): запись привязана к паспорту отчёта и хранит только
+ * выключенное по именам, поэтому чужая запись не применяется, а исчезнувшее имя
+ * просто ничего не значит. Та же запись ложится в адрес — его и отправляют коллеге. */
 
 /* Импорт — одной строкой: модульный синтаксис снимается при вклейке построчно,
  * и оставшаяся строка `import` попала бы в страницу (её ловит проверка). */
@@ -24,6 +25,18 @@ const appUi = JSON.parse(document.getElementById('ui').textContent);
 const appView = { metrics: {}, files: [] };
 appData.metrics.forEach((m) => { appView.metrics[m.key] = true; });
 appData.files.forEach(() => { appView.files.push(true); });
+
+/* Ссылка — это тот же выбор в адресе, под своим именем: чужой якорь страницы
+ * ссылкой не считается, и спорить с ним нечем. */
+const APP_LINK = '#size-report=';
+
+/* Три обстоятельства первой отрисовки, которые действуют только на ней:
+ * адрес в ней не переписывается (его прислали читателю, а не наоборот), память
+ * не трогается (присланная ссылка — не выбор читателя), а сообщение о ссылке
+ * ещё не гаснет. */
+let appStartup = true;
+let appForeign = false;
+let appTransient = false;
 
 /* -------- память выбора читателя -------- */
 
@@ -57,25 +70,119 @@ function appPassport() {
 }
 const appKey = 'size-report:' + appPassport();
 
-/* Хранится только выключенное: «включено» и «записи нет» — одно и то же состояние,
- * поэтому возврат всех галочек убирает запись, а не оставляет след, неотличимый
- * от выбора. */
-function appWrite() {
+/* Запись выбора — одна на всё: её кладут и в память, и в адрес, поэтому двух
+ * форматов одного состояния не бывает. Хранится только выключенное, по именам:
+ * «включено» и «записи нет» — одно и то же состояние, поэтому возврат всех галочек
+ * убирает запись, а не оставляет след, неотличимый от выбора. */
+function appRecord() {
   const metrics = {};
   const files = {};
   appData.metrics.forEach((m) => { if (!appView.metrics[m.key]) metrics[m.key] = false; });
   appData.files.forEach((_f, i) => { if (!appView.files[i]) files[appFileAt(i)] = false; });
-  try {
-    if (Object.keys(metrics).length === 0 && Object.keys(files).length === 0) {
-      window.localStorage.removeItem(appKey);
-    } else {
-      window.localStorage.setItem(appKey, JSON.stringify(
-        { v: 1, passport: appPassport(), metrics: metrics, files: files }));
+  return { v: 1, passport: appPassport(), metrics: metrics, files: files };
+}
+
+// Своя ли запись и того ли формата — одно правило и для памяти, и для адреса.
+function appRecordOk(rec) {
+  return rec !== null && typeof rec === 'object' && rec.v === 1 && rec.passport === appPassport();
+}
+
+function appWrite() {
+  const rec = appRecord();
+  const empty = Object.keys(rec.metrics).length === 0 && Object.keys(rec.files).length === 0;
+  if (!appTransient) {
+    try {
+      if (empty) window.localStorage.removeItem(appKey);
+      else window.localStorage.setItem(appKey, JSON.stringify(rec));
+    } catch (_e) {
+      /* Памяти нет (браузер её не даёт этой странице): выбор не переживёт закрытия,
+       * а числа и разметка от этого не зависят. */
     }
-  } catch (_e) {
-    /* Памяти нет (браузер её не даёт этой странице): выбор не переживёт закрытия, а
-     * числа и разметка от этого не зависят. */
   }
+  /* Адрес и есть ссылка для коллеги, поэтому он повторяет выбор. Но не на первой
+   * отрисовке и не тогда, когда ссылка оказалась чужой: присланный адрес — не наш,
+   * его читателю ещё читать. */
+  if (appStartup || appForeign) return;
+  try {
+    window.history.replaceState(null, '', APP_LINK + encodeURIComponent(JSON.stringify(rec)));
+  } catch (_e) {
+    /* Браузер не даёт менять адрес: ссылку тогда берут из памяти браузера. */
+  }
+}
+
+/* Сброс к «включено всё»: граница между «в отчёте этого больше нет» и
+ * «выключено» — это запись, а не отсутствие значения. Ссылка несёт весь выбор
+ * отправителя, поэтому применяется на чистом виде, а не поверх чужого. */
+function appAll() {
+  appData.metrics.forEach((m) => { appView.metrics[m.key] = true; });
+  appData.files.forEach((_f, i) => { appView.files[i] = true; });
+}
+
+/* Что говорит адрес. Отвечает либо своей записью, либо отказом (`linkForeign` —
+ * ссылка другого отчёта, `linkBroken` — прочитать нечего): чужой или испорченный
+ * выбор не применяется, но и не молчит — иначе читатель не поймёт, почему он видит
+ * не то, что ему прислали. Адрес без имени ссылки не ссылка вовсе: молчание, чтобы
+ * не спорить с обычными якорями страницы. */
+function appLinkRead() {
+  const hash = window.location.hash || '';
+  if (hash.indexOf(APP_LINK) !== 0) return { rec: null, refused: null };
+  const body = hash.slice(APP_LINK.length);
+  let rec = null;
+  try {
+    rec = JSON.parse(decodeURIComponent(body));
+  } catch (_e) {
+    try {
+      rec = JSON.parse(body);
+    } catch (_e2) {
+      return { rec: null, refused: 'linkBroken' };
+    }
+  }
+  if (!appRecordOk(rec)) {
+    return { rec: null, refused: rec === null || typeof rec !== 'object' || rec.v !== 1
+      ? 'linkBroken' : 'linkForeign' };
+  }
+  return { rec: rec, refused: null, extra: appUnknown(rec) };
+}
+
+/* Сколько имён в ссылке этому отчёту неизвестны: о них читателю надо сказать —
+ * иначе он будет искать в таблице то, чего в ней и не было. */
+function appUnknown(rec) {
+  const known = {};
+  const metricKeys = {};
+  appData.files.forEach((_f, i) => { known[appFileAt(i)] = true; });
+  appData.metrics.forEach((m) => { metricKeys[m.key] = true; });
+  let n = 0;
+  Object.keys(rec.metrics || {}).forEach((k) => { if (!metricKeys[k]) n++; });
+  Object.keys(rec.files || {}).forEach((k) => { if (!known[k]) n++; });
+  return n;
+}
+
+/* Сообщение о ссылке гаснет после первого же действия читателя: он его прочитал, а
+ * постоянное предупреждение — это шум поверх чисел. */
+function appNotice(text) {
+  const el = document.getElementById('notice');
+  el.textContent = text;
+  el.hidden = text === '';
+}
+
+/* Что делает с адресом его событие — открытие страницы и перемена якоря на уже
+ * открытой (браузер в этом случае документ не перезагружает, а лишь переставляет
+ * якорь, поэтому без этого разбора ссылка работала бы только в новой вкладке).
+ * Своя ссылка заменяет вид целиком: в ней весь выбор отправителя, а не разница с
+ * чужим. Отказ объясняется словами — и не трогает ни вид, ни адрес. */
+function appLinkUse() {
+  const link = appLinkRead();
+  if (link.rec !== null) {
+    appAll();
+    appApply(link.rec);
+    if (link.extra > 0) appNotice(appUi.linkExtra.replace('{n}', link.extra));
+    return 'ours';
+  }
+  if (link.refused !== null) {
+    appNotice(appUi[link.refused]);
+    return 'refused';
+  }
+  return 'none';
 }
 
 /* Чтение: только своя запись — своей версии формата и своего паспорта. Запись
@@ -95,8 +202,7 @@ function appRead() {
   } catch (_e) {
     return null;
   }
-  if (rec === null || typeof rec !== 'object' || rec.v !== 1) return null;
-  return rec.passport === appPassport() ? rec : null;
+  return appRecordOk(rec) ? rec : null;
 }
 
 /* Применение — по именам: файл опознаётся путём, метрика ключом. Имени, которого в
@@ -367,15 +473,43 @@ function appTable() {
  * каждой пересборки возвращается на своё место: иначе переключение с Tab и Space
  * требовало бы начинать обход панели заново. Место опознаётся порядковым номером
  * поля — порядок полей панели от данных не зависит. */
-function appRender() {
+function appRender(keepNotice) {
   const at = Array.from(document.querySelectorAll('#panel input')).indexOf(document.activeElement);
   appPanel();
   if (at >= 0) document.querySelectorAll('#panel input')[at].focus();
   appTable();
+  /* Сообщение о ссылке переживает отрисовку, которая сама же им и вызвана, и
+   * гаснет от действия читателя: он его уже прочитал. */
+  if (keepNotice !== true) appNotice('');
 }
 
 /* Восстановление — до первой отрисовки: у того, кто открыл страницу впервые,
- * разметка обязана быть умолчанием, а не чужим выбором. */
-const appSaved = appRead();
-if (appSaved !== null) appApply(appSaved);
-appRender();
+ * разметка обязана быть умолчанием, а не чужим выбором. Ссылка старше памяти: это
+ * явный выбор отправителя, и пока читатель ничего не менял, она его собственный
+ * выбор не подменяет — в память её запись не идёт. Отказ ссылки — не пустая
+ * таблица, а сообщение: читателю видно и что произошло, и что показано вместо. */
+const appStart = appLinkUse();
+if (appStart === 'ours') appTransient = true;
+else if (appStart === 'refused') appForeign = true;
+if (appStart !== 'ours') {
+  const appSaved = appRead();
+  if (appSaved !== null) appApply(appSaved);
+}
+appRender(true);
+appStartup = false;
+appForeign = false;
+appTransient = false;
+
+/* Якорь сменился на открытой странице: выбор из нового адреса применяется тем же
+ * кодом, что и при открытии. Свой собственный адрес такого события не поднимает
+ * (`replaceState` его не вызывает), поэтому петли здесь нет. Отказ не трогает ни
+ * вид — читатель продолжает смотреть то, что смотрел, — ни адрес: его прислали
+ * читателю, и до первого его действия это не наше. */
+window.addEventListener('hashchange', () => {
+  const state = appLinkUse();
+  if (state === 'refused') appForeign = true;
+  appTransient = state === 'ours';
+  appRender(true);
+  appForeign = false;
+  appTransient = false;
+});

@@ -264,9 +264,10 @@ test('вычислительная часть страницы — код дви
    * разметка, либо вернувшийся своим путём расчёт; первое правится здесь же,
    * второе лучше не делать вовсе. */
   assert.deepEqual(defined('\n' + appSrc).sort(), [
-    'appApply', 'appBox', 'appCell', 'appCommit', 'appEl', 'appFileAt', 'appFileBox', 'appHash',
-    'appIndexes', 'appLegend', 'appPanel', 'appPassport', 'appRead', 'appRender', 'appState',
-    'appSubHead', 'appTable', 'appTree', 'appTreeList', 'appValueCell', 'appWrite'
+    'appAll', 'appApply', 'appBox', 'appCell', 'appCommit', 'appEl', 'appFileAt', 'appFileBox',
+    'appHash', 'appIndexes', 'appLegend', 'appLinkRead', 'appLinkUse', 'appNotice', 'appPanel',
+    'appPassport', 'appRead', 'appRecord', 'appRecordOk', 'appRender', 'appState', 'appSubHead',
+    'appTable', 'appTree', 'appTreeList', 'appUnknown', 'appValueCell', 'appWrite'
   ], 'оболочка страницы завела свою функцию: расчёт должен жить в вычислительной части');
   assert.equal(/\breduce\(|Math\.abs/.test(appSrc), false,
     'оболочка страницы считает итоги или знак дельты сама');
@@ -296,9 +297,9 @@ const pageText = pageHtml();
  * в приватном окне, памяти не даёт), а `beforeParse` кладёт в неё то, что «браузер
  * сохранил» с прошлого захода — так перезаход и проверяется. */
 const PAGE_URL = 'https://report.invalid/size-report.html';
-function openPage(seed) {
+function openPage(seed, hash) {
   return new JSDOM(pageText, {
-    url: PAGE_URL,
+    url: PAGE_URL + (hash || ''),
     runScripts: 'dangerously',
     beforeParse(window) {
       Object.keys(seed || {}).forEach((key) => window.localStorage.setItem(key, seed[key]));
@@ -320,6 +321,9 @@ const fileBox = (doc, path) => panelInputs(doc).find((b) => b.title.indexOf(path
 const nowTotalCell = (doc) => doc.querySelectorAll('#grid tbody tr')[0].querySelectorAll('td')[0].textContent;
 const nowCells = (doc) => doc.querySelectorAll('#grid tbody tr')[0].querySelectorAll('td').length;
 const allCells = () => (data.files.length + 1) * data.metrics.length;
+
+// Ссылка на выбор в том же виде, в каком её носит адрес: наш формат, а не пересказ.
+const linkTo = (rec) => '#size-report=' + encodeURIComponent(JSON.stringify(rec));
 function toggleCheck(doc, box, checked) {
   box.checked = checked;
   box.dispatchEvent(new doc.defaultView.Event('change'));
@@ -336,6 +340,15 @@ test('страница самодостаточна и несёт данные �
    * с диска, а не с сервера, и разрешать `import` там нечем. */
   assert.equal((pageText.match(/<script/g) || []).length, 3,
     'в странице не три тега script: вклейка изменилась, и файлов могло стать больше одного');
+
+  /* Ни одна возможность страницы не ходит в сеть: память и ссылка — это браузер,
+   * а не запрос. Проверка по именам (внешней ссылки может и не быть, а обращение —
+   * быть), и она буквальная: слово не должно встречаться в странице даже в
+   * комментарии — поэтому о динамическом импорте в исходниках пишут словами. */
+  ['fetch(', 'XMLHttpRequest', 'WebSocket', 'sendBeacon', 'import('].forEach((api) => {
+    assert.equal(pageText.indexOf(api), -1,
+      'в странице появилось обращение к сети: ' + api + ' — так она не работает с диска');
+  });
   assert.ok(pageText.indexOf('<script>\n' + pageScript() + '</script>') > 0,
     'программа страницы вклеена не целиком или не тем текстом, который отдаёт движок');
   assert.equal(/type="module"/.test(pageText), false, 'программа страницы объявлена модулем');
@@ -557,6 +570,142 @@ test('память выбора: чужая или испорченная зап
   assert.deepEqual(JSON.parse(stored(ghost)[key]),
     { v: 1, passport: rec.passport, metrics: { min: false }, files: { 'src/code.js': false } },
     'страница не привела запись к тому, что есть в отчёте');
+});
+
+/* Обмен выбором ссылкой: адрес и есть ссылка (страница его повторяет), а открытие
+ * по ней показывает выбор отправителя — тем же набором колонок и теми же числами.
+ * При этом ссылка не подменяет память того, кто ею лишь поделился, и не трогает
+ * присланный адрес до первого действия читателя. */
+test('ссылка: открытая по ней страница показывает выбор отправителя', () => {
+  const sender = openPage();
+  const sd = sender.window.document;
+  toggleCheck(sd, metricBox(sd), false);
+  toggleCheck(sd, fileBox(sd, 'src/code.js'), false);
+
+  const link = sender.window.location.hash;
+  assert.equal(link.indexOf('#size-report='), 0, 'выбор не попал в адрес: передавать ссылкой нечего');
+  const sentCells = nowCells(sd);
+  const sentTotal = nowTotalCell(sd);
+
+  /* У получателя своё сохранённое состояние — но ссылка старше его: читатель видит
+   * то, что ему прислали, а не смесь двух выборов. */
+  const owner = openPage();
+  const od = owner.window.document;
+  toggleCheck(od, fileBox(od, 'package.json'), false);
+  const own = stored(owner);
+  assert.equal(Object.keys(own).length, 1, 'выбор владельца не записался');
+
+  const guest = openPage(own, link);
+  const gd = guest.window.document;
+  assert.equal(nowCells(gd), sentCells, 'ссылка дала не тот набор колонок');
+  assert.equal(nowTotalCell(gd), sentTotal, 'ссылка дала не тот итог');
+  assert.equal(metricBox(gd).checked, false, 'ссылка не выключила метрику отправителя');
+  assert.equal(fileBox(gd, 'src/code.js').checked, false, 'ссылка не выключила файл отправителя');
+  assert.equal(fileBox(gd, 'package.json').checked, true,
+    'ссылка не заменила выбор читателя, а смешалась с ним');
+  assert.deepEqual(stored(guest), own, 'присланная ссылка переписала память читателя');
+  assert.equal(guest.window.location.hash, link, 'адрес присланной ссылки переписан страницей');
+  assert.equal(gd.getElementById('notice').hidden, true, 'о нормальной ссылке сказано лишнее');
+
+  /* Действие читателя — теперь состояние его: и память, и адрес становятся его,
+   * причём от того вида, что стоит на экране (вид отправителя), а не от прежнего
+   * собственного выбора — страница помнит то, что показывает. */
+  toggleCheck(gd, fileBox(gd, 'src/code.js'), true);
+  assert.notDeepEqual(stored(guest), own, 'действие читателя не сохранилось в его память');
+  assert.notEqual(guest.window.location.hash, link, 'адрес не стал выбором читателя');
+  const rec = JSON.parse(stored(guest)[Object.keys(stored(guest))[0]]);
+  assert.deepEqual(rec.metrics, { min: false }, 'в память читателя легла не его метрика');
+  assert.deepEqual(rec.files, {}, 'в память читателя легло не то, что он сделал');
+  assert.equal(nowCells(gd), (data.files.length + 1) * (data.metrics.length - 1),
+    'правка вида отправителя не вернула все файлы');
+});
+
+/* Отказ ссылки — это сообщение читателю, а не пустая таблица: чужой отчёт, битая
+ * запись, имена, которых в отчёте нет, и честно выключенное всё. */
+test('ссылка: чужой, битый или неполный выбор объясняется словами', () => {
+  const owner = openPage();
+  const od = owner.window.document;
+  const ui = JSON.parse(od.getElementById('ui').textContent);
+  toggleCheck(od, metricBox(od), false);
+  const own = stored(owner);
+  const passport = Object.keys(own)[0].slice('size-report:'.length);
+  const notice = (doc) => doc.getElementById('notice');
+
+  /* Чужой якорь — не наша ссылка: молчание. */
+  const anchor = openPage({}, '#top');
+  assert.equal(notice(anchor.window.document).hidden, true, 'обычный якорь приняли за ссылку');
+
+  /* Ссылка другого отчёта: не применяется, читателю сказано, адрес не тронут. */
+  const foreignHash = linkTo({ v: 1, passport: 'deadbeef',
+    metrics: { min: false }, files: { 'src/code.js': false } });
+  const foreign = openPage(own, foreignHash);
+  const fd = foreign.window.document;
+  assert.equal(notice(fd).textContent, ui.linkForeign, 'про чужую ссылку не сказано');
+  assert.equal(notice(fd).hidden, false, 'про чужую ссылку промолчали');
+  assert.equal(fileBox(fd, 'src/code.js').checked, true, 'чужой выбор всё-таки применился');
+  assert.equal(metricBox(fd).checked, false, 'выбор читателя не применился после отказа ссылки');
+  assert.equal(foreign.window.location.hash, foreignHash, 'чужой адрес переписан страницей');
+
+  /* Битая ссылка: тоже сказано, а разметка остаётся умолчанием. */
+  const broken = openPage({}, '#size-report=%7B%D1%8D%D1%82%D0%BE-%D0%BD%D0%B5-JSON');
+  assert.equal(notice(broken.window.document).textContent, ui.linkBroken, 'про битую ссылку не сказано');
+  assert.equal(nowCells(broken.window.document), allCells(), 'битая ссылка испортила умолчание');
+
+  /* Ссылка про то, чего в отчёте нет: применено названное верно, а о пропущенном
+   * сказано числом — иначе читатель станет искать в таблице то, чего в ней нет. */
+  const ghost = openPage({}, linkTo({ v: 1, passport: passport,
+    metrics: { tok: false, min: false }, files: { 'src/gone.js': false, 'src/code.js': false } }));
+  const gd = ghost.window.document;
+  assert.equal(metricBox(gd).checked, false, 'названная метрика не применилась из ссылки');
+  assert.equal(fileBox(gd, 'src/code.js').checked, false, 'названный файл не применился из ссылки');
+  assert.equal(notice(gd).textContent, ui.linkExtra.replace('{n}', '2'),
+    'о пропущенных именах не сказано');
+
+  /* Отправитель выключил всё: это его вид, и он объяснён словами, а не пустой сеткой. */
+  const all = { v: 1, passport: passport, metrics: {}, files: {} };
+  data.metrics.forEach((m) => { all.metrics[m.key] = false; });
+  data.files.forEach((f) => { all.files[f.path === null ? f.paths[0] : f.path] = false; });
+  const empty = openPage({}, linkTo(all));
+  const ed = empty.window.document;
+  assert.equal(ed.getElementById('state').textContent, ui.empty,
+    'ссылка с выключенными метриками дала сетку без объяснения');
+  assert.equal(notice(ed).hidden, true, 'о полной ссылке сказано лишнее');
+});
+
+/* Адрес меняют и на уже открытой странице: браузер в этом случае документ не
+ * перезагружает, а только переставляет якорь. Ссылка должна работать и так, иначе
+ * она срабатывает лишь в новой вкладке — а её отправляют тому, у кого отчёт,
+ * скорее всего, уже открыт. */
+test('ссылка: смена адреса на открытой странице тоже применяется', async () => {
+  const sender = openPage();
+  const sd = sender.window.document;
+  toggleCheck(sd, metricBox(sd), false);
+  const link = sender.window.location.hash;
+
+  const reader = openPage();
+  const rd = reader.window.document;
+  const ui = JSON.parse(rd.getElementById('ui').textContent);
+  assert.equal(metricBox(rd).checked, true, 'страница открылась не с умолчанием');
+
+  const applied = new Promise((done) => reader.window.addEventListener('hashchange', () => done()));
+  reader.window.location.hash = link;
+  await applied;
+  assert.equal(metricBox(rd).checked, false, 'смена адреса не применила выбор из ссылки');
+  assert.equal(nowCells(rd), (data.files.length + 1) * (data.metrics.length - 1),
+    'смена адреса дала не тот набор колонок');
+  assert.equal(nowTotalCell(rd), nowTotalCell(sd), 'смена адреса дала не те числа');
+  assert.equal(reader.window.location.hash, link, 'адрес переписан при применении ссылки');
+  assert.deepEqual(stored(reader), {}, 'присланный выбор записался в память читателя');
+
+  /* Чужая ссылка на открытой странице: сообщение, прежний вид и целый адрес. */
+  const foreign = linkTo({ v: 1, passport: 'deadbeef', metrics: { min: false }, files: {} });
+  const refused = new Promise((done) => reader.window.addEventListener('hashchange', () => done()));
+  reader.window.location.hash = foreign;
+  await refused;
+  assert.equal(rd.getElementById('notice').textContent, ui.linkForeign,
+    'про чужую ссылку на открытой странице промолчали');
+  assert.equal(metricBox(rd).checked, false, 'чужой адрес изменил вид читателя');
+  assert.equal(reader.window.location.hash, foreign, 'чужой адрес переписан страницей');
 });
 
 /* Оформление: общая часть таблицы у двух выводов одна, и цвет дельт задан один раз.
