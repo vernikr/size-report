@@ -152,6 +152,13 @@ const MINIFY_BY_EXT = {
 };
 export const STRATEGIES = ['strip-js', 'strip-html', 'strip-css', 'json', 'strip-lines', 'none'];
 
+/* Стратегии, которые и есть минификация: JSON теряет только незначащие пробелы
+ * (числа приводятся к кратчайшей записи), и короче его не сделает никто. Остальные
+ * — упрощение: они снимают балласт, но не переименовывают и не перестраивают код,
+ * и обещать за них точное число нельзя. Список ведёт тот модуль, который владеет
+ * стратегиями; метрика по нему решает, точное у неё число или приближённое. */
+export const EXACT_STRATEGIES = ['json'];
+
 export function strategyFor(file, cfg) {
   const ext = path.extname(file).toLowerCase();
   return (cfg.minify.ext && cfg.minify.ext[ext]) || MINIFY_BY_EXT[ext] || 'strip-lines';

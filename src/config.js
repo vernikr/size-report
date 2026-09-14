@@ -3,7 +3,7 @@ import { execFileSync } from 'child_process';
 import { MAX_BUF, gitArgv, gitEnv } from './git.js';
 import { EXIT, cliCommand, refuse } from './refusal.js';
 import { LOCALES } from './locales.js';
-import { METRICS } from './metrics.js';
+import { METRICS, MINIFY_ENGINES } from './metrics.js';
 import { CATEGORY_ORDER } from './data.js';
 
 /* Настройки проекта-потребителя: значения по умолчанию, чтение и проверка.
@@ -20,7 +20,9 @@ export const DEFAULT_CONFIG = {
   fixCommand: 'npx size-report --write',
   metrics: ['raw', 'min'],
   columns: [],
-  minify: { ext: {}, guard: ['.js', '.mjs', '.cjs'] },
+  // `engine` — чем считается метрика `min`: снятием балласта (умолчание, под ним
+  // сняты замороженные эталоны) или настоящим сжатием минификатором.
+  minify: { engine: 'strip', ext: {}, guard: ['.js', '.mjs', '.cjs'] },
   journal: null,
   links: { commitUrl: '' },
   // Слияние — обычный коммит: у него есть правки разрешения конфликта, и без
@@ -88,6 +90,9 @@ export function validateConfig(cfg) {
   cfg.metrics.forEach((m) => {
     if (!METRICS[m]) fail('неизвестная метрика «' + m + '» (есть: ' + Object.keys(METRICS).join(', ') + ')');
   });
+  if (MINIFY_ENGINES.indexOf(cfg.minify.engine) < 0) {
+    fail('неизвестный способ минификации «' + cfg.minify.engine + '» (есть: ' + MINIFY_ENGINES.join(', ') + ')');
+  }
   if (!LOCALES[cfg.locale]) fail('неизвестная локаль «' + cfg.locale + '» (есть: ' + Object.keys(LOCALES).join(', ') + ')');
   // Файл таблицы не может быть её колонкой: размер артефакта зависит от числа
   // строк, то есть от самого себя.

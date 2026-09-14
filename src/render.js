@@ -1,5 +1,5 @@
 import { fill, LOCALES } from './locales.js';
-import { METRICS } from './metrics.js';
+import { METRICS, metricView } from './metrics.js';
 import { rowHref } from './journal.js';
 import { cellParts, commitParts, nowModel, rowModel, valueParts } from './derived.js';
 import { ARTIFACT_CSS, TABLE_CSS } from './css.js';
@@ -54,7 +54,10 @@ function commitCell(row, index, cfg) {
 
 export function noteText(rows, cfg) {
   const loc = LOCALES[cfg.locale];
-  const metrics = cfg.metrics.map((m) => '<b>' + METRICS[m].label + '</b> — ' + METRICS[m].note[cfg.locale]).join(loc.note.metricSep);
+  const metrics = cfg.metrics.map((m) => {
+    const view = metricView(m, cfg);
+    return '<b>' + view.label + '</b> — ' + view.note;
+  }).join(loc.note.metricSep);
   const journal = cfg.journal ? loc.note.journal : loc.note.noJournal;
   return loc.note.intro + metrics + loc.note.metricEnd + fill(loc.note.numbers, { now: loc.now })
     + (cfg.journal ? fill(journal, { journal: cfg.journal.path }) : journal)

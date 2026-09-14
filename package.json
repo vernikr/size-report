@@ -41,5 +41,8 @@
   "devDependencies": {
     "eslint": "^9.18.0",
     "jsdom": "~26"
+  },
+  "optionalDependencies": {
+    "esbuild": "0.28.2"
   }
 }

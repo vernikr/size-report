@@ -5,7 +5,9 @@
  *
  * Другая половина набора — сам гард стриппера: он единственное, что ловит
  * стриппер, когда тот действительно ломает файл, поэтому здесь же он ломается
- * намеренно (мутация в `src/strip.js`), и прогон обязан упасть честным текстом.
+ * намеренно — в копии движка, а не в живом `src/strip.js` (наборы идут по файлам
+ * параллельно, и такая мутация была бы мутацией у соседа), — и прогон обязан
+ * упасть честным текстом.
  * Гард принимает результат, разбирающийся хотя бы одним способом — скриптом или
  * модулем, — и именно поэтому второе доказательство обязательно: без него
  * «починка» могла бы свестись к отключению проверки.
@@ -52,6 +54,28 @@ function makeRepo(name, pkg, extra) {
   return dir;
 }
 
+/* Копия движка для проверок, которые его ломают. Мутация живого дерева — мутация
+ * у соседа: наборы идут по файлам параллельно, и сломанный `strip.js` попадал в
+ * чужие прогоны (страница не собиралась при живом сломанном стриппере). Поэтому
+ * ломается копия: `bin`, `src` и манифест в своём каталоге. */
+function engineCopy(name) {
+  const dir = path.join(tmp, name);
+  ['bin', 'src'].forEach((part) => fs.cpSync(path.join(ROOT, part), path.join(dir, part), { recursive: true }));
+  fs.copyFileSync(path.join(ROOT, 'package.json'), path.join(dir, 'package.json'));
+  return { dir: dir, target: { name: 'движок из копии', file: path.join(dir, 'bin', 'size.js'), env: null } };
+}
+
+/* Способ минификации в черновике: черновик ведёт новый проект на минификатор, а
+ * предпроектные проверки (гард стриппера, разметка в `.js`) стерегут снятие
+ * балласта, поэтому способ они называют явно — иначе проверяли бы не то, что
+ * называют. */
+function setEngine(dir, engine) {
+  const file = path.join(dir, 'size-table.config.json');
+  const cfg = JSON.parse(fs.readFileSync(file, 'utf8'));
+  cfg.minify = Object.assign({}, cfg.minify, { engine: engine });
+  fs.writeFileSync(file, JSON.stringify(cfg, null, 2) + '\n');
+}
+
 /* Оба варианта — один и тот же модуль в `.js`: манифест лишь сообщает Node, как
  * читать `.js`, а генератор должен измерять файл в обоих случаях. */
 for (const withType of [true, false]) {
@@ -64,7 +88,8 @@ for (const withType of [true, false]) {
     const init = runSize(dir, ['--init']);
     assert.equal(init.code, 0, 'черновик настроек не создался: ' + firstLine(init.stderr));
     const cfg = JSON.parse(fs.readFileSync(path.join(dir, 'size-table.config.json'), 'utf8'));
-    assert.equal(cfg.minify, undefined, 'черновик принёс настройку minify — в проекте её не должно быть');
+    assert.equal(cfg.minify && cfg.minify.engine, 'esbuild',
+      'черновик не ведёт новый проект на настоящее сжатие: ' + JSON.stringify(cfg.minify));
     assert.equal(cfg.metrics.indexOf('min') >= 0, true, 'черновик потерял метрику min');
 
     const res = runSize(dir, ['--write']);
@@ -89,17 +114,19 @@ test('гард жив: сломанный стриппер не проходит
   const dir = makeRepo('broken-stripper', { name: 'broken-stripper', version: '1.0.0', private: true });
   const init = runSize(dir, ['--init']);
   assert.equal(init.code, 0, 'черновик настроек не создался: ' + firstLine(init.stderr));
-  const ok = runSize(dir, ['--write']);
+  setEngine(dir, 'strip');
+  const engine = engineCopy('broken-engine');
+  const ok = runTool(engine.target, dir, ['--write']);
   assert.equal(ok.code, 0, 'до мутации проект не собрался: ' + firstLine(ok.stderr));
 
-  const file = path.join(ROOT, 'src', 'strip.js');
+  const file = path.join(engine.dir, 'src', 'strip.js');
   const original = fs.readFileSync(file, 'utf8');
   const from = "    if (ch === '\"' || ch === \"'\" || ch === '`') {\n      const end = endOfString(src, i, ch);";
   const to = "    if (ch === '\"' || ch === '`') {\n      const end = endOfString(src, i, ch);";
   assert.ok(original.indexOf(from) >= 0, 'мутация не применилась: ветка строк в стриппере переписана');
   try {
     fs.writeFileSync(file, original.replace(from, to));
-    const res = runSize(dir, ['--write']);
+    const res = runTool(engine.target, dir, ['--write']);
     assert.notEqual(res.code, 0, 'сломанный стриппер прошёл молча — гард не стережёт');
     assert.match(res.stderr, /стриппер испортил/, 'текст отказа не называет причину:\n' + res.stderr);
     assert.match(res.stderr, /greet\.js/, 'текст отказа не называет файл:\n' + res.stderr);
@@ -108,14 +135,15 @@ test('гард жив: сломанный стриппер не проходит
   }
   assert.equal(fs.readFileSync(file, 'utf8'), original, 'мутация не откатилась');
 
-  const again = runSize(dir, ['--write']);
+  const again = runTool(engine.target, dir, ['--write']);
   assert.equal(again.code, 0, 'после отката мутации проект не собирается: ' + firstLine(again.stderr));
 });
 
-/* Когда не разбирается даже исходный текст, стриппер ни при чём: в этой графе не
- * JavaScript (разметка прямо в `.js`). Это правка настроек, а не дефект
- * инструмента, поэтому наружу идёт отказ с готовой командой, а не стек с
- * обвинением стриппера. */
+/* Когда не разбирается сам файл, никто ни при чём: в этой графе не JavaScript
+ * (разметка прямо в `.js`). Это правка настроек, а не дефект инструмента, поэтому
+ * наружу идёт отказ с готовой командой, а не стек. Отказ берётся с того способа,
+ * которым файл считали: минификатор называет себя и даёт выход на упрощение, а
+ * гард снятия балласта — `minify.guard` и расширение. */
 test('не JavaScript в графе — отказ с командой починки, а не стек', () => {
   const dir = makeRepo('jsx-in-js', { name: 'jsx-in-js', version: '1.0.0', private: true }, {
     'src/view.js': [
@@ -134,9 +162,19 @@ test('не JavaScript в графе — отказ с командой почи�
     + firstLine(res.stderr || res.stdout));
   assert.equal(/стриппер/.test(res.stderr), false,
     'отказ обвиняет стриппер в том, чего тот не делал:\n' + res.stderr);
-  assert.match(res.stderr, /не JavaScript/, 'отказ не называет настоящую причину:\n' + res.stderr);
-  assert.match(res.stderr, /minify\.guard/, 'отказ не называет, что править:\n' + res.stderr);
+  assert.match(res.stderr, /esbuild не разобрал src\/view\.js/,
+    'отказ не называет ни файла, ни того, кто его не разобрал:\n' + res.stderr);
+  assert.match(res.stderr, /minify\.ext/, 'отказ не называет, что править:\n' + res.stderr);
   assert.equal(hasStack(res.stderr), false, 'отказ напечатал стек:\n' + res.stderr);
+
+  // Тем же проектом, но прежним способом: причину называет гард снятия балласта.
+  setEngine(dir, 'strip');
+  const guarded = runSize(dir, ['--write']);
+  assert.equal(guarded.code, 2, 'способ из настроек не назвал настоящую причину: '
+    + firstLine(guarded.stderr || guarded.stdout));
+  assert.match(guarded.stderr, /не JavaScript/, 'отказ не называет настоящую причину:\n' + guarded.stderr);
+  assert.match(guarded.stderr, /minify\.guard/, 'отказ не называет, что править:\n' + guarded.stderr);
+  assert.equal(hasStack(guarded.stderr), false, 'отказ напечатал стек:\n' + guarded.stderr);
 });
 
 /* У проекта-потребителя движок лежит в `node_modules`, и подсказка обязана

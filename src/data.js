@@ -1,6 +1,6 @@
 import path from 'path';
 import { LOCALES } from './locales.js';
-import { METRICS } from './metrics.js';
+import { metricView } from './metrics.js';
 import { rowHref } from './journal.js';
 import { build } from './history.js';
 import { TOOL_PKG } from './tool.js';
@@ -61,13 +61,7 @@ export function reportData(cfg, root) {
       journal: cfg.journal === null ? null : { path: cfg.journal.path },
       showSha: cfg.rows.sha
     },
-    metrics: cfg.metrics.map((key) => ({
-      key: key,
-      label: METRICS[key].label,
-      note: METRICS[key].note[cfg.locale],
-      method: METRICS[key].method[cfg.locale],
-      accuracy: METRICS[key].accuracy
-    })),
+    metrics: cfg.metrics.map((key) => Object.assign({ key: key }, metricView(key, cfg))),
     categories: CATEGORY_ORDER.filter((key) => files.some((f) => f.category === key))
       .map((key) => ({ key: key, label: loc.categories[key] })),
     files: files,

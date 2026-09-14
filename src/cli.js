@@ -7,6 +7,7 @@ import { MAX_BUF, git, gitArgv, gitEnv } from './git.js';
 import { byteLen } from './strip.js';
 import { build } from './history.js';
 import { reportData } from './data.js';
+import { sensorGap } from './metrics.js';
 import { render } from './render.js';
 import { totalsOf } from './derived.js';
 import { pageHtml } from './page/build.js';
@@ -17,6 +18,16 @@ import { pageHtml } from './page/build.js';
 
 function kmb(bytes) {
   return Math.round(bytes / 1024) + ' КБ';
+}
+
+/* Деградация — не ошибка, а факт отчёта: числа получены упрощением, потому что
+ * необязательный минификатор недоступен. Факт печатается один раз и становится
+ * кодом 4 — иначе приближение уезжало бы в CI как успех. */
+function sensorNote(cfg) {
+  const gap = sensorGap(cfg);
+  if (gap === null) return EXIT.OK;
+  console.error('! ' + gap.why + '\n  починка: ' + gap.fix);
+  return EXIT.SENSOR;
 }
 
 export function check(cfg, want, root) {
@@ -61,7 +72,7 @@ function writeMode(cfg, root) {
     + skipped.join(', ') + ')');
   console.log('  состояние на HEAD: ' + cfg.columns.map((c, i) => c.label + ' '
     + (state[i] === null ? '—' : cfg.metrics.map((m) => state[i].cells[m]).join('/'))).join(', '));
-  return 0;
+  return sensorNote(cfg);
 }
 
 function checkMode(cfg, root) {
@@ -71,6 +82,7 @@ function checkMode(cfg, root) {
   if (code === 0) {
     console.log('✓ таблица размеров: ' + rows.length + ' коммитов × ' + cfg.columns.length + ' файлов '
       + 'совпадает с историей (' + cfg.output + ', ' + kmb(byteLen(html)) + ')');
+    return sensorNote(cfg);
   }
   return code;
 }
@@ -80,7 +92,7 @@ function checkMode(cfg, root) {
  * остаётся нетронутой: она заморожена эталоном паритета (fixtures/parity). */
 export function dataMode(cfg, root) {
   process.stdout.write(JSON.stringify(reportData(cfg, root), null, 2) + '\n');
-  return 0;
+  return sensorNote(cfg);
 }
 
 /* Страница отчёта: собирается тем же проходом по истории, что и артефакт — иначе
@@ -95,7 +107,7 @@ export function pageMode(cfg, root, file) {
   writeFileEnsured(target, html);
   console.log('✓ ' + path.relative(root, target) + ': ' + data.rows.length + ' строк × '
     + data.files.length + ' файлов, ' + kmb(byteLen(html)));
-  return 0;
+  return sensorNote(cfg);
 }
 
 function jsonMode(cfg, root) {
@@ -111,7 +123,7 @@ function jsonMode(cfg, root) {
     })),
     skipped: skipped
   }, null, 2) + '\n');
-  return 0;
+  return sensorNote(cfg);
 }
 
 /* Черновик конфига для нового проекта: колонки — по расширениям, которые в
@@ -190,6 +202,10 @@ export function initMode(root, file, force) {
     heading: 'Объём файлов по коммитам',
     fixCommand: hasPkg ? manager + ' run sizes' : 'npx size-report --write',
     metrics: ['raw', 'min'],
+    // Настоящее сжатие, а не упрощение: новый проект не должен начинать с
+    // приближённых чисел. Плата названа в подсказке ниже: без необязательной
+    // зависимости метрика честно отступает к упрощению и прогон возвращает код 4.
+    minify: { engine: 'esbuild' },
     columns: sniffed.columns,
     journal: journalPath
       ? { path: journalPath, url: '../' + journalPath, pattern: '^## (?<id>\\S+)\\s+(?<title>.+?)\\s*$', anchor: 'heading' }
@@ -206,6 +222,7 @@ export function initMode(root, file, force) {
   console.log('✓ черновик конфига: ' + path.relative(root, target));
   console.log('  расширения в проекте: ' + (sniffed.exts.join(' ') || '—'));
   console.log('  колонок: ' + sniffed.columns.length + ' (крупнейшие файлы по расширениям)');
+  console.log('  метрика min: настоящее сжатие (esbuild); без него — честное упрощение и код 4');
   console.log('  журнал: ' + (journalPath || 'не найден — ссылки строк будут без разделов'));
   console.log('  дальше: 1) поправьте колонки и метрики — какие файлы важны, знает только проект');
   console.log('          2) ' + (hasPkg
