@@ -334,9 +334,12 @@ test('потерянная правка merge-коммита ловится со
   assert.notEqual(mutated, source,
     'мутация не применилась: движок больше не читает слияния первым родителем — мутацию пора переписать');
 
+  /* Мутированную сборку собираем целиком: движок читает соседние исходники
+   * (`derived.js`, `page/app.js` — вслед за движком), и без них отказ был бы
+   * «модуль не найден», то есть проверка проверяла бы не то. */
   const dir = path.join(tmp, 'engine-without-merge-paths');
-  fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
   fs.mkdirSync(path.join(dir, 'bin'), { recursive: true });
+  fs.cpSync(path.join(ROOT, 'src'), path.join(dir, 'src'), { recursive: true });
   fs.writeFileSync(path.join(dir, 'src', 'size-table.js'), mutated);
   fs.copyFileSync(PACKAGE_BIN, path.join(dir, 'bin', 'size.js'));
 

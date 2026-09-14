@@ -6,7 +6,7 @@
  *      ревизией) — контракт обязан нести ту же правду, что и артефакт;
  *   2. в контракте нет ни одной производной величины (проверяется по составу
  *      полей, а не на слово);
- *   3. вычислительная часть страницы (`DERIVED_SRC` — исходники функций, которыми
+ *   3. вычислительная часть страницы (`src/derived.js` — тот же код, которым
  *      считает артефакт) прогоняется и её итоги сверяются с итогами артефакта, а
  *      сумма дельт по колонке — с текущим размером; оболочка страницы при этом не
  *      имеет права заводить свои функции расчёта;
@@ -22,9 +22,7 @@ import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { JSDOM } from 'jsdom';
-import {
-  APP_DOM, APP_SCRIPT, CATEGORY_ORDER, DERIVED_SRC, rowModel, totalsOf, valueParts
-} from '../src/size-table.js';
+import { CATEGORY_ORDER, pageScript, rowModel, stripModules, totalsOf, valueParts } from '../src/size-table.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SYNTH = path.join(ROOT, 'fixtures', 'synthetic');
@@ -59,10 +57,18 @@ function dataOf(dir) {
   return JSON.parse(res.stdout);
 }
 
-/* Вычислительная часть страницы — текст, вклеенный в страницу. Проверки ниже
- * гоняют его в настоящем JS: если он перестанет исполняться или разойдётся с
- * числами артефакта, станет видно из теста, а не из браузера. */
-const pageMath = new Function(DERIVED_SRC + '\nreturn { rowModel: rowModel, totalsOf: totalsOf };')();
+/* Программа страницы собирается из исходников на диске: общий расчёт
+ * (`src/derived.js`) и оболочка (`src/page/app.js`). Проверки ниже читают те же
+ * файлы, чтобы сверять вклеенное в страницу с тем, что лежит в репозитории, а не
+ * с тем, что движок сказал про себя. */
+const DERIVED_FILE = path.join(ROOT, 'src', 'derived.js');
+const APP_FILE = path.join(ROOT, 'src', 'page', 'app.js');
+const derivedSrc = fs.readFileSync(DERIVED_FILE, 'utf8');
+const appSrc = fs.readFileSync(APP_FILE, 'utf8');
+
+// Вычислительная часть — тот же код, что исполняет страница.
+const pageMath = new Function(stripModules(derivedSrc)
+  + '\nreturn { rowModel: rowModel, totalsOf: totalsOf };')();
 
 // Ключи включённых метрик — то, что вычислительная часть принимает на вход.
 function keysOn(view) {
@@ -253,25 +259,29 @@ test('выключенное не участвует ни в таблице, н�
  * вычислительной части у самого движка, а оболочка страницы обязана только
  * строить узлы: свои итоги, дельты или форматирование в ней — уже второй расчёт. */
 test('вычислительная часть страницы — код движка, а не копия', () => {
-  ['group', 'totalsOf', 'deltaOf', 'cellParts', 'valueParts', 'rowModel', 'nowModel', 'commitParts']
-    .forEach((name) => {
-      assert.ok(new RegExp('function ' + name + '\\(').test(DERIVED_SRC),
-        'в вычислительной части страницы нет ' + name);
-    });
-  assert.equal(APP_SCRIPT.indexOf(DERIVED_SRC), 0, 'программа страницы начинается не с общего расчёта');
-  assert.ok(pageHtml.indexOf(APP_SCRIPT) > 0, 'страница собрана не из общей программы');
+  const script = pageScript();
+  const defined = (src) => [...src.matchAll(/\nfunction\s+(\w+)/g)].map((m) => m[1]);
+
+  // В страницу попадает ровно текст двух файлов (без модульного синтаксиса).
+  assert.deepEqual(defined(script).sort(), defined(stripModules(derivedSrc))
+    .concat(defined(stripModules(appSrc))).sort(),
+  'в программе страницы есть функция не из своих исходников');
+  assert.equal(script.indexOf(stripModules(derivedSrc)), 0,
+    'программа страницы начинается не с общего расчёта');
+  assert.equal(/^\s*(import|export)\s/m.test(script), false,
+    'в вклеенной программе остался модульный синтаксис: страница с диска его не разрешит');
+  assert.ok(pageHtml.indexOf(script) > 0, 'страница собрана не из общей программы');
 
   /* Список функций оболочки закрыт: любая новая функция в ней — это либо
    * разметка, либо вернувшийся своим путём расчёт; первое правится здесь же,
    * второе лучше не делать вовсе. */
-  const defined = [...APP_DOM.matchAll(/function\s+(\w+)/g)].map((m) => m[1]).sort();
-  assert.deepEqual(defined, [
+  assert.deepEqual(defined('\n' + appSrc).sort(), [
     'appBox', 'appCell', 'appCommit', 'appEl', 'appPanel', 'appRender', 'appSubHead', 'appTable', 'appValueCell'
   ], 'оболочка страницы завела свою функцию: расчёт должен жить в вычислительной части');
-  assert.equal(/\breduce\(|Math\.abs/.test(APP_DOM), false,
+  assert.equal(/\breduce\(|Math\.abs/.test(appSrc), false,
     'оболочка страницы считает итоги или знак дельты сама');
   ['rowModel', 'nowModel', 'commitParts', 'cellParts', 'valueParts'].forEach((name) => {
-    assert.ok(APP_DOM.indexOf(name + '(') >= 0, 'оболочка страницы не пользуется ' + name);
+    assert.ok(appSrc.indexOf(name + '(') >= 0, 'оболочка страницы не пользуется ' + name);
   });
 });
 
@@ -294,6 +304,15 @@ test('страница самодостаточна и несёт данные �
   assert.equal(/https?:\/\//.test(pageHtml), false,
     'в странице есть внешняя ссылка: без сети она не откроется');
   assert.equal(/<link|<img|src=/.test(pageHtml), false, 'страница тянет что-то со стороны');
+
+  /* Один файл и три тега: два с данными и программа. Программа вклеена ровно
+   * так, как её отдаёт движок, и без модульного синтаксиса: страница открывается
+   * с диска, а не с сервера, и разрешать `import` там нечем. */
+  assert.equal((pageHtml.match(/<script/g) || []).length, 3,
+    'в странице не три тега script: вклейка изменилась, и файлов могло стать больше одного');
+  assert.ok(pageHtml.indexOf('<script>\n' + pageScript() + '</script>') > 0,
+    'программа страницы вклеена не целиком или не тем текстом, который отдаёт движок');
+  assert.equal(/type="module"/.test(pageHtml), false, 'программа страницы объявлена модулем');
 
   const dom = new JSDOM(pageHtml);
   const embedded = JSON.parse(dom.window.document.getElementById('data').textContent);

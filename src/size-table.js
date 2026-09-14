@@ -60,6 +60,9 @@ import vm from 'vm';
 import zlib from 'zlib';
 import { execFileSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import {
+  cellParts, commitParts, deltaOf, group, nowModel, rowModel, totalsOf, valueParts
+} from './derived.js';
 
 // Пакет — модуль, а подсказка в `loadConfig` цитирует путь самого движка: в ESM
 // `__filename` нет, поэтому путь берётся от `import.meta.url`.
@@ -1018,120 +1021,10 @@ function reportData(cfg, root) {
   };
 }
 
-// --- производные величины ----------------------------------------------------
-
-/* Единственное место, где из абсолютных значений получаются производные: итоги,
- * дельты, содержимое клетки и подпись коммита. Оба вывода — статический артефакт
- * и страница — идут через эти функции, причём страница получает их же текст
- * (`DERIVED_SRC`), а не свою копию: второго расчёта той же таблицы нет вовсе,
- * поэтому разойтись молча двум отчётам нечем. Это стережёт проверка в
- * `test/contract.test.js`.
- *
- * Функции самодостаточны: ни импортов, ни состояния модуля — иначе текст было бы
- * нельзя вклеить в страницу. */
-
-// Разряды тонкими пробелами: toLocaleString зависит от ICU сборки Node, а строка
-// таблицы обязана совпадать побайтово на любой машине.
-function group(n) {
-  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '\u2009');
-}
-
-/* Итог: сумма по включённым файлам. Выключенный файл не участвует ни в таблице,
- * ни в сумме, — иначе «итого» отвечало бы не про то, что видно. */
-function totalsOf(values, metrics, on) {
-  const out = {};
-  metrics.forEach((m) => { out[m] = 0; });
-  values.forEach((v, i) => {
-    if (v === null || (on !== undefined && !on[i])) return;
-    metrics.forEach((m) => { out[m] += v[m]; });
-  });
-  return out;
-}
-
-/* Дельта к предыдущему коммиту. Появление файла — рост на весь его объём: иначе
- * сумма дельт по колонке не сходилась бы с текущим размером. */
-function deltaOf(now, before) {
-  return before === null || before === undefined ? now : now - before;
-}
-
-/* Содержимое клетки строки-коммита: что в ней написано и каким цветом. Разметку
- * из этого делает каждый вывод сам (строка HTML или узел DOM), а правила одни.
- * Пустая клетка — «не менялось», `—` — файла в ревизии нет.
- * `minus` — знак минуса: у артефакта он заморожен эталоном побайтово, страница
- * ставит типографский. */
-function cellParts(value, delta, minus) {
-  if (value === null) return { text: '—', dir: null, miss: true };
-  if (!delta) return { text: '', dir: null, miss: false };
-  return {
-    text: (delta > 0 ? '+' : minus) + group(Math.abs(delta)),
-    dir: delta > 0 ? 'up' : 'down',
-    miss: false
-  };
-}
-
-// Клетка верхней строки: абсолютный размер, без дельты.
-function valueParts(value) {
-  return value === null ? { text: '—', miss: true } : { text: group(value), miss: false };
-}
-
-/* Строка-коммит: блок «общий объём» и по блоку на включённый файл, в каждом —
- * клетка на метрику. Отбор включённых файлов происходит здесь, поэтому и таблица,
- * и суммы считаются от одного выбора. */
-function rowModel(values, prev, metrics, on) {
-  const total = totalsOf(values, metrics, on);
-  const prevTotal = prev === null ? null : totalsOf(prev, metrics, on);
-  const out = {
-    total: metrics.map((m) => ({
-      value: total[m],
-      delta: deltaOf(total[m], prevTotal === null ? null : prevTotal[m])
-    })),
-    files: []
-  };
-  values.forEach((v, i) => {
-    if (on !== undefined && !on[i]) return;
-    const before = prev === null || prev[i] === null ? null : prev[i];
-    out.files.push(metrics.map((m) => {
-      const value = v === null ? null : v[m];
-      const was = value === null || before === null ? null : before[m];
-      return { value: value, delta: value === null ? null : deltaOf(value, was) };
-    }));
-  });
-  return out;
-}
-
-/* Верхняя строка — абсолютные размеры на HEAD: абсолютное число стоит в таблице
- * один раз, и именно с ним сходятся все дельты под ним. */
-function nowModel(values, metrics, on) {
-  const total = totalsOf(values, metrics, on);
-  const files = [];
-  values.forEach((v, i) => {
-    if (on !== undefined && !on[i]) return;
-    files.push(metrics.map((m) => (v === null ? null : v[m])));
-  });
-  return { total: metrics.map((m) => total[m]), files: files };
-}
-
-/* Подпись коммита в терминах данных: что показать и куда вести. Ссылку считает
- * `rowHref` — то же место, откуда её берёт контракт для страницы, поэтому оба
- * вывода ведут туда же. */
-function commitParts(row, showSha, href) {
-  const short = showSha ? row.sha.slice(0, 7) : '';
-  return {
-    when: row.when,
-    subject: row.subject,
-    short: short,
-    href: href || null,
-    mark: row.section === null
-      ? { text: '—', title: null }
-      : { text: '§' + row.section.id + (row.section.added ? '' : '*'), title: row.section.head }
-  };
-}
-
-/* Текст вычислительной части страницы — это исходники тех же функций, что
- * считают артефакт. Страница исполняет их, а не пересказ: второй реализации не
- * существует, поэтому и разойтись двум отчётам нечем. */
-const DERIVED_SRC = [group, totalsOf, deltaOf, cellParts, valueParts, rowModel, nowModel, commitParts]
-  .map((fn) => fn.toString()).join('\n');
+/* Производные величины живут в `src/derived.js`: их считает и артефакт (импорт
+ * ниже), и страница (получает тот же файл текстом). Второго расчёта той же
+ * таблицы нет вовсе, поэтому разойтись молча двум отчётам нечем — это стережёт
+ * `test/contract.test.js`. */
 
 // --- рендер -----------------------------------------------------------------
 
@@ -1297,175 +1190,25 @@ ${body}
 
 // --- страница отчёта --------------------------------------------------------
 
-/* Оболочка страницы: панель выбора и таблица. Производные величины берёт
- * вычислительная часть (`DERIVED_SRC` — тот же код, что считает артефакт), а
- * здесь только состояние выбора и разметка: включение метрики, категории или
- * файла заново зовёт тот же расчёт и потому не может дать других чисел. Отделка
- * (дерево папок, запоминание выбора, тёмная схема) — следующий проход. */
-const APP_DOM = `
-const appData = JSON.parse(document.getElementById('data').textContent);
-const appUi = JSON.parse(document.getElementById('ui').textContent);
-const appView = { metrics: {}, files: [] };
-appData.metrics.forEach((m) => { appView.metrics[m.key] = true; });
-appData.files.forEach(() => { appView.files.push(true); });
-
-function appEl(tag, cls, text) {
-  const el = document.createElement(tag);
-  if (cls) el.className = cls;
-  if (text !== undefined) el.textContent = text;
-  return el;
+/* Программа страницы — обычные исходники (`src/page/app.js` и общий расчёт
+ * `src/derived.js`), а не строки в движке: их видит линтер, их же движок
+ * вклеивает в страницу. Модульный синтаксис снимается при вклейке: в браузере,
+ * открывшем файл с диска, разрешать `import` нечем, а объявления обязаны попасть
+ * в общую область видимости в порядке вклейки — сперва расчёт, затем оболочка. */
+function stripModules(src) {
+  return src.split('\n')
+    .filter((line) => !/^import\s.*;\s*$/.test(line))
+    .map((line) => line.replace(/^export\s+(function|const|let|var|class)\s/, '$1 '))
+    .join('\n');
 }
 
-function appBox(label, title, checked, onChange) {
-  const box = appEl('label', 'box');
-  const input = document.createElement('input');
-  input.type = 'checkbox';
-  input.checked = checked;
-  if (title) input.title = title;
-  input.addEventListener('change', onChange);
-  box.appendChild(input);
-  box.appendChild(appEl('span', null, label));
-  return box;
+function pageSource(file) {
+  return stripModules(fs.readFileSync(new URL(file, import.meta.url), 'utf8'));
 }
 
-/* Категория — не отдельное состояние, а способ переставить галочки файлов сразу:
- * сама она ничего не помнит, иначе одно и то же решалось бы в двух местах. */
-function appPanel() {
-  const panel = document.getElementById('panel');
-  panel.textContent = '';
-  const mrow = appEl('div', 'row');
-  mrow.appendChild(appEl('span', 'cap', appUi.metrics));
-  appData.metrics.forEach((m) => {
-    mrow.appendChild(appBox(m.label, m.note + ' · способ: ' + m.method + ' (' + m.accuracy + ')',
-      appView.metrics[m.key], (e) => {
-        appView.metrics[m.key] = e.target.checked;
-        appRender();
-      }));
-  });
-  panel.appendChild(mrow);
-  appData.categories.forEach((cat) => {
-    const idx = [];
-    appData.files.forEach((f, i) => { if (f.category === cat.key) idx.push(i); });
-    const row = appEl('div', 'row');
-    row.appendChild(appBox(cat.label, 'все файлы категории', idx.every((i) => appView.files[i]), (e) => {
-      idx.forEach((i) => { appView.files[i] = e.target.checked; });
-      appRender();
-    }));
-    idx.forEach((i) => {
-      const f = appData.files[i];
-      const where = f.path === null ? f.paths[0] + ' (нет на HEAD)' : f.path;
-      row.appendChild(appBox(f.label, where + ' · категория: '
-        + (f.categoryBy === 'config' ? 'из настроек' : 'по расширению'), appView.files[i], (e) => {
-        appView.files[i] = e.target.checked;
-        appRender();
-      }));
-    });
-    panel.appendChild(row);
-  });
+function pageScript() {
+  return pageSource('./derived.js') + '\n' + pageSource('./page/app.js');
 }
-
-// Разметка клетки строки-коммита: правила — в cellParts, здесь только узел.
-function appCell(cell, first) {
-  const parts = cellParts(cell.value, cell.delta, '−');
-  const td = appEl('td', 'num' + (first ? ' g' : '') + (parts.miss ? ' miss' : ''));
-  if (parts.dir === null) td.textContent = parts.text;
-  else td.appendChild(appEl('span', 'delta ' + parts.dir, parts.text));
-  return td;
-}
-
-// Разметка клетки верхней строки: правила — в valueParts.
-function appValueCell(value, first) {
-  const parts = valueParts(value);
-  const td = appEl('td', 'num' + (first ? ' g' : '') + (parts.miss ? ' miss' : ''));
-  td.textContent = parts.text;
-  return td;
-}
-
-function appCommit(row) {
-  const th = appEl('th', 'c-commit');
-  const parts = commitParts(row, appData.report.showSha, row.href);
-  const name = parts.href ? appEl('a', 'subj', parts.subject) : appEl('span', 'subj', parts.subject);
-  if (parts.href) name.href = parts.href;
-  name.title = parts.subject + (parts.short ? ' ' + parts.short : '');
-  th.appendChild(appEl('span', 'when', parts.when));
-  th.appendChild(name);
-  th.appendChild(appEl('span', 'sect', parts.mark.text));
-  return th;
-}
-
-function appSubHead(metrics) {
-  const tr = appEl('tr');
-  metrics.forEach((m, mi) => tr.appendChild(appEl('th', mi === 0 ? 'g' : '', m.label)));
-  return tr;
-}
-
-function appTable() {
-  const shown = appData.metrics.filter((m) => appView.metrics[m.key]);
-  const metrics = shown.map((m) => m.key);
-  const on = appView.files;
-  const files = [];
-  appData.files.forEach((f, i) => { if (on[i]) files.push(i); });
-  const table = document.getElementById('grid');
-  table.textContent = '';
-
-  const head = appEl('tr');
-  const commit = appEl('th', 'c-commit', appUi.commit);
-  commit.rowSpan = 2;
-  head.appendChild(commit);
-  const total = appEl('th', 'g', appUi.total);
-  total.colSpan = metrics.length;
-  head.appendChild(total);
-  files.forEach((i) => {
-    const th = appEl('th', 'g', appData.files[i].label);
-    th.colSpan = metrics.length;
-    head.appendChild(th);
-  });
-  const subs = appSubHead(shown);
-  files.forEach(() => {
-    const more = appSubHead(shown);
-    while (more.firstChild) subs.appendChild(more.firstChild);
-  });
-  const thead = appEl('thead');
-  thead.appendChild(head);
-  thead.appendChild(subs);
-
-  const body = appEl('tbody');
-  for (let r = appData.rows.length - 1; r >= 0; r--) {
-    const row = appData.rows[r];
-    const prev = r === 0 ? null : appData.rows[r - 1];
-    const model = rowModel(row.values, prev === null ? null : prev.values, metrics, on);
-    const tr = appEl('tr');
-    tr.appendChild(appCommit(row));
-    model.total.forEach((cell, mi) => tr.appendChild(appCell(cell, mi === 0)));
-    model.files.forEach((cells) => cells.forEach((cell, mi) => tr.appendChild(appCell(cell, mi === 0))));
-    body.appendChild(tr);
-  }
-
-  /* Верхняя строка — «сейчас»: абсолютные размеры на HEAD. Дельты под ней сходятся
-   * с ней, поэтому она и стоит первой. */
-  const now = appEl('tr', 'now');
-  now.appendChild(appEl('th', 'c-commit', appUi.now));
-  const nowCells = nowModel(appData.now, metrics, on);
-  nowCells.total.forEach((v, mi) => now.appendChild(appValueCell(v, mi === 0)));
-  nowCells.files.forEach((cells) => cells.forEach((v, mi) => now.appendChild(appValueCell(v, mi === 0))));
-  body.insertBefore(now, body.firstChild);
-
-  table.appendChild(thead);
-  table.appendChild(body);
-  document.getElementById('note').textContent = appUi.note.replace('{command}', appData.report.fixCommand);
-}
-
-function appRender() {
-  appPanel();
-  appTable();
-}
-appRender();
-`;
-
-/* Программа страницы: вычислительная часть — исходники функций, считающих
- * артефакт, затем оболочка. Читает её `pageHtml`, а «второго расчёта» здесь нет
- * ровно потому, что текст берётся у самих функций. */
-const APP_SCRIPT = DERIVED_SRC + '\n' + APP_DOM;
 
 const APP_CSS = `
 :root { color-scheme: light dark; }
@@ -1512,7 +1255,7 @@ function pageHtml(data, cfg) {
       metrics: loc.page.metrics,
       note: loc.page.note.replace(/\{now\}/g, loc.now) // {command} подставляет страница
     })
-    + '</script>\n<script>\n' + APP_SCRIPT + '</script>\n</body>\n</html>\n';
+    + '</script>\n<script>\n' + pageScript() + '</script>\n</body>\n</html>\n';
 }
 
 /* JSON внутри страницы: `<` экранируется, иначе подпись коммита или путь закрыли
@@ -1775,7 +1518,7 @@ export {
   stripJs, stripHtml, stripCss, stripLines, compactJson, minifyForm, strategyFor,
   parseSections, touchedSection, anchor, sectionLink, rowHref,
   CATEGORY_EXTS, CATEGORY_ORDER, categoryOf,
-  reportData, dataMode, pageMode, pageHtml, DERIVED_SRC, APP_SCRIPT, APP_DOM,
+  reportData, dataMode, pageMode, pageHtml, pageScript, stripModules, pageSource,
   measureHistory, render, noteText, initMode, sniffColumns, check, main,
   group, totalsOf, deltaOf, cellParts, valueParts, rowModel, nowModel, commitParts,
   cellHtml, valueHtml
