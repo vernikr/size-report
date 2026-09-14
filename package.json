@@ -26,6 +26,8 @@
   "sideEffects": false,
   "scripts": {
     "test": "node --test",
+    "lint": "eslint . || true",
+    "lint:strict": "eslint .",
     "parity": "node tools/parity-freeze.js",
     "parity:live": "node tools/parity-live.js",
     "fixture": "node tools/make-fixture.js"
@@ -38,6 +40,7 @@
     "report"
   ],
   "devDependencies": {
+    "eslint": "^9.18.0",
     "jsdom": "~26"
   }
 }
