@@ -37,6 +37,26 @@ test('замороженная копия — та ревизия, с котор
     'файл эталонных чисел изменён после снятия');
 });
 
+/* Манифест — запись о том, что лежит рядом, и она обязана сходиться с файлами:
+ * правка эталона после снятия рукой иначе расходится молча, а по этим записям
+ * сверяется и перенос, и живая история. */
+test('записанное в манифестах совпадает с файлами эталонов', () => {
+  const synth = readJson(path.join(SYNTH, 'manifest.json'));
+  Object.keys(synth.files).forEach((name) => {
+    const file = path.join(SYNTH, name);
+    assert.equal(fs.statSync(file).size, synth.files[name].bytes,
+      'размер ' + name + ' не тот, что записан в манифесте фикстуры');
+    assert.equal(sha256(fs.readFileSync(file)), synth.files[name].sha256,
+      name + ' не тот, что записан в манифесте фикстуры (правился после снятия?)');
+  });
+  assert.equal(sha256(fs.readFileSync(path.join(PARITY, 'data.json'))), parityManifest.data.sha256,
+    'числа эталона паритета не те, что записаны в его манифесте');
+  assert.equal(sha256(fs.readFileSync(path.join(PARITY, 'config.json'))), parityManifest.config.sha256,
+    'настройки эталона паритета не те, что записаны в его манифесте');
+  assert.equal(shaFileLine(path.join(PARITY, 'artifact.sha256')), parityManifest.artifact.sha256,
+    'артефакт эталона паритета не тот, что записан в его манифесте');
+});
+
 test('фикстура и живой проект сняты одним инструментом', () => {
   assert.equal(readJson(path.join(SYNTH, 'manifest.json')).legacy.file.split('/').pop(),
     parityManifest.tool.file.split('/').pop(),

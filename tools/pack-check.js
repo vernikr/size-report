@@ -23,13 +23,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SYNTH = path.join(ROOT, 'fixtures', 'synthetic');
-const BUNDLE = path.join(SYNTH, 'history.bundle');
-const CONFIG = path.join(SYNTH, 'config.json');
-const MAX_BUF = 256 * 1024 * 1024;
+import { pathToFileURL } from 'node:url';
+import { BUNDLE, CONFIG, MAX_BUF, ROOT } from './harness.js';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'size-report-pack-'));
 let failed = 0;
@@ -66,6 +61,23 @@ try {
   execFileSync('tar', ['-xzf', path.join(tmp, tarball), '-C', unpacked]);
   const pkg = path.join(unpacked, 'package');
   ok('собран пакет', tarball);
+
+  /* Список `files` — обещание поставки, и проверяется оно с двух сторон: в нём не
+   * должно быть того, чего в репозитории нет (забытый файл или пустой каталог
+   * доезжает до выпуска как обещание), а в тарболл не должно попасть то, чего он
+   * не обещает. */
+  const promised = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).files;
+  const absent = promised.filter((entry) => !fs.existsSync(path.join(ROOT, entry)));
+  if (absent.length > 0) bad('в files названо то, чего в репозитории нет', absent.join(' '));
+  else ok('список files называет только существующее', promised.join(' '));
+
+  /* Часть файлов npm кладёт в тарболл сам, мимо списка (манифест, README,
+   * лицензии) — они не считаются лишними, иначе проверка ругалась бы на
+   * обещанный планом `LICENSE`. */
+  const AUTO = /^(package\.json|README(\..*)?|LICEN[SC]E(\..*)?)$/i;
+  const extra = fs.readdirSync(pkg).filter((entry) => !AUTO.test(entry) && promised.indexOf(entry) < 0);
+  if (extra.length > 0) bad('в пакет попало то, что files не обещает', extra.join(' '));
+  else ok('постороннего в пакете нет', fs.readdirSync(pkg).length + ' записей');
 
   /* Файлы: сравнение по составу, а не по числу — иначе потеря и лишний файл
    * могли бы уравновесить друг друга. */

@@ -212,7 +212,7 @@ export function initMode(root, file, force) {
     ? 'добавьте в package.json: "sizes": "size --write", "test:sizes": "size"'
     : 'запуск: ' + cfg.fixCommand + ' (проверка — без --write)'));
   console.log('          3) ' + (hasPkg ? 'добавьте ' + manager + ' run test:sizes в CI' : 'добавьте проверку в CI')
-    + '; сами проверки едут вместе с пакетом');
+    + '; проверка — команда пакета, своих файлов в проект она не приносит');
   return 0;
 }
 

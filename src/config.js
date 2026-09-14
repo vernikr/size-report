@@ -17,7 +17,7 @@ export const DEFAULT_CONFIG = {
   locale: 'ru',
   title: '',          // по умолчанию — заголовок из локали
   heading: '',
-  fixCommand: 'npx size-table --write',
+  fixCommand: 'npx size-report --write',
   metrics: ['raw', 'min'],
   columns: [],
   minify: { ext: {}, guard: ['.js', '.mjs', '.cjs'] },

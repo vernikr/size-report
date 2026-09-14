@@ -9,7 +9,7 @@
     "commits": 149
   },
   "tool": {
-    "file": "tools/size-table.js",
+    "file": "fixtures/legacy/size-table.cjs",
     "sha256": "50dc144f0532085f1d93f3888c613619c5966ae177c31cc8a90de5789ecef1ba"
   },
   "artifact": {

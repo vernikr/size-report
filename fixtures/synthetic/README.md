@@ -36,7 +36,7 @@
 
 ```bash
 git clone fixtures/synthetic/history.bundle /tmp/size-report-fixture
-node tools/make-fixture.js            # пересобрать (нужен инструмент, с которого снят эталон)
+node tools/make-fixture.js            # пересобрать (инструмент и окружение — встроенные)
 ```
 
 HEAD: `16b2fe8384d18b2c44b15e5c54102e57b95fe084` (16 коммитов).

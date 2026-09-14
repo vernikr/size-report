@@ -17,11 +17,7 @@
   "files": [
     "bin",
     "src",
-    "dist",
-    "templates",
-    "README.md",
-    "CHANGELOG.md",
-    "LICENSE"
+    "README.md"
   ],
   "sideEffects": false,
   "scripts": {

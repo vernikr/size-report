@@ -86,8 +86,8 @@
   ],
   "files": {
     "README.md": {
-      "bytes": 3819,
-      "sha256": "389b9779562b97072673be5fe49bc8f23779b9d3af3aac672c517624a8e600fb"
+      "bytes": 4062,
+      "sha256": "15002dbaa370658880296c9f50402ae3f884c0fea432d9da250e7e31c6fbe02c"
     },
     "artifact.sha256": {
       "bytes": 87,
@@ -108,7 +108,7 @@
   },
   "localeStable": true,
   "legacy": {
-    "file": "../figma/safe-resets/tools/size-table.js",
+    "file": "fixtures/legacy/size-table.cjs",
     "sha256": "50dc144f0532085f1d93f3888c613619c5966ae177c31cc8a90de5789ecef1ba",
     "rows": 14,
     "columns": 10,

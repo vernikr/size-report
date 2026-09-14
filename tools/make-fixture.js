@@ -5,12 +5,18 @@
  * Зачем. Проверять движок на истории живого проекта нельзя: она меняется, она
  * большая, и половины ловушек в ней нет. Фикстура детерминирована — автор, даты и
  * содержимое зафиксированы, поэтому sha коммитов воспроизводимы. Эталонные числа
- * (`golden.json`) снимаются с текущего инструмента один раз, и дальше перенос
- * обязан их воспроизвести.
+ * (`golden.json`) снимаются с замороженной копии реализации один раз, и дальше
+ * перенос обязан их воспроизвести.
+ *
+ * Инструмент и окружение снятия закреплены. Копия — встроенная
+ * (`fixtures/legacy/size-table.cjs`), поэтому пересъём не зависит от того, держит
+ * ли проект-потребитель свою копию. Окружение — `core.quotePath=false`: у копии
+ * нет починки B1, и машина с настройками git по умолчанию потеряла бы в фикстуре
+ * строку с не-английским именем файла — эталон молча стал бы короче.
  *
  * Запуск (из корня репозитория size-report):
  *   node tools/make-fixture.js                       # бандл + конфиг + эталон
- *   node tools/make-fixture.js --legacy-tool <путь>   # инструмент, с которого снимаем
+ *   node tools/make-fixture.js --legacy-tool <путь>   # другой инструмент, если он нужен
  *   node tools/make-fixture.js --bundle-only          # только бандл (без эталона)
  *   node tools/make-fixture.js --keep                 # не удалять временный репозиторий
  */
@@ -18,15 +24,17 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import crypto from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { LEGACY, MAX_BUF, gitConfig, sha256 } from './harness.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'fixtures', 'synthetic');
-const DEFAULT_LEGACY = path.join(ROOT, '..', 'figma', 'safe-resets', 'tools', 'size-table.js');
-const MAX_BUF = 256 * 1024 * 1024;
 const ARTIFACT = 'docs/size-table.html';
+
+/* Окружение снятия эталона — то же, что у проверок замороженной копии
+ * (`harness.FROZEN`): без закрепления чтения путей эталон снимается другим. */
+const FROZEN_ENV = gitConfig({ 'core.quotePath': 'false' });
 
 // --- детерминированное время и личность автора ------------------------------
 
@@ -344,13 +352,9 @@ function runLegacy(legacyTool, dir, cfgPath, args, env) {
     cwd: dir,
     encoding: 'utf8',
     maxBuffer: MAX_BUF,
-    env: Object.assign({}, process.env, env || {})
+    env: Object.assign({}, process.env, FROZEN_ENV, env || {})
   });
   return { code: res.status, stdout: res.stdout || '', stderr: res.stderr || '' };
-}
-
-function sha256(buf) {
-  return crypto.createHash('sha256').update(buf).digest('hex');
 }
 
 const TRAPS = [
@@ -358,7 +362,8 @@ const TRAPS = [
   'комментарий в начале файла и блок-комментарий посреди кода',
   '`.mjs` с `export` — гард компиляции идёт через `node --check`, а не через `vm.Script`',
   'не-английское имя файла (`docs/заметки.md`) — путь приходит из git, и его цитирование зависит от локали',
-  'CRLF в текстовом файле',
+  'CRLF в текстовом файле — при `core.autocrlf=true` выкладка такого файла необратима'
+    + ' (сам git про это предупреждает), и сверка с рабочим деревом не имеет права на нём падать',
   'правка файла до переименования и само переименование — колонка с алиасами путей находит файл и под старым именем, и под новым',
   'коммит «только отчёт» — строки не получает',
   'смешанный коммит (отчёт + код) — строку получает, сборка предупреждает',
@@ -397,7 +402,7 @@ function fixtureNote(ctx) {
     '',
     '```bash',
     'git clone fixtures/synthetic/history.bundle /tmp/size-report-fixture',
-    'node tools/make-fixture.js            # пересобрать (нужен инструмент, с которого снят эталон)',
+    'node tools/make-fixture.js            # пересобрать (инструмент и окружение — встроенные)',
     '```',
     '',
     'HEAD: `' + ctx.head + '` (' + ctx.commits.length + ' коммитов).',
@@ -422,7 +427,7 @@ function main() {
   const out = path.resolve(flag('--out') === true || flag('--out') === null
     ? OUT : String(flag('--out')));
   const legacy = flag('--legacy-tool');
-  const legacyTool = typeof legacy === 'string' ? path.resolve(legacy) : DEFAULT_LEGACY;
+  const legacyTool = typeof legacy === 'string' ? path.resolve(legacy) : LEGACY;
   const bundleOnly = args.indexOf('--bundle-only') >= 0;
   const keep = args.indexOf('--keep') >= 0;
 
