@@ -24,7 +24,9 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "test": "node --test",
+    "test": "node tools/run-tests.js fast",
+    "test:all": "node tools/run-tests.js full",
+    "suites:measure": "node tools/run-tests.js measure",
     "lint": "eslint . || true",
     "lint:strict": "eslint .",
     "parity": "node tools/parity-freeze.js",
