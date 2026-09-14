@@ -140,6 +140,32 @@ export function runFixtureWith(target, dir, args, env) {
   return runTool(target, dir, ['--config', CONFIG].concat(args), env);
 }
 
+/* Сбор вывода не дожидаясь конца: нужен там, где прогоны идут вперемешку и ждать
+ * их по очереди нельзя (`tools/parity-live.js`). Куски копятся буферами, а не
+ * приклеиваются к строке: кусок приходит с потока там, где его вернуло ядро, и
+ * многобайтовый символ может попасть на границу между кусками. Строка из куска
+ * расшифровала бы обе половины поодиночке и дала два символа-заменителя вместо
+ * буквы — сверка падала бы на случайном месте, а не на расхождении (проверка —
+ * `test/runner.test.js`, случай — `WORKLOG.md` §21). */
+export function collectOutput(child) {
+  return new Promise((resolve) => {
+    const out = [];
+    const err = [];
+    let size = 0;
+    child.stdout.on('data', (chunk) => {
+      size += chunk.length;
+      if (size < MAX_BUF) out.push(chunk);
+      else child.kill();
+    });
+    child.stderr.on('data', (chunk) => { err.push(chunk); });
+    child.on('close', (code) => resolve({
+      code: code,
+      stdout: Buffer.concat(out).toString('utf8'),
+      stderr: Buffer.concat(err).toString('utf8')
+    }));
+  });
+}
+
 /* Кэш прогонов на чтение: ключ — инструмент, каталог, ключи и окружение. Только
  * для команд, которые ничего не пишут и не зависят от того, что уже написано. */
 const cache = new Map();

@@ -34,6 +34,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFileSync, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { collectOutput } from './harness.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PARITY = path.join(ROOT, 'fixtures', 'parity');
@@ -79,22 +80,13 @@ function firstDiff(a, b) {
 }
 
 /* Запуск без ожидания: окружения идут вперемешку, поэтому `spawn`, а не
- * `spawnSync`. Вывод собирается целиком — сверяется он побайтово. */
+ * `spawnSync`. Вывод собирается целиком — сверяется он побайтово — и склейка
+ * кусков живёт в обвязке (`collectOutput`), а не здесь. */
 function runCli(bin, dir, args, env) {
-  return new Promise((resolve) => {
-    const child = spawn(process.execPath, [bin, '--config', CONFIG].concat(args), {
-      cwd: dir,
-      env: Object.assign({}, process.env, env || {})
-    });
-    let out = '';
-    let err = '';
-    child.stdout.on('data', (chunk) => {
-      if (out.length + err.length < MAX_BUF) out += chunk;
-      else child.kill();
-    });
-    child.stderr.on('data', (chunk) => { err += chunk; });
-    child.on('close', (code) => resolve({ code: code, stdout: out, stderr: err }));
-  });
+  return collectOutput(spawn(process.execPath, [bin, '--config', CONFIG].concat(args), {
+    cwd: dir,
+    env: Object.assign({}, process.env, env || {})
+  }));
 }
 
 /* Контракт данных обязан нести ту же правду, что замороженные числа: это одна и та
