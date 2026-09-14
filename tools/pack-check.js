@@ -80,21 +80,34 @@ try {
   else ok('постороннего в пакете нет', fs.readdirSync(pkg).length + ' записей');
 
   /* Файлы: сравнение по составу, а не по числу — иначе потеря и лишний файл
-   * могли бы уравновесить друг друга. */
-  const inRepo = fs.readdirSync(path.join(ROOT, 'src')).sort();
-  const packedSrc = path.join(pkg, 'src');
-  if (!fs.existsSync(packedSrc)) {
-    throw new Error('в тарболле нет каталога src: проверьте список files в package.json');
-  }
-  const inPack = fs.readdirSync(packedSrc).sort();
-  const missing = inRepo.filter((f) => inPack.indexOf(f) < 0);
-  if (missing.length > 0) bad('в пакет не доехали исходники', missing.join(' '));
-  else ok('все исходники в пакете', inRepo.length + ' записей');
+   * могли бы уравновесить друг друга. Шаблоны проверяются наравне с исходниками:
+   * они и есть обещание «возьми и положи», а шаблон, не доехавший в поставку, —
+   * это обещание, которого нет. */
+  [['src', 'исходники'], ['templates', 'шаблоны']].forEach(([dir, what]) => {
+    const packed = path.join(pkg, dir);
+    if (!fs.existsSync(packed)) {
+      throw new Error('в тарболле нет каталога ' + dir + ': проверьте список files в package.json');
+    }
+    const inRepo = fs.readdirSync(path.join(ROOT, dir)).sort();
+    const inPack = fs.readdirSync(packed).sort();
+    const missing = inRepo.filter((f) => inPack.indexOf(f) < 0);
+    if (missing.length > 0) bad('в пакет не доехали ' + what, missing.join(' '));
+    else ok('все ' + what + ' в пакете', inRepo.length + ' записей');
+  });
+
+  /* Шаблон проект берёт как есть, поэтому он обязан доехать побайтово: правка
+   * шаблона после сборки иначе разошлась бы с тем, что проект у себя видит. */
+  fs.readdirSync(path.join(ROOT, 'templates')).forEach((f) => {
+    const a = fs.readFileSync(path.join(ROOT, 'templates', f));
+    const b = fs.readFileSync(path.join(pkg, 'templates', f));
+    if (!a.equals(b)) bad('шаблон изменился при упаковке', f);
+    else ok('шаблон в пакете побайтово тот же', f);
+  });
 
   /* Разбор модуля держится на файле рядом с собой (`parse-worker.js`), а не на
    * пути от корня репозитория: из установленного пакета поток обязан подняться
    * так же — иначе пользователь платит запуск Node на каждую клетку. */
-  const parse = await import(pathToFileURL(path.join(packedSrc, 'parse.js')).href);
+  const parse = await import(pathToFileURL(path.join(pkg, 'src', 'parse.js')).href);
   parse.moduleError('export const a = 1;');
   if (parse.parseMode() !== 'thread') bad('разбор модуля в пакете ушёл в запуск, а не в поток');
   else ok('разбор модуля в пакете идёт потоком');

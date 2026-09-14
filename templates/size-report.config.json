@@ -1,0 +1,50 @@
+{
+  "output": "docs/size-table.html",
+  "locale": "ru",
+  "title": "Объём файлов по коммитам",
+  "heading": "Объём файлов по коммитам",
+  "fixCommand": "npx size-report --write",
+  "metrics": [
+    "raw",
+    "min",
+    "tok"
+  ],
+  "minify": {
+    "engine": "esbuild",
+    "ext": {},
+    "guard": [
+      ".js",
+      ".mjs",
+      ".cjs"
+    ]
+  },
+  "tokens": {
+    "family": "openai",
+    "encoding": "o200k_base"
+  },
+  "columns": [
+    {
+      "label": "README.md",
+      "paths": [
+        "README.md"
+      ],
+      "category": "docs"
+    },
+    {
+      "label": "package.json",
+      "paths": [
+        "package.json"
+      ],
+      "category": "chore"
+    }
+  ],
+  "journal": null,
+  "links": {
+    "commitUrl": ""
+  },
+  "rows": {
+    "merges": true,
+    "sha": true
+  },
+  "skip": []
+}
