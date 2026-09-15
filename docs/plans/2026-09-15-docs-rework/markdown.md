@@ -32,7 +32,7 @@ edit is allowed — but it belongs in the same diff, never as a silent follow-up
 | Reader | What it looks for | Breaks when |
 |---|---|---|
 | `tools/docs-facts.js` `publishedRuns` | README run-table rows starting with «Быстрый» / «Полный» | the row words become English |
-| `tools/docs-facts.js` `NOT_TODAY`, `OWN_PROJECT` | README section titles «Чего ещё нет», «Для ИИ-агента», «Как подключить к своему проекту» | those headings are renamed |
+| `tools/docs-facts.js` `NOT_TODAY`, `OWN_PROJECT` | README section titles | those headings are renamed — `NOT_TODAY` was renamed in M6 and the guard reddened as predicted (`docs-commands`: `size init` from the "not yet" block was read as a call); `OWN_PROJECT` waits for M7 |
 | `test/docs-paths.test.js` | the README table under the heading `## Что в репозитории` | that heading is renamed |
 | `test/docs-commands.test.js` | a bare `§N` resolved to `requirements.md` by the word «требовани» | requirements are quoted without naming the file |
 | `tools/docs-facts.js` `DOCS`, `TARGETS`, `FOREIGN` | file *names* (`README.md`, `WORKLOG.md`, …) | a document moves |
@@ -182,14 +182,27 @@ files). The parts below are the order to work in; each is one commit.
   the frozen copy no longer claims a hand measurement ("checked by three runs"): it names what guards
   that today — the git border's witness, hermeticity of the output, and the slow profile. `pnpm run
   verify` green (8 steps, 64,0 s).
-- [ ] **M6 README, the tail sections** — «Чего ещё нет», «Гейт против раздувания», «Для ИИ-агента»,
-  «Ловушки…» (about 94 Russian lines). Two of those headings are known to `tools/docs-facts.js`
-  (`NOT_TODAY`, `OWN_PROJECT`), so that reader changes in the same commit. To check there: the list of
-  what is still missing against what has since been done, the bloat sensor's thresholds against
-  `eslint.metrics.config.js`, and the description of the `--data` contract against `src/data.js`.
-- [ ] **M6 README 687–705 + 1045–1139** — 94 Russian: «Чего ещё нет», «Гейт против
-  раздувания», «Для ИИ-агента», «Ловушки…». Two of those headings are named by
-  `tools/docs-facts.js` `NOT_TODAY` / `OWN_PROJECT` — same commit.
+- [x] **M6 README, the tail sections** — the "not yet" list, the gate against bloat, the agent
+  section and the traps: 94 Russian lines → **208 changed lines in four files** (`worklog/0105`). README
+  991 → 997 lines, its Cyrillic 357 → 263, so the next Russian line is 570 (M7). The two headings read by
+  `tools/docs-facts.js` `NOT_TODAY` went English, and the rename **reddened `docs-commands` as predicted
+  — 1 of 8, proven by an experiment in the tree: with the old names the guard reads `size init` of the
+  "not yet" block as a call to the tool**. Three verifications asked for by the plan, each by code or
+  measurement: **(1)** the "not yet" list against what has since been done — two entries were wrong and
+  were fixed (a pre-assembled `dist/app.js` is **not** planned: `PLAN.md`'s release-readiness section
+  decided against it, because the page's program is pasted into the page at build time from
+  `src/page/*.js` and `src/derived.js` and the file would be a second copy of the same; and `size measure`
+  is not a flag either — the help lists check, explain, doctor, install-hook, uninstall-hook, hook-run,
+  with `--init` as a mode), while four entries held in code (`MINIFY_LOADERS` has only js/ts/css, JSX and
+  TSX count as a simplification, `TOKEN_FAMILIES` holds `openai` alone, and the templates carry no agent
+  block on purpose); **(2)** the thresholds against their settings — 12, 60, 450 and 15 in
+  `eslint.metrics.config.js` and `.eslint-suppressions.json` holding `{}`, 3 bytes; **(3)** the data
+  contract against the code — `--json` is byte for byte the parity reference (`test/parity.test.js`),
+  `--data` is "absolute values and the shape of the table, nothing derived" (`src/data.js`,
+  `test/contract-data.test.js`), and the exit codes, the four calls with an answer, doctor's `action` /
+  `note` levels and explain's `touched` all match `USAGE`, `src/doctor.js` and `src/explain.js`. Three
+  stale named references were fixed outside README (`templates/README.md`, `REFACTOR.md` R-4.11, and the
+  exit-code row 5 in README itself).
 - [ ] **M7 README 706–921** — 159 Russian: «Как подключить к своему проекту», steps 1–5.
 - [ ] **M8 README 922–1044** — 104 Russian: steps 6–8 (the hook, the traps found by this very
   instruction, an already installed copy).

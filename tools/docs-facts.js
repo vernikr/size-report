@@ -94,7 +94,7 @@ export function withoutSection(text, title) {
  * the `>` remark explaining the caveat): checking those as promises would be nitpicking at
  * wording. The section about wiring the tool into another project is dropped only where
  * **paths** are concerned: its paths are someone else's, its commands are ours and must work. */
-export const NOT_TODAY = { 'README.md': ['Чего ещё нет', 'Для ИИ-агента'] };
+export const NOT_TODAY = { 'README.md': ['What is not here yet', 'For an AI agent'] };
 export const OWN_PROJECT = { 'README.md': ['Как подключить к своему проекту'] };
 export function facts(doc, sections) {
   let text = read(doc);

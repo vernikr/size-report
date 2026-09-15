@@ -545,24 +545,27 @@ output independent of the machine, and the slow profile repeats the whole suite 
 machine's git settings at all. That what the manifests record agrees with the files is guarded by
 `test/frozen.test.js`.
 
-## Чего ещё нет
+## What is not here yet
 
 ```text
-dist/app.js        пре-собранная программа отчёта для публикации
-size init/measure  командами вместо флагов: сейчас командами стали только check, explain, doctor и хук
-блок для агентов   инструкция агенту проекта: требования её не просят, поэтому в шаблонах её нет
-минификация HTML   минификатор разметки: пока HTML считается упрощением (шаг 3)
-JSX и TSX          выход зависит от настройки jsx самого проекта — упрощение (шаг 3)
-семейства токенов  кроме openai: у остальных нет своего словаря — считали бы чужим (шаг 4)
+dist/app.js          a pre-assembled report program: the page's program is pasted into the page
+                     while the report is built, so the file would be a second copy of the same
+size init / measure  commands instead of flags: of the commands only check, explain, doctor and
+                     the hook are here, and no command measures at all
+a block for agents   an instruction for the project's own agent: the requirements do not ask for
+                     it, so the templates carry none
+HTML minification    a minifier of markup: HTML counts as stripping for now
+JSX and TSX          the output depends on the project's own jsx setting — stripping
+token families       anything but openai: the others have no dictionary of their own, and counting
+                     with someone else's is not a family
 ```
 
-Швы между модулями проходят по границам данных: сверху — то, что читает git и
-файловую систему (`git`, `strip`, `metrics`, `history`), ниже — то, что работает на
-уже собранных значениях (`data`, `render`, `page`), а настройки, тексты и отказ —
-по краям, потому что их знает любой и они не знают никого. Оба отчёта считаются на
-сборке: страница получает исходники общего расчёта и своей программы вклеенными
-(`src/derived.js`, `src/page/*.js`), потому что открывается она с диска, без
-сервера и без сети. Остальное — по шагам 2–6 (`PLAN.md` §5).
+The seams between modules follow the borders of data: above sit the parts that read git and the file system
+(`git`, `strip`, `metrics`, `history`), below the parts that work on values already collected (`data`,
+`derived`, `page`), while the settings, the texts and the refusal stand at the edges, because everyone
+knows them and they know no one. Both reports are counted at build time: the page gets the sources of the
+shared calculation and of its own program pasted in (`src/derived.js`, `src/page/*.js`), because it opens
+from disk, with no server and no network. The rest is planned step by step in `PLAN.md`.
 
 ## Как подключить к своему проекту
 
@@ -778,7 +781,7 @@ pnpm exec size doctor     # 0 — делать нечего; иначе перв
 | 2 | что-то в вызове или в проекте — **командная строка** (незнакомый ключ, ключ без значения, повтор ключа, два режима сразу, лишнее слово, команда и режим, неизвестная команда, несовместимый ключ, нет ответа в JSON, два ответа сразу, нет коммита); **настройки и проект** (нет файла настроек, настройки не разобраны, настройки неверны, нет git, не git-репозиторий, конфиг уже есть); **история** (нет такого коммита, коммит назван неточно, коммит вне истории); **хук** (чужой хук, чужой core.hooksPath, нечем звать инструмент); **измерение** (файл не JavaScript, минификатор не разобрал) | текст отказа называет причину и готовую команду — и она выполнима: это сторожит `test/refusals.test.js` |
 | 3 | неполная история (clone с `--depth`) | полный клон: `git fetch --unshallow` |
 | 4 | нет датчика | `minify.engine: "esbuild"`, а минификатора нет: числа получены упрощением. Отчёт собран, причина и починка — в тексте; если при этом таблица расходится с историей, код остаётся **1** (нарушение старше приближения), а заметка о другом счёте печатается рядом |
-| 5 | внутренняя ошибка | это дефект инструмента: текст нужен нам, см. «Ловушки» ниже |
+| 5 | внутренняя ошибка | это дефект инструмента: текст нужен нам, см. «Traps worth testing the engine on» ниже |
 
 ### 6. Отчёт обновляется сам после коммита
 
@@ -903,97 +906,92 @@ R-4.1): пути, таблица файлов, зовы и ключи инстр
 починки взяты из конфига) не проверяет никто: если это важно, это одна проверка
 поверх `--data` в проекте.
 
-## Гейт против раздувания
+## The gate against bloat
 
-**Список проверок — один, и он же в CI.** Профиль проверок задан в одном месте
-(`tools/gates/run.js`): `pnpm run verify:fast` (десятки секунд — каждая правка),
-`pnpm run verify` (полный — перед отправкой и в CI) и `pnpm run verify:slow`
-(по расписанию — то же плюс покрытие). CI зовёт эту же команду, а не свой список:
-работа `verify` (`.github/workflows/ci.yml`) на каждый пуш и запрос правки, работа
-`verify-slow` — по расписанию. Совпадение стережёт `test/gates-verify.test.js`:
-проверка, которой нет в профиле, в CI не пройдёт.
+**The list of checks is single, and it is the one CI runs.** The profiles live in one place
+(`tools/gates/run.js`): `pnpm run verify:fast` (tens of seconds — every edit), `pnpm run verify` (the full
+one — before pushing and in CI) and `pnpm run verify:slow` (on a schedule — the same plus the suite with
+no machine git settings and coverage). CI calls that same command rather than a list of its own: the job
+`verify` (`.github/workflows/ci.yml`) on every push and pull request, the job `verify-slow` on a schedule.
+That they agree is guarded by `test/gates-verify.test.js`: a check that is not in a profile cannot pass in CI.
 
-**Датчики ловят раздувание, а не стиль** (стиль — у линтера): размер и сложность
-функций, размер модулей, дубли веток и функций (`sonarjs`), вес проверок (проверка
-без утверждения, утверждение без сравнения, выключенная проверка), пометки долга,
-клоны по токенам (`jscpd`), циклы и сироты связей (`dependency-cruiser`), просадка
-покрытия против своей же базы (`c8`).
+**The sensors catch bloat rather than style** (style is the linter's business): the size and complexity of
+functions, the size of modules, duplicated branches and functions (`sonarjs`), the weight of checks (a
+check with no assertion, an assertion with no comparison, a switched-off check), debt markers, token clones
+(`jscpd`), cycles and orphans in the graph (`dependency-cruiser`), and coverage falling against its own
+baseline (`c8`).
 
-**Порог взят из замера, а не из головы, и он храповик.** По исходному замеру:
-сложность функции p50 1 / p90 4 / p99 11 / max 27 — порог 12 (в базе осталось 5
-функций); длина функции p50 7 / p90 27 / p99 73 / max 118 — порог 60 (9 в базе);
-модуль p90 381 строка / max 907 — порог 450 (в базе не осталось ни одного: три
-толстых файла — контракт, программа страницы и сборка фикстуры — разделены,
-`WORKLOG.md` §59–§61). Всё, что выше порога
-сегодня, лежит в базе (`.eslint-suppressions.json`) и работе не мешает; новое валит
-прогон. Дубли — 13 клонов / 84 строки (0,67 %), связи — 112 модулей / 468 связей и ни
-одной находки.
+**A threshold comes from a measurement rather than from a guess, and it is a ratchet.** The thresholds
+today: a function's complexity 12, its length 60, a module 450 lines, cognitive complexity 15 — each of
+them cut in the tail of a measured distribution, not in its middle. **Nothing lies above them**: the
+baseline (`.eslint-suppressions.json`) holds nothing at all, so a new overrun fails the run while the
+tree as it stands needs no excuses. The table behind the thresholds is in
+`worklog/archive/WORKLOG.md` §58.3, and its figures describe the tree of that day rather than this one;
+the sensors print their own numbers on every run.
 
-**Базы обновляет человек.** `pnpm run baseline:metrics`, `baseline:dup`,
-`baseline:coverage` — и только с трейлером `Gate-Change:` в сообщении коммита: правка
-гейт-файла без него красна и локально (хук `commit-msg`), и в CI (по каждому коммиту
-диапазона). Иначе гейт ослаблялся бы тем же коммитом, который он останавливает.
-Таблица замеров, отвергнутые инструменты (knip, ast-grep, size-limit, gitleaks) и
-действия человека — в `WORKLOG.md` §58.
+**A person updates the baselines.** `pnpm run baseline:metrics`, `baseline:dup` and `baseline:coverage` —
+and only with the `Gate-Change:` trailer in the commit message: a gate file edited without it is red both
+locally (the `commit-msg` hook) and over a range (the `pre-push` hook, while CI reads no trailers at all).
+Otherwise the gate would be weakened by the very commit it stops. The table of measurements and the
+rejected tools (knip, ast-grep, size-limit, gitleaks) are in `worklog/archive/WORKLOG.md` §58.
 
-## Для ИИ-агента
+## For an AI agent
 
-- `pnpm run verify:fast` — перед каждой правкой, `pnpm run verify` — перед отправкой;
-  что не так и что нельзя трогать при красном — `AGENTS.md`.
-- `size check --json` — готово ли всё: какая часть истории покрыта, какие пути
-  мимо колонок (с коммитом-первопричиной) и какие коммиты выпали без строки.
-- `size explain <коммит> --json` — почему у конкретного коммита нет строки: причина,
-  тронутые файлы (колонки, исключённые, непокрытые) и готовая починка. Коммит —
-  именем ревизии (`HEAD`, ветка, тег), полным sha или его началом.
-- `size measure --json` — данные без вёрстки: строки, числа, суммы. Сегодня это
-  `--json` (прежняя форма, заморожена эталоном) и `--data` (контракт страницы).
-- `--json` — форма ответа, а не отдельный режим, и правило у него одно: ответ
-  бывает ровно у четырёх вызовов. Без команды это прежняя форма данных
-  (заморожена эталоном паритета), у `check`, `explain` и `doctor` — их ответ.
-  У команды без ответа и рядом с режимом (`--write`, `--data`, `--init`)
-  он отказ, а не тишина: просить JSON там, где его не бывает, — ошибка вызова.
-- `size doctor --json` — вся диагностика одним ответом: окружение, зависимости,
-  настройки, покрытие и находки с уровнем (`action` — делать, `note` — знать).
-- Коды выхода: `0` всё хорошо · `1` расхождение с историей или неполнота ·
-  `2` настройки, окружение, неизвестное или лишнее слово, два режима сразу ·
-  `3` неполная история · `4` нет датчика · `5` внутренняя ошибка (таблица —
-  `PLAN.md` §4.1). Действуют уже сейчас: отказ — это код и одна строка с готовой
-  командой починки, без стека. `--help` печатает и то, и другое.
-- Прогонов два, и оба названы: `pnpm test` — быстрый (каждая правка), `pnpm test:all` —
-  полный (выкладка и CI); что в каком и почему — `tools/suites.js`, печатает числа и
-  стоимости сам прогон.
-- Разбор аргументов один на входе и до чтения проекта: режим либо один, либо
-  отказ с обоими названными; команда и режим вместе не работают; ключ без
-  значения и ключ, названный дважды, — такой же отказ. Поэтому зов, который
-  инструмент не понял, нельзя спутать с исправным прогоном: вместо нуля придёт
-  код 2 и готовая команда.
+- `pnpm run verify:fast` before every edit, `pnpm run verify` before pushing; what is wrong and what
+  must not be touched when a sensor is red — `AGENTS.md`.
+- `size check --json` — whether everything is in: how much of the history is covered, which paths went
+  past the columns (with the commit that introduced them) and which commits dropped out without a row.
+- `size explain <commit> --json` — why one commit has no row: the reason, the files it touched (columns,
+  excluded, untracked) and a ready fix. The commit is named by a revision (`HEAD`, a branch, a tag), by a
+  full sha or by its beginning.
+- The data without the markup — the rows, the numbers, the totals — is `--json` (the earlier form, frozen
+  byte for byte by the parity reference) and `--data` (the page's contract: absolute values and the shape of
+  the table, with nothing derived — whatever the page can count itself is not there). A `size measure`
+  command does not exist yet.
+- `--json` is a form of answer rather than a mode of its own, and it has one rule: exactly four calls have
+  an answer. With no command it is the earlier form of the data (frozen by the parity reference), and for
+  `check`, `explain` and `doctor` it is their answer. For a command with no answer, and next to a mode
+  (`--write`, `--data`, `--init`), it is a refusal rather than silence: asking for JSON where there is none
+  is an error of the call.
+- `size doctor --json` — all the diagnostics in one answer: the environment, the dependencies, the
+  settings, the coverage and findings with their level (`action` — to be done, `note` — to be known).
+- Exit codes: `0` all is well · `1` a mismatch with the history or incomplete coverage · `2` the settings,
+  the environment, an unknown or extra word, two modes at once · `3` a shallow history · `4` no sensor ·
+  `5` an internal error. They work already: a refusal is a code and one line with a ready fix, with no
+  stack. `--help` prints both.
+- There are two runs, and both are named: `pnpm test` is the fast one (every edit), `pnpm test:all` the
+  full one (a release and CI); what is in which and why is in `tools/suites.js`, while the numbers and the
+  durations are printed by the run itself.
+- Arguments are parsed once, on the way in and before the project is read: either one mode or a refusal
+  naming both; a command and a mode do not work together; a flag with no value and a flag named twice are
+  such refusals too. So a call the tool did not understand cannot be confused with a healthy run: instead
+  of zero comes code 2 and a ready command.
 
-## Ловушки, на которых стоит проверять движок
+## Traps worth testing the engine on
 
-Фикстура (`fixtures/synthetic/history.bundle`) — это история, в которой
-собрано то, на чём ломаются такие инструменты: `//` внутри строки, регексп с
-экранированным слэшем, шаблон с выражением, `.mjs` с `export`, не-английское имя
-файла, CRLF, переименование файла, коммит «только отчёт», смешанный коммит,
-слияние с правкой разрешения конфликта, замена символа без изменения объёма,
-удаление и возврат файла, пустой файл, незнакомое расширение. Полный список — в
+The fixture (`fixtures/synthetic/history.bundle`) is a history holding what breaks tools of this kind:
+`//` inside a string, a regexp with an escaped slash, a template with an expression, `.mjs` with `export`,
+a file name that is not English, CRLF, a file renamed, a commit that touched only the report, a mixed
+commit, a merge with a conflict-resolution edit, a character replaced without changing the volume, a file
+deleted and returned, an empty file, an unknown extension. The full list is in
 `fixtures/synthetic/README.md`.
 
 ```bash
-pnpm test                      # быстрый прогон (каждая правка): паритет на фикстуре,
-                               # контракт данных и страница, сторож документации и выпуска
-pnpm test:all                  # полный прогон (выкладка и CI): то же плюс интеграционные —
-                               # сборка на дисках, сверка с деревом, хуки, метрики
-pnpm run suites:measure        # замерить длительность каждого файла набора
-pnpm run parity:live           # паритет с живым проектом на клоне, две среды
-node bin/size.js --data        # контракт данных: отчёт и агент
-node bin/size.js --write       # минимальный отчёт
-node bin/size.js --help        # справка и коды выхода
-pnpm run parity                # переснять эталон паритета: проект и ревизия — из манифеста
-pnpm run fixture               # пересобрать фикстуру и её эталон
-pnpm run pack:check            # работает ли движок из собранного тарболла
-pnpm run check:standards       # эталоны воспроизводятся, а дерево остаётся чистым
+pnpm test                      # the fast run (every edit): parity on the fixture,
+                               # the data contract and the page, the documentation and release guards
+pnpm test:all                  # the full run (a release and CI): the same plus the integration ones —
+                               # assembling on disk, the comparison with the tree, the hooks, the sensors
+pnpm run suites:measure        # measure every file of the suite
+pnpm run parity:live           # parity with the live project on a clone, two environments
+node bin/size.js --data        # the data contract: the report and an agent
+node bin/size.js --write       # the smallest report
+node bin/size.js --help        # the help and the exit codes
+pnpm run parity                # re-take the parity reference: the project and the revision from the manifest
+pnpm run fixture               # rebuild the fixture and its reference
+pnpm run pack:check            # does the engine work from the assembled tarball
+pnpm run check:standards       # both references reproduce and the tree stays clean
 git clone fixtures/synthetic/history.bundle /tmp/size-report-fixture
 ```
 
-Открытые блокеры и известные пробелы — в `BLOCKERS.md`; там же таблица настроек,
-которые проверены и оказались инертными (чтобы не проверять их заново).
+Open blockers and known gaps are in `BLOCKERS.md`, and next to them the note about the settings that were
+checked and turned out inert, so as not to check them again.
