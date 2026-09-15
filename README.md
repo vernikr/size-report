@@ -1,227 +1,150 @@
 # @vernikr/size-report
 
-Инструмент учёта роста объёма кода и документов: показывает, насколько вырос или
-уменьшился проект в каждом изменении, в трёх разрезах — «как написано» (raw),
-«в минифицированном виде» (min) и «в токенах для языковой модели» (tok).
+A tool that tracks how the volume of code and documents grows: every change shows how much the
+project grew or shrank, in three measures — as written (`raw`), minified (`min`) and in tokens for a
+language model (`tok`).
 
-Отвечает на два вопроса: человеку — «где проект распухает», ИИ-агенту — «сколько
-весит моё изменение в его собственном контексте». Ничего не запрещает и не
-блокирует: только показывает.
+It answers two questions: for a person, "where is the project swelling"; for an AI agent, "how
+much does my change weigh in its own context". It forbids nothing and blocks nothing: it only
+shows.
 
-## Статус
+## Status
 
-**Выпуск 2.4.0 (2026-09-15).** Инструмент живёт отдельным пакетом: имя в
-реестре — `@vernikr/size-report` (публикуется тегом из CI, без секрета). Настроек
-проект может не заводить вовсе: без файла инструмент выводит их из самого проекта и
-говорит об этом строкой, а `--init` закрепляет выведенное файлом (чем этот шаг
-отличается от прежнего — `CHANGELOG.md` 1.3.0). Отчёт — **один файл**,
-самодостаточная страница `docs/size-report.html`, и он появляется сам: хук обновления
-ставится после установки пакета и при первом запуске (чем это отличается от двух
-файлов прежних выпусков — `CHANGELOG.md` 2.0.0).
-Версия — в манифесте, а у выпуска есть `CHANGELOG.md` с разделом «Что изменится
-в числах»:
-таблица чисел в нём не пересказ, а замер на фикстуре, который сверяется с живым
-прогоном (`test/changelog.test.js`). Числа на фикстуре этим выпуском не меняются —
-правки в том, **что и в каком порядке видно**: без файла настроек колонкой идёт
-каждый отслеживаемый файл (а не выборка из двенадцати), в дереве панели
-складываются папки, а всё, чего в отчёте нет, стоит после остальных и со снятой
-галочкой; в таблице колонки, которых коснулся последний коммит, идут впереди.
-`schema: 1` данных, замороженная 1.0.0, остаётся той же (выпуск добавил поле, а не
-поменял смысл прежних).
+**Release 2.4.0 (2026-09-15).** The tool lives as a package of its own: the registry name is
+`@vernikr/size-report` (published by tag from CI, with no secret). A project may keep no settings at
+all: without a config file the tool derives them from the project itself and says so in one line,
+and `--init` pins what was derived into a file. The report is **one file**, the self-contained page
+`docs/size-report.html`, and it appears by itself: the updating hook is installed after the package
+is installed and on the first run. The version is in the manifest, and every release has a
+`CHANGELOG.md` section saying what changes in the numbers: the table there is not a retelling but a
+measurement on the fixture, checked against a live run (`test/changelog.test.js`).
 
-**Шаг 1 плана пройден — перенос без изменения поведения.** Команда —
-`bin/size.js`, точка входа пакета — `src/size-table.js` (только реэкспорт),
-механика разложена по модулям `src/`; паритет доказан автоматически:
-`pnpm test` сверяет пакет с эталоном побайтово на фикстуре и в четырёх заведомо
-чужих окружениях (настройки git машины, локаль), `pnpm run parity:live` — на живой
-истории `safe-resets` в двух средах (95 строк × 27 колонок, артефакт байт в байт).
-Вывод не зависит от настроек машины — настройки git, влияющие на разбор, закреплены
-в самом движке (`BLOCKERS.md` §B1). Сверка с рабочим деревом сравнивает содержимое,
-а не размеры, поэтому выкладка с переводами строк в CRLF (`.gitattributes`,
-`core.autocrlf` — значение по умолчанию в установке Git для Windows) работе не
-мешает (`BLOCKERS.md` §B2).
+2.4.0 changes nothing in the numbers; what it changes is **what is visible and in which order**:
+with no config file every tracked file is a column (rather than a sample of twelve), folders fold in
+the tree, and everything outside the report stands after the rest with its box cleared and
+unavailable; in the table, the columns the last commit touched come first. The data `schema: 1`,
+frozen at 1.0.0, stays what it was: the release added a field rather than changing the meaning of
+the old ones.
 
-**История с удалениями больше не тупик** (`BLOCKERS.md` §B3). Колонка, чей файл жил
-в истории и был удалён до HEAD, роняла прогон **кодом 1** с текстом «файла нет
-вместо файла нет» — то есть на проекте с удалёнными файлами отчёта не было вовсе.
-Теперь отказом считается **расхождение** сторон сверки, а не пустота с обеих:
-потерянное создание, потерянное изменение и потерянное удаление по-прежнему роняют
-прогон — но с настоящей причиной и готовой командой, а файл, удалённый до HEAD,
-просто пуст в таблице. Доказано числами, а не словом: размер колонки на каждом
-коммите сверяется с размером блоба из git (возврат файла даёт то же число, что его
-первое появление), а второй свидетель — файл, который появляется только в слиянии,
-— роняет прогон и называет обе стороны: «в дереве `src/only-in-merge.js` 77d3e2f, в
-состоянии файла нет». Заодно закрыта граница того же разбора (`BLOCKERS.md` §N8):
-путь для состояния выбирался по порядку настроек, а не по тому, что в коммите есть,
-поэтому при `diff.renames=false` — когда git отдаёт в одном коммите и старое имя
-переименованного файла, и новое — движок брал исчезнувшее и сверка отказывала на
-законном случае. Теперь берётся тот псевдоним колонки, для которого git отдал блоб.
-Прежние числа поехать не могли: обе логики совпадают всюду, где первый по порядку
-псевдоним в коммите существует, то есть в любом прогоне, который до сих пор
-заканчивался отчётом. Это проверено, а не заявлено: вывод движка до и после правки
-совпал побайтово на фикстуре при `diff.renames` в обоих значениях, оба эталона
-воспроизводятся байт в байт, живой отчёт — те же 95 × 27 и 225 673 Б, а прогон на
-живой истории остался 1,56–1,58 с.
+**Parity with the implementation the move started from is proven, not asserted.** The command is
+`bin/size.js` and the package's entry point is `src/size-table.js` (a re-export only), with the
+mechanics laid out in modules under `src/`. `pnpm test` compares the package with the frozen
+standard byte by byte on the fixture and in four deliberately hostile environments (the machine's
+git settings, the locale); `pnpm run parity:live` does the same on the consumer project's live
+history in two environments — 95 rows × 27 columns, the artifact self-contained and passing its own
+control mode. The output does not depend on the machine: the git settings that change what is
+parsed are pinned inside the engine (`BLOCKERS.md` §B1). The comparison against the working tree
+compares content rather than sizes, so a tree with CRLF newlines (`.gitattributes`; `core.autocrlf`,
+the default of Git's installer for Windows) is no obstacle (`BLOCKERS.md` §B2).
 
-**Подключение к проекту-потребителю сделано (2026-09-14, шаг 5 плана).**
-`safe-resets` ставит пакет из git по тегу выпуска и больше не держит своей копии
-инструмента: ни `tools/size-table.js`, ни его теста — таблицу собирает и
-проверяет команда `size` (`pnpm run test:sizes`), а её шаги в проекте — одна
-строка в раннере (`WORKLOG.md` §18). Инструкция подключения оказалась верна, а
-двух вещей в ней не было: шага доступа к пакету в CI и порядка переезда с уже
-лежащей копии — оба дописаны в её же раздел («Как подключить»); шаг с ключом
-оттуда потом ушёл вместе с приватностью (§1).
+**A history with deletions is no longer a dead end** (`BLOCKERS.md` §B3): a column whose file lived
+in history and was deleted before HEAD used to fail the whole run with code 1 and the text "no file
+instead of no file" — that is, a project with deleted files got no report at all. Now only a
+**disagreement** between the two sides of the comparison is a refusal: a lost creation, a lost edit
+and a lost deletion still fail the run, but with the real cause and a ready command, while a file
+deleted before HEAD is simply empty in the table. Proven by numbers rather than by a word: the
+column's size at every commit is checked against the blob size from git — a returned file gives the
+same number as its first appearance — and a witness, the file that appears only in a merge, fails
+the run naming both sides. The boundary of the same parse is closed as well (`BLOCKERS.md` §N8):
+the path for the state was chosen by the order of the settings rather than by what the commit holds,
+so with `diff.renames=false` — when git returns the old name of a renamed file and the new one in a
+single commit — the engine took the vanished alias and the comparison refused on a legitimate case;
+now it takes the alias git returned a blob for. The old numbers could not move: both logics agree
+wherever the first alias in the commit exists, that is, in every run that ended with a report
+before.
 
-**Шаг 2 начат первым срезом — контрактом данных.** Движок отдаёт абсолютные
-значения и устройство таблицы (`--data`), а дельты, суммы, «сейчас» и фильтры
-считает страница (она же и есть отчёт — `size-report.html`): без этого
-фильтры и «итого по выбору» невозможны в принципе. В контракте едет и точность
-числа — рядом пометок `approx` по клеткам, — потому что это факт замера, а не
-вывод: страница показывает то, что сказал движок, и своего правила точности не
-заводит. Панель страницы — дерево файлов по папкам, с переключателем у каждой
-папки на всё поддерево; выбор читателя переживает перезаход и передаётся
-ссылкой — адрес страницы и есть ссылка. В контракте же едет **каталог проекта** —
-все пути, которые видит git: дерево страницы — дерево проекта, а числа есть только
-у тех файлов, что стали колонками (чем это отличается от прежнего дерева, где
-были одни колонки, — `CHANGELOG.md` 2.2.0).
-Минификация и токены сделаны первыми срезами шагов 3 и 4 (ниже).
-Разбиение движка по файлам сделано (пункт D1 плана, R-1.3 `REFACTOR.md`).
-Источник инструмента — скрипт `size-table.js` (1145 строк) в проекте
-[`safe-resets`](../figma/safe-resets) (метрики `raw` и «упрощение вместо
-минификации», статичный отчёт в git); в этом репозитории такого пути нет, и
-дальше он не упоминается без имени проекта.
-**Пункт R-1.2 волны 1** (`REFACTOR.md`): в пакете есть линтер — правила те же, что у
-проекта-потребителя, плюс запрет склейки операторов в одну строку; всё настоящее
-дерево (102 файла) даёт ноль замечаний, `fixtures/` не линтуются — там данные.
+**The consumer project is connected** (2026-09-14). `safe-resets` installs the package from git by
+the release tag and keeps no copy of the tool of its own — neither `tools/size-table.js` nor a test
+for it: the table is built and checked by the `size` command (`pnpm run test:sizes`), and its part
+in that project is one line of its runner (`worklog/archive/WORKLOG.md` §18). The connecting
+instruction turned out to be right and incomplete in two places — the step giving CI access to the
+package and the order of moving off an already installed copy — and both are written into the
+instruction below. The step with a key left it later, along with private access.
 
-**Пункты R-1.1 и R-2.1 волн 1–2** (`REFACTOR.md`): вычислительная часть отчёта одна
-(`src/derived.js`) — страница исполняет тот же код, что считает статическую таблицу,
-и разметку для неё строят обычные исходники (`src/page/*.js`), а не строки внутри
-движка; артефакт и разметка страницы при этом совпали со старым выводом побайтово.
-Главы программы страницы разделены по предметам — состояние выбора, узлы, панель,
-таблица, сборка (`WORKLOG.md` §62): вклейка склеивает их подряд, поэтому собранная
-страница осталась той же побайтово, а у глав одна область видимости — это записано
-в `eslint.config.js`, потому что `import` между зовущими друг друга главами завёл
-бы кольцо связей.
+**The data contract and the page.** The engine hands over absolute values and the shape of the table
+(`--data`), while deltas, totals, "now" and the filters are computed by the page — which is the
+report itself (`size-report.html`): without that split the filters and "the total over the
+selection" are impossible in principle. The contract carries the accuracy of a number as well, a
+row of `approx` marks per cell, because that is a fact of the measurement rather than a conclusion:
+the page shows what the engine said and keeps no rule of accuracy of its own. The page's panel is a
+tree of files by folder, with a switch per folder for the whole subtree; a reader's choice survives
+a revisit and travels in a link — the page's address is the link. The contract carries the **project
+catalogue** too: every path git sees, so the page's tree is the project's tree, while numbers exist
+only for the files that became columns (`CHANGELOG.md` 2.2.0).
 
-**Отчёт собирается и в проекте с модулями в `.js`** (`REFACTOR.md` R-4.6): гард
-стриппера понимает обе формы — скрипт и модуль, — поэтому подключение не требует
-ни одной правки настроек руками, а когда в графе и правда не JavaScript, отказ
-называет причину и команду. Подсказки, справка, умолчание команды починки и
-шаблоны называют **путь внутри проекта** (`node node_modules/@vernikr/size-report/bin/size.js`),
-а не имя пакета: `npx <имя>` запускает установленный пакет, только пока тот на
-месте, а в проекте без него это имя уходит в реестр и тянет пакет по сети
-(`R-4.7` — прежнее решение, `R-4.21` — почему оно отменено).
+The tool grew out of one script in the consumer project [`safe-resets`](../figma/safe-resets) — the
+metrics `raw` and "a simplification instead of minification", a static report in git; that path
+does not exist in this repository, and it is not named anywhere without the project.
+**A project whose code is JavaScript modules in `.js` reports too**: the stripper's guard understands
+both forms, a script and a module, so connecting needs no setting edited by hand, and when the graph
+really is not JavaScript the refusal names the cause and the command. Hints, the help text, the
+default fix command and the templates name the **path inside the project**
+(`node node_modules/@vernikr/size-report/bin/size.js`) rather than the package name: `npx <name>`
+runs an installed package only while it is there, and in a project without it the name goes to the
+registry and pulls a package over the network.
 
-**У обещаний документации есть сторож** (`REFACTOR.md` R-4.1): он разложен по
-обещаниям, поэтому у каждого свой дом — `test/docs-paths.test.js` (пути из текста
-есть в дереве, таблица файлов сходится с ним в обе стороны),
-`test/docs-commands.test.js` (команды и ключи есть в справке, причины отказа
-совпадают с реестром движка, ссылки на разделы ведут в существующие),
-`test/docs-numbers.test.js` (числа проверок — факт) и
-`test/docs-pin.test.js` (пример установки ведёт на ревизию, чья справка знает
-названные команды), а с выпуском добавился пятый — `test/changelog.test.js`
-(версия выпуска — версия манифеста, а таблица «что изменится в числах» — не
-пересказ, а замер на фикстуре, сверенный с живым прогоном); читатель фактов один —
-`tools/docs-facts.js`. Заведённый сторож сразу
-нашёл четыре расхождения, и все починены: таблица файлов не называла
-`fixtures/live/README.md`, `test/runner.test.js` и сам файл сторожа, `README.md`
-обещал 92 проверки при 97, а две ссылки `PLAN.md` вели в разделы, которых в названных
-документах нет. Чего машиной не проверить — формулировок, обещаний о будущем и
-верности описания роли файла — сторож за собой не берёт и говорит об этом в шапке.
+**What the documentation promises is checked, not assumed**, and the promises are split one per file:
+existence and completeness of paths (`test/docs-paths.test.js`), commands, refusal causes and section
+links (`test/docs-commands.test.js`), the count of checks (`test/docs-numbers.test.js`), the install
+example leading to a revision whose help knows the named commands (`test/docs-pin.test.js`) and, with
+the releases, the version of the manifest and the table of what changes in the numbers
+(`test/changelog.test.js`). One reader of facts serves them all (`tools/docs-facts.js`). What a
+machine cannot check — wording, promises about the future, whether a file's role is described
+correctly — the guards do not take on, and they say so in their headers.
 
-**git читается через одну границу — и в проверках тоже** (`REFACTOR.md` R-1.4).
-Список закреплений (`core.quotePath`, раскраска, подпись, кодировка) один на движок и
-обвязку: проверки и инструменты зовут git через общее место, а незакреплённое
-место стережёт `test/git-pins.test.js` — и он же свидетелем показывает, что
-закрепление работает: то же чтение без него отдаёт не-английский путь кавычками, с
-ним — как есть. Это тот же дефект, что B1, только найденный в обвязке: без
-закрепления проверка зелена на машине с нашими настройками и красна на машине с
-настройками по умолчанию. У проверки, которая измеряет само окружение,
-незакреплённое чтение осталось намеренно — оно названо и стоит в отдельном списке.
+**git is read through one boundary, in the checks too**: the list of pins (`core.quotePath`,
+colouring, the signature block, the encoding) is one for the engine and for the harness, so the
+checks and the tools reach git through a common place — and an unpinned place is guarded by
+`test/git-pins.test.js`, which also shows by witness that a pin works: the same read without it
+returns a non-English path quoted. It is the same defect as B1, only found in the harness: without
+the pins a check is green on a machine with our settings and red on a machine with the default ones.
+The check that measures the environment itself keeps its unpinned read deliberately — it is named,
+and it stands in a list of its own.
 
-**Каждый отказ инструмента говорит правду — и это сторожится, а не подразумевается**
-(`REFACTOR.md` R-4.18). Ложную причину в тексте отказа находил живой прогон, и находил
-четыре раза подряд (B1, B3, разбор аргументов, `explain HEAD`) — каждый раз случайно.
-Класс закрыт не пятым исправлением: в `tools/refusals.js` лежит по строке на каждый
-отказ — что он обязан донести, каким кодом ответить и какие фразы в выводе обязаны
-остаться, — а две проверки делят обе половины обещания. `test/refusals.test.js`
-**вызывает** тридцать два отказа (тридцать три запуска инструмента, включая чужие
-клоны для хука, обрезанной истории и ветки мимо отчёта) и сверяет код выхода и
-фразы; `test/refusals-catalog.test.js` читает исходники и требует, чтобы у каждого
-места отказа был свой пункт (карты `SITES` и `PRINTED` держат числа мест), а у
-каждого пункта — случай в каталоге, — то есть новый отказ не может появиться без
-проверки. Отказы, которых прогоном не поймать,
-названы явно: четыре стережёт своя проверка (в каталоге записаны её файл и фразы),
-а один не поймать вовсе — «внутренняя ошибка» — и там же сказано, почему. Чего
-каталог не берёт, сказано словами: формулировки вне перечисленных фраз, смысл, и
-знак «!» — это примечание (приближение, смешанный коммит, выключенная автоматика),
-а не отказ, и код выхода у него нулевой.
+**Every refusal of the tool tells the truth, and that is guarded rather than assumed.** A false cause
+in a refusal text was found by a live run, four times in a row, each time by accident — so the class
+is closed not by a fifth fix: `tools/refusals.js` holds a line per refusal saying what it must
+convey, which code to answer with and which phrases must stay in the output, and two checks split
+that promise. `test/refusals.test.js` **calls** each refusal and compares the exit code and the
+phrases; `test/refusals-catalog.test.js` reads the sources and requires a catalogue entry for every
+refusal site — the maps `SITES` and `PRINTED` hold the counts — and a case in the catalogue for every
+entry, so a new refusal cannot appear without a check. Refusals a run cannot reach are named
+explicitly: four are guarded by a check of their own (the catalogue names the file and the phrases),
+and one cannot be caught at all — "internal error" — which is said where it stands. What the
+catalogue does not take on is said in words: wording beyond the listed phrases, and meaning, and the
+"!" sign, which is a note (an approximation, a mixed commit, the automation switched off) rather
+than a refusal, with exit code zero.
 
-**И совет в отказе исполним — это тоже проверяется.** Правда о причине — половина
-обещания: вторая — что предложенную команду можно выполнить. Поводом стал живой
-случай (R-4.21): подсказка звала по имени из реестра, где пакета с таким именем нет,
-и в проекте без установленного пакета запускала чужой код. Теперь у каждого случая
-каталога сказано, что отказ советует, и совет выполняется в том состоянии, которое
-его напечатало: сверяется код (включая «отказ ушёл» — тот же зов после совета должен
-ответить другим), а совет-форма без значений проверяется по справке (те ли команды и
-ключи). Совет, который выполнить нечем, назван с причиной: правка настроек, коммит,
-установка зависимости — за человеком, и это сказано там же, в каталоге. Новый совет
-в уже существующем отказе молча не пройдёт: совет вынимается из вывода по маркерам
-(«починка:», «создайте его:», «соберите её:»), и у него обязано быть объявление.
+**And the advice in a refusal is executable — that is checked as well.** The truth about the cause is
+half the promise; the other half is that the suggested command can be run. A live case started this:
+a hint called out to a registry name no package carried, and in a project without that package
+installed it ran someone else's code. Now every catalogue case says what the refusal advises, and the
+advice is executed in the state that printed it: the exit code is compared (including "the refusal is
+gone" — the same call after the advice must answer differently), while an advice that is a form
+without values is checked against the help output (the same commands and flags). Advice a person has
+to carry out is named with its reason — editing settings, committing, installing a dependency — and
+that is said there too, in the catalogue. A new advice inside an existing refusal cannot pass
+silently: the advice is taken out of the output by its markers, and it has to have a catalogue entry.
 
-**Волна 3 чистки пройдена** (`REFACTOR.md`): обвязка проверок одна на пакет
-(`tools/harness.js`), прогоны на чтение не повторяются, клон фикстуры держится на
-набор, а тяжёлый паритетный файл распался по предметам — и он, и команды CLI идут
-волной по ядрам. Проверок было 39 и все 39 сохранены (имена сверены), а новые
-добавлены только вместе с новым поведением страницы, подключения и разбора
-модулей, а последние — о том, что записанное в манифестах сходится с файлами
-эталонов, и о склейке кусков вывода процесса, и о дереве файлов, и о памяти
-выбора и ссылке на странице, семь — о настоящем сжатии и семь — о токенах (§«Метрика
-`min` умеет считать по-настоящему», §«Метрика `tok` считает токены настоящим
-словарём», четыре — о сверке с деревом и выборе пути для состояния (§«История с
-удалениями больше не тупик»), три — о точности по клетке (§«Точность числа»);
-всего 80.
+**A module no longer costs a Node process per cell**: the guard parses a module through
+`vm.SourceTextModule`, which exists only under `--experimental-vm-modules`, and that is where the
+per-cell process came from. Today one worker thread parses the modules for a whole run, and the price
+has not disappeared but become one-time; the parse also rests on an experimental API (without it the
+guard falls back to `node --check`: slower, no softer). What a run costs today the run prints itself
+(`pnpm run suites:measure`).
 
-**Разбор модуля перестал стоить запуска Node на клетку** (`REFACTOR.md` R-5.4).
-Гард понимает модуль через `vm.SourceTextModule`, а он живёт только под
-`--experimental-vm-modules`: раньше отсюда и брался отдельный процесс на каждую
-клетку. Теперь модуль разбирает один рабочий поток на прогон: на синтетической
-истории с модулями (31 коммит, 3 файла, файл меняется каждым коммитом) `--write`
-**5,59 → 0,47 с**, на той же истории со скриптами — те же 0,39 с (скриптовый
-проект за поток не платит вовсе), а на проекте с одной изменённой клеткой —
-0,44 → 0,40 с. Цена не исчезла, а стала разовой: старт потока ≈ 54 мс вместо
-86 мс на каждую клетку, плюс разбор опирается на экспериментальный API (без него
-гард отступает к прежнему `node --check` — медленнее, но не мягче).
-Прогон подешевел втрое: `pnpm test` 15,7 → **5,6 с** (тогда в наборе было 39
-проверок), `pnpm run parity:live` 23,8 → **8,3 с**. Набор стоит
-**23,4–29,9 с** при 124 проверках — в зависимости от загрузки машины: окна с
-загрузкой 18–70 несравнимы (в спокойном — 23,4–24,2 с, в занятых — 26,6–29,9 с;
-в среде без настроек git — 27,4 с, с `CI=1` — 29,9 с), и это свойство окна, а не
-набора: под той же загрузкой та же ревизия без нового сторожа идёт 24,4–26,3 с
-при 122 проверках. Вклад сторожа выпуска измерен **парным прогоном** с
-чередованием (124 → 122 проверки и обратно, два круга): **+2,0 и +2,2 с**, при этом
-сам он стоит 1,4 с собственным прогоном (`node --test test/changelog.test.js`: два
-запуска инструмента на фикстуре) и идёт параллельно прочим файлам.
-Числа разных окон несравнимы вовсе: тот же набор при 119 проверках шёл 25,5–25,7 с,
-хотя теперь проверок больше. Дороже всего в наборе — запуски инструмента: перебор
-режимов и правило `--json` в `test/cli.test.js` стоят по нескольку десятых секунды
-каждая, а разложение сторожа документации на четыре файла времени **не
-прибавило** — 23,2 с и до него, и после: обе новые проверки измерены отдельным
-прогоном, а не выведены из разброса. Из общего времени **+8,5 с** — десять проверок хука
-(`test/hook.test.js`: сам он идёт 17,9–18,5 с и становится самым долгим файлом
-набора, а та же ревизия без него — 15,8–16,6 с при 107 проверках). Интеграционные
-прогоны (клон, коммиты, слияние, отказы) дешевле не сделать, не ослабив проверку.
-`pnpm run parity:live` — 9,3 с в обеих средах. Замеры, машина и разброс —
-`REFACTOR.md` §5.
+**The checks' shared part lives in one place** (`tools/harness.js`): one clone of the fixture per
+environment rather than one per check, a read-only run of the tool is not repeated, and a check that
+edits files takes a clone of its own. The files go in a pool over the cores (`tools/run-tests.js`),
+and the numbers add up: the run counts the checks of every file against the `test(` declarations in
+it, so a file that did not run is a failure rather than fewer checks.
 
-**Прогонов два, и выбор между ними — по цене файла, а не по алфавиту**
-(`REFACTOR.md` R-5.5). Цена проверки в этом наборе — не объём файла, а сколько раз
-файл запускает инструмент и git: запуск — это процесс Node, а клон фикстуры и сборка
-артефакта — сотни миллисекунд. Поэтому быстрый прогон собирает то, что доказывает по
-прочитанному (исходники, дерево, справка, эталонные числа на общей фикстуре), а
-полный добавляет то, что гоняет инструмент по многу раз на своих клонах, коммитит и
-ставит хуки; причина для каждого дорогого файла названа построчно в
+**There are two runs, and the choice between them follows the price of a file, not the alphabet.**
+The cost of a check here is not the size of the file but how many times it launches the tool and git:
+a launch is a Node process, while cloning the fixture or building the artifact takes hundreds of
+milliseconds. So the fast run gathers what it proves from reading (sources, tree, help, reference
+numbers on a shared fixture), and the full one adds what runs the tool many times on its own clones,
+commits and installs hooks; the reason for each expensive file is named line by line in
 `tools/suites.js`.
 
 | Прогон | Команда | Проверок |
@@ -235,25 +158,23 @@
 объявление `test/suites.test.js` (полнота классификации и причина у каждого файла) и
 сторож документации `test/docs-numbers.test.js` (числа в таблице выше).
 
-**Целей по времени у прогонов нет, и это решение, а не пропуск.** Секунды зависят от
-окна — машина бывает под очень разной нагрузкой, — поэтому ни набор, ни CI за время
-не валятся, и документ секунд не обещает: `pnpm run suites:measure` печатает
-длительность каждого файла отдельным прогоном (и сам прогон печатает её рядом с
-галочкой), но это измерение, а не порог. Разделение держится признаком файла — чем он
-занят, а не сколько идёт. CI зовёт полный прогон дважды: обычной средой и без настроек
-машины (`GIT_CONFIG_GLOBAL=/dev/null`).
+**The runs have no time targets, and that is a decision rather than an omission.** Seconds depend on
+the window — the machine is under very different load at different times — so neither the suite nor CI
+fails over time, and this document promises no seconds: `pnpm run suites:measure` prints every file's
+duration in a run of its own (and a run prints it next to its tick), but that is a measurement, not a
+threshold. The split rests on what a file is about rather than on how long it takes. CI calls the full
+run twice: in the usual environment and with none of the machine's settings
+(`GIT_CONFIG_GLOBAL=/dev/null`).
 
-**Обещанное пакетом сведено к факту.** Список поставки называл четыре пути,
-которых в репозитории нет (`dist/`, `templates/`, `CHANGELOG.md`, `LICENSE`):
-теперь он обещает только существующее (шаблоны и `CHANGELOG.md` вернулись в список
-вместе с файлами, а не раньше их), а `pnpm run pack:check` проверяет это с двух
-сторон — в списке нет того, чего нет, и в тарболл не попадает то, чего список не
-обещает. Снятие обоих эталонов снова работает (`pnpm run parity`, `pnpm run
-fixture`) и больше не зависит ни от того, держит ли проект-потребитель свою копию
-инструмента, ни от настроек git на машине. Заодно поправлены два текста, которые
-это же обещали: подсказка `--init` (говорила «проверки едут вместе с пакетом», а
-сьют в пакет не входит) и умолчание `fixCommand` (называло несуществующее имя
-пакета `npx size-table --write`).
+**What the package promises is down to fact.** The shipped-file list named four paths the repository
+does not have (`dist/`, `templates/`, `CHANGELOG.md`, `LICENSE`): today it promises only what exists —
+`templates/` and `CHANGELOG.md` came back into the list together with their files, not before them —
+while `pnpm run pack:check` checks it from both sides, that the list names nothing absent and that the
+tarball carries nothing the list does not promise. Taking both references works again (`pnpm run
+parity`, `pnpm run fixture`) and no longer depends either on whether the consumer project keeps a copy
+of the tool or on the machine's git settings. Two texts that promised the same were fixed as well: the
+`--init` hint (it said the checks travel with the package, while the suite is not part of it) and the
+default `fixCommand` (it named a package that does not exist, `npx size-table --write`).
 
 **Проверки идут сами (шаг 6 плана, `.github/workflows/ci.yml`).** На каждый пуш и
 на каждый запрос правки один job `verify` зовёт **одну команду** — `pnpm run verify`;

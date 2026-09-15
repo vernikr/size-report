@@ -81,11 +81,25 @@ files). The parts below are the order to work in; each is one commit.
   move the budget (it is a bound), so the figures are named with their dates. Two clarifications
   were added: `tools/suites.js` is a gate file too, and `sg` is the deprecated name of
   `ast-grep`.
-- [ ] **M2 README 1–190** — 173 Russian: the head and the opening of «Статус» (what the tool
-  is, the current release, the run numbers in prose).
-- [ ] **M3 README 191–350** — 145 Russian. Carries the run table (lines 229–230), so
-  `tools/docs-facts.js` `publishedRuns` — which matches rows by their first words «Быстрый» /
-  «Полный» — is edited in the same commit.
+- [x] **M2 README head** — 1139 → 1060 lines, 994 → 771 Russian, i.e. 222 Russian lines gone: 210
+  translated (M2 plus the opening prose of M3, which turned out to need no guard) and 12 deleted with
+  the «Волна 3» paragraph. 162 added, 241 removed, **403 changed lines** in one file — inside the
+  budget; the measured multiplier on prose is **≈1.9** changed lines per Russian line
+  (`worklog/0100`). **The line ranges of this list are approximate**: the paragraph on module parsing
+  runs 186–215 and the run table sits at 227–234, not at 229–230, so the parts were cut at the
+  paragraph seams rather than by number. Measured: the whole snapshot table of suite timings is gone
+  (numbers of one window, and they had already drifted: the full run is 59,5 s at 177 checks today),
+  the module paragraph keeps only what the code says, and the addresses into `REFACTOR.md` R-1.1…R-5.5
+  and §5, `PLAN.md` and the root `WORKLOG.md` are dropped. The «Волна 3» paragraph was deleted — its
+  numbers (39 checks kept, 80 in all) are false today — and its substance was restored in compressed
+  form, verified against the code: one harness per package (`tools/harness.js`), one fixture clone per
+  environment, no repeated read-only run, a clone of its own for a check that edits files, a pool over
+  the cores (`tools/run-tests.js`), and the counts adding up against the `test(` declarations.
+  `pnpm run verify` green (8 steps, 59,5 s); no gate file in the commit, so no trailer.
+- [ ] **M3 README, the rest** — the opening prose is done with M2 (above). What is left: the run
+  table and the check counts in prose, so `tools/docs-facts.js` `publishedRuns` — which matches rows
+  by their first words «Быстрый» / «Полный» — is edited in the same commit, plus the paragraphs on CI
+  and the release up to the start of M4 (the report page).
 - [ ] **M4 README 351–553** — 190 Russian: the rest of «Статус» (the report page, its memory
   and folding, performance).
 - [ ] **M5 README 554–686** — 129 Russian: «Что в репозитории». Its heading is read by
