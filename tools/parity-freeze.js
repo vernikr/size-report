@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /* Снимает эталон паритета: как замороженная копия реализации
- * (`fixtures/legacy/size-table.cjs`) считает числа и собирает артефакт на той
- * ревизии проекта-потребителя, которая записана в манифесте эталона.
+ * (`fixtures/legacy/size-table.cjs`, байты которой лежат в истории — `REFACTOR.md`
+ * R-1.5) считает числа и собирает артефакт на той ревизии проекта-потребителя,
+ * которая записана в манифесте эталона.
  *
  * Зачем. «Перенос ничего не сломал» — утверждение, которое надо доказывать. Для
  * этого фиксируются три вещи: полный вывод `--json` (числа строк и клеток), хеш
@@ -36,7 +37,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { LEGACY, MAX_BUF, gitConfig, sha256 } from './harness.js';
+import { LEGACY_PATH, MAX_BUF, gitConfig, legacyTool, sha256 } from './harness.js';
 import { CONFIG_NAME } from '../src/config.js';
 import { gitArgv, gitEnv } from '../src/git.js';
 
@@ -62,7 +63,7 @@ function gitBytes(dir, args) {
 /* Копия запускается закреплённым окружением — тем же, что у проверок
  * (`harness.FROZEN`): без него эталон снимается другими числами. */
 function legacy(dir, args) {
-  const res = spawnSync(process.execPath, [LEGACY, '--config', path.join(dir, CONFIG_NAME)].concat(args), {
+  const res = spawnSync(process.execPath, [legacyTool(), '--config', path.join(dir, CONFIG_NAME)].concat(args), {
     cwd: dir,
     encoding: 'utf8',
     maxBuffer: MAX_BUF,
@@ -127,9 +128,6 @@ function main() {
   const project = path.resolve(args.positional || (frozen ? frozen.project.path : DEFAULT_PROJECT));
   const want = args.flags['--at'] || (frozen ? frozen.project.head : null);
 
-  if (!fs.existsSync(LEGACY)) {
-    throw new Error('нет встроенной копии реализации: ' + path.relative(ROOT, LEGACY));
-  }
   if (!fs.existsSync(project)) {
     throw new Error('проект не найден: ' + project
       + '\n  укажите путь: node tools/parity-freeze.js <путь-к-проекту>');
@@ -180,7 +178,7 @@ function main() {
       schema: 1,
       kind: 'parity',
       project: { path: project, name: path.basename(project), head, headDate, commits },
-      tool: { file: path.relative(ROOT, LEGACY), sha256: sha256(fs.readFileSync(LEGACY)) },
+      tool: { file: LEGACY_PATH, sha256: sha256(fs.readFileSync(legacyTool())) },
       artifact: { path: cfg.output, bytes: artifact.length, sha256: sha256(artifact) },
       data: {
         rows: data.rows.length,

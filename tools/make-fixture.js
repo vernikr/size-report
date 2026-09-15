@@ -8,9 +8,9 @@
  * (`golden.json`) снимаются с замороженной копии реализации один раз, и дальше
  * перенос обязан их воспроизвести.
  *
- * Инструмент и окружение снятия закреплены. Копия — встроенная
- * (`fixtures/legacy/size-table.cjs`), поэтому пересъём не зависит от того, держит
- * ли проект-потребитель свою копию. Окружение — `core.quotePath=false`: у копии
+ * Инструмент и окружение снятия закреплены. Копия берётся из истории
+ * (`fixtures/legacy/size-table.cjs`, `REFACTOR.md` R-1.5), поэтому пересъём не
+ * зависит от того, держит ли проект-потребитель свою копию. Окружение — `core.quotePath=false`: у копии
  * нет починки B1, и машина с настройками git по умолчанию потеряла бы в фикстуре
  * строку с не-английским именем файла — эталон молча стал бы короче.
  *
@@ -26,7 +26,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { LEGACY, MAX_BUF, gitConfig, sha256 } from './harness.js';
+import { LEGACY_PATH, MAX_BUF, gitConfig, legacyTool as legacyCopy, sha256 } from './harness.js';
 import { gitArgv, gitEnv } from '../src/git.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -430,7 +430,11 @@ function main() {
   const out = path.resolve(flag('--out') === true || flag('--out') === null
     ? OUT : String(flag('--out')));
   const legacy = flag('--legacy-tool');
-  const legacyTool = typeof legacy === 'string' ? path.resolve(legacy) : LEGACY;
+  const legacyTool = typeof legacy === 'string' ? path.resolve(legacy) : legacyCopy();
+  /* В записи о происхождении называется путь, под которым копия лежала, а не сегодняшнее
+   * место её байтов: запись — это история эталона, и она обязана сходиться с тем, что
+   * записано в снятом манифесте, а его не переписывает никакой переезд. */
+  const legacyName = typeof legacy === 'string' ? path.relative(ROOT, legacyTool) : LEGACY_PATH;
   const bundleOnly = args.indexOf('--bundle-only') >= 0;
   const keep = args.indexOf('--keep') >= 0;
 
@@ -487,7 +491,7 @@ function main() {
       ctx.localeStable = !!cData && JSON.stringify(cData) === JSON.stringify(data);
 
       ctx.legacy = {
-        file: path.relative(ROOT, legacyTool),
+        file: legacyName,
         sha256: sha256(fs.readFileSync(legacyTool)),
         rows: data.rows.length,
         columns: data.columns.length,

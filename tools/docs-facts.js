@@ -36,6 +36,9 @@ export const FOREIGN = [
   '.github/workflows/size-report.yml', 'node_modules/size-report/templates/ci.yml',
   'tools/size-table.js', 'tests/size-table.js',
   '../figma/safe-resets/docs/ROADMAP.md', '../figma/safe-resets/docs/TESTING.md', '../figma/safe-resets/AGENTS.md',
+  // прошлое: путь, под которым лежали байты замороженной копии реализации, — она
+  // выведена из дерева (REFACTOR.md R-1.5), а документы называют её по-прежнему
+  'fixtures/legacy/size-table.cjs',
   // плановое: то, что описано как цель, а не как факт
   'dist/app.js', '.size-report/report.html', '.size-report/data.json',
   'docs/METHODS.md', 'docs/DATA-FORMAT.md', 'docs/ARCHITECTURE.md',

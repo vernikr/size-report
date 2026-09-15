@@ -37,7 +37,6 @@ import { gitArgv, gitEnv } from '../src/git.js';
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const SYNTH = path.join(ROOT, 'fixtures', 'synthetic');
 export const PARITY = path.join(ROOT, 'fixtures', 'parity');
-export const LEGACY = path.join(ROOT, 'fixtures', 'legacy', 'size-table.cjs');
 export const BUNDLE = path.join(SYNTH, 'history.bundle');
 export const CONFIG = path.join(SYNTH, 'config.json');
 export const PACKAGE_BIN = path.join(ROOT, 'bin', 'size.js');
@@ -47,11 +46,44 @@ export const MAX_BUF = 256 * 1024 * 1024;
  * эталон. У копии своё окружение — то, в котором снимали эталон (до починки B1
  * иначе не воспроизводится). */
 export const PACKAGE = { name: 'движок пакета', file: PACKAGE_BIN, env: null };
-export const FROZEN = {
-  name: 'замороженная копия реализации',
-  file: LEGACY,
-  env: gitConfig({ 'core.quotePath': 'false' })
-};
+
+/* Замороженная копия реализации, с которой сняты оба эталона, в дереве не лежит
+ * (`REFACTOR.md` R-1.5): это редко нужное прошлое, а не рабочая копия пакета, и место
+ * такого прошлого — история, откуда байты и берутся по требованию. Путь — тот, под
+ * которым копия лежала: он записан в происхождении обоих эталонов и остаётся их
+ * записью, а не сегодняшним деревом. */
+export const LEGACY_PATH = 'fixtures/legacy/size-table.cjs';
+
+let legacyFile = null;
+
+/* Байты копии берутся из того коммита, который её **добавил** (последнего, если
+ * её заводили не однажды): так материал не привязан к записанному руками sha и
+ * переживает любые переезды истории. Скачанное сверяется с хешем, который записало
+ * происхождение эталона: иначе «та самая копия» молча перестала бы ею быть. */
+export function legacyTool() {
+  if (legacyFile !== null) return legacyFile;
+  const added = gitIn(ROOT, ['log', '--diff-filter=A', '--format=%H', '--', LEGACY_PATH])
+    .split('\n').filter((line) => line !== '')[0];
+  if (added === undefined) {
+    throw new Error('в истории нет ' + LEGACY_PATH + ': копию, с которой снят эталон, взять неоткуда');
+  }
+  const bytes = execFileSync('git', gitArgv(['-C', ROOT, 'show', added + ':' + LEGACY_PATH]),
+    { maxBuffer: MAX_BUF, env: gitEnv() });
+  const want = JSON.parse(fs.readFileSync(path.join(PARITY, 'manifest.json'), 'utf8')).tool.sha256;
+  assert.equal(sha256(bytes), want, 'копия из истории (' + added.slice(0, 7) + ') разошлась с тем,'
+    + ' какой её записало происхождение эталона: сверять было бы нечего');
+  legacyFile = path.join(tempDir('legacy'), 'size-table.cjs');
+  fs.writeFileSync(legacyFile, bytes);
+  return legacyFile;
+}
+
+export function frozenTarget() {
+  return {
+    name: 'замороженная копия реализации',
+    file: legacyTool(),
+    env: gitConfig({ 'core.quotePath': 'false' })
+  };
+}
 
 export function tempDir(name) {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'size-report-' + name + '-'));
