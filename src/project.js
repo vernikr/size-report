@@ -118,8 +118,9 @@ function readJson(file) {
 /* The artifact's note and the refusals quote this command, so it has to work right here and now: the
  * project's own script only if it is declared (or `npm run sizes` answers "no such script", and
  * advice that does not work is the worst kind), otherwise the installed package inside the project.
- * The package name is deliberately absent from the command: `npx <name>` without an installed package
- * goes to the registry and runs someone else's code. */
+ * The package name is deliberately absent from the command: with no package installed it would send the
+ * reader to the registry, which serves a revision the project never pinned, while a path inside the
+ * project refuses on the spot. */
 function fixCommandOf(root) {
   const pkg = readJson(path.join(root, 'package.json')) || {};
   const script = pkg.scripts === undefined ? '' : pkg.scripts.sizes;

@@ -61,13 +61,11 @@ export function refuseCause(cause, message) {
  * checks. */
 const CAUSE_LINES = CONFIG_CAUSES.map((g) => '  ' + g[0] + ': ' + g[1].join(' · '));
 
-/* How the tool is called where it is read. The advice names what lies nearby and never the
- * package name: `npx <name>` runs the installed package only while it is there, and in a
- * project without it the name goes to the registry and runs a foreign package of the same
- * name — a text meant to rescue the user would lead into foreign code. Hence one form: a
- * path inside the project (`node node_modules/<name>/bin/size.js`), which works where the
- * package is installed and, where it is not, refuses on the spot without touching the
- * network.
+/* How the tool is called where it is read. The advice names what lies nearby and never the package
+ * name: a path inside the project (`node node_modules/<name>/bin/size.js`) works where the package is
+ * installed and, where it is not, refuses on the spot; the name from the registry would instead fetch
+ * and run a revision the project never pinned (and the unscoped name there belongs to another package
+ * altogether). One form, therefore, and no trip to the network.
  *
  * The fix command quotes the entry point rather than the engine itself: importing the
  * engine runs nothing, so `--init` works through the command only. Inside the package's own

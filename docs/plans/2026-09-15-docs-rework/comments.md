@@ -75,10 +75,12 @@ comment diff stays under the commit budget, otherwise it is split by file groups
   `worklog/0080`, 2026-09-15).
 - [x] **M8 hook and tool** — `src/hook.js`, `src/tool.js` (472 → 452; journal entry `worklog/0081`,
   2026-09-15).
-- [ ] **M8-fix, found outside the module** — the same outdated justification ("the registry name is
-  someone else's package") still stands in `src/refusal.js`, `src/config.js`, `src/project.js` and
-  `test/docs-pin.test.js`: the registry holds *this* package under its scoped name, while the bare
-  `size-report` is the foreign one. Verified in `worklog/0081`; one small comments-only commit.
+- [x] **M8-fix, found outside the module** — the outdated justification ("the registry name is someone
+  else's package") stood in `src/refusal.js`, `src/config.js`, `src/project.js`, `test/docs-pin.test.js`
+  and, found while fixing them, `test/docs-commands.test.js`; all five now say what is true: a call by
+  the name goes to the registry and runs a revision the project never pinned, while a path inside the
+  project refuses on the spot, and the release link names the revision the documentation describes
+  (comments only; journal entry `worklog/0082`, 2026-09-15).
 - [ ] **M9 tools** — `tools/**` (3520; three or four commits, `tools/gates/**` and
   `tools/synthetic/**` last).
 - [ ] **M10 tests** — `test/*.test.js` (6221; four or five commits).

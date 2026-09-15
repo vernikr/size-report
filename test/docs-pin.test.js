@@ -21,10 +21,10 @@ test('пример установки ведёт на ревизию, чья с�
   assert.notEqual(pin, null, 'README не называет ревизию в примере установки — сверить нечего');
   const rev = pin[1];
 
-  /* Инструмент учит ставить пакет **той же** ссылкой: так документ и совет не могут
-   * разойтись, и выпуск, поднявший версию, обязан поднять и пин (`src/tool.js`,
-   * `installSpec`). Имени пакета в реестре в этой ссылке нет намеренно: оно занято
-   * чужим пакетом, и `add -D <имя>` поставил бы его (REFACTOR R-4.21). */
+  /* The tool teaches installing the package by **that same** link: that way the document and the advice
+   * cannot drift apart, and a release that raises the version has to raise the pin too (`src/tool.js`,
+   * `installSpec`). A name from the registry would not do here: it names whatever the registry serves as
+   * the latest revision, while the document describes this very one. */
   assert.ok(installSpec() !== null, 'у манифеста нет адреса репозитория: совету об'
     + ' установке нечего назвать — это правится не документацией, а манифестом');
   assert.ok(read('README.md').indexOf(installSpec()) >= 0,

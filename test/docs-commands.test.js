@@ -109,11 +109,11 @@ test('документация зовёт только существующие 
 });
 
 test('документация зовёт инструмент так, что зов работает и без установленного пакета', () => {
-  /* У обещанного зова два состояния, и совет обязан работать в обоих: рядом с
-   * установленным пакетом — делать обещанное, без пакета — отказывать на месте.
-   * Зов по имени пакета этого не умеет: `npx <имя>` идёт в реестр, когда пакета
-   * рядом нет, и запускает чужой пакет под тем же именем. Поэтому инструкции
-   * называют путь внутри проекта, а имени пакета в зове нет. */
+  /* The promised call has two states and the advice has to work in both: with the package installed it
+   * does what was promised, without it, it refuses on the spot. A call by the package name manages
+   * neither: without the package nearby it goes to the registry and runs the revision served there,
+   * which is not the one the project pinned. Hence the instructions name a path inside the project, and
+   * the call carries no package name. */
   const escaped = TOOL_PKG.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const byName = new RegExp('^(?:npx|npm exec|yarn) ' + escaped + '(\\s|$)');
   const bad = [];

@@ -19,8 +19,8 @@ export const DEFAULT_CONFIG = {
   locale: 'ru',
   title: '',          // by default: the heading from the locale
   heading: '',
-  // The fix is a call that cannot go to the registry: a path inside the project. The package name
-  // is no good here (`npx <name>` in a project without the package runs foreign code).
+  // The fix is a call that stays inside the project: the package name would send the reader to the registry,
+  // which serves a revision the project never pinned.
   fixCommand: invocation() + ' --write',
   metrics: ['raw', 'min'],
   columns: [],
