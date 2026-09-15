@@ -1,19 +1,6 @@
 import { appEl, appBox } from './dom.js';
 import { appData, appUi, appView, appFileAt } from './state.js';
 
-/* Легенда: образцы — теми же классами, что и числа в клетках (`up`/`down` из
- * общей части оформления), поэтому образец не может разойтись с цветом числа. */
-function appLegend() {
-  const list = appEl('ul', 'legend');
-  appUi.legend.forEach((item) => {
-    const li = appEl('li');
-    li.appendChild(appEl('span', 'swatch ' + item.cls));
-    li.appendChild(appEl('span', null, item.text));
-    list.appendChild(li);
-  });
-  return list;
-}
-
 /* Галочку файла ставит только файл: и категория, и папка в дереве — способы
  * переставить те же галочки сразу группой, а своего состояния у них нет. Иначе
  * одно и то же решение жило бы в двух местах и расходилось. */
@@ -106,7 +93,9 @@ export function appPanel() {
 
   const files = appEl('fieldset', 'files');
   files.appendChild(appEl('legend', null, appUi.files));
-  const cats = appEl('div', 'row');
+  /* Строка категорий помечена классом: список файлов листается, и она остаётся на
+   * виду (липкость — в широкой раскладке, там панель и прокручивается). */
+  const cats = appEl('div', 'row cats');
   appData.categories.forEach((cat) => {
     const idx = [];
     appData.files.forEach((f, i) => { if (f.category === cat.key) idx.push(i); });
@@ -119,6 +108,4 @@ export function appPanel() {
   files.appendChild(cats);
   files.appendChild(appTree());
   panel.appendChild(files);
-
-  panel.appendChild(appLegend());
 }

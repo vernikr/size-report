@@ -72,13 +72,6 @@ function uiText(page, loc) {
     approximate: page.approximate,
     approxCell: page.approximateCell,
     methodLabel: page.panelMethod,
-    legend: [
-      { cls: 'up', text: page.legendUp },
-      { cls: 'down', text: page.legendDown },
-      { cls: 'approx', text: page.legendApprox },
-      { cls: 'same', text: page.legendSame },
-      { cls: 'miss', text: page.legendMiss }
-    ],
     empty: page.emptyMetrics,
     noFiles: page.noFiles,
     /* {command} подставляет страница: у неё есть данные, а {now} — уже здесь. */

@@ -76,8 +76,9 @@ test('вычислительная часть страницы — код дви
   assert.deepEqual(defined('\n' + stripModules(appSrc)).sort(), [
     'appAll', 'appApply', 'appApprox', 'appBody', 'appBox', 'appCell', 'appCellClass', 'appCommit', 'appEl',
     'appFileAt', 'appFileBox',
-    'appHash', 'appHead', 'appIndexes', 'appLegend', 'appLinkRead', 'appLinkUse', 'appNotice', 'appPanel',
-    'appPassport', 'appRead', 'appRecord', 'appRecordOk', 'appRender', 'appRow', 'appState', 'appSubHead',
+    'appHash', 'appHead', 'appIndexes', 'appLinkRead', 'appLinkUse', 'appNotice', 'appPanel',
+    'appPassport', 'appRead', 'appRecord', 'appRecordOk', 'appRender', 'appRow',
+    'appScrollBack', 'appScrollTop', 'appState', 'appSubHead',
     'appTable', 'appTree', 'appTreeList', 'appUnknown', 'appValueCell', 'appWrite'
   ], 'оболочка страницы завела свою функцию: расчёт должен жить в вычислительной части');
   assert.equal(/\breduce\(|Math\.abs/.test(appSrc), false,
@@ -206,9 +207,11 @@ test('приближённые клетки помечены, а итог бер
   assert.equal(about.length, data.metrics.length, 'под метриками нет подписи способа');
   assert.ok(about.some((line) => line.indexOf(min.method) >= 0),
     'способ метрики min назван не тот: ' + about.join(' | '));
-  const legend = [...doc.querySelectorAll('.legend li')].map((li) => li.textContent);
-  assert.ok(legend.indexOf(ui.legend.find((l) => l.cls === 'approx').text) >= 0,
-    'в легенде не сказано, что значит подчёркнутое число');
+  /* Расшифровки под деревом файлов нет: место под списком она занимала у чисел,
+   * а смысл её стоит у самого объясняемого — цвет называет знак числа, способ и
+   * точность стоят под переключателями, знак пропуска — в подсказке клетки. */
+  assert.equal(doc.querySelectorAll('#panel .legend').length, 0,
+    'под деревом файлов снова завелась расшифровка: место у чисел, а смысл — у клеток');
 
   /* Итог пересчитывается по выбору: оставим один точный файл — и знак с итога
    * снимется. Иначе «худшее из включённых» было бы сказано, но не сделано. */
@@ -328,6 +331,12 @@ test('оформление таблицы одно на оба вывода, и 
     'оформление страницы завело свой цвет: цвет дельт должен быть один на пакет');
   hex(TABLE_CSS).forEach((color) => assert.equal(pageText.split(color).length - 1, 1,
     'цвет ' + color + ' встречается в странице не один раз: он уехал из общей части'));
+
+  // Образцов расшифровки в оформлении больше нет, а строка категорий липнет: пока
+  // списку нужна прокрутка, листать его и держать эту строку на виду — одно и то же.
+  assert.equal(pageText.indexOf('.swatch'), -1, 'в оформлении страницы остались образцы расшифровки');
+  assert.match(pageText, /\.panel \.cats\s*\{[^}]*position:\s*sticky/,
+    'строка категорий не остаётся на виду, когда листается список файлов');
 });
 
 /* Состояния пустоты: без метрик таблицу не из чего собрать — страница говорит об
@@ -356,6 +365,40 @@ test('состояния пустоты: без метрик — слова вм
   assert.equal(onlyTotal[0].querySelectorAll('td').length, data.metrics.length,
     'с выключенными файлами в строке остались чужие колонки');
   assert.equal(doc.querySelectorAll('[colspan="0"]').length, 0, 'в разметке остался colspan="0"');
+});
+
+/* jsdom не раскладывает страницу, поэтому прокрутка у её элементов всегда ноль, а
+ * запись в `scrollTop` ничего не значит. Чтобы проверить, что пересборка панели
+ * прокрутку не теряет, окну даётся память о ней: тот же `scrollTop`, только
+ * запоминаемый. Это подмена раскладки, а не поведения — страница читает и пишет то
+ * же свойство, что и в браузере. */
+function scrollMemory(dom) {
+  Object.defineProperty(dom.window.Element.prototype, 'scrollTop', {
+    configurable: true,
+    get() { return this.appTop === undefined ? 0 : this.appTop; },
+    set(top) { this.appTop = top; }
+  });
+}
+
+/* Клик по галочке перерисовывает панель целиком, и прокрутка списка — это то, что
+ * читатель в ней настроил (до какого файла дошёл): пересборка обязана её вернуть, а
+ * поле под клавиатурой — не тянуть список к себе. Прокрутка панели и списка
+ * проверяются обе: в широком окне прокручивается панель, в узком — список. */
+test('прокрутка панели и списка файлов переживает пересборку', () => {
+  const dom = openPage();
+  const doc = dom.window.document;
+  scrollMemory(dom);
+  const panel = doc.getElementById('panel');
+  const list = () => doc.querySelector('#panel .files');
+  panel.scrollTop = 137;
+  list().scrollTop = 48;
+
+  toggleBox(doc, fileBox(doc, 'src/code.js'), false);
+
+  assert.equal(panel.scrollTop, 137,
+    'пересборка панели вернула её прокрутку к началу: нижние метрики снова искать заново');
+  assert.equal(list().scrollTop, 48,
+    'пересборка вернула список файлов к началу: до нижних файлов дерева не добраться');
 });
 
 /* Переключатели панели глазами клавиатуры: поле ввода лежит внутри метки (одна цель

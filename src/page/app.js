@@ -25,14 +25,39 @@ function appTable() {
   appWrite();
 }
 
-/* Панель перерисовывается целиком, поэтому поле, стоящее под клавиатурой, после
- * каждой пересборки возвращается на своё место: иначе переключение с Tab и Space
- * требовало бы начинать обход панели заново. Место опознаётся порядковым номером
- * поля — порядок полей панели от данных не зависит. */
+/* Прокрутка панели — свойство панели, а не разметки, поэтому она переживает
+ * пересборку: иначе каждый клик по галочке возвращал бы список к началу, и до
+ * нижних файлов дерева было бы не добраться. Запоминается прокрутка панели и
+ * списка файлов — у каждого она своя, а в узком окне прокручивается список.
+ * Элементы берутся те, что есть в разметке страницы (`src/page/build.js`):
+ * второго перечисления мест прокрутки в пакете нет. */
+const appScrolled = ['#panel', '#panel .files'];
+function appScrollTop() {
+  return appScrolled.map((sel) => {
+    const el = document.querySelector(sel);
+    return el === null ? 0 : el.scrollTop;
+  });
+}
+
+function appScrollBack(saved) {
+  appScrolled.forEach((sel, i) => {
+    const el = document.querySelector(sel);
+    if (el !== null) el.scrollTop = saved[i];
+  });
+}
+
+/* Панель перерисовывается целиком, поэтому поле, стоящее под клавиатурой, и
+ * прокрутка после каждой пересборки возвращаются на своё место: иначе
+ * переключение с Tab и Space требовало бы начинать обход панели заново, а
+ * прокрутка — искать своё место заново. Место поля опознаётся порядковым номером —
+ * порядок полей панели от данных не зависит. Фокус ставится без прокрутки (`preventScroll`):
+ * он возвращает клавиатуру, а не двигает список. */
 function appRender(keepNotice) {
   const at = Array.from(document.querySelectorAll('#panel input')).indexOf(document.activeElement);
+  const saved = appScrollTop();
   appPanel();
-  if (at >= 0) document.querySelectorAll('#panel input')[at].focus();
+  appScrollBack(saved);
+  if (at >= 0) document.querySelectorAll('#panel input')[at].focus({ preventScroll: true });
   appTable();
   /* Сообщение о ссылке переживает отрисовку, которая сама же им и вызвана, и
    * гаснет от действия читателя: он его уже прочитал. */

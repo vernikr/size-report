@@ -21,11 +21,6 @@ export const LOCALES = {
       dir: 'все файлы папки {name} ({n})',
       all: 'все',
       sub: '{tool} {version} · {artifact}',
-      legendUp: 'рост',
-      legendDown: 'спад',
-      legendSame: 'пустая клетка — не менялось',
-      legendMiss: '«—» — файла в этой ревизии ещё нет',
-      legendApprox: 'подчёркнутое число — приближённое: способ назван под метриками',
       /* Слова точности: подпись метрики говорит про худшее в колонке, а клетки —
        * про своё число. Одно слово на подпись и на подсказку клетки, чтобы не
        * разошлось и не звучало по-разному. */
@@ -77,11 +72,6 @@ export const LOCALES = {
       dir: 'all files in “{name}” ({n})',
       all: 'all',
       sub: '{tool} {version} · {artifact}',
-      legendUp: 'growth',
-      legendDown: 'fall',
-      legendSame: 'an empty cell — no change',
-      legendMiss: '“—” — the file does not exist in that revision yet',
-      legendApprox: 'an underlined number is approximate: its way of measuring is named under the metrics',
       exact: 'an exact number',
       approximate: 'an approximation',
       approximateCell: 'an approximate number: ',
