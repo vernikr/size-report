@@ -117,15 +117,39 @@ files). The parts below are the order to work in; each is one commit.
   paragraphs of CI defect history became one paragraph of two rules, verified in
   `tools/run-tests.js` and `tools/check-standards.js`, with the root `WORKLOG.md` addresses dropped.
   `pnpm run verify` green (8 steps, 59,5 s); no gate file in the commit, so no trailer.
-- [ ] **M4 README 351–553** — 190 Russian: the rest of «Статус» (the report page, its memory
-  and folding, performance). **Needs measurement rather than reading**: the paragraphs carry real
-  Chrome numbers (`0,6 мс` in the handler against `107 + 380 мс` of a redraw, `1060 × 735`, `148
-  подписей`, `39 576 клеток`), so each is either re-measured with `tools/page-harness.js` or
-  replaced by a rule where the number decides nothing. Left over for M5, to check there: the
-  paragraph on the frozen copy claims "проверено тремя прогонами … и прогон без настроек машины —
-  тоже" — a measurement claim no gate repeats today.
+- [x] **M4a README, the report page** (226–368 in the file of that day) — 133 Russian lines,
+  **242 changed lines in one file**, inside the budget with room to spare (`worklog/0102`). Decided
+  up front: **the Chrome numbers are not re-measured, they are replaced by the rules they supported.**
+  Every one of them is a measured symptom rather than knowledge of what the tool does (`panel 883 px,
+  page 1097 at a 900px window`, `0,6 мс` against `107 + 380 мс`, `panel.scrollTop = 421`, `1060 ×
+  735`, `25 columns and 994 335`), and the rules they follow from are in the code, so they do not age;
+  a re-measurement would have to be done by hand too, since `tools/page-harness.js` is a jsdom
+  harness for five suites and there is no real-browser harness in the repository. Each rule that
+  stayed was verified in the code: the shared stylesheet and the artifact's byte-frozen geometry
+  (`src/table.css`, `src/css.js`), the two empty states (`src/page/table.js` `appState`), the label
+  around an input and the tooltip on a disabled row (`src/page/dom.js`), the catalogue as the source
+  of the tree including the report itself (`src/project.js` `projectTree`), the fraction counter, the
+  three states, the sign with its own key, `folded` as a class on the row (`src/page/panel.js`), the
+  grid of five named rows and the 899/900 threshold with its reason (`src/page/app.css`), the scroll
+  as part of the view and the focus without scrolling (`src/page/app.js`), the passport and the
+  by-name record (`src/page/state.js`), "no network at all" as an assertion of two checks
+  (`test/page-view.test.js`, `test/parity.test.js`), and the rule behind "the last commit's columns
+  first" — the last commit that touched at least one column, so that the mark does not depend on the
+  report's own commit (`src/history.js`). `pnpm run verify` green (8 steps, 59,7 s).
+- [ ] **M4b README, the metrics and the commands** — `min`, `tok`, wave 0, `check`/`explain`, the
+  hook (about 90 Russian lines as measured on 2026-09-16). Its numbers are of another kind and **can
+  be re-measured**: the fixture ones on a clone of `fixtures/synthetic` with and without
+  `"minify": {"engine": "esbuild"}` and with both token encodings, the timings on the live bundle
+  (`pnpm run parity:live` does the same clone). The suite-cost figures in that text (**«7,3–7,9 → 10,4
+  с при 66 → 73 проверках»**) have already drifted — the suite counts 177 checks today — and are to be
+  replaced by a rule, as in M4a. Open question for the user: whether re-measured seconds belong
+  anywhere in README at all, or whether (as the run section already says) the document promises no
+  seconds.
 - [ ] **M5 README 554–686** — 129 Russian: «Что в репозитории». Its heading is read by
-  `test/docs-paths.test.js` (the table of paths), so that reader changes in the same commit.
+  `test/docs-paths.test.js` (the table of paths), so that reader changes in the same commit. To check
+  there: the paragraph on the frozen copy (around line 590) claims "проверено тремя прогонами … и
+  прогон без настроек машины — тоже" — a measurement claim that no gate repeats today, so it is
+  either re-measured or turned into a rule.
 - [ ] **M6 README 687–705 + 1045–1139** — 94 Russian: «Чего ещё нет», «Гейт против
   раздувания», «Для ИИ-агента», «Ловушки…». Two of those headings are named by
   `tools/docs-facts.js` `NOT_TODAY` / `OWN_PROJECT` — same commit.

@@ -223,146 +223,108 @@ commits, that is, what makes it a replacement for the consumer project. The bund
 `HEAD` and the branch `main` at the reference revision, or a clone decides on its own which branch to
 lay out (`tools/check-standards.js`).
 
-**Страница отчёта выглядит и ведёт себя как инструмент** (`REFACTOR.md` R-2.2):
-один набор стилей таблицы на оба вывода (`src/table.css`) — странице достались
-липкие шапка и колонка коммита, которые раньше были только у статического
-артефакта, и она больше не уезжает вбок в узком окне (до правки — 1518px при
-окне 620). Добавились состояния «нечего показать» (сняты все метрики или все
-файлы) и переключатели, доступные с клавиатуры. Цвет
-deльт задан один раз и по артефакту: рост зелёный, спад красный — смена это две
-строки в `src/table.css` плюс пересборка эталона артефакта, больше цвета нигде нет.
+**The report page looks and behaves like a tool.** One set of table styles serves both outputs
+(`src/table.css`), so the page took over the sticky header and commit column the static artifact
+already had, and its commit column narrows in a narrow window instead of pushing the table sideways.
+The page says so in words when there is nothing to assemble a table from — every metric or every file
+switched off — and its switches are labels around inputs, so a mouse, `Space` and assistive technology
+all reach them. The colour of a delta is defined once: growth green, fall red — changing it is two
+lines in `src/table.css` plus re-taking the artifact's reference, and no other place holds a colour.
+The one place where the page departs from the shared geometry is its "adaptations" section, and every
+departure stands there with its reason: the shared part is frozen by the artifact's bytes (`src/css.js`).
 
-**Левая панель страницы — дерево файлов проекта** (`REFACTOR.md` R-2.4, каталог
-путей — `CHANGELOG.md` 2.2.0, складывание папок — 2.3.0, вид того, чего в отчёте
-нет, — 2.4.0). Дерево строится по путям проекта, а не по одним
-колонкам, поэтому в нём видно и то, что в отчёт не попало: у такого листа (и у
-папки, где измерять нечего) галочка стоит на месте, но **снята и недоступна** —
-включать нечего, — а причина в всплывающей строке («колонкой быть не может» —
-правило пакета — или «в набор колонок не попал» — выбор проекта). Снятая, а не
-убранная: ряд строк остаётся ровным (глаз сравнивает одно с одним), а недоступность
-говорит, что это не выбор читателя. Заодно счётчик папки со смешанным
-составом написан долей («2/5»: два файла в отчёте из пяти в папке). Сам отчёт в
-дереве назван всегда: его отслеживаемость — свойство момента, и от неё содержимое
-страницы не зависит. **Всё, чего в отчёте нет, стоит после того, что в нём есть** —
-и папки, и листья: в списке, где половина строк не переключается, отчёт должен
-быть виден сразу, а не среди чужого (`test/page-tree.test.js`). У
-папки три состояния — все её файлы включены, часть, ни одного, — и переключатель
-папки ведёт за собой всё поддерево; рядом стоит число файлов. Своего состояния у
-папки и у быстрой кнопки категории нет: обе переставляют галочки файлов, поэтому
-дерево, кнопки и таблица не могут разойтись. У каждой папки есть ещё свой знак
-(▾/▸): он отвечает за то, сколько дерева видно, — это дело смотрящего, а не выбор
-читателя, поэтому знак помнится между заходами и в ссылку не идёт (у записи свой
-ключ и тот же паспорт отчёта; разворот всех папок её убирает, как возврат галочек —
-запись выбора). Список файлов длиннее панели
-прокручивается, а не выталкивает таблицу, — и прокрутка эта одна: на широком
-экране листается панель целиком (при окне 1440×900 страница укладывается в окно, а
-таблица берёт всю оставшуюся высоту), а на узком — сам список, потому что там
-панель растёт вместе со страницей. Дерево стало длинным (в этом репозитории 148
-подписей), поэтому папки и складываются: иначе до его середины не добраться.
+**The left panel is the project's file tree.** It is built from the catalogue — every path git sees —
+rather than from the columns, so it also shows what did not make it into the report: such a leaf, and a
+folder with nothing to measure in it, keeps its place with the checkbox off and unavailable, and the
+tooltip names the reason — the package's rule or the project's choice. Off rather than absent: the
+rows stay even (the eye compares like with like) while unavailability says this is not the reader's
+choice. The report itself is always in the catalogue, whether or not it is tracked: that is a property
+of the moment, and the page must not depend on it, or the first rebuild in a fresh clone would give
+different bytes. A folder whose files are only partly in the report writes its count as a fraction
+("2/5"), and everything outside the report stands after everything inside it — folders and leaves
+alike — so that the report is seen at once in a list where half the rows do not switch
+(`test/page-tree.test.js`).
 
-**Складывание папки — чистый вид, и оно не считает числа** (`CHANGELOG.md` 2.4.0).
-Поддерево лежит в разметке и прячется классом на строке: клик по знаку меняет три
-вещи, которые читатель и видит, — класс, знак и запись в памяти. Пересборка здесь
-была бы честной работой впустую: она строит таблицу целиком (в этом репозитории —
-97 строк × 136 колонок, 39 576 клеток), то есть платит за числа, которых складывание
-не меняет, — и это было видно глазом как задержка. Замер в настоящем Chrome на этой
-же странице: клик по знаку папки `src/` (42 строки поддерева) — **0,6 мс** в
-обработчике и 6 мс на перекладку против **107 + 380 мс** перерисовки, которую он
-вызывал раньше (столько же стоит переключение одного файла у той же страницы).
-Стережёт это проверка о том, что после складывания таблица осталась той же самой
-разметкой (`test/page-tree.test.js`), а не собранной заново.
+**A folder is a switch like a file, and its sign is a decision of its own.** The checkbox of a folder
+carries its whole subtree and shows three states — every file on, some, none — with the number of files
+next to it. Neither a folder nor a category button keeps state of its own: both flip the same file
+checkboxes, so the tree, the buttons and the table cannot drift apart. The sign beside a folder answers
+a different question — how much of the tree is visible, which is the onlooker's business rather than the
+reader's choice — so it is remembered between visits in a record of its own, under a key of its own and
+the same report passport, and it never goes into the link; unfolding every folder removes that record,
+just as turning the checkboxes back on removes the choice.
 
-**Колонки, которых коснулся последний коммит, идут впереди** (`CHANGELOG.md` 2.4.0).
-Отчёт пересобирается после каждого коммита, и первый вопрос читателя — что принесла
-эта правка. Знак приходит из истории, а не из чисел: правка без изменения размера —
-тоже правка. Берётся последний коммит, задевший хотя бы одну колонку, — считая от
-верхушки назад: коммиты мимо колонок (и, прежде всего, сам отчёт, который коммитит
-хук) пропускаются, — иначе знак зависел бы от собственного коммита отчёта, а тот же
-прогон давал бы другие байты. Внутри каждой части порядок прежний, из настроек
-(`sort` устойчив): порядок колонок — то, к чему читатель привык, и своим выбором
-файлов он его не переставляет (`test/page-view.test.js`, поле `last` контракта).
+**The list scrolls, and there is one scroll.** On a narrow window it is the file list that scrolls —
+the panel grows with the page there — while on a wide one the whole panel does: otherwise the controls
+would push the table off the screen. Folders fold because the tree is longer than the window; otherwise
+its middle is out of reach.
 
-**На широком экране панель стоит слева от таблицы и не вытесняет числа**
-(от 900 px, `src/page/app.css`). Это не украшение: на десктопе бокового места
-много, а вертикального мало — переключатели, дерево и числа видны одновременно, и
-ни прокрутка чисел, ни прокрутка дерева не уводит управление за верх экрана.
-Раскладка сделана сеткой на `body`: обёртки в разметке нет, потому что страница
-собирается вклейкой глав и форма страницы должна жить в одном месте. Строк у сетки
-пять и они названы по предмету (заголовок, сообщение о ссылке, работа, сообщение
-пустоты, подпись), тянется только рабочая: таблица берёт всю оставшуюся высоту, а
-панель — не больше неё. Цена прежнего поведения была видна глазом: высоту страницы
-задавал список файлов, и под таблицей оставалась пустота (замер до правки при окне
-1440×900: панель 883 px, страница 1097 при окне 900, под таблицей 195 px).
-Измерено в настоящем Chrome после правки: при 1440×900 страница ровно в окно
-(900), панель — колонка 300 px слева (103…888, содержимое 804 — дальше она
-прокручивается), таблица 1060 × 735 на том же верху 103 (до правки 1060 × 602), а
-под ней остаётся только подпись под таблицей (62 px); при 1024×800 — те же 300 и
-таблица 651 × 620; при 899 раскладка снимается и столбцы снова идут друг под
-другом (панель 871, таблица 871 × 442, страница прокручивается — 972).
-Стрежет это проверка на числах таблицы, а не на разметке: выключение папки убирает
-ровно её колонки и ровно её объём из итога (`test/contract.test.js`). Проверено в
-настоящем Chrome: 9 папок до трёх уровней вложенности (`.github/workflows`,
-`tests/golden`), 25 файлов, ни одного внешнего запроса (сеть — только сам файл),
-ни одной ошибки в консоли, `docs/6` после выключения одного своего файла показала
-третье состояние, а после выключения целиком — 52 колонки → 40.
+**Folding is pure view, and it counts no numbers.** The subtree lies in the markup and a class on the
+row hides it, so a click on the sign changes exactly the three things the reader sees — the class, the
+sign and the note in the memory. A rebuild here would be honest work for nothing: it counts the whole
+table, every row by every column, and so pays for numbers folding does not change. What guards this is
+that after folding the table is the same markup rather than a rebuilt one (`test/page-tree.test.js`).
 
-**Галочка не отбирает ни прокрутку, ни место у чисел** (правка вида страницы
-2026-09-15, `src/page/app.js`, `src/page/app.css`). Панель рисуется заново после
-каждого переключения, и вместе с ней терялось место, до которого читатель
-долистал: клик по галочке возвращал список к началу, а до нижних файлов дерева так
-и не добирались. Теперь прокрутка панели и списка — часть вида, как галочки: она
-запоминается перед пересборкой и ставится обратно после (фокус возвращается без
-прокрутки — `preventScroll`), а поле «Файлы» больше не режет дерево своим
-потолком в 62vh. Строка категорий («Код», «Документация», «Служебные») в широкой
-раскладке липнет к верху панели — фон у неё тот же, что у панели, поэтому под ней
-не читаются проезжающие файлы; верхний отступ панели для этого переехал в первое
-поле (прокручиваемое видно и в отступе прокрутки — замер: до него в полосе 13 px
-читались «parity/» и «data.json», после — сама строка). Шрифт подписей файлов
-стал как у чисел таблицы (12,5 px), а расшифровка под деревом убрана: она
-отодвигала числа, а её смысл и так стоит у того, что объясняет (знак числа называет
-цвет дельты, способ и точность — под переключателями метрик, знак пропуска —
-в подсказке клетки). Заодно граница широкой раскладки стала 899 px: при ровно
-900 px обе половины оформления применялись к одной странице, и от «узкой» в
-«широкой» оставался потолок высоты таблицы — те же пустые 179 px под ней на одном
-единственном размере окна. Проверено в настоящем Chrome на этой странице: при
-окне 1440×500 (панель прокручивается) и прокрутке до последнего файла
-`panel.scrollTop` = 421 до клика и 421 после, строка категорий стоит на 1 px от
-верхнего края панели, а под ней на всех полосах прокрутки — только её же подписи.
+**The columns the last commit touched come first.** The report is rebuilt after every commit, and a
+reader's first question is what that edit brought. The mark comes from the history rather than from the
+numbers — an edit that changed no size is an edit too — and it is taken from the last commit that
+touched at least one column, counting back from the top: a commit that went past the columns, above all
+the report itself, which the hook commits, is skipped, or the mark would depend on the report's own
+commit, the same run would give different bytes and the hook would commit the report a second time.
+Inside each part the order stays as it comes from the settings (the sort is stable): the order of the
+columns is what the reader is used to, and his choice of files does not rearrange it
+(`test/page-view.test.js`, the contract's `last` field).
 
-**Панель помнит выбор читателя** (`REFACTOR.md` R-2.5). Запись хранится в памяти
-браузера, и она привязана к «паспорту отчёта» — имя инструмента, схема данных,
-путь артефакта, заголовок и метки колонок; в ключ входит отпечаток паспорта,
-поэтому чужие отчёты живут порознь и не видят выбора друг друга (в браузере все
-страницы `file://` делят одну память, так что это не мелочь). Внутри записи выбор
-лежит **по именам** — файл путём, метрика ключом, — и хранится только выключенное:
-колонка, перенаправленная на другое, или метрика, убранная из настроек, просто
-ничего не значит, появившееся остаётся включённым, а «включил всё обратно»
-возвращает страницу к умолчанию и стирает запись. Первому читателю (и тому, чья
-запись испорчена или устарела) достаётся именно умолчание — состояние на числа и
-разметку не влияет. Проверено перезаходом в настоящем Chrome с диска, без сети:
-после выключения метрики и одного файла следующий заход даёт те же **25 колонок
-вместо 52** и тот же итог **994 335 вместо 1 133 362**; два отчёта в одном браузере
-держат по своей записи (`size-report:4684b2b2` и `size-report:5dcd0db1`), и выбор
-одного не трогает другой.
+**On a wide window the panel stands to the left of the table and takes no room from the numbers** (from
+900px, `src/page/app.css`). That is not decoration: a desktop has much side room and little vertical
+room, so the switches, the tree and the numbers are visible at once, and neither scrolling the numbers
+nor scrolling the tree takes the controls off the top of the screen. The layout is a grid on `body`
+rather than a wrapper in the markup — the page is assembled by pasting chapters, and the page's shape
+should live in one place. The grid has five rows, named by subject (the heading, the message about a
+link, the working row, the empty state, the note), and only the working row stretches: the table takes
+all the remaining height and the panel no more than that, scrolling inside itself rather than pushing
+the table off the screen. The narrow half starts at 899px rather than at 900px, so that at exactly
+900px the two halves cannot apply to one page — they once did, and the table's height ceiling survived
+from the narrow one, leaving empty space under the table at that single window size. What guards the
+numbers behind the layout is the contract rather than the markup: switching a folder off removes exactly
+its columns and exactly its volume from the total (`test/contract.test.js`).
 
-**Ту же выборку отдают ссылкой** (`REFACTOR.md` R-2.6). Адрес страницы — это и есть
-ссылка: та же запись, что ложится в память браузера, ложится и в якорь
-(`#size-report=…`), поэтому отправитель просто копирует адрес, а получатель видит
-его выбор без единого действия. Ссылка старше памяти: она — явный выбор
-отправителя, а память читателя она не подменяет, пока тот сам чего-нибудь не
-поменяет. Чужой или испорченный адрес не применяется — и не молчит: над таблицей
-появляется строка с причиной («ссылка собрана в другом отчёте» / «выбор в адресе
-нечитаем»), вид остаётся читательским, а присланный адрес не переписывается; о
-именах, которых в отчёте нет, сообщается числом, они пропускаются, остальное
-применяется. Ссылка работает и когда отчёт уже открыт: браузер на смену якоря
-документ не перезагружает, поэтому страница слушает адрес сама (без этого ссылка
-срабатывала бы только в новой вкладке — этот разрыв нашёлся в браузерной
-проверке, а не в тестах). Проверено на живом отчёте в Chrome с диска: получатель с
-пустой памятью по ссылке видит те же **25 колонок и тот же итог 994 335**, что и
-отправитель; чужой адрес оставляет 52 колонки и 1 133 362 и объясняет отказ; на
-уже открытой странице ссылка меняет вид с 52 колонок на 25, а консоль остаётся
-пустой. Ни одного обращения в сеть в странице нет — это отдельное утверждение
-проверки, а не обещание.
+**A checkbox takes away neither the numbers' room nor the reader's place in the list.** The panel is
+drawn anew after every switch, so its scroll and the list's are part of the view like the checkboxes:
+both are saved before the rebuild and set back after, and the field under the keyboard comes back with
+its focus (without scrolling — `preventScroll`), or switching with `Tab` and `Space` would mean walking
+the panel from the start again. The file list has no ceiling of its own in a wide window: the panel
+scrolls, and the list does not push the table. The row of categories sticks to the top of the panel,
+with the panel's own background (or passing rows of the list would read through it), and the panel's own
+top padding lives on its first field, which travels away with it. File captions use the table's font size
+(12.5px), and the legend under the tree is gone on purpose: below the list it pushed the numbers away,
+while what it explained already stands next to the thing it explains — the sign of a number names the
+colour of a delta, accuracy stands under the metric switches, and the mark of a gap lives in the cell's
+tooltip.
+
+**The panel remembers the reader's choice.** The record lives in the browser's memory, tied to the
+report's passport — the tool's name, the data schema, the artifact's path, the title and the column
+labels, hashed into the record's key — so reports in one browser do not see each other's choice (all
+`file://` pages share one memory, so this is no trifle). Inside the record the choice is held by names —
+a file by its path, a metric by its key — and only what is switched off: a column pointed at another path
+or a metric dropped from the settings simply matches nothing, what appeared stays switched on, and
+turning everything back on returns the page to its default and removes the record. The first reader —
+and a reader whose record is broken or outdated — gets exactly the default, and the choice affects
+neither the numbers nor the markup. The passport holds neither the tool's version nor the top of the
+history, and on purpose: updating the tool does not change what a column means, while a grown history is
+the very history the reader comes back to.
+
+**The same choice travels as a link.** The page's address is the link: the record that goes into the
+browser's memory goes into the anchor too (`#size-report=…`), so the sender copies the address and the
+recipient sees that choice with no action at all. The link outranks the memory — it is the sender's
+explicit choice — while it does not replace the reader's own until he changes something. A foreign or
+broken address is not applied, and is not silent either: a line above the table names the reason ("the
+link was made in another report" / "the choice in the address is unreadable"), the view stays the
+reader's own, and the incoming address is not rewritten; names the report does not hold are reported by
+count, skipped, and the rest is applied. The link works on an already open page as well: the browser does
+not reload the document when the anchor changes, so the page reads the address itself, or a link would
+only work in a new tab. The page makes no request to the network at all, and that is an assertion of a
+check rather than a promise (`test/page-view.test.js`, `test/parity.test.js`).
 
 **Метрика `min` умеет считать по-настоящему** (шаг 3 плана, срез 1). Способ
 выбирается в настройках: `"minify": {"engine": "esbuild"}` — настоящее сжатие
