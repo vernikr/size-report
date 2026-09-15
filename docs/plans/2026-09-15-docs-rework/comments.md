@@ -119,7 +119,30 @@ comment diff stays under the commit budget, otherwise it is split by file groups
   rewrites 60–80 % of a file's lines, and the commit budget is hard (≤ 600 changed lines, ≤ 10
   files), so the parts above are the measured split: six passes. M9e and M9f stay last, as the
   plan says.
-- [ ] **M10 tests** — `test/*.test.js` (6221; four or five commits).
+- **M10 tests** — `test/*.test.js`: 38 files, 6221 lines. Measured before the pass: 1234 comment
+  lines are in Russian (the work), 125 are already English, and 1347 non-comment lines hold Russian
+  text (test names and assertion messages — data, left alone). A comment pass changes ~2.0 lines
+  per Russian comment line (measured on M9e: 167 comment lines → 337 changed source lines), so the
+  module is seven parts of 153–204 comment lines each (≈310–410 changed lines), 3–9 files per part:
+  - [x] **M10a the report page** — `page-view` (93), `page-tree` (58), `page-choice` (53);
+    204 comment lines → 397 changed lines in 3 files (journal entry `worklog/0091`, 2026-09-15).
+    Two claims fell: a comment counted "148 paths of the project" while the fixture's tree holds 12
+    (measured by cloning the bundle — the number belonged to this repository), and the styling
+    comment spoke of "two outputs" while the report is one page carrying both sheets, the shared
+    one frozen by the artifact's bytes.
+  - [ ] **M10b the entry, the refusal and the CLI** — `cli` (65), `refusals` (63),
+    `refusals-catalog` (37), `cli-paths` (16).
+  - [ ] **M10c the disk, the module and the hook** — `hook` (73), `module` (68), `disk` (61).
+  - [ ] **M10d the measures** — `doctor` (45), `minify` (36), `check` (35), `guard` (19),
+    `tokens` (18).
+  - [ ] **M10e the documentation guards and the release** — `docs-commands` (48), `release` (40),
+    `templates` (39), `changelog` (25), `docs-numbers` (15), `docs-pin` (13), `docs-paths` (12).
+  - [ ] **M10f the probes of the gates** — `gates-metrics` (46), `gates-verify` (31), `suites` (22),
+    `gates-files` (21), `gates-dup` (12), `gates-coverage` (11), `gates-deps` (10). All seven are
+    gate files, so this part's commit needs the `Gate-Change:` trailer.
+  - [ ] **M10g the contracts and the frozen copies** — `contract-data` (38), `frozen` (21),
+    `git-pins` (20), `environment` (17), `contract-derived` (16), `parity` (15), `runner` (10),
+    `crlf` (7), `api` (5).
 - [ ] **M11 shell and configs** — `.githooks/*`, `eslint.config.js`,
   `eslint.metrics.config.js`, `.dependency-cruiser.cjs` (~500). Known defect to fix here, found
   during M9e: `eslint.metrics.config.js` (line 5) names the ratchet `eslint-suppressions.json` —

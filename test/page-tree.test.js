@@ -1,12 +1,11 @@
-/* Панель выбора — дерево файлов проекта: папки берутся из путей (а не только из
- * колонок), у папки три состояния, переключатель ведёт за собой всё поддерево, а
- * файл вне отчёта стоит на своём месте подписью с причиной. Здесь же место, до
- * которого дошёл читатель: пересборка панели его возвращает, иначе каждое
- * переключение начиналось бы снизу.
+/* The choice panel — the project's file tree: folders come from the paths (not only from the
+ * columns), a folder has three states, its switch takes the whole subtree with it, and a file the
+ * report does not hold stands in its place with the reason in words. Here too is how far the
+ * reader got: a rebuild of the panel puts that back, or every switch would start from the bottom.
  *
- * Проверяется по собранной странице в настоящем DOM (jsdom), а не по описанию.
- * Числа, вклейка программы и состояния пустоты — соседний набор (`page-view`):
- * файл разделён по предмету, а не по размеру. Память выбора — `page-choice`.
+ * Checked against the assembled page in a real DOM (jsdom) rather than against a description. The
+ * numbers, the pasted program and the empty states are a neighbouring suite (`page-view`), and the
+ * memory of a choice is `page-choice`: the file is split by subject rather than by size.
  */
 
 import { test } from 'node:test';
@@ -16,8 +15,8 @@ import {
   fileBox, nowCells, nowTotal, pageMath, pageReady, stored, toggleBox
 } from '../tools/page-harness.js';
 
-/* Ожидаемые итоги считает та же вычислительная часть, что вклеена в страницу
- * (`pageMath` обвязки): своего правила «сколько весит поддерево» у проверки нет. */
+/* The expected totals are computed by the same calculation the page carries (`pageMath` of the
+ * harness): the check has no rule of its own about what a subtree weighs. */
 const { data, openPage } = pageReady('tree');
 
 const allOn = () => data.files.map(() => true);
@@ -28,13 +27,14 @@ const dirBox = (doc, prefix) => dirs(doc).find((b) => b.textContent.indexOf(pref
 const dirInput = (doc, prefix) => dirBox(doc, prefix).querySelector('input');
 const leaves = (doc) => [...doc.querySelectorAll('#panel .tree .box:not(.dir):not(.plain)')];
 const plains = (doc) => [...doc.querySelectorAll('#panel .tree .box.plain:not(.dir)')];
-/* Файлы проекта, которых нет в отчёте: колонкой они не стали. Знак «колонка» в
- * каталоге — пустая причина, а имя колонки берётся тем же правилом, что в панели. */
+/* Files of the project that the report does not hold: they never became a column. The "column"
+ * mark in the catalogue is an empty reason, and a column is named by the same rule the panel
+ * uses. */
 const notMeasured = () => data.catalog.filter((e) =>
   !data.files.some((f) => where(f) === e.path));
 
-/* Папки дерева — ровно те, что есть в путях файлов проекта (а не только колонок),
- * и листья — все измеряемые файлы. */
+/* The tree's folders are exactly those in the project's file paths (not only in the columns), and
+ * its leaves are every measurable file. */
 function foldersMatchPaths(doc) {
   const paths = data.catalog.map((e) => e.path).concat(data.files.map(where));
   const expected = [...new Set(paths.map((p) => p.split('/').slice(0, -1).join('/')))]
@@ -47,8 +47,8 @@ function foldersMatchPaths(doc) {
   'в дереве нет файла ' + where(f)));
 }
 
-/* Три состояния папки: все её файлы включены — отметка; часть — третье
- * состояние; ни одного — папка просто не отмечена, но не выглядит частичной. */
+/* A folder's three states: all its files on — checked; some — the third state; none — the folder
+ * is simply unchecked and must not look partial. */
 function folderStates(doc) {
   const leafOf = (prefix) => dirBox(doc, prefix).closest('li')
     .querySelector('.box:not(.dir):not(.plain) input');
@@ -69,10 +69,9 @@ function folderStates(doc) {
   assert.equal(dirInput(doc, 'notes/').checked, true, 'включение папки не включило её файл');
 }
 
-/* Переключатель папки ведёт за собой всё поддерево: из таблицы и из итога
- * уходят ровно её файлы и их колонки. Быстрые кнопки категорий и дерево — одно
- * состояние: выключение категории видно на папке, где лежат её файлы, и не
- * трогает чужие. */
+/* A folder's switch takes the whole subtree with it: exactly its files and their columns leave
+ * the table and the total. The quick category buttons and the tree are one state: switching a
+ * category off shows on the folder holding its files and leaves other files alone. */
 function subtreeAndCategories(doc) {
   const inSrc = [];
   data.files.forEach((f, i) => { if (where(f).indexOf('src/') === 0) inSrc.push(i); });
@@ -107,13 +106,12 @@ test('дерево файлов: папки по путям, три состоя
   subtreeAndCategories(doc);
 });
 
-/* Дерево — дерево проекта, а не список колонок: файл, который в отчёт не попал,
- * стоит на своём месте, но его галочка снята и недоступна (чисел для него не
- * измеряли, и переключать нечего), а причина названа во всплывающей строке — иначе
- * читатель решил бы, что файл потерялся. Причина приходит от движка знаком: «такой
- * файл колонкой быть не может» — это правило пакета, «в набор колонок не попал» —
- * выбор проекта. Счётчик папки со смешанным составом — доля: сколько в отчёте из
- * сколько. */
+/* The tree is the project's tree rather than a list of columns: a file the report does not hold
+ * stands in its place, but its box is off and disabled (there are no numbers to switch), and the
+ * reason is in the tooltip — or the reader would think the file was lost. The reason arrives from
+ * the engine as a mark: "such a file cannot be a column" is the package's rule, "not in the set of
+ * columns" is the project's choice. A folder of mixed content counts a share: how many of how
+ * many are in the report. */
 test('дерево показывает все файлы проекта, а вне отчёта — со снятой галочкой', () => {
   const doc = openPage().window.document;
   const others = notMeasured();
@@ -130,9 +128,9 @@ test('дерево показывает все файлы проекта, а в�
     assert.match(b.title, /не измеряется: /, 'подпись не говорит, почему файла нет в отчёте');
   });
 
-  /* Две причины — два ответа: сам отчёт колонкой быть не может, а обычный текстовый
-   * файл просто не выбран в колонки. Одними словами это назвать нельзя — читатель
-   * не поймёт, надо ли что-то править в настройках. */
+  /* Two reasons are two answers: the report itself cannot be a column, while an ordinary text file
+   * simply was not chosen as one. Words alone cannot say this — the reader would not know whether
+   * something in the settings needs fixing. */
   const at = (path) => plains(doc).find((b) => b.title.indexOf(path + ' · ') === 0);
   const artifact = others.find((e) => e.path === data.report.artifact);
   assert.equal(artifact.why, 'rule', 'у самого отчёта причина не та: ' + JSON.stringify(artifact));
@@ -141,7 +139,8 @@ test('дерево показывает все файлы проекта, а в�
   assert.notEqual(at(choosable.path).title, at(artifact.path).title,
     'две разные причины вне отчёта названы одними словами');
 
-  /* Папка со смешанным составом: и доля в счётчике, и галочка только по измеряемым. */
+  /* A folder of mixed content: both a share in its counter and a box only for what is
+   * measurable. */
   const inside = (p) => p.indexOf('docs/') === 0;
   const inDocs = others.filter((e) => inside(e.path)).length;
   const measuredDocs = data.files.filter((f) => inside(where(f))).length;
@@ -156,14 +155,14 @@ test('дерево показывает все файлы проекта, а в�
 
 });
 
-/* Папка, у которой включать нечего, остаётся на месте, но её галочка тоже снята и
- * недоступна: вид у всех строк один, а причина — во всплывающей строке. Заодно
- * проверяется порядок уровня: всё, чего в отчёте нет, стоит после того, что в нём
- * есть, а не вперемешку — иначе искать в отчёте пришлось бы среди чужого.
+/* A folder with nothing to switch stays in place, but its box is off and disabled too: every row
+ * looks alike, and the reason is in the tooltip. The order within a level is checked as well:
+ * everything the report does not hold comes after what it holds rather than being mixed in — or
+ * the report would have to be searched among strangers.
  *
- * Набор «папок, где измерять нечего» считается по данным, а не по разметке: иначе
- * проверка подтверждала бы сама себя и пропустила бы папку, помеченную недоступной
- * зря. */
+ * The set of "folders with nothing to measure" is computed from the data rather than read off the
+ * markup: otherwise the check would confirm itself and miss a folder marked unavailable for no
+ * reason. */
 test('папки вне отчёта — со снятой галочкой и после тех, что в отчёте', () => {
   const doc = openPage().window.document;
   const measured = data.files.map(where);
@@ -190,11 +189,10 @@ test('папки вне отчёта — со снятой галочкой и �
   });
 });
 
-/* Складывание — это то, сколько дерева видно, и оно не должно трогать числа:
- * галочка отвечает за то, что считается, а знак папки — за то, что видно. Поэтому
- * складывание и память о нём проверяются там, где видно, что таблица не сдвинулась,
- * а на следующем заходе дерево осталось сложенным: у 148 путей проекта это
- * единственный способ добраться до его середины. */
+/* Folding is how much of the tree is visible, and it must not touch the numbers: the box is
+ * responsible for what is counted, the folder's mark for what is visible. So folding and the
+ * memory of it are checked where it shows that the table has not moved and that the tree comes back
+ * folded on the next visit — in a tree of any length that is the only way to reach its middle. */
 test('папку дерева можно сложить, и сложенное помнится на следующем заходе', () => {
   const dom = openPage();
   const doc = dom.window.document;
@@ -210,15 +208,15 @@ test('папку дерева можно сложить, и сложенное �
     'складывание папки поменяло её выбор: знак отвечает за вид, а галочка — за числа');
   assert.equal(nowCells(doc), before, 'складывание папки убрало числа из таблицы');
   assert.equal(fold(doc, 'src/').textContent, '▸', 'знак сложенной папки не сказал, что она сложена');
-  /* Складывание — чистый вид: таблица после него остаётся той же самой разметкой, а
-   * не собранной заново. Иначе каждый клик по знаку считал бы все строки и колонки,
-   * и дерево с длинной историей отвечало бы на него заметной задержкой. */
+  /* Folding is pure appearance: the table stays the very same markup afterwards rather than being
+   * assembled again. Otherwise every click on the mark would count all rows and columns, and a tree
+   * with a long history would answer with a visible delay. */
   assert.equal(doc.querySelector('#grid tbody tr'), table,
     'клик по знаку пересобрал таблицу: складывание считает числа, которых не меняет');
 
-  /* Память: следующий заход открывается с тем же сложенным деревом и с полным
-   * выбором. Ключ у складывания свой — иначе оно уехало бы в ссылку, а ссылку
-   * отправляют ради чисел, а не ради того, как у кого разложено дерево. */
+  /* Memory: the next visit opens with the same folded tree and the full choice. Folding has a key
+   * of its own — otherwise it would travel into the link, and a link is sent for the numbers
+   * rather than for how somebody arranged their tree. */
   const seed = stored(dom);
   const next = openPage(seed).window.document;
   assert.equal(fold(next, 'src/').textContent, '▸',
@@ -233,11 +231,10 @@ test('папку дерева можно сложить, и сложенное �
     'складывание легло в запись выбора: ' + Object.keys(seed)[0]);
 });
 
-/* jsdom не раскладывает страницу, поэтому прокрутка у её элементов всегда ноль, а
- * запись в `scrollTop` ничего не значит. Чтобы проверить, что пересборка панели
- * прокрутку не теряет, окну даётся память о ней: тот же `scrollTop`, только
- * запоминаемый. Это подмена раскладки, а не поведения — страница читает и пишет то
- * же свойство, что и в браузере. */
+/* jsdom does not lay the page out, so its elements always scroll by zero and writing to
+ * `scrollTop` means nothing. To check that a rebuild does not lose the scroll, the window is given
+ * a memory of it: the same `scrollTop`, only remembered. This stands in for layout, not for
+ * behaviour — the page reads and writes the same property as in a browser. */
 function scrollMemory(dom) {
   Object.defineProperty(dom.window.Element.prototype, 'scrollTop', {
     configurable: true,
@@ -246,10 +243,10 @@ function scrollMemory(dom) {
   });
 }
 
-/* Клик по галочке перерисовывает панель целиком, и прокрутка списка — это то, что
- * читатель в ней настроил (до какого файла дошёл): пересборка обязана её вернуть, а
- * поле под клавиатурой — не тянуть список к себе. Прокрутка панели и списка
- * проверяются обе: в широком окне прокручивается панель, в узком — список. */
+/* A click on a box redraws the whole panel, and the scroll of the list is what the reader set up
+ * (how far they got): a rebuild has to bring it back, while the field under the keyboard must not
+ * drag the list towards itself. Both the panel's scroll and the list's are checked: in a wide
+ * window the panel scrolls, in a narrow one the list. */
 test('прокрутка панели и списка файлов переживает пересборку', () => {
   const dom = openPage();
   const doc = dom.window.document;
