@@ -1,35 +1,31 @@
 #!/usr/bin/env node
-/* Снимает эталон паритета: как замороженная копия реализации
- * (`fixtures/legacy/size-table.cjs`, байты которой лежат в истории — `REFACTOR.md`
- * R-1.5) считает числа и собирает артефакт на той ревизии проекта-потребителя,
- * которая записана в манифесте эталона.
+/* Takes the parity golden: how the frozen copy of the implementation (`fixtures/legacy/size-table.cjs`,
+ * whose bytes lie in the history — `tools/harness.js`, `legacyTool`) counts numbers and builds the
+ * artifact on the revision of the consumer project that the golden's manifest records.
  *
- * Зачем. «Перенос ничего не сломал» — утверждение, которое надо доказывать. Для
- * этого фиксируются три вещи: полный вывод `--json` (числа строк и клеток), хеш
- * собранного артефакта (форма отчёта) и хеш самого инструмента (какая именно
- * ревизия этот эталон дала).
+ * Why. "The port broke nothing" is a claim that needs proof. Three things are fixed for it: the whole
+ * `--json` output (row and cell counts), the hash of the built artifact (the report's form) and the
+ * hash of the tool itself (which revision produced this golden).
  *
- * Обе стороны пары закреплены. Инструмент — встроенная копия, поэтому пересъём
- * не зависит от того, держит ли проект свою копию. Ревизия — из манифеста:
- * эталон неподвижен, иначе пересъём уезжал бы следом за чужим проектом, а
- * сверять с ним стало бы нечего; сдвинуть ревизию — осознанное действие
- * (`--at`). Окружение снятия закреплено тем же способом, что и у проверок
- * (`core.quotePath=false`): у копии нет починки B1, и на машине с настройками
- * git по умолчанию эталон молча потерял бы строку.
+ * Both sides of the pair are pinned. The tool is the built-in copy, so a re-take does not depend on
+ * whether the project keeps a copy of its own. The revision comes from the manifest: the golden is
+ * motionless — otherwise a re-take would follow someone else's project and there would be nothing to
+ * compare against; moving the revision is a deliberate act (`--at`). The environment of the taking is
+ * pinned the way the checks pin theirs (`core.quotePath=false`): the copy predates the pin the engine
+ * sets for itself, and on a machine with default git settings the golden would silently lose a line.
  *
- * Артефакт не берётся из ревизии, а собирается копией и сверяется с лежащим в
- * ревизии: так эталон доказывает, что форма отчёта снята тем же инструментом, а
- * не просто описана рядом. Контрольный режим копии на своём артефакте обязан
- * быть зелёным — иначе эталон описывает несогласованный отчёт.
+ * The artifact is not taken from the revision but built by the copy and compared with the one lying in
+ * the revision: that is how the golden proves the report's form was taken by the same tool rather than
+ * merely described beside it. The copy's check mode on its own artifact must be green — otherwise the
+ * golden describes an inconsistent report.
  *
- * Проект открывается только на чтение и только на клоне: в потребителе не
- * трогается ничего.
+ * The project is opened read-only and only through a clone: nothing in the consumer is touched.
  *
- * Запуск (из корня репозитория size-report):
- *   node tools/parity-freeze.js [путь-к-проекту] [--at <sha>] [--out <каталог>]
+ * Run (from the size-report repository root):
+ *   node tools/parity-freeze.js [path-to-project] [--at <sha>] [--out <dir>]
  *
- * По умолчанию проект — записанный в манифесте, каталог — `fixtures/parity`.
- * Перезапись эталона — осознанное действие: молча он не обновляется ничем.
+ * By default the project is the one recorded in the manifest and the directory is `fixtures/parity`.
+ * Rewriting the golden is a deliberate act: nothing updates it silently.
  */
 
 import fs from 'node:fs';
@@ -45,11 +41,11 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_PROJECT = path.join(ROOT, '..', 'figma', 'safe-resets');
 const DEFAULT_OUT = path.join(ROOT, 'fixtures', 'parity');
 
-/* stderr задан явно, хотя он и не читается: без этого `execFileSync` дублирует его
- * в наш stderr, и замечание самого git (`hint: Using 'master' …`) становится
- * первой строкой нашего сообщения об отказе, а причина — невидимой. */
-/* Закрепления — тот же список, что у движка и проверок: эталон снимается одним и
- * тем же чтением git независимо от машины. */
+/* stderr is set explicitly although it is never read: without that `execFileSync` duplicates it
+ * into our stderr, and git's own remark (`hint: Using 'master' …`) becomes the first line of our
+ * refusal message while the cause stays invisible. */
+/* The pinning is the same list the engine and the checks use: the golden is taken by one and the
+ * same reading of git, whatever the machine. */
 function git(dir, args) {
   return execFileSync('git', gitArgv(args),
     { cwd: dir, encoding: 'utf8', maxBuffer: MAX_BUF, env: gitEnv(), stdio: ['ignore', 'pipe', 'pipe'] }).trim();
@@ -60,8 +56,8 @@ function gitBytes(dir, args) {
     { cwd: dir, maxBuffer: MAX_BUF, env: gitEnv(), stdio: ['ignore', 'pipe', 'pipe'] });
 }
 
-/* Копия запускается закреплённым окружением — тем же, что у проверок
- * (`harness.FROZEN`): без него эталон снимается другими числами. */
+/* The copy runs in a pinned environment — the one the checks use (`tools/harness.js`,
+ * `frozenTarget`): without it the golden is taken with other numbers. */
 function legacy(dir, args) {
   const res = spawnSync(process.execPath, [legacyTool(), '--config', path.join(dir, CONFIG_NAME)].concat(args), {
     cwd: dir,
@@ -76,8 +72,8 @@ function legacy(dir, args) {
   return res.stdout || '';
 }
 
-/* Разбор аргументов: флагу может принадлежать значение, поэтому позиционный
- * аргумент — это тот, что не является ни флагом, ни значением флага. */
+/* Argument reading: a flag may own a value, so a positional argument is the one that is neither a
+ * flag nor a flag's value. */
 function parseArgs(args) {
   const out = { positional: null, flags: {} };
   for (let i = 0; i < args.length; i++) {
@@ -120,8 +116,9 @@ function manifestNote(ctx) {
   ].join('\n') + '\n';
 }
 
-/* Что снимать и куда: каталог, проект и ревизия. Ревизия и проект по умолчанию —
- * из манифеста: эталон неподвижен, пока его не переснимут осознанно. */
+/* What to take and where to: the directory, the project and the revision. By default the revision
+ * and the project come from the manifest: the golden is motionless until someone deliberately
+ * re-takes it. */
 function plan() {
   const args = parseArgs(process.argv.slice(2));
   const out = path.resolve(args.flags['--out'] || DEFAULT_OUT);
@@ -136,14 +133,14 @@ function plan() {
   return { out: out, project: project, want: want };
 }
 
-/* Снятие на клоне: ревизия, настройки, числа, артефакт. Копия запускается
- * трижды — `--json`, `--write` и контрольный режим на своём артефакте: эталон
- * описывает согласованный отчёт, а не набор файлов рядом. */
+/* The taking on a clone: the revision, the settings, the numbers, the artifact. The copy runs three
+ * times — `--json`, `--write` and the check mode on its own artifact: the golden describes an agreed
+ * report rather than a set of files lying beside each other. */
 function take(work, project, want) {
   const clone = path.join(work, 'clone');
   git(work, ['clone', '-q', '--no-hardlinks', project, clone]);
-  /* Обрезанность проверяется у клона, а не у источника: источником может быть
-   * и бандл истории (файл), у которого своего рабочего дерева нет. */
+  /* Shallow-ness is checked on the clone rather than on the source: the source may be a history
+   * bundle (a file), which has no working tree of its own. */
   if (git(clone, ['rev-parse', '--is-shallow-repository']) === 'true') {
     throw new Error('история проекта обрезана (shallow): эталон снимается только с полной истории');
   }
@@ -173,7 +170,8 @@ function take(work, project, want) {
   return { head: head, headDate: headDate, commits: commits, cfg: cfg, data: data, artifact: artifact };
 }
 
-/* Запись эталона: данные, настройки, хеш артефакта, манифест и объяснение рядом. */
+/* Writing the golden: the data, the settings, the artifact's hash, the manifest and the explanation
+ * beside them. */
 function store(out, project, taken) {
   const { head, headDate, commits, cfg, data, artifact } = taken;
   fs.mkdirSync(out, { recursive: true });

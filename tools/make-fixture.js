@@ -1,30 +1,29 @@
 #!/usr/bin/env node
-/* Собирает синтетическую фикстуру size-report: маленький репозиторий с историей,
- * в которой собраны ловушки настоящих проектов, плюс bundle для переноса.
+/* Builds the synthetic size-report fixture: a small repository whose history collects the traps
+ * real projects have, plus a bundle to carry it around.
  *
- * Зачем. Проверять движок на истории живого проекта нельзя: она меняется, она
- * большая, и половины ловушек в ней нет. Фикстура детерминирована — автор, даты и
- * содержимое зафиксированы, поэтому sha коммитов воспроизводимы. Эталонные числа
- * (`golden.json`) снимаются с замороженной копии реализации один раз, и дальше
- * перенос обязан их воспроизвести.
+ * Why. The engine cannot be checked against a live project's history: it changes, it is big, and
+ * half the traps are not in it. The fixture is determined — author, dates and contents are fixed,
+ * so the commit shas are reproducible. The golden numbers (`golden.json`) are taken from the frozen
+ * copy of the implementation once, and from then on the port has to reproduce them.
  *
- * Здесь — **вход**: разбор ключей, настройки фикстуры, снятие эталона и манифест.
- * Сюжеты сборки лежат рядом (`tools/synthetic/`), потому что это разные вопросы:
- * `repo.js` — как говорим с git (время, автор, закрепления), `content.js` — что
- * лежит в файлах, `history.js` — какие коммиты из этого получаются, `note.js` — что
- * об этом читает человек. Список ловушек — в записке, а не в коде: он её часть.
+ * This file is the **entry**: flag reading, the fixture's settings, taking the golden and the
+ * manifest. The build stories live next door (`tools/synthetic/`) because they answer other
+ * questions: `repo.js` how we talk to git (time, author, pins), `content.js` what lies in the files,
+ * `history.js` what commits come of it, `note.js` what a person reads about it. The list of traps
+ * belongs to the note rather than to the code: it is part of the note.
  *
- * Инструмент и окружение снятия закреплены. Копия берётся из истории
- * (`fixtures/legacy/size-table.cjs`, `REFACTOR.md` R-1.5), поэтому пересъём не
- * зависит от того, держит ли проект-потребитель свою копию. Окружение — `core.quotePath=false`: у копии
- * нет починки B1, и машина с настройками git по умолчанию потеряла бы в фикстуре
- * строку с не-английским именем файла — эталон молча стал бы короче.
+ * The tool and the environment of the taking are pinned. The copy comes from the history
+ * (`tools/harness.js`, `legacyTool`), so a re-take does not depend on whether the consumer project
+ * keeps a copy of its own. The environment is `core.quotePath=false`: the copy predates the pin the
+ * engine sets for itself, and a machine with default git settings would lose the fixture's line with
+ * a non-ASCII file name — a shorter golden, silently.
  *
- * Запуск (из корня репозитория size-report):
- *   node tools/make-fixture.js                       # бандл + конфиг + эталон
- *   node tools/make-fixture.js --legacy-tool <путь>   # другой инструмент, если он нужен
- *   node tools/make-fixture.js --bundle-only          # только бандл (без эталона)
- *   node tools/make-fixture.js --keep                 # не удалять временный репозиторий
+ * Run (from the size-report repository root):
+ *   node tools/make-fixture.js                        # bundle + config + golden
+ *   node tools/make-fixture.js --legacy-tool <path>    # another tool, if one is needed
+ *   node tools/make-fixture.js --bundle-only           # bundle only (no golden)
+ *   node tools/make-fixture.js --keep                  # keep the temporary repository
  */
 
 import fs from 'node:fs';
@@ -33,9 +32,9 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { LEGACY_PATH, MAX_BUF, gitConfig, legacyTool as legacyCopy, sha256 } from './harness.js';
-/* Значение ключа читается тем же способом, что у движка пакета (`src/config.js`),
- * а не своим разбором: «ключ без значения» — общий вопрос, и вторая его копия
- * разошлась бы с первой так же тихо, как расходятся любые две копии (нашёл `dup`). */
+/* A flag's value is read the same way the package's engine reads it (`src/config.js`) rather than
+ * by a parser of its own: "a flag with no value" is a shared question, and a second copy of it would
+ * diverge from the first as quietly as any two copies do (the `dup` sensor found it). */
 import { argValue } from '../src/config.js';
 import { git } from './synthetic/repo.js';
 import { buildRepo } from './synthetic/history.js';
@@ -45,11 +44,11 @@ import { fixtureNote } from './synthetic/note.js';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'fixtures', 'synthetic');
 
-/* Окружение снятия эталона — то же, что у проверок замороженной копии
- * (`harness.FROZEN`): без закрепления чтения путей эталон снимается другим. */
+/* The environment of the taking is the one the frozen-copy checks use (`tools/harness.js`,
+ * `frozenTarget`): without the path reading pinned, the golden is taken by another one. */
 const FROZEN_ENV = gitConfig({ 'core.quotePath': 'false' });
 
-// --- конфиг фикстуры --------------------------------------------------------
+// --- the fixture's settings -------------------------------------------------
 
 const CONFIG = {
   output: ARTIFACT,
@@ -81,18 +80,18 @@ const CONFIG = {
   skip: []
 };
 
-/* --- ключи, история и эталон ------------------------------------------------- */
+/* --- flags, history and the golden ------------------------------------------ */
 
 function options(args) {
-  /* Пустое значение — это «ключ назван без значения», то есть значение не названо:
-   * `--out` без пути берёт умолчание, `--legacy-tool` без пути — встроенную копию. */
+  /* An empty value means "the flag was named without a value", that is, no value was given:
+   * `--out` without a path takes the default, `--legacy-tool` without one the built-in copy. */
   const out = argValue(args, '--out');
   const legacy = argValue(args, '--legacy-tool');
   const named = typeof legacy === 'string' && legacy !== '';
   const tool = named ? path.resolve(legacy) : legacyCopy();
-  /* В записи о происхождении называется путь, под которым копия лежала, а не сегодняшнее
-   * место её байтов: запись — это история эталона, и она обязана сходиться с тем, что
-   * записано в снятом манифесте, а его не переписывает никакой переезд. */
+  /* The origin records the path the copy lay under rather than where its bytes live today: the
+   * record is the golden's history, and it has to agree with what the manifest holds — and no move
+   * rewrites the manifest. */
   return {
     out: path.resolve(out === null || out === '' ? OUT : out),
     tool: tool,
@@ -121,8 +120,8 @@ function runLegacy(tool, dir, cfgPath, args, env) {
   return { code: res.status, stdout: res.stdout || '', stderr: res.stderr || '' };
 }
 
-/* Артефакт собирается на клоне, а не в собранном репозитории: `--write` пишет файл,
- * и в фикстуре он обязан остаться неотслеживаемым, а не восемнадцатым коммитом. */
+/* The artifact is built on a clone rather than in the assembled repository: `--write` writes a file,
+ * and in the fixture it has to stay untracked rather than become one commit more. */
 function takeArtifact(paths, clone) {
   const wrote = runLegacy(paths.tool, clone, paths.config, ['--write']);
   if (wrote.code !== 0) throw new Error('инструмент не собрал артефакт: ' + wrote.stderr.trim());
@@ -132,8 +131,8 @@ function takeArtifact(paths, clone) {
   return artifact;
 }
 
-/* Пути вне ASCII: git цитирует их в зависимости от локали, и если числа от этого
- * меняются, эталон непереносим — это надо знать до, а не после. */
+/* Paths outside ASCII: git quotes them depending on the locale, and if the numbers change with it
+ * the golden is not portable — worth knowing before rather than after. */
 function localeStable(paths, clone, data) {
   const cLocale = runLegacy(paths.tool, clone, paths.config, ['--json'], { LC_ALL: 'C', LANG: 'C' });
   const cData = cLocale.code === 0 ? JSON.parse(cLocale.stdout) : null;
@@ -154,7 +153,7 @@ function takeGolden(paths, ctx) {
   fs.writeFileSync(path.join(paths.out, 'golden.json'), golden, 'utf8');
 
   const artifact = takeArtifact(paths, clone);
-  // Контрольный режим обязан быть зелёным: эталон снят с согласованного артефакта.
+  // The check mode must be green: the golden was taken from an agreed artifact.
   const checked = runLegacy(paths.tool, clone, paths.config, []);
   if (checked.code !== 0) throw new Error('контрольный режим на фикстуре красный: ' + checked.stderr.trim());
 
@@ -172,8 +171,8 @@ function takeGolden(paths, ctx) {
   };
 }
 
-/* Манифест — личность фикстуры: sha коммитов и хеши всех файлов рядом. Сам себя
- * он в список не берёт (иначе манифест зависел бы от манифеста). */
+/* The manifest is the fixture's identity: the commit shas and the hashes of every file beside them.
+ * It does not list itself (the manifest would then depend on the manifest). */
 function writeManifest(out, ctx) {
   const files = fs.readdirSync(out).sort().reduce((acc, name) => {
     const full = path.join(out, name);

@@ -89,8 +89,10 @@ comment diff stays under the commit budget, otherwise it is split by file groups
   2026-09-15). The outdated registry justification turned up here a sixth time (in the catalogue,
   at the "nothing to call the tool with" advice), found by searching the tree for its wording
   after the five places of M8-fix were done.
-- [ ] **M9c tools: frozen and live copies** — `tools/make-fixture.js`, `tools/parity-freeze.js`,
-  `tools/yaml.js` (611).
+- [x] **M9c tools: frozen and live copies** — `tools/make-fixture.js`, `tools/parity-freeze.js`,
+  `tools/yaml.js` (611 → 608; journal entry `worklog/0085`, 2026-09-15). Both copies of the
+  `core.quotePath=false` reasoning pointed at `harness.FROZEN`, a name that does not exist (the
+  frozen copy is taken through `frozenTarget()`); both now point at what is there.
 - [ ] **M9d tools: live parity and the tarball** — `tools/parity-live.js`, `tools/pack-check.js`
   (419).
 - [ ] **M9e tools: the gates** — `tools/gates/**` (769, 7 files).

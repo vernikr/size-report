@@ -1,27 +1,27 @@
-/* Разбор подмножества YAML, которого хватает описаниям рабочих процессов: отображения
- * по отступу, элементы списка `- `, скалярные значения и потоковый список (`[a, b]`).
- * Выход за подмножество — явная ошибка, а не молча пропущенная строка: описание,
- * которое перестало разбираться, обязано уронить проверку, а не пройти её.
+/* A parser of the YAML subset that workflow descriptions need: maps by indentation, list items
+ * (`- `), scalar values and a flow list (`[a, b]`). Leaving the subset is an explicit error rather
+ * than a silently skipped line: a description that stopped parsing has to fail a check instead of
+ * passing it.
  *
- * Блочные скаляры (`run: |`) — вне подмножества, и это названо отдельной ошибкой:
- * многострочную команду приходится собирать в одну строку, а не ловить потом странное
- * «не ключ и не элемент списка» посреди чужой команды.
+ * Block scalars (`run: |`) are outside the subset, and that has an error of its own: a multi-line
+ * command has to be assembled into one line rather than producing a strange "neither a key nor a
+ * list item" in the middle of someone's command later.
  *
- * Разборщик один на оба сторожа — шаблон проверки для чужого проекта и выпуск из CI:
- * два разборщика разошлись бы так же тихо, как расходятся любые две копии проверки.
- * Зачем проверке вообще разбор, когда есть строки: поиск подстроки не отличает
- * верное описание от того, которое **не разбирается вовсе** (так и вышло с выпуском:
- * `? … : …` внутри незакавыченного значения — синтаксис YAML ломает, а подстрока
- * находится).
+ * The parser is one for every guard that reads a workflow description — the check template for a
+ * consumer project, the repository's own CI parity, the release from CI: two parsers would diverge
+ * as quietly as any two copies of a check do. Why parse at all when there is text: a substring
+ * search cannot tell a correct description from one that **does not parse at all** (which is what
+ * happened to the release: `? … : …` inside an unquoted value breaks the YAML syntax, while the
+ * substring is right there).
  *
- * Разбор идёт по шагам (`map` / `list` / `node`), а строка и указатель на неё живут в
- * одном состоянии (`p`): вложенные функции пришлось бы собирать заново на каждый
- * уровень, а рекурсия уровней здесь и есть суть разбора.
+ * The parse goes in steps (`map` / `list` / `node`), and the line with a pointer at it live in one
+ * state (`p`): inner functions would have to be built anew for every level, and the recursion of
+ * levels is the essence of the parse.
  */
 
-/* Строки описания без комментариев и пустых, с отступом и номером в исходном тексте.
- * Отступ и хвостовые пробелы — вне подмножества: разбор по отступу на неоднозначном
- * отступе давал бы разное дерево у разных людей. */
+/* The description's lines without comments and blanks, with their indentation and their number in
+ * the source text. Tabs and trailing spaces are outside the subset: an indentation-based parse on
+ * an ambiguous indent would give different people different trees. */
 function linesOf(src) {
   const lines = [];
   src.split('\n').forEach((raw, i) => {
@@ -37,8 +37,8 @@ function linesOf(src) {
   return lines;
 }
 
-/* Элемент потокового списка может быть закавычен (`tags: ['v*']`) — кавычки в
- * самом YAML не часть значения, и значение читается без них. */
+/* A flow list's item may be quoted (`tags: ['v*']`) — in YAML itself the quotes are no part of the
+ * value, and the value is read without them. */
 function flowItem(text) {
   if (text.length > 1 && (text[0] === "'" || text[0] === '"') && text[text.length - 1] === text[0]) {
     return text.slice(1, -1);
@@ -51,9 +51,9 @@ function scalar(text, line) {
     throw new Error('строка ' + line + ': блочный скаляр (`' + text + '`) вне подмножества —'
       + ' соберите значение шага в одну строку');
   }
-  /* Правило самого YAML, и в этом файле оно не украшение: `? … : …` в команде
-   * незакавыченным значением разбирается как конец значения, то есть описание не
-   * разбирается вовсе, а поиск подстроки этого не видит. */
+  /* A rule of YAML itself, and in this file it is no decoration: `? … : …` in a command as an
+   * unquoted value parses as the end of the value, which means the description does not parse at
+   * all — and a substring search does not see that. */
   const quoted = text[0] === '"' || text[0] === "'" || text[0] === '[';
   if (!quoted && text.indexOf(': ') >= 0) {
     throw new Error('строка ' + line + ': двоеточие с пробелом в незакавыченном значении —'
@@ -67,15 +67,15 @@ function scalar(text, line) {
   return text;
 }
 
-/* Ключ и значение из строки `ключ: значение`; `null` — строка не отображение (сообщение
- * об ошибке зависит от места и потому живёт у того, кто спросил). */
+/* A key and a value out of a `key: value` line; `null` means the line is no mapping (the error
+ * message depends on the place and thus lives with whoever asked). */
 function split(text) {
   const cut = text.indexOf(':');
   if (cut < 0) return null;
   return { key: text.slice(0, cut).trim(), value: text.slice(cut + 1).trim() };
 }
 
-/* Значение ключа: пустое — вложенный узел глубже по отступу, а если его нет — null. */
+/* A key's value: empty means a nested node deeper by indentation, and null when there is none. */
 function valueAt(p, kv, line, indent) {
   if (kv.value !== '') return scalar(kv.value, line);
   if (p.at < p.lines.length && p.lines[p.at].indent > indent) return node(p, p.lines[p.at].indent);
@@ -104,8 +104,8 @@ function list(p, indent) {
       out.push(node(p, head.indent + 2));
       continue;
     }
-    /* Элемент-отображение записан первой строкой (`- name: …`), остальные его
-     * ключи стоят на два пробела глубже. */
+    /* A mapping item is written by its first line (`- name: …`) and its remaining keys stand two
+     * spaces deeper. */
     const kv = split(rest);
     if (kv === null) throw new Error('строка ' + head.line + ': элемент списка не отображение');
     const item = {};
