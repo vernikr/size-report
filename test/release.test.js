@@ -1,29 +1,25 @@
-/* Выпуск — тоже обещание, и оно из тех, что стареют молча: описание рабочего
- * процесса лежит в репозитории, а исполняет его чужая машина (раннер GitHub).
- * Поэтому проверяется то, что проверяемо машинно: выпуск начинается тегом, а не
- * кнопкой; публикация не требует ни секрета, ни кода из аутентификатора (иначе
- * «у тебя все права» превращается в «у тебя есть токен»); версия берётся из
- * манифеста и сверяется с тегом; prerelease не уезжает в `latest`; перед
- * публикацией идёт тот же полный набор, что и в CI; а подсказка про одну
- * одноразовую настройку на npmjs.com называет **этот самый файл** — иначе она
- * отправила бы владельца настраивать то, чего нет.
+/* A release is a promise too, and one of those that age in silence: the workflow description lies in the
+ * repository while someone else's machine (a GitHub runner) runs it. So what is checked is what a machine
+ * can check: the release starts from a tag rather than a button; publishing needs neither a secret nor a
+ * code from an authenticator (or "you have all the rights" turns into "you have a token"); the version
+ * comes from the manifest and is held against the tag; a prerelease does not go to `latest`; the same
+ * full suite as in CI runs before publishing; and the hint about the one-time setting on npmjs.com names
+ * **this very file** — otherwise it would send the owner to configure what does not exist.
  *
- * **Проверка разбирает описание, а не ищет в нём подстроки,** и это не строгость
- * ради строгости: поиск подстроки не отличает верное описание от неразбираемого.
- * Так и вышло с первой редакцией этого файла — `? … : …` внутри незакавыченной
- * команды публикации ломало YAML целиком (раннер падал через ноль секунд
- * «workflow file issue»), а подстрока находилась, и проверка была зелёной.
- * Разборщик один на оба сторожа — здесь и у шаблона для чужого проекта
- * (`tools/yaml.js`), потому что два разборщика разошлись бы так же тихо.
+ * **The check parses the description rather than searching it for substrings,** and that is no strictness
+ * for its own sake: a substring search cannot tell a valid description from an unparseable one. That is
+ * how the first draft of this file went — `? … : …` inside an unquoted publish command broke the YAML
+ * outright (the runner failed in zero seconds with "workflow file issue") while the substring was found
+ * and the check was green. One parser serves both guards — this one and the template's for a foreign
+ * project (`tools/yaml.js`) — because two parsers would drift apart just as quietly.
  *
- * Чего здесь нет и почему: сам GitHub Actions не запускается из проверки —
- * запустить его можно только пушем тега. Поэтому зелёный набор значит «описание
- * разбирается и говорит верное», а не «выпуск прошёл»; правду об этом даёт
- * прогон `workflow_dispatch` (черновой режим) и первый настоящий тег.
+ * What is absent here and why: GitHub Actions itself does not run from a check — only a tag push starts
+ * it. So a green suite means "the description parses and says what is true" rather than "the release went
+ * through"; the truth about that comes from a `workflow_dispatch` run (draft mode) and the first real tag.
  *
- * Отдельно назван предел чернового прогона, а не спрятан: `npm publish --dry-run`
- * не обменивается удостоверением и проходит вообще без учётных данных, поэтому
- * настроен ли издатель на npmjs.com — он **не** проверяет. Это делает первый тег.
+ * The limit of the draft run is named separately rather than hidden: `npm publish --dry-run` exchanges no
+ * attestation and passes with no credentials at all, so whether the publisher is configured on npmjs.com
+ * is what it does **not** check. The first tag does.
  */
 
 import { test } from 'node:test';
@@ -37,13 +33,13 @@ const FILE = '.github/workflows/release.yml';
 const WORKFLOW = path.join(ROOT, FILE);
 const TEXT = fs.existsSync(WORKFLOW) ? fs.readFileSync(WORKFLOW, 'utf8') : '';
 
-/* Шаги без комментариев: обещание «секретов не требуем» относится к тому, что
- * job делает, а не к тому, что о нём написано. Иначе комментарий, объясняющий это
- * правило, сам его и нарушал бы — проверка ловила бы собственное объяснение. */
+/* Steps without comments: the promise "no secrets required" is about what the job does rather than about
+ * what is written next to it. Otherwise a comment explaining this rule would break it itself — the check
+ * would catch its own explanation. */
 const STEPS = TEXT.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
 
-/* Разбор описания — часть проверки: неразбираемый файл не может считаться верным.
- * Ошибка разбора называет строку, а не «где-то в файле». */
+/* Parsing the description is part of the check: an unparseable file cannot count as a valid one. A parse
+ * error names a line rather than "somewhere in the file". */
 function workflow() {
   assert.ok(TEXT !== '', 'описания выпуска нет: выпускать нечем — это ' + FILE);
   return parseWorkflow(TEXT);
@@ -61,8 +57,8 @@ test('описание выпуска разбирается, и выпуск н
     'выпуск не привязан к тегу `v*`: выкладывать можно было бы с любой ветки');
   assert.ok(doc.on.workflow_dispatch, 'у выпуска нет ручного запуска: черновой прогон нечем позвать');
 
-  // Версия сверяется с тегом и берётся из манифеста: два числа, прочитанные
-  // отдельно, а не выведенные одно из другого.
+  // The version is held against the tag and taken from the manifest: two numbers read separately rather
+  // than one derived from the other.
   const version = step(doc, 'Версия манифеста — в окружение');
   assert.match(String(version.run), /require\('\.\/package\.json'\)\.version/,
     'версия не берётся из манифеста — вторым списком её держать нечем');
@@ -90,11 +86,11 @@ test('публикация не требует ни секрета, ни код�
   assert.equal(step(doc, 'npm поновее (для trusted publishing)').run, 'npm install -g npm@latest',
     'npm не поднят: trusted publishing требует 11.5.1, а с Node 22 приходит 10');
 
-  /* `registry-url` — не украшение шага: с ним setup-node пишет в `.npmrc` строку
-   * `_authToken=${NODE_AUTH_TOKEN}`, npm считает учётные данные заданными и за
-   * удостоверением OIDC не идёт, а публикация падает 404 при верно заведённом
-   * издателе. Реестр и так по умолчанию registry.npmjs.org, а выставленный явно
-   * адрес живёт в `publishConfig` манифеста. */
+  /* `registry-url` is no decoration of the step: with it setup-node writes the line
+   * `_authToken=${NODE_AUTH_TOKEN}` into `.npmrc`, npm takes the credentials for given and never goes for
+   * the OIDC attestation, and publishing fails with 404 even with the publisher properly configured. The
+   * registry is the default one anyway, while an explicitly set address lives in the manifest's
+   * `publishConfig`. */
   const setup = doc.jobs.release.steps.find((s) => String(s.uses || '').startsWith('actions/setup-node'));
   assert.notEqual(setup, undefined,
     'в описании выпуска нет шага setup-node: Node берётся неизвестно откуда');
@@ -110,11 +106,11 @@ test('публикация не требует ни секрета, ни код�
   assert.match(String(publish.run), /'next'/, 'у prerelease нет своей метки `next`');
   assert.match(String(publish.run), /'latest'/, 'у обычного выпуска нет метки `latest`');
 
-  /* Черновой прогон собирает пакет и проходит путь публикации, ничего не отправляя.
-   * Версия в нём — черновая надстройка: на честном номере реестр отказывает в
-   * публикации уже выпущенной версии, и прогон, который должен отвечать «настройка
-   * верна», был бы красным по чужой причине (так и вышло на первом же прогоне с
-   * 1.1.1). Правка версии живёт только в рабочем каталоге раннера. */
+  /* The draft run assembles the package and walks the publishing path without sending anything. Its
+   * version is a draft increment: on an honest number the registry refuses to publish an already
+   * published version, and a run that has to answer "the setting is right" would be red for a foreign
+   * reason — as the first run did with 1.1.1. The version edit lives in the runner's working directory
+   * alone. */
   const dry = step(doc, 'Черновой прогон — в реестр ничего не ушло');
   assert.match(String(dry.run), /npm publish --dry-run/,
     'черновой прогон не показывает, что бы уехало: он молчит о содержимом пакета');

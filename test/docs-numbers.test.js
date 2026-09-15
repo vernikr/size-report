@@ -1,16 +1,15 @@
-/* Четвёртое обещание документации: **названные числа совпадают с фактом** — число
- * проверок в `README.md` равно тому, что есть на самом деле: сколько проверок
- * объявлено в файлах набора (`tools/suites.js`). Счёт держится тем, что проверка
- * объявляется в начале строки: объявление внутри цикла сделало бы число выводом из
- * кода, и документации было бы не на что опираться (за этим следит первая проверка
- * файла).
+/* The promise that **the numbers named match the fact**: the check count in `README.md` is the real
+ * one, that is, how many checks are declared in the suite's files (`tools/suites.js`). The count holds
+ * because a check is declared at the start of a line: a declaration inside a loop would make the number
+ * a derivation from the code, and the documentation would have nothing to rest on (the file's first
+ * check watches that).
  *
- * Прогонов два, и у каждого своё число — иначе быстрый прогон перестал бы быть
- * быстрым молча, а документ говорил бы о разделении, которого никто не держит.
+ * There are two runs and each has a count of its own — otherwise the fast run would stop being fast in
+ * silence, and the document would speak of a split nobody holds.
  *
- * **Целей по времени здесь нет, и это сказано, а не спрятано:** секунды зависят от
- * окна (загрузка машины бывает какой угодно), поэтому прогон за время не валится и
- * документ секунд не обещает — сверять нечего.
+ * **There are no time targets here, and that is said rather than hidden:** seconds depend on the window
+ * (a machine's load is whatever it is), so a run does not fail on time and the document promises no
+ * seconds — there is nothing to check against.
  */
 
 import { test } from 'node:test';
@@ -22,9 +21,9 @@ import { FAST, checksIn, testFiles } from '../tools/suites.js';
 import { publishedRuns, read } from '../tools/docs-facts.js';
 
 test('числа проверок в документации совпадают с фактом', () => {
-  // Объявлений проверок — по файлам набора. Счёт держится на том, что проверка
-  // объявляется в начале строки: объявление внутри цикла сделало бы число выводом
-  // из кода, и документации было бы не на что опираться.
+  // Check declarations, file by file. The count holds because a check is declared at the start of a
+  // line: a declaration inside a loop would make the number a derivation from the code, and the
+  // documentation would have nothing to rest on.
   const nested = [];
   fs.readdirSync(path.join(ROOT, 'test')).filter((f) => /\.test\.js$/.test(f)).forEach((f) => {
     read(path.join('test', f)).split('\n').forEach((line, i) => {
@@ -38,7 +37,7 @@ test('числа проверок в документации совпадают
   const total = testFiles().reduce((sum, f) => sum + checksIn(f), 0);
   const quick = FAST.reduce((sum, entry) => sum + checksIn(entry.file), 0);
 
-  // README называет оба прогона таблицей: команда и сколько проверок.
+  // README names both runs as a table: the command and how many checks it takes.
   const runs = publishedRuns();
   assert.ok(runs.fast !== null, 'README не называет быстрый прогон: `pnpm test` — сколько'
     + ' проверок из скольких');

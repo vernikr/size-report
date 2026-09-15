@@ -1,19 +1,16 @@
-/* Четыре обещания документации: **документ зовёт только то, что инструмент умеет**
- * (команды и ключи — из справки, а не из второго списка), **называет те причины
- * отказа, которые бывают**, **ссылается на существующие разделы** и **зовёт
- * инструмент так, что зов работает и без установленного пакета**.
+/* Four promises of the documentation: **it calls only what the tool knows** (commands and flags from
+ * the help rather than from a second list), **it names the refusal causes that exist**, **it refers to
+ * sections that exist** and **it calls the tool in a way that works without the package installed**.
  *
- * Причины кодом 2 держатся реестром: `CONFIG_CAUSES` в `src/refusal.js` — одно
- * место, где они перечислены словами, справка печатает их из него, а таблица
- * кодов `README.md` обязана назвать тот же список. Иначе документ снова скажет
- * меньше, чем бывает, — тем и кончились четыре прошлых прохода.
+ * Causes with code 2 are held by a registry: `CONFIG_CAUSES` in `src/refusal.js` is the one place where
+ * they are listed in words, the help prints them from it, and the code table of `README.md` has to name
+ * the same list — or the document would again say less than happens.
  *
- * Что здесь машинно не проверяется, и это сказано, а не спрятано: формулировки и
- * смысл, обещания о будущем (разделы «чего ещё нет» проверку не проходят — там
- * названо отсутствующее, и требовать его существования значило бы запретить
- * планировать) и совпадение счёта причин с числом отказов в движке по тексту
- * сообщения — оно держится реестром: причина без записи в нём не доедет до
- * пользователя, потому что `refuseCause` её не пропустит.
+ * What is not checked by machine here, said out loud rather than hidden: wording and meaning, promises
+ * about the future (the "not yet" sections do not pass the check — they name the absent, and demanding
+ * that it exist would forbid planning), and the count of causes matching the number of refusals in the
+ * engine by message text — that one holds through the registry: a cause without a record in it never
+ * reaches a user, because `refuseCause` will not let it through.
  */
 
 import { test } from 'node:test';
@@ -24,17 +21,17 @@ import { ROOT, gitIn } from '../tools/harness.js';
 import { CONFIG_CAUSES, USAGE, refuseCause } from '../src/refusal.js';
 import { TOOL_PKG } from '../src/tool.js';
 
-/* Инструкции — то, по чему читатель запускает инструмент: README пакета и записка
- * в шаблонах. `PLAN.md` и `REFACTOR.md` называют целевую поверхность и историю,
- * а `WORKLOG.md` и `CHANGELOG.md` — прошедшее время: прежние зовы там уместны. */
+/* Instructions are what a reader launches the tool by: the package's README and the note in the
+ * templates. Calls are checked there alone: the other documents name the target surface, the history or
+ * the past, where former calls are in place. */
 const INSTRUCTIONS = ['README.md', 'templates/README.md'];
 import {
   DOCS, NOT_TODAY, PKG, TARGETS, callWords, facts, invocations, read, sectionsOf,
   usageCommands, usageFlags
 } from '../tools/docs-facts.js';
 
-/* Причины из справки: движок печатает их из того же реестра, поэтому строки
- * разбираются, а не сверяются глазами. */
+/* Causes from the help: the engine prints them from the same registry, so the lines are parsed rather
+ * than compared by eye. */
 function usageCauses() {
   const block = USAGE.split('Причины отказа кодом 2')[1] || '';
   return block.split('\n').filter((l) => l.indexOf(': ') > 0).map((l) => {
@@ -43,8 +40,8 @@ function usageCauses() {
   });
 }
 
-/* Причины из таблицы кодов README.md: строка `| 2 | … |`, в ней группы вида
- * `**имя** (причина, причина)`. */
+/* Causes from the code table of `README.md`: the row `| 2 | … |`, holding groups shaped
+ * `**name** (cause, cause)`. */
 function readmeCauses() {
   const rows = read('README.md').split('\n').filter((l) => /^\|\s*2\s*\|/.test(l));
   assert.ok(rows.length > 0, 'в таблице кодов README нет строки про код 2 — сверить нечего');
@@ -53,14 +50,13 @@ function readmeCauses() {
   return found.map((m) => [m[1], m[2].split(', ')]);
 }
 
-/* Отказы, объявленные самим движком: `refuseCause('причина', …)`. Список мест ведёт
- * не комментарий, а проверка: голый `refuse(EXIT.CONFIG` в движке — это причина,
- * которую никто не назвал. Первый аргумент обязан быть литералом — разбирать
- * тернарники проверке нечем, а название причины скрытое за выражением и человек
- * прочтёт не сразу. */
+/* Refusals declared by the engine itself: `refuseCause('cause', …)`. The list of sites is kept by a
+ * check rather than by a comment: a bare `refuse(EXIT.CONFIG` in the engine is a cause nobody named.
+ * The first argument has to be a literal — the check has nothing to parse a ternary with, and a cause
+ * hidden behind an expression would not read at a glance. */
 function emittedCauses() {
-  // Дом самого механизма из счёта выпадает: в `refusal.js` отказ только собирается,
-  // а выдают его те, кто причину называет.
+  // The home of the mechanism itself is left out of the count: in `refusal.js` a refusal is only put
+  // together, while those who name the cause are the ones who hand it out.
   const out = new Set();
   const files = gitIn(ROOT, ['ls-files', 'src']).split('\n')
     .filter((f) => /\.js$/.test(f) && f !== 'src/refusal.js');
@@ -78,10 +74,9 @@ function emittedCauses() {
 const escapedName = PKG.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 test('документация зовёт только существующие команды и ключи', () => {
-  // Проверяются инструкции — README пакета и записка в шаблонах: их читает тот,
-  // кто собирается что-то запустить. `PLAN.md` и `REFACTOR.md` называют целевую
-  // поверхность (`size init`, `size measure`, `--out`) — это план, и требовать от
-  // них сегодняшнего CLI значило бы запретить планировать.
+  // What is checked is the instructions — the package's README and the note in the templates: they are
+  // read by someone about to run something. Other documents name the target surface, commands the CLI
+  // does not have yet — that is a plan, and demanding today's CLI of it would forbid planning.
   const bad = [];
   INSTRUCTIONS.forEach((doc) => {
     invocations(facts(doc, NOT_TODAY[doc])).forEach((call) => {
@@ -91,9 +86,9 @@ test('документация зовёт только существующие 
       if (words.length === 0) return;
       const known = usageCommands.indexOf(words[0]) >= 0;
       if (!known && words[0][0] !== '-') {
-        // Первое слово может быть только командой или ключом режима; всё
-        // остальное — зов несуществующей команды (но только если это слово, а
-        // не, скажем, `…` или `<sha>` из шаблона).
+        // The first word can only be a command or a mode flag; anything else is a call to a command
+        // that does not exist (but only if it is a word rather than, say, the `…` or `<sha>` of a
+        // template).
         if (/^[a-z][a-z-]*$/.test(words[0])) {
           bad.push(doc + ': команда «' + words[0] + '» (в «' + call + '»)');
         }
@@ -131,9 +126,8 @@ test('причины отказа совпадают у движка, справ
   assert.deepEqual(readmeCauses(), CONFIG_CAUSES,
     'таблица кодов README называет не те причины, что объявлены в CONFIG_CAUSES');
 
-  // Обратная сторона: причина, объявленная и напечатанная, но никем не выдаваемая,
-  // — это обещание отказа, которого не бывает, и место в документации, которое
-  // читатель ищет напрасно.
+  // The other side: a cause declared and printed while nobody hands it out is a promise of a refusal
+  // that never happens and a place in the documentation a reader looks for in vain.
   const emitted = emittedCauses();
   const declared = new Set(CONFIG_CAUSES.map((g) => g[1]).flat());
   const silent = [...declared].filter((c) => !emitted.has(c));
@@ -141,14 +135,14 @@ test('причины отказа совпадают у движка, справ
   const undeclared = [...emitted].filter((c) => !declared.has(c));
   assert.deepEqual(undeclared, [], 'отказы называют причины, которых нет в списке: ' + undeclared.join(', '));
 
-  // Голый отказ кодом 2 в обход причины — то же самое, только тише: причина
-  // появится в поведении и не появится в документации.
+  // A bare refusal with code 2 bypassing the cause is the same thing, only quieter: the cause would
+  // appear in the behaviour and not in the documentation.
   const bare = gitIn(ROOT, ['grep', '-l', '-F', 'refuse(EXIT.CONFIG', '--', 'src'])
     .split('\n').filter((f) => f !== '' && f !== 'src/refusal.js');
   assert.deepEqual(bare, [], 'отказ кодом 2 в обход причины (refuseCause) в: ' + bare.join(', '));
 
-  // Механизм живой, а не декоративный: причина, которой нет в реестре, до
-  // пользователя не доедет.
+  // The mechanism is live rather than decorative: a cause that is not in the registry never reaches a
+  // user.
   assert.throws(() => refuseCause('выдуманная причина', 'текст'),
     /причина отказа не объявлена/, 'refuseCause пропустил неназванную причину');
 });
@@ -163,17 +157,17 @@ test('ссылки на разделы ведут в существующие р
       [...line.matchAll(/§\s*(\d+(?:\.\d+)*|[BN]\d+)/g)].forEach((m) => {
         const key = m[1];
         const before = line.slice(0, m.index);
-        // Ближайшее имя документа: сразу за ссылкой («§4.3 `module-design.md`»)
-        // или перед ней («`PLAN.md` §5»). Без имени ссылка на раздел требований —
-        // так на них и ссылаются («требование §4.2»).
+        // The nearest document name: right after the reference ("§4.3 `module-design.md`") or before it
+        // ("`PLAN.md` §5"). With no name it is a reference to a section of the requirements — that is
+        // how they are referred to ("requirement §4.2").
         const after = line.slice(m.index + m[0].length).match(/^\s*`?([\w.-]+\.md)`?/);
         const named = (after && sections[after[1]] !== undefined && after[1])
           || [...before.matchAll(/`?([\w.-]+\.md)`?/g)].reverse().map((n) => n[1])
             .find((n) => sections[n] !== undefined)
           || (/(?:требовани|требований)/.test(line) ? 'requirements.md' : null);
-        // Ссылка без имени документа — это § журнала или плана, и разрешать её
-        // нечем: планировать и нумеровать всякий волен по-своему. Молчание тут
-        // честнее догадки.
+        // A reference with no document name is a § of the journal or of a plan, and there is nothing to
+        // resolve it against: anyone is free to plan and number as they like. Silence is more honest
+        // than a guess here.
         if (named === null || sections[named] === undefined) return;
         if (!sections[named].has(key)) bad.push(doc + ': §' + key + ' → ' + named);
       });

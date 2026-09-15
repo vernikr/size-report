@@ -1,22 +1,22 @@
-/* Шестое обещание документации, и оно про выпуск: **версия в `CHANGELOG.md` — та,
- * что в манифесте, а раздел «Что изменится в числах» не пересказ, а замер**.
+/* The promise that **the version in `CHANGELOG.md` is the one in the manifest, and the "what will
+ * change in the numbers" section is a measurement rather than a retelling**.
  *
- * Класс дефекта здесь тот же, что у остальных сторожей (`tools/docs-facts.js`):
- * документ утверждает то, чего в репозитории нет. Для выпуска это дороже, чем для
- * инструкции: обещание «у вас числа не поедут» читают перед обновлением, и таблица
- * чисел стареет молча — числа меняет не выпуск, а следующая правка датчика. Поэтому
- * таблица сверяется с живым прогоном инструмента на фикстуре: столько же колонок,
- * те же метки и те же значения, а строка итога — сумма строк.
+ * The defect class is the same as for the other guards (`tools/docs-facts.js`): a document asserts what
+ * the repository does not have. For a release that costs more than for an instruction: the promise
+ * "your numbers will not move" is read before an update, and the numbers table ages in silence — the
+ * numbers are changed by the next edit of a sensor rather than by the release. So the table is held
+ * against a live run of the tool on the fixture: as many columns, the same labels and the same values,
+ * and the total row equal to the sum of the rows.
  *
- * Что остаётся человеку, и это названо: формулировки причин («почему число
- * поехало»), полнота списка «что вошло» и верность обещаний на будущее — проверке
- * недоступны; механику она стережёт, смысл — нет.
+ * What stays with a person, said out loud: the wording of the causes ("why the number moved"), the
+ * completeness of the "what is in it" list and the truth of promises about the future are beyond the
+ * check; it guards the mechanics, not the meaning.
  *
- * Числа `min` с `esbuild` и `tok` воспроизводятся там, где необязательные
- * зависимости (минификатор и словарь) на месте: без них инструмент честно считает
- * упрощением и оценкой — другими числами, помеченными приближением. Проверка в этом
- * случае говорит это словами, а не молчит: `test/minify.test.js`, `test/tokens.test.js`
- * держат тот же шов со стороны движка.
+ * The `min` numbers with `esbuild` and `tok` are reproducible where the optional dependencies (the
+ * minifier and the dictionary) are in place: without them the tool honestly counts by simplification and
+ * by estimate — other numbers, marked as an approximation. In that case the check says so in words
+ * rather than staying silent: `test/minify.test.js` and `test/tokens.test.js` hold the same seam from the
+ * engine's side.
  */
 
 import { test, after } from 'node:test';
@@ -31,7 +31,7 @@ after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 const TEXT = fs.readFileSync(path.join(ROOT, 'CHANGELOG.md'), 'utf8');
 const manifest = readJson(path.join(ROOT, 'package.json'));
 
-/* Верхний выпуск в файле: от его заголовка до следующего заголовка того же уровня. */
+/* The top release of the file: from its heading to the next heading of the same level. */
 function release() {
   const head = TEXT.match(/^## (\d+\.\d+\.\d+) — (\d{4}-\d{2}-\d{2})$/m);
   assert.notEqual(head, null, 'в CHANGELOG нет строки выпуска вида «## 1.0.0 — 2026-09-14»');
@@ -40,8 +40,9 @@ function release() {
   return { version: head[1], date: head[2], text: next < 0 ? from : from.slice(0, next + 1) };
 }
 
-/* Таблица чисел выпуска: метка и четыре значения — raw, min со strip, min со сжатием,
- * токены. Разбирается она, а не читается глазами: иначе сверять было бы нечего. */
+/* The release's numbers table: a label and four values — `raw`, `min` under stripping, `min` under
+ * compression, tokens. It is parsed rather than read by eye: otherwise there would be nothing to check
+ * against. */
 function numbersTable() {
   const section = TEXT.match(/^### Что изменится в числах$[\s\S]*?(?=\n#{2,3} |(?![\s\S]))/m);
   assert.notEqual(section, null, 'в CHANGELOG нет раздела «Что изменится в числах» — выпуск не отвечает,'
@@ -60,8 +61,9 @@ function numbersTable() {
   return rows;
 }
 
-/* Настройки замера: история и колонки — эталонные, меняются только метрики и способ
- * минификации. Иначе числа выпуска сравнивались бы не с той фикстурой. */
+/* The settings of the measurement: the history and the columns are the reference ones, and only the
+ * metrics and the minification way change. Otherwise the release's numbers would be compared with the
+ * wrong fixture. */
 function configAs(name, metrics, engine) {
   const cfg = readJson(CONFIG);
   cfg.metrics = metrics;
@@ -72,7 +74,7 @@ function configAs(name, metrics, engine) {
   return file;
 }
 
-/* Состояние на верхушке фикстуры: то, что колонка показывает сейчас. */
+/* The state at the fixture's tip: what a column shows now. */
 function nowState(dir, cfgFile, what) {
   const res = runSize(dir, ['--config', cfgFile, '--data']);
   assert.equal(res.code, 0, what + ': инструмент не отдал данные (код ' + res.code + '): '
@@ -105,9 +107,9 @@ test('числа выпуска совпадают с прогоном на фи
 
   const total = [0, 0, 0, 0];
   rows.slice(0, -1).forEach((row, i) => {
-    // Колонки минификатора и словаря считаются теми же клетками той же истории: ждём
-    // по одному числу на разрез — `raw`, упрощение, сжатие, токены. Пустая колонка
-    // (файла нет на HEAD) — четыре нуля, а не повод пропустить строку.
+    // The minifier's and the dictionary's columns are counted from the same cells of the same history:
+    // one number per cut is expected — `raw`, simplification, compression, tokens. An empty column (the
+    // file is absent at HEAD) is four zeros rather than a reason to skip the row.
     const want = [strip[i].cells[0] || 0, strip[i].cells[1] || 0,
       full[i].cells[1] || 0, full[i].cells[2] || 0];
     assert.deepEqual(row.nums, want, 'числа выпуска для «' + row.label + '» разошлись'

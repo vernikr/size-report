@@ -1,13 +1,11 @@
-/* Пятое обещание документации, и оно своё у каждой инструкции: **пример установки
- * ведёт на ревизию, которая умеет то, чему учит текст**. Пин — ревизия этого
- * репозитория, сорок знаков (короткий sha pnpm разрешает только через видимые
- * рефы, то есть пока ревизия — верхушка ветки), и в её справке есть все команды,
- * которые зовёт инструкция. Иначе документированный путь ведёт в пустоту:
- * инструмент той ревизии лишнего слова не читает, и `size doctor` отвечает нулём,
- * ничего не сделав.
+/* The promise that **the install example leads to a revision that can do what the text teaches**. The
+ * pin is a revision of this repository — forty characters (pnpm resolves a short sha only through
+ * visible refs, that is, while the revision is the tip of a branch) — and its help holds every command
+ * the instructions call. Otherwise the documented path leads into emptiness: a revision that silently
+ * ignores a word it does not know answers zero having done nothing.
  *
- * Справка ревизии читается из истории git (`git show <пин>:src/refusal.js`), а не
- * из дерева: в дереве она своя, и проверять её здесь значило бы проверять себя.
+ * The revision's help is read from git history (`git show <pin>:src/refusal.js`) rather than from the
+ * tree: in the tree it is the one beside us, and checking it here would mean checking ourselves.
  */
 
 import { test } from 'node:test';
@@ -30,10 +28,10 @@ test('пример установки ведёт на ревизию, чья с�
   assert.ok(read('README.md').indexOf(installSpec()) >= 0,
     'пример установки не совпадает с тем, чему учит инструмент (' + installSpec() + ')');
 
-  // Короткий sha pnpm разрешает только через видимые рефы, а `git ls-remote` отдаёт
-  // одни верхушки веток: пока ревизия — верхушка, она разрешается, а на следующем
-  // коммите установка падает с «Could not resolve … to a commit». Поэтому пин либо
-  // сорок знаков, либо имя ветки или тега — и это проверяется здесь, а не памятью.
+  // pnpm resolves a short sha only through visible refs, and `git ls-remote` hands over branch tips
+  // alone: while the revision is a tip it resolves, and on the next commit the install fails with
+  // "Could not resolve … to a commit". So the pin is either forty characters or a branch (tag) name —
+  // checked here rather than remembered.
   if (/^[0-9a-f]+$/.test(rev)) {
     assert.equal(rev.length, 40, 'пин «' + rev + '» — короткий sha: pnpm разрешает его'
       + ' только пока ревизия является верхушкой ветки; пишите сорок знаков');

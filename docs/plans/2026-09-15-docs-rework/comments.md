@@ -167,8 +167,21 @@ comment diff stays under the commit budget, otherwise it is split by file groups
     `README.md` (16 commits, matching `rep.history.commits`); both frozen fixtures were taken under
     ballast removal (no `minify` key); `.json` is the only exact strategy; the coverage kind is picked
     by the refusal's code and `WEIGHT` puts coverage ahead of a sensor.
-  - [ ] **M10e the documentation guards and the release** — `docs-commands` (48), `release` (40),
-    `templates` (39), `changelog` (25), `docs-numbers` (15), `docs-pin` (13), `docs-paths` (12).
+  - [x] **M10e the documentation guards and the release** — `docs-commands` 183 → 177,
+    `release` 141 → 137, `templates` 166 → 162, `changelog` 123 → 125, `docs-numbers` 53 → 52,
+    `docs-pin` 63 → 61, `docs-paths` 66 → 65; 192 comment lines → 370 changed lines in 7 files
+    (journal entry `worklog/0095`, 2026-09-15). Three claims fell. The guards numbered their promises
+    from a six-promise list that no longer exists — "first" in `docs-paths`, "fourth" in
+    `docs-numbers`, "fifth" in `docs-pin`, "sixth" in `changelog`, while `docs-commands` listed four
+    inside itself and the README speaks of one promise per file (calling the changelog guard the
+    fifth); the ordinals are gone and each promise is named in words. `docs-commands` named
+    `WORKLOG.md` among the documents it does not check for calls — a file that left the root with the
+    journal, and one that is not in the path-checked set at all. And `templates` carried two addresses
+    into `REFACTOR.md` (R-4.21), which this same work rewrites. One duplicate rule was folded into
+    one place (`docs-numbers`). Also measured: the comment pass broke the size sensor — one arrow
+    function in `templates` reached 61 lines against a limit of 60, because comment lines inside a
+    function count towards its length; fixed by compressing the comments (61 → 57), not by touching the
+    threshold.
   - [ ] **M10f the probes of the gates** — `gates-metrics` (46), `gates-verify` (31), `suites` (22),
     `gates-files` (21), `gates-dup` (12), `gates-coverage` (11), `gates-deps` (10). All seven are
     gate files, so this part's commit needs the `Gate-Change:` trailer.

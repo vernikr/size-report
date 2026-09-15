@@ -1,11 +1,10 @@
-/* Первое обещание документации: **то, что она называет, существует**. Путь из
- * код-спана есть в дереве git, в истории фикстуры (её история — не одно дерево, и
- * документ вправе назвать файл, живший до переименования) или в списке чужих,
- * который ведёт человек. Таблица файлов `README.md` при этом сходится с деревом
- * **в обе стороны**: файл, которого в ней нет, — пробел, которого не заметили.
+/* The promise that **what the documentation names exists**. A path from a code span is in the git tree,
+ * in the fixture's history (that history is not one tree, and the document may name a file that lived
+ * before a rename) or in the list of foreign ones, which a person keeps. The file table of `README.md`
+ * has to agree with the tree **both ways**: a file missing from it is a gap nobody noticed.
  *
- * Что остаётся человеку — в шапке `tools/docs-facts.js`: проверка берёт
- * существование и полноту, но не верность описания роли файла.
+ * What stays with a person is said in the header of `tools/docs-facts.js`: the check takes existence and
+ * completeness, not whether a file's role is described correctly.
  */
 
 import { test, after } from 'node:test';
@@ -20,8 +19,8 @@ const tmp = tempDir('docs-paths');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 test('пути, названные документацией, есть в дереве', () => {
-  // Файлы, которые знала фикстура: её история — не одно дерево, и документация
-  // вправе называть файл по имени, жившему до переименования.
+  // The files the fixture knew: its history is not one tree, and the documentation may name a file
+  // under a name that lived before a rename.
   const fixture = new Set(gitIn(sharedClone('plain', tmp), ['log', '--name-only', '--pretty=format:'])
     .split('\n').filter((l) => l !== ''));
   const foreign = new Set(FOREIGN);
@@ -55,9 +54,9 @@ test('таблица файлов README совпадает с деревом в
   const absent = named.filter((p) => !inTree(p));
   assert.deepEqual(absent, [], 'README называет файлы, которых нет:\n  ' + absent.join('\n  '));
 
-  // Обратная сторона: файл, которого в таблице нет, — пробел, которого не
-  // заметили. Каталог покрывает всё, что под ним; сама таблица себя не
-  // перечисляет, потому что это её шапка, а не строка содержимого.
+  // The other side: a file missing from the table is a gap nobody noticed. A directory covers everything
+  // beneath it; the table does not list itself, because that is its heading rather than a row of
+  // content.
   const covered = (f) => named.some((p) => p === f || (p.slice(-1) === '/' && f.indexOf(p) === 0)
     || (dirs.has(p) && f.indexOf(p + '/') === 0));
   const undescribed = tracked.filter((f) => f !== 'README.md' && !covered(f));
