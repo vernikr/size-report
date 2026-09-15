@@ -1,16 +1,15 @@
-/* Сверка с рабочим деревом: две её стороны и свидетели, ради которых она
- * написана.
+/* The comparison with the working tree: its two sides and the witnesses it is written for.
  *
- *   - правка файла только на диске (git о ней молчит) обязана ловиться — иначе
- *     «починка» свелась бы к удалению сверки;
- *   - потеря при переносе между коммитами (`--diff-merges=first-parent` у
- *     merge-коммита) видна только при сравнении состояния с деревом коммита, и
- *     теряется она тремя способами: правкой, созданием файла и его удалением;
- *   - колонка, чей файл удалён до HEAD, и переименование внутри её псевдонимов —
- *     не потеря: прогон обязан собраться, а числа — сойтись с git.
+ *   - an edit of a file on disk alone (git says nothing about it) has to be caught — or "repairing"
+ *     would come down to deleting the comparison;
+ *   - a loss while the state is carried between commits (a merge commit without
+ *     `--diff-merges=first-parent`) is visible only when the state is compared with the commit's
+ *     tree, and it is lost in three ways: by an edit, by the creation of a file and by its removal;
+ *   - a column whose file was removed before HEAD, and a rename inside its aliases, are no loss: the
+ *     run has to assemble, and the numbers have to agree with git.
  *
- * Клоны здесь свои у каждой проверки: они правят файлы, и общий клон после этого
- * не годится никому (одна проверка подсунула бы другой свою правку).
+ * Every check has a clone of its own here: they edit files, and a shared clone suits nobody
+ * afterwards (one check would slip its edit to another).
  */
 
 import { test, after } from 'node:test';
@@ -26,14 +25,15 @@ import {
 const tmp = tempDir('disk');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-// Коммит в клоне фикстуры: подпись и адрес задаются тут же, чтобы git не спрашивал.
+// A commit in the fixture's clone: the identity and the address are set right here so that git does
+// not ask.
 function commit(dir, subject) {
   gitIn(dir, ['add', '-A']);
   gitIn(dir, ['-c', 'user.name=fixture', '-c', 'user.email=fixture@local', 'commit', '-qm', subject]);
   return gitIn(dir, ['rev-parse', 'HEAD']).trim();
 }
 
-// Копия эталонных настроек с добавленной колонкой: история и остальные колонки те же.
+// The reference settings with a column added: the history and the other columns stay as they are.
 function configWith(name, columns) {
   const cfg = readJson(CONFIG);
   cfg.columns = cfg.columns.concat(columns);
@@ -42,9 +42,8 @@ function configWith(name, columns) {
   return file;
 }
 
-/* Настройки под свой репозиторий: в них только то, что описывает проект, —
- * остальное досыпают умолчания движка. Так проверка не зависит от того, какие
- * колонки в фикстуре. */
+/* Settings for a repository of one's own: they hold only what describes the project, and the engine's
+ * defaults add the rest. So the check does not depend on which columns the fixture has. */
 function ownConfig(name, columns) {
   const file = path.join(tmp, name + '.json');
   fs.writeFileSync(file, JSON.stringify({
@@ -56,9 +55,9 @@ function ownConfig(name, columns) {
   return file;
 }
 
-/* Настройки, у которых `fixCommand` — настоящая команда: отказ цитирует её в совете,
- * и проверить совет значит выполнить её. Сам совет берётся из текста отказа, а не из
- * этих настроек: настройки — только источник команды починки. */
+/* Settings whose `fixCommand` is a real command: the refusal quotes it as its advice, and checking
+ * the advice means running it. The advice itself is taken from the refusal's text rather than from
+ * these settings: the settings are but the source of the repair command. */
 let withFix;
 function reconfig() {
   if (withFix === undefined) {
@@ -74,10 +73,10 @@ function fixCommand(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8')).fixCommand;
 }
 
-/* Мутированный движок — **копия** исходников, а не живое дерево: наборы идут по
- * файлам параллельно, и сломанный `git.js` в живом дереве был бы мутацией у
- * соседа. Замена проверяется: если она перестала применяться, мутацию пора
- * переписать, а не считать прогон доказательством. */
+/* A mutated engine is a **copy** of the sources rather than the live tree: the suites run file by file
+ * in parallel, and a broken `git.js` in the live tree would be a mutation at the neighbour's expense.
+ * The replacement is checked: once it stops applying, the mutation needs rewriting, and the run must
+ * not be taken for proof. */
 function mutatedEngine(name, part, from, to) {
   const source = fs.readFileSync(path.join(ROOT, 'src', part), 'utf8');
   const mutated = source.replace(from, to);
@@ -90,14 +89,14 @@ function mutatedEngine(name, part, from, to) {
   return { name: 'мутированный движок', file: path.join(dir, 'bin', 'size.js'), env: null };
 }
 
-/* Потеря при переносе состояния: у merge-коммита отнят список изменённых путей,
- * поэтому в состояние не попадает то, что пришло слиянием. */
+/* A loss while the state is carried: the merge commit is deprived of its list of changed paths, so
+ * what came in by the merge never reaches the state. */
 function engineWithoutMergePaths() {
   return mutatedEngine('without-merge-paths', 'git.js', "'--diff-merges=first-parent', ", '');
 }
 
-/* Проверка проверки: правка файла на диске, о которой git молчит (файл помечен
- * «предполагается неизменным»), обязана быть поймана. */
+/* A check of the check: an edit of a file on disk that git says nothing about (the file is marked
+ * "assumed unchanged") has to be caught. */
 function assertCatchesDiskEdit(dir, label) {
   gitIn(dir, ['update-index', '--assume-unchanged', 'src/code.js']);
   fs.appendFileSync(path.join(dir, 'src', 'code.js'), '// правка, которой нет в git\n');
@@ -108,8 +107,8 @@ function assertCatchesDiskEdit(dir, label) {
   assert.match(res.stderr, /правка есть только на диске/,
     'сверка отказалась по другой причине: ' + res.stderr.trim().split('\n')[0]);
 
-  /* Совет отказа — команда, и она обязана работать: `git checkout -- <путь>`
-   * возвращает файл к HEAD, и тот же зов после этого отвечает нулём. */
+  /* The refusal's advice is a command and has to work: `git checkout -- <path>` returns the file to
+   * HEAD, and the same call answers zero afterwards. */
   assert.match(res.stderr, /починка: закоммитьте правку или откатите её: git checkout -- /,
     'совет не называет, как вернуть файл: ' + res.stderr.trim());
   gitIn(dir, ['checkout', '--', 'src/code.js']);
@@ -123,9 +122,9 @@ test('правка файла только на диске ловится — и
   assertCatchesDiskEdit(cloneCrlf(path.join(tmp, 'edit-crlf')), 'выкладка CRLF');
 });
 
-/* Вторая половина сверки — состояние против дерева коммита — существует ради
- * правки, потерянной при переносе между коммитами. Первый свидетель: правка
- * разрешения конфликта выпадает из состояния (мутация выше), а в дереве остаётся. */
+/* The second half of the comparison — the state against the commit's tree — exists for an edit lost
+ * while the state was carried between commits. The first witness: a conflict resolution falls out of
+ * the state (the mutation above) while remaining in the tree. */
 test('потерянная правка merge-коммита ловится состоянием против дерева', () => {
   const dir = cloneFixture(path.join(tmp, 'mutated-clone'));
   const tool = engineWithoutMergePaths();
@@ -134,10 +133,10 @@ test('потерянная правка merge-коммита ловится со
   assert.match(res.stderr, /перенос состояния между коммитами пропустил правку/,
     'сверка отказалась по другой причине: ' + res.stderr.trim().split('\n')[0]);
 
-  /* Совет этого отказа — не команда починки, и это сказано в тексте: расхождение в
-   * самом переносе состояния, и пересборка его не изменит. Проверяются обе
-   * половины: команда разбора выполняется, а пересборка отказа не убирает — иначе
-   * текст совета был бы неверен. */
+  /* This refusal's advice is no repair command, and the text says so: the discrepancy lies in the
+   * carrying of the state itself, and a rebuild will not change it. Both halves are checked: the
+   * diagnostic command runs, while the rebuild does not remove the refusal — otherwise the advice's
+   * text would be untrue. */
   assert.match(res.stderr, /починка: пересборкой это не лечится/,
     'совет обещает то, чего пересборка не делает, или не назван:\n' + res.stderr.trim());
   assert.match(res.stderr, /Разбор: git show HEAD:/,
@@ -152,12 +151,11 @@ test('потерянная правка merge-коммита ловится со
   assert.notEqual(after.code, 0, 'пересборка убрала расхождение — тогда текст совета неверен');
 });
 
-/* Второй свидетель: файл, который появляется **только в самом слиянии** — так
- * выглядит разрешение, при котором файл заводят заново (ни у одного родителя его
- * нет). Тот же мутированный движок не узнаёт о его появлении, и состояние
- * оказывается пустым там, где в дереве есть файл, — это другой случай той же
- * сверки: потерянное создание. Первый прогон — целым движком: такая история
- * обязана собираться. */
+/* The second witness: a file that appears **in the merge itself** — how a resolution looks when the
+ * file is created anew (neither parent has it). The same mutated engine learns nothing of its
+ * appearance, and the state comes out empty where the tree holds a file — another case of the same
+ * comparison: a lost creation. The first run is with the whole engine: such a history has to
+ * assemble. */
 test('потерянное создание файла ловится состоянием против дерева', () => {
   const dir = initRepo(path.join(tmp, 'created-in-merge'));
   fs.writeFileSync(path.join(dir, 'src', 'base.js'), 'export const base = 1;\n');
@@ -168,7 +166,7 @@ test('потерянное создание файла ловится состо
   gitIn(dir, ['checkout', '-q', 'main']);
   fs.writeFileSync(path.join(dir, 'src', 'base.js'), 'export const base = 1;\nexport const more = 2;\n');
   commit(dir, 'правка ствола');
-  // Слияние доводится до коммита руками: файл заводится в самом слиянии.
+  // The merge is brought to a commit by hand: the file is created in the merge itself.
   gitIn(dir, ['merge', '-q', '--no-commit', '--no-ff', 'side']);
   fs.writeFileSync(path.join(dir, 'src', 'only-in-merge.js'), 'export const resolved = 3;\n');
   commit(dir, 'слияние: файл заведён при разрешении');
@@ -198,9 +196,9 @@ test('потерянное создание файла ловится состо
     'отказ не назвал сторону состояния: ' + res.stderr.trim().split('\n')[0]);
 });
 
-/* Обратная сторона той же сверки: колонка, чей файл жил в истории и был удалён до
- * HEAD, — не потерянное состояние. Прогон обязан собраться, а числа колонки —
- * сойтись с тем, что видно в git (размер блоба на каждом коммите). */
+/* The other side of the same comparison: a column whose file lived in the history and was removed
+ * before HEAD is no lost state. The run has to assemble, and the column's numbers have to agree with
+ * what git shows (the blob's size at every commit). */
 test('файл, удалённый до HEAD, не роняет прогон и числа сходятся с историей', () => {
   const dir = cloneFixture(path.join(tmp, 'gone'));
   const gone = path.join(dir, 'src', 'gone.js');
@@ -226,7 +224,8 @@ test('файл, удалённый до HEAD, не роняет прогон и 
   assert.notEqual(i, -1, 'колонка потерялась в данных');
   const reported = {};
   data.rows.forEach((row) => { reported[row.sha] = row.cells[i] === null ? null : row.cells[i].raw; });
-  // Размер — у git, а не у того же кода: блоб той ревизии, где файл есть.
+  // The size comes from git rather than from the same code: the blob of the revision holding the
+  // file.
   const blobSize = (sha) => Number(gitIn(dir, ['cat-file', '-s', sha + ':src/gone.js']).trim());
   assert.deepEqual(
     [reported[first], reported[edited], reported[removed], reported[back], reported[removedAgain]],
@@ -236,18 +235,18 @@ test('файл, удалённый до HEAD, не роняет прогон и 
     'возврат того же файла посчитан иначе, чем его первое появление');
 });
 
-/* Третий свидетель сверки — потерянное **удаление**: состояние помнит файл, а в
- * дереве его нет. Здесь файл удаляется только в слиянии (руками, при доведении
- * слияния до коммита), поэтому мутированный движок снова ничего о нём не узнаёт
- * и обязан отказать; целый движок ту же историю собирает. */
+/* The third witness of the comparison is a lost **removal**: the state remembers the file while the
+ * tree has none. Here the file is removed in the merge only (by hand, as the merge is brought to a
+ * commit), so the mutated engine again learns nothing of it and has to refuse, while the whole engine
+ * assembles the same history. */
 test('потерянное удаление файла ловится состоянием против дерева', () => {
   const dir = initRepo(path.join(tmp, 'deleted-in-merge'));
   fs.writeFileSync(path.join(dir, 'src', 'keep.js'), 'export const keep = 1;\n');
   fs.writeFileSync(path.join(dir, 'src', 'gone.js'), 'export const gone = 2;\n');
   commit(dir, 'начало');
   gitIn(dir, ['checkout', '-q', '-b', 'side']);
-  // В ветке правится не-колонка: слияние должно быть настоящим, но чужие
-  // колонки мутированный движок терять не должен — иначе отказ придёт не о том.
+  // The branch edits a non-column: the merge has to be a real one, while the mutated engine must not
+  // lose other columns — or the refusal would come about something else.
   fs.writeFileSync(path.join(dir, 'NOTES.md'), 'ветка\n');
   commit(dir, 'заметка в ветке');
   gitIn(dir, ['checkout', '-q', 'main']);
@@ -274,17 +273,16 @@ test('потерянное удаление файла ловится состо
     'отказ не назвал сторону состояния: ' + res.stderr.trim().split('\n')[0]);
 });
 
-/* Ловушка чужого окружения: при выключенном распознавании переименований git
- * отдаёт в одном коммите **оба** пути переименованного файла — и старое имя, и
- * новое. Колонка с двумя псевдонимами выбирала первый по порядку настроек, то
- * есть исчезнувший, и состояние теряло файл: сверка отказывала на законном
- * случае. Выбор идёт по тому, что в коммите действительно есть, поэтому прогон
- * обязан собраться, а числа — сойтись с блобом из git. */
+/* A trap of someone else's environment: with rename detection off, git hands over **both** paths of
+ * a renamed file in one commit — the old name and the new one. A column with two aliases used to take
+ * the first in the settings' order, that is, the one that had disappeared, and the state lost the
+ * file: the comparison refused a lawful case. The choice goes by what the commit really holds, so the
+ * run has to assemble and the numbers have to agree with the blob in git. */
 test('переименование внутри псевдонимов колонки не роняет прогон', () => {
   const dir = cloneFixture(path.join(tmp, 'alias-rename'));
   gitIn(dir, ['mv', 'src/modern.js', 'src/legacy.js']);
   commit(dir, 'имя файла вернулось к legacy.js');
-  // Умолчание git (переименование — один путь) и чужое окружение: оба обязаны работать.
+  // git's default (a rename is one path) and someone else's environment: both have to work.
   const env = gitConfig({ 'diff.renames': 'false' });
   const plain = runFixtureWith(PACKAGE, dir, ['--json']);
   assert.equal(plain.code, 0, 'история с переименованием не собирается: '
@@ -297,7 +295,8 @@ test('переименование внутри псевдонимов коло�
   const i = data.columns.findIndex((c) => c.label === 'modern.js');
   const last = data.rows[data.rows.length - 1];
   assert.notEqual(last.cells[i], null, 'колонка пуста на последней строке: файл потерян');
-  // Размер — у git: у ревизии файл лежит по одному из псевдонимов, и это его блоб.
+  // The size comes from git: in that revision the file lies under one of the aliases, and that is its
+  // blob.
   const blobSize = (sha) => {
     const found = ['src/modern.js', 'src/legacy.js'].filter((p) => {
       try { gitIn(dir, ['cat-file', '-e', sha + ':' + p]); return true; } catch (_e) { return false; }

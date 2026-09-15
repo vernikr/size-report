@@ -1,22 +1,21 @@
-/* Проект, где в расширении `.js` лежит модуль — обычное дело у всех, кто пишет
- * под бандлер: `import`/`export` прямо в `.js`, с `type: module` в манифесте или
- * без него. Такой проект обязан получать отчёт теми же правами, что и любой
- * другой: настройки прямо из `--init`, ни одной правки руками, код выхода 0.
+/* A project whose `.js` extension holds a module — the common case for anyone writing for a bundler:
+ * `import`/`export` right in `.js`, with `type: module` in the manifest or without it. Such a project
+ * has to get a report on the same terms as any other: settings straight from `--init`, no edits by
+ * hand, exit code 0.
  *
- * Другая половина набора — сам гард стриппера: он единственное, что ловит
- * стриппер, когда тот действительно ломает файл, поэтому здесь же он ломается
- * намеренно — в копии движка, а не в живом `src/strip.js` (наборы идут по файлам
- * параллельно, и такая мутация была бы мутацией у соседа), — и прогон обязан
- * упасть честным текстом.
- * Гард принимает результат, разбирающийся хотя бы одним способом — скриптом или
- * модулем, — и именно поэтому второе доказательство обязательно: без него
- * «починка» могла бы свестись к отключению проверки.
+ * The other half of the suite is the stripper's guard: it is the only thing that catches the stripper
+ * when it really breaks a file, so it is broken here on purpose — in a copy of the engine rather than
+ * in the live `src/strip.js` (the suites run file by file in parallel, and such a mutation would be a
+ * mutation at the neighbour's expense) — and the run has to fail with honest text.
+ * The guard accepts a result that parses at least one way — as a script or as a module — and that is
+ * exactly why the second proof is required: without it, "repairing" could come down to switching the
+ * check off.
  *
- * И третье, из того же места: совет инструмента (подсказка, справка, умолчание
- * команды починки) обязан работать в обоих состояниях проекта — там, где пакет
- * лежит рядом, и там, где его нет. Поэтому он называет путь внутри проекта, а не
- * имя пакета: `npx <имя>` в проекте без установленного пакета идёт в реестр и
- * тянет пакет по сети, а совет обязан отказывать на месте.
+ * And the third, from the same place: the tool's advice (the hint, the help, the default repair
+ * command) has to work in both states of the project — where the package lies next to it and where it
+ * does not. So it names a path inside the project rather than the package name: `npx <name>` in a
+ * project without the installed package goes to the registry and pulls the package over the network,
+ * while the advice has to refuse on the spot.
  */
 
 import { test, after } from 'node:test';
@@ -27,9 +26,9 @@ import { spawnSync } from 'node:child_process';
 import { ROOT, firstLine, gitIn, hasStack, runSize, runTool, tempDir } from '../tools/harness.js';
 import { PKG } from '../tools/docs-facts.js';
 
-/* Куда установка кладёт пакет: `node_modules/<имя>`, а у области — ещё одним
- * уровнем (`node_modules/@scope/name`). Путь собирается из имени в манифесте, а не
- * литералом: иначе переименование пакета сделало бы эти проверки пустыми. */
+/* Where the install puts the package: `node_modules/<name>`, and for a scope one level deeper
+ * (`node_modules/@scope/name`). The path is assembled from the name in the manifest rather than as a
+ * literal: otherwise renaming the package would hollow out these checks. */
 const INSTALL_DIR = path.join('node_modules', ...PKG.split('/'));
 const INSTALL_BIN = path.join(INSTALL_DIR, 'bin', 'size.js').split(path.sep).join('/');
 const INSTALL_RE = INSTALL_BIN.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -39,8 +38,8 @@ const BY_NAME_RE = new RegExp('(^|\\s)(?:npx|npm exec|yarn)\\s+'
 const tmp = tempDir('module');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-/* Модуль с ловушкой для стриппера внутри: `//` в адресе — не комментарий. Именно
- * на такой строке стриппер и ломается, если перестаёт понимать кавычки. */
+/* A module with a trap for the stripper inside: `//` in a URL is no comment — and that is the very
+ * line the stripper breaks on once it stops understanding quotes. */
 const GREET = [
   '// Приветствие: модуль в расширении .js — так пишет проект с бандлером.',
   'export function greet(name) {',
@@ -66,10 +65,10 @@ function makeRepo(name, pkg, extra) {
   return dir;
 }
 
-/* Копия движка для проверок, которые его ломают. Мутация живого дерева — мутация
- * у соседа: наборы идут по файлам параллельно, и сломанный `strip.js` попадал в
- * чужие прогоны (страница не собиралась при живом сломанном стриппере). Поэтому
- * ломается копия: `bin`, `src` и манифест в своём каталоге. */
+/* A copy of the engine for the checks that break it. Mutating the live tree mutates the neighbour's:
+ * the suites run file by file in parallel, and a broken `strip.js` used to land in somebody else's
+ * run (the page failed to assemble with the live stripper broken). So a copy is broken instead: `bin`,
+ * `src` and the manifest in a directory of its own. */
 function engineCopy(name) {
   const dir = path.join(tmp, name);
   ['bin', 'src'].forEach((part) => fs.cpSync(path.join(ROOT, part), path.join(dir, part), { recursive: true }));
@@ -77,11 +76,11 @@ function engineCopy(name) {
   return { dir: dir, target: { name: 'движок из копии', file: path.join(dir, 'bin', 'size.js'), env: null } };
 }
 
-/* Черновик без необязательных зависимостей: способ снятия балласта назван явно, а
- * словарь токенов не запрошен. Черновик ведёт новый проект на минификатор и
- * токенизатор, но предпроектные проверки (гард стриппера, разметка в `.js`)
- * стерегут снятие балласта — иначе они проверяли бы не то, что называют, — а
- * движок из копии идёт без `node_modules`, где обе зависимости и лежат. */
+/* A draft without the optional dependencies: the way of removing ballast is named explicitly, and the
+ * token dictionary is not requested. The draft leads a new project to the minifier and the tokenizer,
+ * while the pre-project checks (the stripper's guard, markup in `.js`) guard ballast removal —
+ * otherwise they would check something other than what they name — and the copy of the engine runs
+ * without `node_modules`, where both dependencies lie. */
 function plainDraft(dir) {
   const file = path.join(dir, 'size-table.config.json');
   const cfg = JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -90,7 +89,7 @@ function plainDraft(dir) {
   fs.writeFileSync(file, JSON.stringify(cfg, null, 2) + '\n');
 }
 
-// Правка настроек, которую советует отказ: расширение переходит под упрощение.
+// The settings edit the refusal advises: the extension moves under stripping.
 function withMinifyExt(dir, ext, how) {
   const file = path.join(dir, 'size-table.config.json');
   const cfg = JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -98,11 +97,11 @@ function withMinifyExt(dir, ext, how) {
   fs.writeFileSync(file, JSON.stringify(cfg, null, 2) + '\n');
 }
 
-/* Оба варианта — один и тот же модуль в `.js`: манифест лишь сообщает Node, как
- * читать `.js`, а генератор должен измерять файл в обоих случаях. Проверок две, и
- * объявлены они каждая своей строкой, а не циклом: число проверок в наборе
- * читается по файлам — по нему сверяется документация (`test/docs-numbers.test.js`),
- * а объявление в цикле делает счёт выводом из кода, а не фактом файла. */
+/* Both variants are the same module in `.js`: the manifest only tells Node how to read `.js`, and the
+ * generator has to measure the file either way. There are two checks, and each is declared on a line
+ * of its own rather than in a loop: the number of checks in a suite is read per file — the
+ * documentation is checked against it (`test/docs-numbers.test.js`) — and declaring in a loop would
+ * make the count a derivation from the code rather than a fact of the file. */
 function moduleInJs(name, withType) {
   const pkg = { name: name, version: '1.0.0', private: true };
   if (withType) pkg.type = 'module';
@@ -122,8 +121,8 @@ function moduleInJs(name, withType) {
     'отчёт собрался, но гард на чём-то споткнулся:\n' + res.stderr);
   assert.ok(fs.existsSync(path.join(dir, cfg.output)), 'таблица не написалась: ' + cfg.output);
 
-  // Число снятого балласта тоже посчитано: без min прогон бы упал, но проверяем
-  // не «не упало», а что в данных есть все объявленные метрики.
+  // The amount of removed ballast is counted too: without min the run would fail, but what is checked
+  // is not "it did not fail" but that the data holds every declared metric.
   const data = JSON.parse(runSize(dir, ['--data']).stdout);
   assert.ok(data.now.some((v) => v !== null && v.min !== undefined),
     'в данных нет ни одного числа по метрике min');
@@ -137,9 +136,9 @@ test('модуль в .js измеряется без правок настро�
   moduleInJs('no-type', false);
 });
 
-/* Гард обязан остаться гардом: ломаем стриппер так, как он ломается на самом деле
- * (перестаёт понимать строки в одинарных кавычках), и прогон должен упасть с
- * честным текстом, а не молча выдать неправильное число. */
+/* The guard has to stay a guard: the stripper is broken the way it really breaks (it stops
+ * understanding single-quoted strings), and the run has to fail with honest text rather than silently
+ * produce a wrong number. */
 test('гард жив: сломанный стриппер не проходит молча', () => {
   const dir = makeRepo('broken-stripper', { name: 'broken-stripper', version: '1.0.0', private: true });
   const init = runSize(dir, ['--init']);
@@ -149,9 +148,9 @@ test('гард жив: сломанный стриппер не проходит
   const ok = runTool(engine.target, dir, ['--write']);
   assert.equal(ok.code, 0, 'до мутации проект не собрался: ' + firstLine(ok.stderr));
 
-  /* Мутация — в ветке строк снятия балласта (`src/strip/js.js`): она теряет
-   * случай одинарной кавычки, а в фикстуре такая строка несёт `//` внутри —
-   * сломанный стриппер съедает остаток строки, и код перестаёт разбираться. */
+  /* The mutation is in the ballast-removal string branch (`src/strip/js.js`): it loses the
+   * single-quote case, and in the fixture such a line carries `//` inside — the broken stripper eats
+   * the rest of the line and the code stops parsing. */
   const file = path.join(engine.dir, 'src', 'strip', 'js.js');
   const original = fs.readFileSync(file, 'utf8');
   const from = "  if (quote !== '\"' && quote !== \"'\" && quote !== '`') return false;";
@@ -172,11 +171,11 @@ test('гард жив: сломанный стриппер не проходит
   assert.equal(again.code, 0, 'после отката мутации проект не собирается: ' + firstLine(again.stderr));
 });
 
-/* Когда не разбирается сам файл, никто ни при чём: в этой графе не JavaScript
- * (разметка прямо в `.js`). Это правка настроек, а не дефект инструмента, поэтому
- * наружу идёт отказ с готовой командой, а не стек. Отказ берётся с того способа,
- * которым файл считали: минификатор называет себя и даёт выход на упрощение, а
- * гард снятия балласта — `minify.guard` и расширение. */
+/* When the file itself does not parse, nobody is to blame: this column holds no JavaScript (markup
+ * right in `.js`). That is a settings edit rather than a defect of the tool, so a refusal with a ready
+ * command goes out, not a stack. The refusal comes from the way the file was counted: the minifier
+ * names itself and offers a way out through stripping, while the ballast-removal guard names
+ * `minify.guard` and the extension. */
 test('не JavaScript в графе — отказ с командой починки, а не стек', () => {
   const dir = makeRepo('jsx-in-js', { name: 'jsx-in-js', version: '1.0.0', private: true }, {
     'src/view.js': [
@@ -200,9 +199,9 @@ test('не JavaScript в графе — отказ с командой почи�
   assert.match(res.stderr, /minify\.ext/, 'отказ не называет, что править:\n' + res.stderr);
   assert.equal(hasStack(res.stderr), false, 'отказ напечатал стек:\n' + res.stderr);
 
-  /* Совет отказа — правка настроек, и проверяется она прогоном, а не словом: та же
-   * правка в копии проекта даёт сборку. Копия, а не сам проект: ниже из того же
-   * состояния берётся вторая причина, и правка её бы стёрла. */
+  /* The refusal's advice is a settings edit, and it is checked by a run rather than by the word: the
+   * same edit in a copy of the project gives a build. A copy rather than the project itself: below, a
+   * second cause is taken from the same state, and the edit would wipe it. */
   assert.ok(res.stderr.indexOf('задайте этому расширению упрощение в minify.ext') >= 0,
     'отказ не называет выход, который работает:\n' + res.stderr);
   const fixed = path.join(tmp, 'jsx-fixed');
@@ -211,7 +210,7 @@ test('не JavaScript в графе — отказ с командой почи�
   const built = runSize(fixed, ['--write']);
   assert.equal(built.code, 0, 'совет не починил прогон: ' + firstLine(built.stderr || built.stdout));
 
-  // Тем же проектом, но прежним способом: причину называет гард снятия балласта.
+  // The same project, but through the former way: the cause is named by the ballast-removal guard.
   plainDraft(dir);
   const guarded = runSize(dir, ['--write']);
   assert.equal(guarded.code, 2, 'способ из настроек не назвал настоящую причину: '
@@ -220,7 +219,7 @@ test('не JavaScript в графе — отказ с командой почи�
   assert.match(guarded.stderr, /minify\.guard/, 'отказ не называет, что править:\n' + guarded.stderr);
   assert.equal(hasStack(guarded.stderr), false, 'отказ напечатал стек:\n' + guarded.stderr);
 
-  // И тот же совет второго отказа — тоже прогоном: `minify.ext` работает и здесь.
+  // And the same advice of the second refusal — by a run too: `minify.ext` works here as well.
   assert.ok(guarded.stderr.indexOf('уберите это расширение из minify.guard') >= 0,
     'отказ не называет выход, который работает:\n' + guarded.stderr);
   const fixedGuard = path.join(tmp, 'jsx-fixed-guard');
@@ -230,10 +229,10 @@ test('не JavaScript в графе — отказ с командой почи�
   assert.equal(builtGuard.code, 0, 'совет не починил прогон: ' + firstLine(builtGuard.stderr || builtGuard.stdout));
 });
 
-/* Проект с пакетом, положенным на место установки: проверяется ровно то, что видит
- * проект-потребитель (движок берётся из репозитория, как его положил бы пакетный
- * менеджер). Проект у каждой проверки свой: ниже совет исполняется и правит
- * настройки, и второй проверке нужен свой такой же. */
+/* A project with the package put in place of the install: exactly what the consuming project sees is
+ * checked (the engine is taken from the repository the way a package manager would put it). Every
+ * check has a project of its own: below the advice is executed and edits the settings, and a second
+ * check needs one of its own. */
 function installEngine(name) {
   const dir = path.join(tmp, name);
   const pkg = path.join(dir, INSTALL_DIR);
@@ -250,7 +249,7 @@ function installEngine(name) {
   return { dir: dir, engine: { name: 'движок из node_modules', file: path.join(pkg, 'bin', 'size.js'), env: null } };
 }
 
-/* Совет — путь внутри проекта, а не имя из реестра. */
+/* The advice — a path inside the project rather than a name from the registry. */
 test('совет называет путь внутри проекта, а не имя из реестра', () => {
   const { dir, engine } = installEngine('installed');
   const res = runTool(engine, dir, []);
@@ -263,9 +262,9 @@ test('совет называет путь внутри проекта, а не 
   assert.equal(BY_NAME_RE.test(res.stderr),
     false, 'совет называет имя пакета: в проекте без него этот зов уйдёт в реестр:\n' + res.stderr);
 
-  /* Умолчание команды починки — та же форма: его цитирует подпись отчёта, то есть
-   * текст уезжает к читателю, у которого пакета может и не быть. Настроек нет —
-   * берётся умолчание, а `--json` показывает его как есть. */
+  /* The default repair command has the same shape: the report's caption quotes it, so the text travels
+   * to a reader who may have no package. No settings — the default is taken, and `--json` shows it as
+   * it is. */
   const cfgless = path.join(tmp, 'installed-default');
   fs.cpSync(dir, cfgless, { recursive: true });
   fs.writeFileSync(path.join(cfgless, 'size-table.config.json'),
@@ -277,21 +276,21 @@ test('совет называет путь внутри проекта, а не 
     'умолчание команды починки — не путь внутри проекта: ' + fix);
 });
 
-/* Вторая половина того же обещания: совет выполним там, где пакет лежит рядом, и
- * отказывает на месте там, где его нет, — а справка называет тот же путь. */
+/* The other half of the same promise: the advice is runnable where the package lies next to it and
+ * refuses on the spot where there is none — and the help names the same path. */
 test('совет выполним рядом с пакетом и отказывает на месте без него', () => {
   const { dir, engine } = installEngine('installed-run');
   const res = runTool(engine, dir, []);
   const hint = (res.stderr.match(/закрепить их файлом[^:]*: (.+)$/m) || [])[1];
   assert.notEqual(hint, undefined, 'подсказка не называет команду починки:\n' + res.stderr);
 
-  // Совет выполним: та же строка в том же проекте делает обещанное.
+  // The advice is runnable: the same line in the same project does what it promises.
   const ran = spawnSync('bash', ['-c', hint], { cwd: dir, encoding: 'utf8' });
   assert.equal(ran.status, 0, 'совет не выполнился там, где пакет рядом: ' + firstLine(ran.stderr || ''));
   assert.ok(fs.existsSync(path.join(dir, 'size-table.config.json')), 'совет ничего не создал');
 
-  /* И отказывает на месте в проекте без пакета: сеть для этого зова не нужна вовсе,
-   * поэтому реестр можно направить в никуда — если зов туда пойдёт, это видно. */
+  /* And it refuses on the spot in a project without the package: the network is not needed for this
+   * call at all, so the registry can be pointed into nowhere — if the call goes there, it shows. */
   const elsewhere = path.join(tmp, 'installed-elsewhere');
   fs.mkdirSync(elsewhere, { recursive: true });
   const lost = spawnSync('bash', ['-c', hint], {

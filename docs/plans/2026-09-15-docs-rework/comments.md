@@ -139,7 +139,18 @@ comment diff stays under the commit budget, otherwise it is split by file groups
     REFACTOR addresses in `refusals.test.js` (the four accidental finds stay as the defect class),
     and the "was X, now Y" narration in two places (what a check forbids matters, not when it was
     added).
-  - [ ] **M10c the disk, the module and the hook** — `hook` (73), `module` (68), `disk` (61).
+  - [x] **M10c the disk, the module and the hook** — `hook` 413 → 414, `module` 315 → 314,
+    `disk` 310 → 309; 202 comment lines → 405 changed lines in 3 files (journal entry
+    `worklog/0093`, 2026-09-15). Three claims fell. The hook header explained "someone else's work
+    and the index untouched" by `git commit --only`, a call the engine no longer makes: the report's
+    commit is assembled with plumbing (`hash-object`/`write-tree`/`commit-tree`/`update-ref`), and
+    `src/hook.js` says why `--only` was given up (it refuses during a merge). The loop protection was
+    half-explained — the missing half, that plumbing calls no hooks at all, is named by `src/hook.js`
+    as the reason a nested run is impossible by construction. And `disk.test.js` read
+    `--diff-merges=first-parent` as the cause of the loss, while the mutation **takes that flag away**
+    from the pinned git reads. Dropped: three addresses into documents this same work rewrites
+    (§7.1–§7.3, step 5, `REFACTOR.md` §3) and the fixture's commit count — the substance stays as
+    words.
   - [ ] **M10d the measures** — `doctor` (45), `minify` (36), `check` (35), `guard` (19),
     `tokens` (18).
   - [ ] **M10e the documentation guards and the release** — `docs-commands` (48), `release` (40),

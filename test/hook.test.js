@@ -1,32 +1,32 @@
-/* Хук `post-commit` (`size install-hook` / `uninstall-hook` / `hook-run`): отчёт
- * пересобирается сам после коммита, а если он лежит в git — ложится отдельным
- * коммитом. Требование §7.1–§7.3 (автообновление, защита от зацикливания,
- * отключаемость) и шаг 5 плана.
+/* The `post-commit` hook (`size install-hook` / `uninstall-hook` / `hook-run`): the report rebuilds
+ * itself after a commit and, when it is tracked by git, lands as a commit of its own. The three
+ * promises checked here are self-updating, protection from a loop, and being switchable off.
  *
- * Проверяется не форма файла хука, а поведение git-репозитория вокруг него, и
- * каждый случай — в свежем клоне маленького проекта, а не в рабочем дереве пакета:
- * хук живёт в `.git`, то есть у каждого клона свой, и «установлено» проверять
- * больше негде. Проект именно маленький: хук проверяется на трёх коммитах, а не на
- * истории с ловушками, — цена каждого запуска здесь не предмет проверки (бюджет —
- * `REFACTOR.md` §3).
+ * What is checked is the git repository's behaviour around the hook rather than the hook file's shape,
+ * and every case runs in a fresh clone of a small project rather than in the package's working tree:
+ * the hook lives in `.git`, so every clone has one of its own and "installed" can be checked nowhere
+ * else. The project is small on purpose: what is under test is the hook, not a history with traps, and
+ * the cost of a run is no subject of a check here.
  *
- * Что здесь считается доказательством:
+ * What counts as proof here:
  *
- * - установка — **сама** при первом запуске в проекте (и после постановки пакета),
- *   иначе первого обновления отчёта человек не увидел бы вовсе; явная команда нужна
- *   там, где поставить нельзя, и она называет причину. Хук лежит в `.git/hooks`,
- *   поэтому `git status` его не видит, а в свежем клоне его нет до первого запуска;
- * - правка кода даёт **отдельный** коммит с одним лишь отчётом — это и есть ответ
- *   на ловушку «правка кода и таблицы в одном коммите»;
- * - повторный запуск (и хук, запущенный собственным коммитом отчёта) не порождает
- *   следующего: отчёт — путь, который строки не получает, поэтому байты те же;
- * - чужая незакоммиченная работа и индекс не тронуты (`git commit --only`);
- * - отказ инструмента не роняет коммит: причина — одной строкой и в записи, которую
- *   показывает `size doctor`;
- * - там, где обновлять нечего (CI, выключатель, отделённый HEAD, отчёт вне git,
- *   чужой клон без установки), хук молчит и ничего не коммитит;
- * - снятие возвращает проект к прежнему поведению, а чужой `post-commit` и
- *   `core.hooksPath` не перезаписываются вовсе.
+ * - the installation happens **by itself** on the first run in a project (the package's postinstall
+ *   does the same after an install), or a person would never see the first rebuild of the report; the
+ *   explicit command is for where installing is impossible, and it names the cause. The hook lies in
+ *   `.git/hooks`, so `git status` does not see it, and a fresh clone has none until the first run;
+ * - an edit of code gives a commit of its **own** carrying the report alone — the answer to the trap
+ *   of a code edit and the table in one commit;
+ * - a repeated run (and the hook fired by its own report commit) produces no next one: the report's
+ *   commit is assembled with plumbing, which calls no hook, and the report is a path that gets no
+ *   row, so the same rebuild yields the same bytes;
+ * - someone else's uncommitted work and the index are untouched: the tree comes from HEAD with only
+ *   the report's path replaced in it, so nothing else can enter the commit;
+ * - a refusal by the tool does not bring the commit down: the cause is one line and a record that
+ *   `size doctor` shows;
+ * - where there is nothing to update (integration, the switch, a detached HEAD, a report outside git,
+ *   someone else's clone with no installation) the hook stays silent and commits nothing;
+ * - removing it returns the project to its previous behaviour, while someone else's `post-commit`
+ *   and `core.hooksPath` are never overwritten.
  */
 
 import { test, after } from 'node:test';
@@ -35,10 +35,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { firstLine, gitIn, gitTry, hasStack, runSize, tempDir } from '../tools/harness.js';
 
-/* Окружение проверки задаётся ею самой, а не машиной: `CI` и `SIZE_REPORT_NO_HOOK` —
- * это выключатели хука, и в CI они стоят у всего набора; тогда каждый сценарий
- * молчал бы «по причине CI», а виноватым выглядел бы хук. Сценарий про выключатели
- * задаёт их сам — в вызове, а не в окружении процесса. */
+/* The check sets the environment itself rather than taking the machine's: `CI` and
+ * `SIZE_REPORT_NO_HOOK` are the hook's switches and are set for the whole suite in integration, so
+ * every scenario would stay silent "for the CI reason" while the hook looked guilty. The scenario
+ * about the switches sets them itself — in the call rather than in the process environment. */
 delete process.env.CI;
 delete process.env.SIZE_REPORT_NO_HOOK;
 
@@ -51,10 +51,10 @@ const CONFIG = 'size-table.config.json';
 const SOURCE = path.join(tmp, 'source');
 let built = false;
 
-/* Проект-образец: одна колонка кода, отчёт в git, покрытие полное (README и сам
- * конфиг объявлены исключениями). Отчёт собирается инструментом, а не пишется
- * руками: иначе первый же запуск хука переписывал бы его и «хук ничего не сломал»
- * доказывалось бы на разных байтах. */
+/* The sample project: code columns, the report tracked by git, full coverage (README and the config
+ * itself declared as exceptions). The report is assembled by the tool rather than written by hand —
+ * otherwise the hook's very first run would rewrite it, and "the hook broke nothing" would be proved
+ * on different bytes. */
 function source() {
   if (built) return SOURCE;
   fs.mkdirSync(path.join(SOURCE, 'src'), { recursive: true });
@@ -83,8 +83,8 @@ function source() {
   return SOURCE;
 }
 
-// Свежий клон: хук в него приехать не может (`.git/hooks` не клонируется), а
-// жёсткие ссылки выключены — иначе `--write` в клоне правил бы файлы образца.
+// A fresh clone: no hook can travel into it (`.git/hooks` is not cloned), and hard links are off —
+// otherwise `--write` in the clone would edit the sample's files.
 function clone(name) {
   const dir = path.join(tmp, name);
   gitIn(null, ['clone', '-q', '--no-hardlinks', source(), dir]);
@@ -112,24 +112,24 @@ function hookState(dir) {
   return JSON.parse(fs.readFileSync(path.join(dir, '.git', 'size-report', 'hook.json'), 'utf8'));
 }
 
-// Коммит правки — только названных файлов: индекс чужой работы он не забирает,
-// иначе «хук не тронул чужое» проверялось бы на пустом индексе.
+// A commit of an edit — of the named files alone: it does not take someone else's work from the
+// index, or "the hook touched nothing foreign" would be checked on an empty index.
 function commit(dir, subject, files) {
   files.forEach((f) => fs.appendFileSync(path.join(dir, f), '// ' + subject + '\n'));
   gitIn(dir, ['commit', '-qm', subject, '--'].concat(files));
 }
 
-/* ---------- установка ---------- */
+/* ---------- installation ---------- */
 
 test('хук ставится сам при первом запуске, а ставится ли — решает проект', () => {
   const dir = clone('install');
   const file = hookFileOf(dir);
 
-  // В свежем клоне хука нет: `.git/hooks` не клонируется, а поставить его до первого
-  // запуска некому — ручного шага от человека нет намеренно.
+  // A fresh clone has no hook: `.git/hooks` is not cloned, and nothing can install it before the
+  // first run — a manual step is absent on purpose.
   assert.equal(fs.existsSync(file), false, 'хук появился в клоне до первого запуска');
 
-  // Первого обычного запуска достаточно.
+  // The first ordinary run is enough.
   assert.equal(runSize(dir, ['--config', CONFIG, '--write']).code, 0, 'отчёт не собрался');
   assert.ok(fs.existsSync(file), 'первый запуск не поставил хук: ' + file);
   assert.ok((fs.statSync(file).mode & 0o111) !== 0, 'хук не исполняемый: git его не позовёт');
@@ -139,23 +139,23 @@ test('хук ставится сам при первом запуске, а ст
   assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '',
     'постановка что-то изменила в проекте: хук обязан жить только в `.git`');
 
-  // Диагностика ничего не переставляет: она докладывает, а не правит.
+  // The diagnostics rearrange nothing: it reports rather than repairs.
   const before = fs.readFileSync(file, 'utf8');
   assert.equal(runSize(dir, ['--config', CONFIG, 'doctor', '--json']).code, 0,
     'диагностика здорового проекта не зелёная');
   assert.equal(fs.readFileSync(file, 'utf8'), before, 'диагностика переписала хук');
 
-  // Явная установка на месте говорит то, что нужно человеку: уже стоит, чем
-  // выключается, как снимается.
+  // The explicit installation says what a person needs: it is already there, here is what switches
+  // it off, here is how it is removed.
   const again = install(dir);
   assert.match(again.stdout, /установлен/, 'установка не сказала, что хук уже стоит');
   assert.match(again.stdout, /hooks.*enabled/, 'установка не сказала, чем выключается автоматика');
   assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '', 'повторная установка оставила грязь');
 });
 
-/* Автоматика — фоновая услуга, а не побочный эффект: там, где проект её не хочет или
- * поставить её некуда, она не появляется и не мешает. Проверяется запуском (первым в
- * клоне), а не чтением условия в коде. */
+/* The automation is a background service rather than a side effect: where a project does not want it
+ * or it cannot be installed, it does not appear and does not get in the way. Checked by a run (the
+ * first one in the clone) rather than by reading a condition in the code. */
 test('там, где автоматику выключили или поставить нельзя, хук не появляется', () => {
   const off = clone('install-off');
   const offCfg = JSON.parse(fs.readFileSync(path.join(off, CONFIG), 'utf8'));
@@ -179,7 +179,7 @@ test('там, где автоматику выключили или постав
     'постановка создала каталог чужого core.hooksPath');
 });
 
-/* ---------- обновление ---------- */
+/* ---------- updating ---------- */
 
 test('правка кода даёт пересобранный отчёт отдельным коммитом', () => {
   const dir = clone('update');
@@ -194,8 +194,8 @@ test('правка кода даёт пересобранный отчёт от�
     'в коммите отчёта оказалось что-то кроме отчёта');
   assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '', 'после хука рабочее дерево грязное');
 
-  // В коммит легли те же байты, что собирает `--write`: иначе отчёт в истории и
-  // отчёт на диске разошлись бы, и проверка «таблица совпадает с историей» — тоже.
+  // The commit carries the very bytes `--write` assembles: otherwise the report in history and the
+  // report on disk would diverge, and so would the check "the table agrees with history".
   const committed = fs.readFileSync(path.join(dir, REPORT), 'utf8');
   assert.equal(runSize(dir, ['--config', CONFIG, '--write']).code, 0);
   assert.equal(fs.readFileSync(path.join(dir, REPORT), 'utf8'), committed,
@@ -215,29 +215,28 @@ test('повторный запуск и коммит без изменений 
   commit(dir, 'feat: правка кода', ['src/code.js']);
   assert.match(subjects(dir, 1)[0], /^chore\(report\): /);
 
-  // Пустой коммит: строки от него отчёту не положено, значит и коммита не будет.
+  // An empty commit: it earns the report no row, hence no commit either.
   gitIn(dir, ['commit', '-q', '--allow-empty', '-m', 'chore: пусто']);
   assert.equal(subjects(dir, 1)[0], 'chore: пусто', 'хук создал коммит там, где отчёт не менялся');
   assert.equal(gitIn(dir, ['log', '--format=%s']).split('\n').filter((s) => /^chore\(report\)/.test(s)).length, 1,
     'после коммита без изменений появился второй коммит отчёта');
 
-  // И руками тот же ответ: «менять было нечего».
+  // And by hand the answer is the same: there was nothing to change.
   const res = runSize(dir, ['--config', CONFIG, 'hook-run']);
   assert.equal(res.code, 0, 'повторный запуск вернул отказ: ' + firstLine(res.stderr));
   assert.equal(res.stdout.trim() + res.stderr.trim(), '', 'повторный запуск напечатал лишнее');
   assert.equal(hookState(dir).result, 'unchanged', 'повторный запуск нашёл что менять');
 });
 
-/* На слиянии хук ведёт себя как на любом коммите, но попадает туда другим файлом:
- * git создаёт коммит слияния сам и `post-commit` при этом не зовёт — зовётся
- * `post-merge` (проверено на git 2.50). Отчёт правится в обеих ветвях, поэтому
- * слияние конфликтует — это свойство «отчёта в git», и здесь он разрешается в пользу
- * текущей ветви, как это сделал бы человек.
+/* On a merge the hook behaves as on any commit, but arrives there by another file: git creates the
+ * merge commit itself and does not call `post-commit` — it calls `post-merge` (measured on git 2.50).
+ * Both branches edit the report, so the merge conflicts — a property of "the report in git" — and
+ * here it is resolved in favour of the current branch, as a person would.
  *
- * Строки о слиянии в отчёте здесь ждать нечего: она появляется по общему правилу
- * только когда слияние само сдвинуло объём, а правка ветви уже посчитана. Поэтому
- * проверяется то, за что отвечает хук: отчёт после слияния пересобран отдельным
- * коммитом и совпадает с тем, что собирается из истории и дерева. */
+ * A merge row in the report is not to be expected here: by the usual rule it appears only when the
+ * merge itself shifted a volume, and the branch's edit is already counted. So what is checked is what
+ * the hook is responsible for: after the merge the report is rebuilt as a commit of its own and
+ * agrees with what history and the working tree assemble. */
 test('на слиянии хук ведёт себя как на любом коммите', () => {
   const dir = clone('merge');
   install(dir);
@@ -247,7 +246,7 @@ test('на слиянии хук ведёт себя как на любом ко
   gitIn(dir, ['checkout', '-q', 'main']);
   commit(dir, 'feat: правка в основной', ['src/code.js']);
   gitIn(dir, ['merge', '-q', '--no-ff', '--no-edit', '-X', 'ours', 'side']);
-  // Хук уже отработал: HEAD — коммит отчёта, а сам merge-коммит — его родитель.
+  // The hook has already run: HEAD is the report's commit, and the merge commit is its parent.
   const merge = gitIn(dir, ['rev-parse', 'HEAD^']).trim();
   assert.equal(gitIn(dir, ['rev-list', '--parents', '-n1', merge]).trim().split(' ').length, 3,
     'слияние не создало merge-коммит: проверять нечего');
@@ -264,14 +263,15 @@ test('чужая незакоммиченная работа и индекс н�
   const dir = clone('stage');
   install(dir);
 
-  // Отложенная в индексе правка, грязный файл вне индекса и коммит кода: хук
-  // обязан оставить всё это как было, а закоммитить только отчёт.
+  // An edit staged in the index, a dirty file outside it, and a commit of code: the hook has to
+  // leave all of it alone and commit the report only.
   fs.appendFileSync(path.join(dir, 'src', 'other.js'), '// отложенная правка\n');
   gitIn(dir, ['add', 'src/other.js']);
   fs.appendFileSync(path.join(dir, 'README.md'), 'грязная правка\n');
   commit(dir, 'feat: правка кода', ['src/code.js']);
 
-  // `trim` съел бы значимый ведущий пробел первой строки (« M» — правка вне индекса).
+  // `trim` would eat the meaningful leading space of the first line (" M" is an edit outside the
+  // index).
   const status = gitIn(dir, ['status', '--porcelain']).replace(/\n+$/, '').split('\n').sort();
   assert.deepEqual(status, [' M README.md', 'M  src/other.js'],
     'хук тронул чужую работу или индекс: ' + JSON.stringify(status));
@@ -279,7 +279,7 @@ test('чужая незакоммиченная работа и индекс н�
     'в коммит отчёта попала чужая правка');
 });
 
-/* ---------- там, где обновлять нечего ---------- */
+/* ---------- where there is nothing to update ---------- */
 
 test('хук молчит в CI, по выключателю и на отделённом HEAD', () => {
   const dir = clone('quiet');
@@ -287,7 +287,7 @@ test('хук молчит в CI, по выключателю и на отдел�
   commit(dir, 'feat: правка кода', ['src/code.js']);
   const report = fs.readFileSync(path.join(dir, REPORT), 'utf8');
 
-  // Правка на диске: если хук отработает, отчёт изменится — по этому и видно.
+  // An edit on disk: if the hook does run, the report changes — which is how it shows.
   fs.appendFileSync(path.join(dir, 'src', 'code.js'), '// ещё правка\n');
   const env = runSize(dir, ['--config', CONFIG, 'hook-run'], { CI: '1' });
   assert.equal(env.code, 0, 'хук в CI ответил отказом: ' + firstLine(env.stderr));
@@ -298,7 +298,7 @@ test('хук молчит в CI, по выключателю и на отдел�
   assert.equal(off.code, 0);
   assert.equal(fs.readFileSync(path.join(dir, REPORT), 'utf8'), report, 'рубильник окружения не сработал');
 
-  // Выключатель в настройках: файл читается с диска, коммитить его не нужно.
+  // The switch in the settings: the file is read off the disk and need not be committed.
   const cfg = JSON.parse(fs.readFileSync(path.join(dir, CONFIG), 'utf8'));
   cfg.hooks = { enabled: false };
   fs.writeFileSync(path.join(dir, CONFIG), JSON.stringify(cfg, null, 2) + '\n');
@@ -307,7 +307,7 @@ test('хук молчит в CI, по выключателю и на отдел�
   assert.equal(fs.readFileSync(path.join(dir, REPORT), 'utf8'), report, 'выключатель в настройках не сработал');
   assert.match(hookState(dir).why, /hooks\.enabled/, 'причина пропуска не названа');
 
-  // Выключенный хук виден в диагностике как дело, а не как норма.
+  // A switched-off hook shows in the diagnostics as something to act on rather than as the norm.
   const doc = JSON.parse(runSize(dir, ['--config', CONFIG, 'doctor', '--json']).stdout);
   assert.equal(doc.hooks.installed, true, 'диагностика не видит установленный хук');
   assert.equal(doc.hooks.enabled, false, 'диагностика не видит выключатель');
@@ -324,7 +324,7 @@ test('хук молчит в CI, по выключателю и на отдел�
 });
 
 test('отказ инструмента не роняет коммит, а причина видна в диагностике', () => {
-  // Обрезанная история — отказ самого инструмента (код 3), а не хука.
+  // A shallow history is a refusal of the tool itself (code 3) rather than of the hook.
   const dir = path.join(tmp, 'shallow');
   const shallow = gitTry(null, ['clone', '-q', '--depth', '1', '--no-hardlinks', 'file://' + source(), dir]);
   assert.equal(shallow.status, 0, 'не удалось собрать обрезанную выкладку: ' + firstLine(shallow.stderr));
@@ -339,7 +339,7 @@ test('отказ инструмента не роняет коммит, а пр�
   assert.match(refused.stderr.split('\n')[0], /^✗ size-report: /, 'причина не названа строкой: ' + refused.stderr);
   assert.equal(hookState(dir).result, 'refused', 'отказ не записан: ' + JSON.stringify(hookState(dir)));
 
-  // Коммит на месте и он один: отчёта в истории нет, дерево чистое.
+  // The commit is there and it is the only one: no report in history, a clean tree.
   commit(dir, 'feat: правка кода', ['src/code.js']);
   assert.equal(subjects(dir, 1)[0], 'feat: правка кода', 'хук создал коммит после отказа');
   assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '', 'после отказа осталась грязь');
@@ -363,11 +363,12 @@ test('отчёт вне git: хук пересобирает и не комми�
   assert.ok(fs.existsSync(path.join(dir, '.size-report', 'report.html')), 'отчёт вне git не пересобрался');
   assert.equal(hookState(dir).result, 'rebuilt', 'хук не сказал, что пересобрал без коммита');
 
-  // А в свежем клоне хука нет вовсе — это и есть ответ «на чужой машине и в CI».
+  // And a fresh clone has no hook at all — which is the answer for "someone else's machine and
+  // integration".
   assert.equal(fs.existsSync(hookFileOf(clone('fresh'))), false, 'хук приехал вместе с историей');
 });
 
-/* ---------- снятие и чужие файлы ---------- */
+/* ---------- removal and someone else's files ---------- */
 
 test('снятие возвращает проект к прежнему поведению', () => {
   const dir = clone('uninstall');
