@@ -1,9 +1,9 @@
-/* Журнал и ссылки: к какому разделу относится коммит и куда ведёт его описание.
- * Работает на тексте, а не на git: разделы ищутся в уже прочитанном файле. */
+/* The journal and links: which section a commit belongs to and where its description leads.
+ * It works on text rather than on git: sections are searched for in an already read file. */
 
-/* Журнал (WORKLOG/CHANGELOG/…): раздел, к которому относится коммит. Формат
- * заголовков задаётся регуляркой в конфиге; именованные группы `id` (короткий
- * номер для `§N`) и `title` необязательны — без них номер берётся первым словом. */
+/* A journal (WORKLOG/CHANGELOG/…): the section a commit belongs to. The heading format comes
+ * from a regular expression in the settings; the named groups `id` (the short number used by
+ * `§N`) and `title` are optional — without them the number is the first word. */
 export function parseSections(text, pattern) {
   const re = new RegExp(pattern);
   const list = [];
@@ -23,9 +23,11 @@ export function parseSections(text, pattern) {
   return list;
 }
 
-/* Раздел, к которому относится коммит: сначала вновь заведённый, иначе —
- * последний из отредактированных (журналы ведутся по возрастанию, так что правка
- * почти всегда касается хвоста). */
+/* The section a commit belongs to: a newly opened one first, otherwise the last of the edited
+ * ones in document order. Taking the last assumes a journal written in ascending order, as this
+ * tool's own defaults expect; the "newly added" case holds for any order, while in a journal
+ * written newest-first (CHANGELOG.md is one) the fallback would name the oldest edited section
+ * rather than the newest. */
 export function touchedSection(prevText, nowText, pattern) {
   const prev = new Map(parseSections(prevText, pattern).map((s) => [s.head, s.body]));
   const now = parseSections(nowText, pattern);
@@ -42,10 +44,10 @@ export function touchedSection(prevText, nowText, pattern) {
   return null;
 }
 
-/* Якорь — как у GitHub (github-slugger): пунктуация снимается целиком, каждый
- * пробел становится дефисом. Отсюда «13 — эфф» → «13--эфф» (два дефиса: тире
- * выброшено, пробелы остались каждый своим). Дефис, подчёркивание и буквы
- * (включая кириллицу) сохраняются, остальные пробельные символы — нет. */
+/* The anchor as GitHub makes it (github-slugger): punctuation is dropped entirely and every
+ * space becomes a hyphen. Hence "13 — eff" → "13--eff" (two hyphens: the dash is gone while both
+ * spaces stay). Hyphens, underscores and letters (Cyrillic included) survive; other whitespace
+ * does not. */
 export function anchor(head) {
   return head.toLowerCase().replace(/[^\p{L}\p{N} _-]/gu, '').replace(/ /g, '-');
 }
@@ -56,9 +58,9 @@ export function sectionLink(section, cfg) {
   return cfg.journal.url + '#' + anchor(what);
 }
 
-/* Ссылка строки: на раздел журнала, если раздел есть, иначе на сам коммит (шаблон
- * из настроек). Одно место для артефакта и для данных страницы: адрес раздела —
- * правило GitHub, и второе его воплощение разъехалось бы с первым. */
+/* The link of a row: to a journal section when there is one, otherwise to the commit itself (the
+ * template comes from the settings). One place for the artifact and for the data of the page: a
+ * section address follows GitHub's rule, and a second copy of it would drift from the first. */
 export function rowHref(section, sha, cfg) {
   if (section) return sectionLink(section, cfg);
   if (!cfg.links.commitUrl) return null;

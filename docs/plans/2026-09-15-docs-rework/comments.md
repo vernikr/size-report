@@ -59,7 +59,8 @@ comment diff stays under the commit budget, otherwise it is split by file groups
 - [x] **M3b metrics and tokens** — `src/metrics.js`, `src/minify.js`, `src/tokens.js`,
   `src/optional.js` (442 → 446; module M3 as a whole 891 → 888; journal entry `worklog/0074`,
   2026-09-15).
-- [ ] **M4 history** — `src/git.js`, `src/history.js`, `src/journal.js` (525).
+- [x] **M4 history** — `src/git.js`, `src/history.js`, `src/journal.js` (525 → 519; journal
+  entry `worklog/0075`, 2026-09-15).
 - [ ] **M5 project** — `src/project.js`, `src/config.js`, `src/init.js`, `src/doctor.js`,
   `src/check.js`, `src/explain.js` (1165; two commits).
 - [ ] **M6 report data** — `src/data.js`, `src/derived.js`, `src/artifact.js`, `src/css.js`

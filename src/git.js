@@ -1,26 +1,24 @@
 import { execFileSync, spawnSync } from 'child_process';
 import { EXIT, refuse } from './refusal.js';
 
-/* Единственная граница вызова git: закрепления настроек, блобы пачкой, история и
- * сверка с диском. Всё, что инструмент знает о содержимом репозитория, приходит
- * отсюда, — поэтому и закрепления задаются здесь, а не в каждом вызове. */
+/* The single boundary of git calls: pinned settings, blobs in batches, the history, and the
+ * comparison against the disk. Everything the tool knows about the repository's content comes
+ * from here — which is why the pins are set here rather than in every call. */
 
 export const MAX_BUF = 256 * 1024 * 1024;
-const FIELD = '\u0001'; // разделитель полей в формате git log
+const FIELD = '\u0001'; // field separator of the `git log` format
 
-/* Всё, что движок читает у git, читается с явно заданными настройками: их
- * значения по умолчанию берутся из настроек машины и меняют то, что попадает в
- * разбор. Без `core.quotePath=false` не-английские пути приходят закавыченными и
- * экранированными (`"docs/\320\267..."`): колонка с таким путём не находит файла,
- * а коммит, у которого она была единственным изменением объёма, теряет строку.
- * Остальные закрепления закрывают тот же класс — раскраска и блок подписи
- * подмешались бы в разбираемый поток, а перекодировка подписей — в подписи строк
- * отчёта. Закрепление задаётся здесь, а не в каждом вызове: иначе его забудет
- * следующий вызов.
+/* Everything the engine reads from git is read with explicitly pinned settings: their defaults
+ * come from the machine and change what ends up in the parse. Without `core.quotePath=false`
+ * non-English paths arrive quoted and escaped (`"docs/\320\267..."`): a column holding such a
+ * path finds no file, and a commit whose only change of volume it was loses its row. The other
+ * pins close the same class of defect — colouring and a signature block would mix into the parsed
+ * stream, and signature re-encoding into the row labels of the report. A pin is set here rather
+ * than in every call, or the next call would forget it.
  *
- * Локаль закрепляется заодно: разбор не должен зависеть от того, какие переводы
- * стоят на машине. Цена — сообщения самого git в неожиданных отказах идут
- * по-английски; сообщения инструмента остаются русскими. */
+ * The locale is pinned along with them: the parse must not depend on which translations the
+ * machine has. The price is that git's own messages in unexpected refusals come out in English,
+ * while the tool's own messages stay as they are. */
 export const GIT_PINS = [
   'core.quotePath=false',
   'color.ui=never',
@@ -44,11 +42,11 @@ export function git(root, args) {
   });
 }
 
-/* То же чтение, но с кодом возврата: там, где ненулевой код — ожидаемый ответ, а не
- * отказ (`git diff --quiet` отвечает 1 на расхождение). Исключение здесь означало бы
- * отказ инструмента там, где задан простой вопрос. `env` досыпается к окружению
- * границы — им хук собирает коммит отчёта в отдельном индексе, не трогая
- * настоящий (см. `src/hook.js`). */
+/* The same read, but with the exit code: where a non-zero code is an expected answer rather than
+ * a refusal (`git diff --quiet` answers 1 on a difference), an exception would mean the tool
+ * refusing where a simple question was asked. `env` is added on top of the boundary's
+ * environment — the hook builds the report commit in a separate index with it, leaving the real
+ * one untouched (`src/hook.js`). */
 export function gitTry(root, args, env) {
   const res = spawnSync('git', gitArgv(args), {
     cwd: root, encoding: 'utf8', maxBuffer: MAX_BUF,
@@ -57,15 +55,15 @@ export function gitTry(root, args, env) {
   return { status: res.status, stdout: res.stdout || '', stderr: res.stderr || '' };
 }
 
-/* Чтение блобов пачкой. `git cat-file --batch-check` отвечает про список пар
- * `ревизия:путь` (sha объекта и размер), `--batch` отдаёт содержимое. Один-два
- * процесса на всю историю вместо спавна `git show` на каждый файл — на тысячах
- * коммитов это разница между минутами и секундой. Побочно размер объекта
- * оказывается дешевле его чтения: метрике `raw` содержимое не нужно вовсе.
+/* Reading blobs in batches. `git cat-file --batch-check` answers about a list of `revision:path`
+ * pairs (the object sha and its size), `--batch` returns the content. One or two processes for
+ * the whole history instead of spawning `git show` per file: across thousands of commits that is
+ * the difference between minutes and a second. As a side effect the object size turns out cheaper
+ * than reading the object — the `raw` metric needs no content at all.
  *
- * Ответы позиционные (строка на запрос), поэтому запросы и ответы сопоставляются
- * по порядку — `ревизия:путь` git в ответе не повторяет. */
-const BLOB_CHUNK = 1000; // спек на пачку: ограничивает и stdin, и память
+ * The answers are positional (one line per request), so requests and answers are matched by
+ * order: git does not repeat the `revision:path` in an answer. */
+const BLOB_CHUNK = 1000; // specs per batch: it bounds both stdin and memory
 
 function catFileCheck(root, specs) {
   const out = execFileSync('git', gitArgv(['cat-file', '--batch-check=%(objectname) %(objecttype) %(objectsize)']), {
@@ -85,21 +83,21 @@ function catFileBatch(root, shas) {
     if (nl < 0) break;
     const f = buf.toString('utf8', i, nl).split(' ');
     i = nl + 1;
-    if (f.length < 3) continue; // «<спека> missing»
+    if (f.length < 3) continue; // "<spec> missing"
     const size = Number(f[2]);
     out.set(f[0], { size: size, text: buf.toString('utf8', i, i + size) });
-    i += size + 1; // перевод строки после содержимого
+    i += size + 1; // the newline that follows the content
   }
   return out;
 }
 
-/* Блобы для списка пар «ревизия:путь». `needText` — читать ли содержимое: метрике
- * `raw` хватает размера объекта, и тогда `--batch` не вызывается вовсе.
- * Одинаковые спеки и одинаковые блобы запрашиваются один раз (кэш по sha). */
+/* Blobs for a list of `revision:path` pairs. `needText` decides whether the content is read: the
+ * `raw` metric lives happily with the object size alone, and then `--batch` is not called at all.
+ * Identical specs and identical blobs are requested once (the cache is keyed by sha). */
 export function readBlobs(root, specs, needText) {
   const uniq = [...new Set(specs)];
   const out = new Map();
-  const texts = new Map(); // sha блоба → содержимое
+  const texts = new Map(); // blob sha → content
   for (let start = 0; start < uniq.length; start += BLOB_CHUNK) {
     const part = uniq.slice(start, start + BLOB_CHUNK);
     const lines = catFileCheck(root, part);
@@ -120,11 +118,10 @@ export function readBlobs(root, specs, needText) {
   return out;
 }
 
-/* Дерево HEAD: sha блобов всех файлов коммита. Это правда о содержимом HEAD,
- * добытая не тем же способом, что состояние движка (то читает блобы пачкой),
- * поэтому расхождение с ней и означает потерянную при переносе правку. Один вызов
- * на прогон; разбор идёт по NUL (`-z`), иначе пути с пробелами пришлось бы
- * раскодировать. */
+/* The HEAD tree: the blob shas of every file of the commit. This is the truth about the content
+ * of HEAD obtained by another route than the engine's state (which reads blobs in batches), so a
+ * disagreement with it means an edit lost while the state was carried forward. One call per run;
+ * the output is split by NUL (`-z`), or paths with spaces would have to be unquoted. */
 export function headTree(root) {
   const out = new Map();
   const tree = execFileSync('git', gitArgv(['ls-tree', '-r', '-z', 'HEAD']), {
@@ -138,12 +135,11 @@ export function headTree(root) {
   return out;
 }
 
-/* Файлы на диске — такими, какими их видит git: `hash-object` пропускает каждый
- * файл через те же переводы строк и фильтры, что и `git add` (`.gitattributes`,
- * `core.autocrlf`). Поэтому «файл на диске соответствует коммиту» — это сравнение
- * хешей, а не размеров: размер зависит от выкладки (при `core.autocrlf=true` на
- * диске CRLF, в git LF). Пути приходят списком, ответы позиционные — как у
- * `cat-file`. */
+/* The files on disk as git sees them: `hash-object` runs each file through the same line-ending
+ * conversions and filters as `git add` (`.gitattributes`, `core.autocrlf`). So "the file on disk
+ * matches the commit" is a comparison of hashes rather than of sizes — a size depends on the
+ * checkout (`core.autocrlf=true` gives CRLF on disk and LF inside git). Paths come as a list and
+ * the answers are positional, as with `cat-file`. */
 export function diskHashes(root, paths) {
   const out = new Map();
   const lines = execFileSync('git', gitArgv(['hash-object', '--stdin-paths']), {
@@ -153,31 +149,31 @@ export function diskHashes(root, paths) {
   return out;
 }
 
-/* Обратный перевод: то, что git выложил бы на диск для блоба этой ревизии и пути
- * (`--filters` применяет фильтры выкладки). Нужен там, где переводы строк git не
- * возвращает обратно: файл, в котором CRLF лежат в самом коммите, при
- * `core.autocrlf=true` выкладывается как есть, а «очистка» вернула бы LF, — сам
- * git про такие файлы предупреждает, а на диск кладёт именно это. */
+/* The reverse conversion: what git would write to disk for a blob of this revision and path
+ * (`--filters` applies the checkout filters). Needed where git does not undo its line endings: a
+ * file whose CRLF sits in the commit itself is written out as it is under `core.autocrlf=true`,
+ * while "cleaning" would turn it back into LF — git warns about such files and puts exactly this
+ * on disk. */
 export function diskForm(root, rev, p) {
   return execFileSync('git', gitArgv(['cat-file', '--filters', rev + ':' + p]), {
     cwd: root, maxBuffer: MAX_BUF, env: gitEnv()
   });
 }
 
-// Содержимое файла в ревизии или null, если файла там нет.
+// The content of a file in a revision, or null when the file is not there.
 export function blobAt(root, rev, p) {
   const blobs = readBlobs(root, [rev + ':' + p], true);
   const blob = blobs.get(rev + ':' + p);
   return blob === undefined ? null : blob.text;
 }
 
-/* Имя ревизии → sha коммита: `HEAD`, ветка, тег, `HEAD~1`, короткий или полный
- * sha. Правила имён остаются за git, а не переписываются здесь: свои разошлись бы
- * с ним на первом же `main~2` или `HEAD@{1}`, а `^{commit}` отсекает имена, ведущие
- * не к коммиту (тег на блоб, путь в дереве). Имя, начинающееся с дефиса, к git не
- * идёт вовсе: в `rev-parse` оно было бы ключом, а не ревизией.
- * Не разрешилось — `null`: «имени нет» и «имя неоднозначно» разбирает вызывающий,
- * у которого для этого есть список коммитов. */
+/* A revision name → the commit sha: `HEAD`, a branch, a tag, `HEAD~1`, a short or a full sha. The
+ * rules of names stay with git instead of being rewritten here: our own would part ways with it on
+ * the first `main~2` or `HEAD@{1}`, while `^{commit}` cuts off names that lead somewhere other
+ * than a commit (a tag on a blob, a path in the tree). A name starting with a dash never reaches
+ * git: in `rev-parse` it would be a flag rather than a revision.
+ * Unresolved gives `null`: "no such name" and "the name is ambiguous" are told apart by the
+ * caller, which has the commit list for that. */
 export function resolveCommit(root, name) {
   if (name === '' || name.charAt(0) === '-') return null;
   const res = gitTry(root, ['rev-parse', '--verify', '--quiet', name + '^{commit}']);
@@ -185,14 +181,13 @@ export function resolveCommit(root, name) {
   return res.status === 0 && /^[0-9a-f]{40}$/.test(sha) ? sha : null;
 }
 
-/* История одним вызовом: заголовок коммита и список изменённых им путей.
- * `%ad` — дата автора в его собственной зоне (не в зоне машины), иначе таблица
- * собиралась бы в CI по UTC и расходилась бы с локальной сборкой.
- * `--diff-merges=first-parent` — иначе у merge-коммита списка путей нет вовсе
- * (git не показывает дифф слияния, пока не попросишь): правки разрешения
- * конфликта выпали бы и из строки, и из переноса состояния, а состояние на HEAD
- * разошлось бы с содержимым файла в дереве. С первым родителем у слияния видно
- * ровно то, что оно привнесло поверх своей ветки. */
+/* The history in one call: the commit header and the list of paths it changed. `%ad` is the
+ * author's date in the author's own zone rather than the machine's, or the table would be built in
+ * UTC in CI and disagree with a local build. `--diff-merges=first-parent` is there because a merge
+ * commit otherwise has no path list at all (git shows a merge diff only on request): edits made
+ * while resolving a conflict would drop out of both the row and the carried state, and the state
+ * at HEAD would disagree with the file content in the tree. Against the first parent a merge shows
+ * exactly what it brought on top of its branch. */
 export function readHistory(root) {
   const log = git(root, [
     'log', '--reverse', '--name-only', '--diff-merges=first-parent', '--date=format:%Y-%m-%d %H:%M',

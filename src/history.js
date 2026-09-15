@@ -5,28 +5,26 @@ import { METRICS, measureBlob, pointExact } from './metrics.js';
 import { touchedSection } from './journal.js';
 import { EXIT, refuse } from './refusal.js';
 
-/* Обход истории: измерение по коммитам, сдвиг чисел, перенос состояния между
- * коммитами, сверка с рабочим деревом и сборка — та единственная точка, из
- * которой состояние и строки попадают наружу. Верхний этаж чтения: ниже — git и
- * метрики, выше — только уже собранные значения. */
+/* Walking the history: measuring per commit, shifting numbers, carrying state between commits,
+ * comparing against the working tree, and building — the one point from which rows and state
+ * leave this layer. The top floor of reading: below it are git and the metrics, above it only
+ * assembled values. */
 
-/* Причина, по которой коммит не получил строки, — ключ, а не текст: по нему и
- * считается сводка, и отвечает `explain`. Слова для человека — в `skipLine`, и
- * они те же, что были строкой раньше: «без изменения объёма» накрывает и тот
- * случай, когда коммит не тронул ни одного файла колонок, — в отчёте эта разница
- * не проводилась, и эталон контракта её сохраняет; отличие видно в `explain`, где
- * оно и нужно. */
+/* Why a commit got no row is a key rather than a text: the summary counts by it and `explain`
+ * answers by it. The words a human reads live in `skipLine` and are the ones that used to be the
+ * row itself: "no change of volume" also covers a commit that touched no column at all — the
+ * report never made that distinction and the contract fixture preserves it, while the difference
+ * is visible in `explain`, where it is needed. */
 const SKIP_WORDS = { merge: 'merge', report: 'только таблица', flat: 'без изменения объёма' };
 
 export function skipLine(dropped) {
   return dropped.sha.slice(0, 7) + ' (' + SKIP_WORDS[dropped.reason] + ')';
 }
 
-/* Сдвинул ли коммит хотя бы одно число. Сравниваются числа, а не список файлов:
- * правка в пробелах или комментариях размера не меняет, и строка про неё была бы
- * пустой, а у слияния клетки выходят нулевыми всегда, когда разрешение конфликта
- * совпало с тем, что уже дала ветка. Колонка, которой коммит не касался,
- * остаётся тем же объектом состояния. */
+/* Whether a commit moved at least one number. Numbers are compared rather than the list of files:
+ * an edit to whitespace or comments changes no size and its row would be empty, while a merge
+ * gives zero cells whenever resolving the conflict produced what the branch already had. A column
+ * the commit did not touch keeps the very same state object. */
 function changesVolume(state, before, columns, metrics) {
   return columns.some((_col, i) => {
     const a = state[i], b = before[i];
@@ -36,11 +34,11 @@ function changesVolume(state, before, columns, metrics) {
   });
 }
 
-/* План чтения: какие пары «ревизия:путь» понадобятся и всё содержимое сразу — иначе
- * на каждый коммит приходилось бы по git-вызову на колонку. Псевдонимов колонки,
- * которых коммит коснулся, может быть и два: при выключенном распознавании
- * переименований git отдаёт в одном коммите и старое имя, и новое. Собираются все —
- * какой из них в коммите действительно есть, решается потом, по прочитанным блобам. */
+/* The read plan: which `revision:path` pairs will be needed, and all the content at once —
+ * otherwise every commit would cost one git call per column. A column may have both of its aliases
+ * touched by one commit: with rename detection off, git reports the old name and the new one in
+ * the same commit. All of them are collected — which one is really there is decided later, by the
+ * blobs that came back. */
 function readPlan(cfg, root, commits, needText) {
   const plan = commits.map((c) => {
     const changed = new Set(c.files);
@@ -58,10 +56,10 @@ function readPlan(cfg, root, commits, needText) {
   return { plan: plan, blobs: readBlobs(root, specs, needText) };
 }
 
-/* Замер блоба с памятью на проход: ревизия с тем же содержимым (откат, повторный
- * merge) не пересчитывается. */
+/* Measuring a blob with a memory kept for the run: a revision with the same content (a revert, a
+ * repeated merge) is not measured twice. */
 function measurer(cfg) {
-  const measured = new Map(); // sha блоба + метрика → число
+  const measured = new Map(); // blob sha + metric → number
   return (name, blob, file, rev) => {
     const key = blob.sha + '\u0000' + name;
     if (measured.has(key)) return measured.get(key);
@@ -71,22 +69,22 @@ function measurer(cfg) {
   };
 }
 
-/* Правки коммита в состояние: из псевдонимов берётся тот, который в коммите есть, а
- * не первый по порядку настроек, — исчезнувшее имя в коммите отсутствует, и
- * состояние, взятое по порядку, теряло файл (а сверка с деревом — отказывала). */
+/* The commit's edits applied to the state: the alias taken is the one present in the commit
+ * rather than the first in the settings order — a vanished name is absent from the commit, and a
+ * state taken in settings order lost the file (and the comparison against the tree refused). */
 function applyPicks(pass, c, picks) {
   picks.forEach((candidates, i) => {
     const pick = candidates.find((cand) => pass.blobs.get(cand.spec) !== undefined);
     if (pick === undefined) {
-      // Путь в коммите есть, а файла по нему нет — файл удалён.
+      // The path is in the commit but no blob came back for it — the file was deleted.
       if (candidates.length > 0) pass.state[i] = null;
       return;
     }
     const blob = pass.blobs.get(pick.spec);
     const cells = {};
-    /* Приближённость числа — свойство пути, а не блоба: от расширения зависит,
-     * возьмёт ли формат минификатор. Поэтому она считается здесь, вместо с
-     * замером, и в кэш содержимого не попадает. */
+    /* Approximation is a property of the path rather than of the blob: whether the format goes to
+     * the minifier depends on its extension. It is computed here along with the measurement, and
+     * so it does not enter the content cache. */
     const approx = {};
     pass.metrics.forEach((m) => {
       cells[m] = pass.measure(m, blob, pick.path, c.sha);
@@ -96,9 +94,9 @@ function applyPicks(pass, c, picks) {
   });
 }
 
-/* Один коммит прохода: сдвиг состояния, затем — нужна ли коммиту строка. `pass`
- * общий на весь проход (состояние, списки, память замеров), поэтому функция только
- * двигает его вперёд. */
+/* One commit of the run: shift the state, then decide whether the commit needs a row. `pass` is
+ * shared by the whole run (state, lists, measurement memory), so the function only moves it
+ * forward. */
 function stepCommit(pass, c, ci) {
   const plan = pass.plan[ci];
   let section = null;
@@ -134,14 +132,14 @@ function stepCommit(pass, c, ci) {
   });
 }
 
-/* Проход по истории. Состояние колонки переносится вперёд, а перезамер делается
- * только для изменившихся в коммите файлов.
+/* The run over the history. A column's state is carried forward, and only the files changed by the
+ * commit are measured again.
  *
- * `known` — уже прочитанная история: проходам, которым она нужна ещё и сама по
- * себе (полнота покрытия), незачем звать `git log` второй раз. */
+ * `known` is the history already read: a pass that needs it for its own sake as well (coverage)
+ * has no reason to call `git log` a second time. */
 export function measureHistory(cfg, root, known) {
   const commits = known === undefined ? readHistory(root) : known;
-  // Текст журнала нужен всегда: ссылка в раздел — не метрика, но тоже чтение.
+  // The journal text is always needed: a link to a section is not a metric, but it is a read too.
   const needText = !!cfg.journal || cfg.metrics.some((m) => METRICS[m].needsText);
   const reads = readPlan(cfg, root, commits, needText);
   const pass = {
@@ -158,16 +156,16 @@ export function measureHistory(cfg, root, known) {
     journalPrev: ''
   };
   commits.forEach((c, ci) => stepCommit(pass, c, ci));
-  /* Какие колонки тронул последний коммит — по тому же плану чтения, по которому
-   * идёт перенос состояния: путь колонки есть в списке изменённых путей коммита.
-   * Страница ставит эти колонки впереди остальных: отчёт пересобирается после
-   * каждого коммита, и первый вопрос читателя — что принесла эта правка.
+  /* Which columns the last commit touched, read from the same plan the state is carried along:
+   * a column's path is in the list of paths the commit changed. The page puts those columns ahead
+   * of the rest — the report is rebuilt after every commit, and a reader's first question is what
+   * this edit brought.
    *
-   * Берётся последний коммит, задевший хотя бы одну колонку, — считая от верхушки
-   * назад. Коммиты мимо колонок (и, прежде всего, сам отчёт, который коммитит хук)
-   * пропускаются: правка отчёта — не правка проекта. Иначе знак зависел бы от
-   * собственного коммита отчёта: тот же прогон давал бы другие байты, отчёт
-   * перестал бы быть неподвижной точкой, а хук коммитил бы его по второму разу. */
+   * The commit taken is the last one that touched at least one column, counting back from the top.
+   * Commits that went past the columns (above all the report itself, which the hook commits) are
+   * skipped: an edit to the report is not an edit to the project. Otherwise the mark would depend
+   * on the report's own commit — the same run would produce different bytes, the report would stop
+   * being a fixed point, and the hook would commit it a second time. */
   let last = cfg.columns.map(() => false);
   for (let i = commits.length - 1; i >= 0 && !last.some(Boolean); i--) {
     const picks = reads.plan[i].picks.map((paths) => paths.length > 0);
@@ -176,20 +174,19 @@ export function measureHistory(cfg, root, known) {
   return { rows: pass.rows, dropped: pass.dropped, mixed: pass.mixed, state: pass.state, last: last };
 }
 
-/* Сверка с рабочим деревом отвечает на два вопроса, и оба обязательны: состояние
- * движка на HEAD совпадает с деревом коммита, и файл на диске соответствует тому
- * же содержимому. Первый ловит правку, потерянную при переносе состояния между
- * коммитами (например, у merge-коммита, которого нет в списке изменённых путей): и
- * потерянное создание файла (в дереве он есть, а состояние о нём не знает), и
- * потерянное изменение (файл есть с обеих сторон, содержимое разное), и потерянное
- * удаление (состояние о файле знает, а в дереве его нет). Сравнение при этом идёт
- * с расхождением, а не с пустотой: колонка, чей файл жил в истории и был удалён до
- * HEAD, пуста с обеих сторон — это не потеря, а её видно в отчёте. Второй вопрос —
- * правка, которой в истории нет вовсе. Размеры для этого не годятся: на диске они
- * зависят от выкладки (при `core.autocrlf=true` — значение по умолчанию в установке
- * Git для Windows — CRLF против LF), и инструмент отказывался работать там, где всё
- * в порядке. Файлы, изменённые в дереве, из сверки с диском выпадают: их
- * содержимое в коммите и на диске различается законно. */
+/* The comparison against the working tree answers two questions, and both are needed: the engine's
+ * state at HEAD matches the tree of the commit, and the file on disk matches that same content.
+ * The first catches an edit lost while carrying state between commits (in a merge commit missing
+ * from the list of changed paths, say): a lost creation (the file is in the tree while the state
+ * knows nothing of it), a lost edit (the file is on both sides with different content) and a lost
+ * deletion (the state knows the file while the tree does not). An empty state is compared against
+ * the aliases present in the tree rather than against nothing: a column whose file lived in the
+ * history and was deleted before HEAD is empty on both sides — that is not a loss, and the report
+ * shows as much. The second question is an edit the history does not hold at all, and sizes are no
+ * good for it: on disk they depend on the checkout (`core.autocrlf=true`, the default in Git for
+ * Windows, gives CRLF against LF), and the tool used to refuse to work where everything was in
+ * order. Files edited in the tree drop out of the disk comparison: their content legitimately
+ * differs between the commit and the disk. */
 function assertMatchesDisk(state, cfg, root) {
   const dirty = new Set(git(root, ['status', '--porcelain']).split('\n')
     .map((l) => l.trim()).filter((l) => l !== '').map((l) => l.replace(/^\S+\s+/, '').replace(/^.* -> /, '')));
@@ -207,9 +204,9 @@ function assertMatchesDisk(state, cfg, root) {
           : aliases.map((alias) => alias + ' ' + tree.get(alias).slice(0, 7)).join(', '))
         + ', в состоянии ' + (s === null ? 'файла нет' : s.path + ' ' + s.sha.slice(0, 7))
         + '): перенос состояния между коммитами пропустил правку'
-        // Пересборка здесь не починка: состояние считается тем же прогоном, и
-        // устаревшей таблицы в этом расхождении нет. Поэтому совет называет не
-        // команду починки, а то, чем это можно показать.
+        // Rebuilding is no fix here: the state comes from this very run, so no stale table is
+        // involved in this disagreement. Hence the advice names not a fix command but the way to
+        // show the thing.
         + '\n  починка: пересборкой это не лечится — расхождение в самом переносе состояния,'
         + ' а не в таблице. Разбор: git show HEAD:' + p);
     }
@@ -218,8 +215,8 @@ function assertMatchesDisk(state, cfg, root) {
   if (clean.length === 0) return;
   const onDisk = diskHashes(root, clean);
   clean.forEach((p) => {
-    if (onDisk.get(p) === tree.get(p)) return; // git считает файл неизменным
-    if (fs.readFileSync(path.join(root, p)).equals(diskForm(root, 'HEAD', p))) return; // переводы строк необратимы
+    if (onDisk.get(p) === tree.get(p)) return; // git counts the file as unmodified
+    if (fs.readFileSync(path.join(root, p)).equals(diskForm(root, 'HEAD', p))) return; // line endings are not reversible
     refuse(EXIT.VIOLATION, 'содержимое ' + p + ' на диске разошлось с HEAD (' + onDisk.get(p).slice(0, 7)
       + ' вместо ' + tree.get(p).slice(0, 7) + '), хотя git не считает файл изменённым: правка есть только на диске'
       + '\n  починка: закоммитьте правку или откатите её: git checkout -- ' + p);
