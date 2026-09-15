@@ -105,11 +105,15 @@ a prerequisite.
 
 ## Open questions
 
-- **Journal after the move.** The report picks the first known journal name at the repository
-  root (`JOURNALS` in `src/project.js`), so with `WORKLOG.md` moved to `worklog/archive/` the
-  report's journal column becomes `CHANGELOG.md`. Either keep that, or teach the tool a
-  journal that lives in a subdirectory — a tool change, and therefore a release plus a local
-  copy update.
+- **Journal after the move — settled 2026-09-15.** The report picks the first known journal name
+  at the repository root (`JOURNALS` in `src/project.js`), so with `WORKLOG.md` moved to
+  `worklog/archive/` the report's journal is `CHANGELOG.md`. That is now the agreement rather than
+  an accident: the tool is left alone (pinning a journal in this project's settings would mean
+  carrying the whole profile by hand — a behaviour change — and anything else is a code change),
+  and the measured state is correct: of the report's 113 rows, 14 carry a section, 13 of them from
+  the release commit that opened it and the one that touched an existing section touched only
+  that one. Evidence, the three options with their costs and what is left for the user:
+  `BLOCKERS.md`, note N11.
 - **Release per comment-only portion.** A comment rewrite changes the bytes that ship in the
   tarball without changing behaviour. Decide once, with the mission agent: release a PATCH
   per portion, or batch the releases and say so in the commit.
