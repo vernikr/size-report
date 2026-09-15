@@ -8,10 +8,18 @@
  * одноразовую настройку на npmjs.com называет **этот самый файл** — иначе она
  * отправила бы владельца настраивать то, чего нет.
  *
+ * **Проверка разбирает описание, а не ищет в нём подстроки,** и это не строгость
+ * ради строгости: поиск подстроки не отличает верное описание от неразбираемого.
+ * Так и вышло с первой редакцией этого файла — `? … : …` внутри незакавыченной
+ * команды публикации ломало YAML целиком (раннер падал через ноль секунд
+ * «workflow file issue»), а подстрока находилась, и проверка была зелёной.
+ * Разборщик один на оба сторожа — здесь и у шаблона для чужого проекта
+ * (`tools/yaml.js`), потому что два разборщика разошлись бы так же тихо.
+ *
  * Чего здесь нет и почему: сам GitHub Actions не запускается из проверки —
  * запустить его можно только пушем тега. Поэтому зелёный набор значит «описание
- * говорит верное», а не «выпуск прошёл»; правду об этом даёт прогон
- * `workflow_dispatch` (черновой режим) и первый настоящий тег.
+ * разбирается и говорит верное», а не «выпуск прошёл»; правду об этом даёт
+ * прогон `workflow_dispatch` (черновой режим) и первый настоящий тег.
  */
 
 import { test } from 'node:test';
@@ -19,56 +27,90 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from '../tools/harness.js';
+import { parseWorkflow } from '../tools/yaml.js';
 
 const FILE = '.github/workflows/release.yml';
 const WORKFLOW = path.join(ROOT, FILE);
 const TEXT = fs.existsSync(WORKFLOW) ? fs.readFileSync(WORKFLOW, 'utf8') : '';
 
-/* Шаги без комментариев: обещание «секретов не требуем» относится к тому, что job
- * делает, а не к тому, что о нём написано. Иначе комментарий, объясняющий это
+/* Шаги без комментариев: обещание «секретов не требуем» относится к тому, что
+ * job делает, а не к тому, что о нём написано. Иначе комментарий, объясняющий это
  * правило, сам его и нарушал бы — проверка ловила бы собственное объяснение. */
 const STEPS = TEXT.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
 
-test('выпуск начинается тегом, а манифест называет ту же версию', () => {
+/* Разбор описания — часть проверки: неразбираемый файл не может считаться верным.
+ * Ошибка разбора называет строку, а не «где-то в файле». */
+function workflow() {
   assert.ok(TEXT !== '', 'описания выпуска нет: выпускать нечем — это ' + FILE);
-  assert.match(TEXT, /^\s{2}push:\n\s{4}tags: \['v\*'\]$/m,
+  return parseWorkflow(TEXT);
+}
+
+function step(doc, name) {
+  const found = doc.jobs.release.steps.filter((s) => s.name === name);
+  assert.equal(found.length, 1, 'в описании выпуска нет ровно одного шага «' + name + '»');
+  return found[0];
+}
+
+test('описание выпуска разбирается, и выпуск начинается тегом, а не кнопкой', () => {
+  const doc = workflow();
+  assert.deepEqual(doc.on.push.tags, ['v*'],
     'выпуск не привязан к тегу `v*`: выкладывать можно было бы с любой ветки');
-  assert.match(TEXT, /тег \$GITHUB_REF_NAME, а в манифесте \$want/,
-    'шаг не сверяет тег с версией манифеста: реестр получил бы номер, которого нет в истории');
-  assert.match(TEXT, /require\('\.\/package\.json'\)\.version/,
+  assert.ok(doc.on.workflow_dispatch, 'у выпуска нет ручного запуска: черновой прогон нечем позвать');
+
+  // Версия сверяется с тегом и берётся из манифеста: два числа, прочитанные
+  // отдельно, а не выведенные одно из другого.
+  const version = step(doc, 'Версия манифеста — в окружение');
+  assert.match(String(version.run), /require\('\.\/package\.json'\)\.version/,
     'версия не берётся из манифеста — вторым списком её держать нечем');
-  assert.match(TEXT, /includes\('-'\) \? 'next' : 'latest'/,
-    'prerelease уехал бы в `latest`: установка по умолчанию подхватила бы черновик');
-  assert.match(TEXT, /pnpm test:all/,
-    'перед выпуском идёт не полный набор: CI выкладывает, а не правит');
-  assert.match(TEXT, /pack:check/,
-    'выпуск не проверяет работу из собранного пакета — а уезжает именно он');
+  assert.match(String(version.run), /GITHUB_ENV/, 'версия не доходит до следующего шага');
+  const tag = step(doc, 'Тег называет ту же версию, что манифест');
+  assert.equal(tag.if, "github.event_name == 'push'",
+    'шаг сверки тега идёт и на ручном запуске: там тега нет и сверять нечего');
+  assert.match(String(tag.run), /\$GITHUB_REF_NAME/,
+    'шаг не сверяет тег с версией манифеста: реестр получил бы номер, которого нет в истории');
+  assert.match(String(tag.run), /\$WANT/, 'шаг не называет версию манифеста');
 });
 
-test('публикация не требует ни секрета, ни кода: только удостоверение job’а', () => {
+test('публикация не требует ни секрета, ни кода, и prerelease не уезжает в `latest`', () => {
+  const doc = workflow();
   assert.equal(/secrets\./.test(STEPS), false,
     'в шагах выпуска есть secrets.: обещание «в настройках репозитория заводить нечего» стало ложью');
   assert.equal(/NODE_AUTH_TOKEN/.test(STEPS), false,
     'выпуск ждёт токен в окружении: это и есть секрет, которого обещано не требовать');
-  assert.match(TEXT, /^\s{2}id-token: write/m,
-    'нет `id-token: write`: trusted publishing нечем себя предъявить, и публикация упадёт');
-  assert.match(TEXT, /^\s{2}contents: read$/m,
-    'права job’а не ограничены чтением содержимого — выпуску больше и не нужно');
-  assert.match(TEXT, /npm install -g npm@latest/,
-    'npm не поднят: trusted publishing требует 11.5.1, а с Node 22 приходит 10');
   assert.equal(/--otp/.test(STEPS), false,
     'выпуск просит одноразовый код: у аккаунта с security key его взять негде');
+  assert.equal(doc.permissions['id-token'], 'write',
+    'нет `id-token: write`: trusted publishing нечем себя предъявить, и публикация упадёт');
+  assert.equal(doc.permissions.contents, 'read',
+    'права job’а не ограничены чтением содержимого — выпуску больше и не нужно');
+  assert.equal(step(doc, 'npm поновее (для trusted publishing)').run, 'npm install -g npm@latest',
+    'npm не поднят: trusted publishing требует 11.5.1, а с Node 22 приходит 10');
+
+  const publish = step(doc, 'Публикация');
+  assert.match(String(publish.if), /dry_run == false/,
+    'настоящая публикация не отделена от черновой — черновой прогон уехал бы в реестр');
+  assert.match(String(publish.run), /contains\(github\.ref_name, '-'\)/,
+    'метка выпуска не различает prerelease: черновик уехал бы в `latest`');
+  assert.match(String(publish.run), /'next'/, 'у prerelease нет своей метки `next`');
+  assert.match(String(publish.run), /'latest'/, 'у обычного выпуска нет метки `latest`');
+
+  const dry = step(doc, 'Черновой прогон — в реестр ничего не ушло');
+  assert.equal(dry.run, 'npm publish --dry-run',
+    'черновой прогон не показывает, что бы уехало: он молчит о содержимом пакета');
+  const input = doc.on.workflow_dispatch.inputs.dry_run;
+  assert.equal(String(input.default), 'true',
+    'черновой режим не включён по умолчанию: кнопка «запустить» выпустила бы пакет');
 });
 
-test('черновой прогон ничего не публикует, а подсказка называет этот же файл', () => {
-  assert.match(TEXT, /^\s{6}dry_run:$/m,
-    'у чернового прогона нет входа: проверить выпуск до тега нечем');
-  assert.match(TEXT, /default: true/,
-    'черновой режим не включён по умолчанию: кнопка «запустить» выпустила бы пакет');
-  assert.match(TEXT, /dry_run == false\n\s+run: npm publish --tag/,
-    'настоящая публикация не отделена от черновой — черновой прогон уехал бы в реестр');
-  assert.match(TEXT, /run: npm publish --dry-run/,
-    'черновой прогон не показывает, что бы уехало: он молчит о содержимом пакета');
+test('выпуск прогоняет тот же набор, что CI, и подсказка называет этот же файл', () => {
+  const doc = workflow();
+  const checks = step(doc, 'Проверки перед выпуском');
+  assert.match(String(checks.run), /pnpm run lint:strict/,
+    'перед выпуском не идёт строгий линтер');
+  assert.match(String(checks.run), /pnpm test:all/,
+    'перед выпуском идёт не полный набор: CI выкладывает, а не правит');
+  assert.match(String(step(doc, 'Работа из собранного пакета').run), /pack:check/,
+    'выпуск не проверяет работу из собранного пакета — а уезжает именно он');
   assert.ok(TEXT.indexOf(path.basename(FILE)) >= 0,
     'подсказка не называет файл рабочего процесса: одноразовая настройка на npmjs.com'
       + ' указывала бы на другой файл, и выпуск по тегу не нашёл бы издателя');

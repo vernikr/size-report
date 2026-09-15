@@ -57,29 +57,28 @@ jobs:
 
       # Выпуск выкладывает, а не правит: тот же полный набор, что и в CI.
       - name: Проверки перед выпуском
-        run: |
-          pnpm run lint:strict
-          pnpm test:all
+        run: pnpm run lint:strict && pnpm test:all
 
       - name: Работа из собранного пакета
         run: pnpm run pack:check
+
+      # Версия берётся из манифеста, а не из тега: сверять два числа можно только
+      # тогда, когда оба прочитаны, а не выведены одно из другого.
+      - name: Версия манифеста — в окружение
+        if: github.event_name == 'push'
+        run: echo "WANT=v$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
 
       # Тег и версия в манифесте — одно и то же число: иначе реестр получил бы
       # версию, которой нет в истории, и по тегу поставилось бы не то.
       - name: Тег называет ту же версию, что манифест
         if: github.event_name == 'push'
-        run: |
-          want="v$(node -p "require('./package.json').version")"
-          test "$GITHUB_REF_NAME" = "$want" || {
-            echo "тег $GITHUB_REF_NAME, а в манифесте $want"
-            exit 1
-          }
+        run: test "$GITHUB_REF_NAME" = "$WANT" || { echo "тег $GITHUB_REF_NAME, а в манифесте $WANT"; exit 1; }
 
       # Prerelease уходит в `next`, а не в `latest`: установка по умолчанию не
       # должна подхватывать черновик.
       - name: Публикация
         if: github.event_name == 'push' || inputs.dry_run == false
-        run: npm publish --tag "$(node -p "require('./package.json').version.includes('-') ? 'next' : 'latest'")"
+        run: npm publish --tag "${{ contains(github.ref_name, '-') && 'next' || 'latest' }}"
 
       - name: Черновой прогон — в реестр ничего не ушло
         if: github.event_name == 'workflow_dispatch' && inputs.dry_run

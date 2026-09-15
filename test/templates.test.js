@@ -18,6 +18,7 @@ import path from 'node:path';
 import { DEFAULT_CONFIG, USAGE, loadConfig } from '../src/size-table.js';
 import { ROOT, cloneFixture, readJson, runSize, tempDir } from '../tools/harness.js';
 import { PKG } from '../tools/docs-facts.js';
+import { parseWorkflow } from '../tools/yaml.js';
 
 /* Имя пакета — из манифеста: шаблон обязан называть то же имя, что и подсказки
  * инструмента (`node_modules/<имя>/bin/size.js`), и переименование пакета должно
@@ -44,84 +45,6 @@ function knownFlags() {
 // Ключи инструмента, названные в команде: `…/bin/size.js --write` → ['--write'].
 function flagsOf(command) {
   return [...command.matchAll(/--[a-z][a-z-]*/g)].map((m) => m[0]);
-}
-
-/* Разбор подмножества YAML, которого хватает описанию проверки: отображения по
- * отступу, элементы списка `- `, скалярные значения и потоковый список (`[a, b]`).
- * Выход за подмножество — явная ошибка, а не молча пропущенная строка: описание,
- * которое перестало разбираться, обязано ронять проверку, а не проходить её. */
-function parseWorkflow(src) {
-  const lines = [];
-  src.split('\n').forEach((raw, i) => {
-    const text = raw.replace(/#.*$/, '').trimEnd();
-    if (text.trim() === '') return;
-    lines.push({ indent: text.length - text.trimStart().length, text: text.trim(), line: i + 1 });
-  });
-  for (const l of lines) {
-    if (/\s$/.test(l.text) || l.text.indexOf('\t') >= 0) {
-      throw new Error('строка ' + l.line + ': отступ или хвостовые пробелы вне подмножества');
-    }
-  }
-  let at = 0;
-  const scalar = (text) => {
-    if (text[0] === '[') {
-      if (text[text.length - 1] !== ']') throw new Error('потоковый список не закрыт: ' + text);
-      return text.slice(1, -1).split(',').map((s) => s.trim());
-    }
-    if (/^\d+$/.test(text)) return Number(text);
-    return text;
-  };
-  function map(indent) {
-    const out = {};
-    while (at < lines.length && lines[at].indent === indent && lines[at].text[0] !== '-') {
-      const head = lines[at];
-      const cut = head.text.indexOf(':');
-      if (cut < 0) throw new Error('строка ' + head.line + ': не ключ и не элемент списка');
-      const key = head.text.slice(0, cut).trim();
-      const value = head.text.slice(cut + 1).trim();
-      at++;
-      if (value !== '') out[key] = scalar(value);
-      else if (at < lines.length && lines[at].indent > indent) out[key] = node(lines[at].indent);
-      else out[key] = null;
-    }
-    return out;
-  }
-  function list(indent) {
-    const out = [];
-    while (at < lines.length && lines[at].indent === indent && lines[at].text[0] === '-') {
-      const head = lines[at];
-      const rest = head.text.slice(1).trim();
-      at++;
-      if (rest === '') {
-        out.push(node(head.indent + 2));
-        continue;
-      }
-      /* Элемент-отображение записан первой строкой (`- name: …`), остальные его
-       * ключи стоят на два пробела глубже. */
-      const cut = rest.indexOf(':');
-      if (cut < 0) throw new Error('строка ' + head.line + ': элемент списка не отображение');
-      const item = {};
-      const value = rest.slice(cut + 1).trim();
-      const key = rest.slice(0, cut).trim();
-      if (value !== '') item[key] = scalar(value);
-      else if (at < lines.length && lines[at].indent > head.indent) item[key] = node(lines[at].indent);
-      else item[key] = null;
-      const more = at < lines.length && lines[at].indent > head.indent && lines[at].text[0] !== '-'
-        ? map(head.indent + 2) : {};
-      out.push(Object.assign(item, more));
-    }
-    return out;
-  }
-  function node(indent) {
-    const first = lines[at];
-    if (first === undefined || first.indent < indent) return null;
-    if (first.text[0] === '-') return list(first.indent);
-    if (first.indent > indent) throw new Error('строка ' + first.line + ': отступ глубже ожидаемого');
-    return map(first.indent);
-  }
-  const doc = map(lines[0].indent);
-  if (at !== lines.length) throw new Error('разбор кончился на строке ' + lines[at].line);
-  return doc;
 }
 
 test('черновик настроек проходит проверку инструмента', () => {
