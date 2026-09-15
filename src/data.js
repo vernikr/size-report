@@ -39,7 +39,7 @@ export function categoryOf(col) {
  * вопроса, на который пригодилось бы поле («почему у коммита нет строки» задают
  * командой `explain`, и там причина уже разложена). */
 export function reportData(cfg, root) {
-  const { rows, state, dropped } = build(cfg, root);
+  const { rows, state, dropped, last } = build(cfg, root);
   const loc = LOCALES[cfg.locale];
   const files = cfg.columns.map((col, i) => {
     const cat = categoryOf(col);
@@ -74,6 +74,10 @@ export function reportData(cfg, root) {
     rows: rows.map((r) => Object.assign(rowShape(r),
       { href: rowHref(r.section, r.sha, cfg), values: r.cells })),
     now: state.map((s) => (s === null ? null : s.cells)),
+    /* Какие колонки тронул последний коммит: страница по этому знаку ставит их
+     * впереди — читателю нужнее то, что изменилось только что. Это факт из истории,
+     * а не производная величина: она не считает, а говорит, чего коснулась правка. */
+    last: last,
     approx: approxMarks(rows, state, cfg),
     skipped: dropped.map(skipLine)
   };

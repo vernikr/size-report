@@ -73,9 +73,9 @@ test('вычислительная часть страницы — код дви
    * попадают в страницу, — со снятым модульным синтаксисом. */
   assert.deepEqual(defined('\n' + stripModules(appSrc)).sort(), [
     'appAll', 'appApply', 'appApprox', 'appBody', 'appBox', 'appCell', 'appCellClass', 'appCommit', 'appCount',
-    'appDirHead', 'appEl', 'appFileAt', 'appFileBox', 'appFoldBox', 'appFoldRead', 'appFoldSet',
-    'appHash', 'appHead', 'appIndexes', 'appLeafAt', 'appLeaves', 'appLinkRead', 'appLinkUse', 'appNode',
-    'appNotice', 'appPanel',
+    'appDir', 'appDirHead', 'appEl', 'appFileAt', 'appFileBox', 'appFoldBox', 'appFoldRead', 'appFoldSet',
+    'appHash', 'appHead', 'appIndexes', 'appLeaf', 'appLeafAt', 'appLeaves', 'appLinkRead', 'appLinkUse', 'appNode',
+    'appNotice', 'appOffBox', 'appPanel',
     'appPassport', 'appRead', 'appRecord', 'appRecordOk', 'appRender', 'appRow',
     'appScrollBack', 'appScrollTop', 'appState', 'appSubHead',
     'appTable', 'appTree', 'appTreeList', 'appUnknown', 'appUnmeasuredBox', 'appValueCell', 'appWrite'
@@ -85,6 +85,33 @@ test('вычислительная часть страницы — код дви
   ['rowModel', 'nowModel', 'commitParts', 'cellParts', 'valueParts'].forEach((name) => {
     assert.ok(appSrc.indexOf(name + '(') >= 0, 'оболочка страницы не пользуется ' + name);
   });
+});
+
+/* Порядок колонок — про читателя, а не про числа: отчёт пересобирается после
+ * каждого коммита, и первый его вопрос — что принесла эта правка. Поэтому колонки,
+ * которых последний коммит коснулся, стоят впереди в порядке настроек, а остальные —
+ * после них и тоже в порядке настроек. Проверяется это по шапке: в разметке есть
+ * метки, а по ним видно ровно то, что видит читатель. */
+test('колонки последнего коммита идут впереди остальных, порядок настроек устоял', () => {
+  const doc = openPage().window.document;
+  // Первые две ячейки шапки — не колонки: подпись коммита и общий объём.
+  const heads = headers(doc);
+  const where = (i) => (data.files[i].path === null ? data.files[i].paths[0] : data.files[i].path);
+  const indexes = data.files.map((_f, i) => i);
+  const labels = (list) => list.map((i) => data.files[i].label);
+  const touched = indexes.filter((i) => data.last[i] === true);
+  const rest = indexes.filter((i) => data.last[i] !== true);
+  assert.ok(touched.length > 0,
+    'в фикстуре последний коммит не тронул ни одной колонки — проверять нечего');
+  assert.deepEqual(heads, labels(touched.concat(rest)),
+    'колонки идут не так: сперва те, что тронул последний коммит, затем остальные в порядке настроек');
+
+  /* То же на живом выборе читателя: он выключает файл, и порядок обязан остаться
+   * тем же — иначе он зависел бы от того, сколько файлов включено. */
+  const last = touched[touched.length - 1];
+  toggleBox(doc, fileBox(doc, where(last)), false);
+  assert.deepEqual(headers(doc), labels(touched.slice(0, -1).concat(rest)),
+    'выключение файла сдвинуло порядок колонок');
 });
 
 test('страница самодостаточна и несёт данные контракта', () => {
@@ -157,6 +184,17 @@ test('страница считает то же, что артефакт, и п�
     'итог после выключения файла не совпал с суммой без него');
 });
 
+/* Клетки строки: сперва итог по метрике, затем по блоку на файл, в каждом —
+ * по метрике. Место файла берётся из шапки таблицы, а не из его номера в настройках:
+ * колонки последнего коммита стоят впереди, и порядок настроек — уже не порядок
+ * таблицы. */
+const cellsOf = (tr) => [...tr.querySelectorAll('td')];
+const at = (doc, tr, file, mi) => cellsOf(tr)
+  [(headers(doc).indexOf(data.files[file].label) + 1) * data.metrics.length + mi];
+const total = (tr, mi) => cellsOf(tr)[mi];
+const headers = (doc) => [...doc.querySelectorAll('#grid thead tr')[0].querySelectorAll('th')]
+  .map((th) => th.textContent).slice(2);
+
 /* Пометка точности на странице: приближённая клетка подчёркнута и объясняется
  * словами, точная — не тронута, а у итога знак — худшее из включённых в него
  * файлов (сумма не может обещать точность, которой нет у слагаемых). Знаки
@@ -165,13 +203,7 @@ test('страница считает то же, что артефакт, и п�
 test('приближённые клетки помечены, а итог берёт худшее из включённых', () => {
   const doc = openPage().window.document;
   const ui = JSON.parse(doc.getElementById('ui').textContent);
-  const metrics = data.metrics.length;
   const first = () => doc.querySelectorAll('#grid tbody tr')[0];
-  const cellsOf = (tr) => [...tr.querySelectorAll('td')];
-  /* Клетки строки: сперва итог по метрике, затем по блоку на файл, в каждом —
-   * по метрике (тот же порядок, что в шапке таблицы). */
-  const at = (tr, file, mi) => cellsOf(tr)[(file + 1) * metrics + mi];
-  const total = (tr, mi) => cellsOf(tr)[mi];
 
   /* Знаки страницы — ровно знаки движка, клетка за клеткой, и знак итога —
    * по слагаемым. */
@@ -179,7 +211,7 @@ test('приближённые клетки помечены, а итог бер
     const marks = data.approx[m.key];
     const ones = marks === undefined ? 0 : (marks.now.match(/1/g) || []).length;
     let marked = 0;
-    data.files.forEach((_f, i) => { if (at(first(), i, mi).classList.contains('approx')) marked++; });
+    data.files.forEach((_f, i) => { if (at(doc, first(), i, mi).classList.contains('approx')) marked++; });
     assert.equal(marked, ones,
       'метрика «' + m.key + '»: помечено ' + marked + ' клеток вместо ' + ones);
     assert.equal(total(first(), mi).classList.contains('approx'), ones > 0,
@@ -192,11 +224,11 @@ test('приближённые клетки помечены, а итог бер
   const json = data.files.findIndex((f) => f.label === 'package.json');
   const minAt = data.metrics.findIndex((m) => m.key === 'min');
   const min = data.metrics[minAt];
-  assert.equal(at(first(), json, minAt).classList.contains('approx'), false,
+  assert.equal(at(doc, first(), json, minAt).classList.contains('approx'), false,
     'точная клетка помечена приближением');
-  assert.equal(at(first(), md, minAt).classList.contains('approx'), true,
+  assert.equal(at(doc, first(), md, minAt).classList.contains('approx'), true,
     'приближённая клетка не помечена: точность метрики до клетки не доехала');
-  assert.equal(at(first(), md, minAt).title, ui.approxCell + min.method,
+  assert.equal(at(doc, first(), md, minAt).title, ui.approxCell + min.method,
     'пометка клетки не называет способ, которым получено число');
 
   /* Способ и точность видны в панели текстом, а не только во всплывающей строке:

@@ -20,3 +20,17 @@ export function appBox(label, title, checked, onChange, cls) {
   box.appendChild(appEl('span', null, label));
   return box;
 }
+
+/* Галочка, которую нечем переключить: место в дереве есть, а включать нечего —
+ * файла нет в колонках, отчёт его не измеряет. Она снята и недоступна: так строка
+ * выглядит как все прочие (глаз сравнивает одно с одним), но видно, что это не
+ * «выключено читателем», а «не измеряется». Причина — во всплывающей строке. */
+export function appOffBox(label, title, cls) {
+  const box = appBox(label, title, false, null, cls);
+  box.classList.add('plain');
+  box.querySelector('input').disabled = true;
+  /* Подсказка — на всей строке, а не только на поле: у недоступного поля браузер её
+   * не показывает, а причина читателю нужна именно здесь. */
+  box.title = title;
+  return box;
+}

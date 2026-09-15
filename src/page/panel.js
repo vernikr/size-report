@@ -1,4 +1,4 @@
-import { appEl, appBox } from './dom.js';
+import { appEl, appBox, appOffBox } from './dom.js';
 import { appData, appUi, appView, appFileAt, appFoldSet, appMeasured } from './state.js';
 
 /* Галочку файла ставит только файл: и категория, и папка в дереве — способы
@@ -14,14 +14,12 @@ function appFileBox(i) {
   });
 }
 
-/* Файл, которого в отчёте нет: он стоит в дереве на своём месте, но галочки у
- * него нет — чисел для него не измеряли, и переключать нечего. Причину читатель
- * видит во всплывающей строке, а не догадывается по виду. */
+/* Файл, которого в отчёте нет: он стоит в дереве на своём месте, но галочка у
+ * него снята и недоступна — чисел для него не измеряли, и переключать нечего.
+ * Причину читатель видит во всплывающей строке, а не догадывается по виду. */
 function appUnmeasuredBox(entry) {
-  const box = appEl('span', 'box plain', entry.path.split('/').pop());
-  box.title = entry.path + ' · '
-    + (entry.why === 'rule' ? appUi.notMeasuredRule : appUi.notMeasuredChoice);
-  return box;
+  return appOffBox(entry.path.split('/').pop(), entry.path + ' · '
+    + (entry.why === 'rule' ? appUi.notMeasuredRule : appUi.notMeasuredChoice));
 }
 
 /* Все измеряемые файлы поддерева — то, чем управляет переключатель папки: файл
@@ -48,15 +46,14 @@ function appNode() {
  * состояния — все файлы включены, часть, ни одного. Рядом число файлов; если в
  * папке есть и те, что вне отчёта, оно написано долей («2/5»): читателю важно, что
  * в папке пять файлов, а измеряются два. Папка без единого измеряемого файла
- * галочки не получает — включать в ней нечего, — но на месте остаётся. */
+ * остаётся на месте, но её галочка снята и недоступна: включать в ней нечего. */
 function appDirHead(name, sub) {
   const idx = appIndexes(sub);
   const total = appCount(sub);
   const label = name + '/';
   let head;
   if (idx.length === 0) {
-    head = appEl('span', 'box dir plain', label);
-    head.title = appUi.dirNone.replace('{name}', name).replace('{n}', total);
+    head = appOffBox(label, appUi.dirNone.replace('{name}', name).replace('{n}', total), 'dir');
   } else {
     const on = idx.map((i) => appView.files[i]);
     const every = on.every((v) => v);
@@ -76,12 +73,25 @@ function appDirHead(name, sub) {
  * два разных действия означала бы, что сложить папку можно только вместе с
  * включением её файлов. Знак нарисован спаном, а не кнопкой, потому что в строке
  * папки рядом уже стоит метка-галочка, а вложенная в метку кнопка поднимала бы её
- * же нажатие. */
+ * же нажатие.
+ *
+ * Клик по знаку ничего не пересобирает: поддерево лежит в разметке, а прячет его
+ * класс на строке. Пересборка здесь была бы честной работой впустую — она считает
+ * таблицу целиком (в этом проекте — сотни строк на полторы сотни колонок), то есть
+ * платит за числа, которых складывание не меняет. Поэтому меняются только три
+ * вещи, которые читатель и видит: класс, знак и запись в памяти. */
 function appFoldBox(name, path) {
   const folded = appView.folded[path] === true;
   const box = appEl('span', 'fold', folded ? '▸' : '▾');
   box.title = (folded ? appUi.foldOpen : appUi.foldClose).replace('{name}', name);
-  box.addEventListener('click', () => { appFoldSet(path, !folded); appRender(); });
+  box.addEventListener('click', () => {
+    const now = !(appView.folded[path] === true);
+    appFoldSet(path, now);
+    const li = box.closest('li');
+    if (li !== null) li.classList.toggle('folded', now);
+    box.textContent = now ? '▸' : '▾';
+    box.title = (now ? appUi.foldOpen : appUi.foldClose).replace('{name}', name);
+  });
   return box;
 }
 
@@ -95,26 +105,40 @@ function appLeaves(node) {
   return items.sort((a, b) => (a.name < b.name ? -1 : (a.name > b.name ? 1 : 0)));
 }
 
-/* Узлы одного уровня: сперва папки по алфавиту, затем листья (их порядок — из
- * `appLeaves`). Сложенная папка — это та, у которой нет самого списка: прятать
- * поддерево оформлением значило бы держать в разметке то, чего не видно, и
- * пересобирать её на каждый клик по знаку. */
+/* Строка папки: знак складывания, галочка с числом файлов и поддерево. Сложенная
+ * папка отличается только классом — разметка одна и та же. */
+function appDir(name, sub, prefix) {
+  const here = prefix === '' ? name : prefix + '/' + name;
+  const folded = appView.folded[here] === true;
+  const li = appEl('li', folded ? 'folded' : null);
+  li.appendChild(appFoldBox(name, here));
+  li.appendChild(appDirHead(name, sub));
+  li.appendChild(appTreeList(sub, here));
+  return li;
+}
+
+// Строка листа: измеряемый файл — с галочкой, файл вне отчёта — со снятой.
+function appLeaf(leaf) {
+  const li = appEl('li');
+  li.appendChild(leaf.entry === null ? appFileBox(leaf.i) : appUnmeasuredBox(leaf.entry));
+  return li;
+}
+
+/* Узлы одного уровня: сперва всё, что в отчёте (папки по алфавиту, затем листья —
+ * их порядок из `appLeaves`), потом то, чего в отчёте нет: папки без измеряемых
+ * файлов и файлы вне колонок. Так решено не из вкуса: у всего вне отчёта галочка
+ * снята и недоступна, и в конце списка оно не отвлекает от того, что в таблице,
+ * а найти его по-прежнему можно — оно там же, где было. */
 function appTreeList(node, prefix) {
   const list = appEl('ul', 'tree');
-  [...node.dirs.keys()].sort().forEach((name) => {
-    const sub = node.dirs.get(name);
-    const here = prefix === '' ? name : prefix + '/' + name;
-    const li = appEl('li');
-    li.appendChild(appFoldBox(name, here));
-    li.appendChild(appDirHead(name, sub));
-    if (appView.folded[here] !== true) li.appendChild(appTreeList(sub, here));
-    list.appendChild(li);
-  });
-  appLeaves(node).forEach((leaf) => {
-    const li = appEl('li');
-    li.appendChild(leaf.entry === null ? appFileBox(leaf.i) : appUnmeasuredBox(leaf.entry));
-    list.appendChild(li);
-  });
+  const dirs = [...node.dirs.keys()].sort()
+    .map((name) => ({ name: name, sub: node.dirs.get(name), inReport: appIndexes(node.dirs.get(name)).length > 0 }));
+  const leaves = appLeaves(node);
+  const inside = leaves.filter((leaf) => leaf.entry === null);
+  dirs.filter((d) => d.inReport).forEach((d) => list.appendChild(appDir(d.name, d.sub, prefix)));
+  inside.forEach((leaf) => list.appendChild(appLeaf(leaf)));
+  dirs.filter((d) => !d.inReport).forEach((d) => list.appendChild(appDir(d.name, d.sub, prefix)));
+  leaves.filter((leaf) => leaf.entry !== null).forEach((leaf) => list.appendChild(appLeaf(leaf)));
   return list;
 }
 

@@ -21,6 +21,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { CATEGORY_ORDER } from '../src/size-table.js';
+import { readHistory } from '../src/git.js';
 import { cloneFixture, gitIn, runFixture, tempDir } from '../tools/harness.js';
 import { contractData } from '../tools/page-harness.js';
 import { TOOL_PKG } from '../src/tool.js';
@@ -102,6 +103,25 @@ test('каталог называет все файлы проекта, а пр�
     'сам отчёт назван колонкой, которой быть не может');
   assert.ok(data.catalog.some((e) => e.why === 'choice'),
     'в каталоге нет ни одного файла с причиной «не выбран в колонки»');
+});
+
+/* Знак «этот колонки коснулся последний коммит» — факт из истории, и проверяется он
+ * по самой истории: берётся последний коммит, задевший хотя бы одну колонку, — считая
+ * от верхушки назад, потому что коммиты мимо колонок (и сам отчёт, который коммитит
+ * хук) пропускаются. Страница по этим знакам ставит колонки впереди, и ошибка здесь
+ * была бы незаметной: порядок колонок — не число, его не сверяет ни один эталон. */
+test('последний коммит назван по истории: отмечены ровно тронутые колонки', () => {
+  const aliases = data.files.map((f) => f.paths);
+  const history = readHistory(dir);
+  assert.ok(history.length > 0, 'в фикстуре нет истории — сверять знак не с чем');
+  /* Ищем от верхушки назад: знак ставит последний коммит, задевший 
+   * хотя бы одну колонку, — и колонка отмечена, если этот коммит её и задел. */
+  const real = [...history].reverse()
+    .find((c) => c.files.some((f) => aliases.some((paths) => paths.indexOf(f) >= 0)));
+  assert.notEqual(real, undefined, 'в истории фикстуры нет коммита, задевшего колонку');
+  assert.deepEqual(data.last, aliases.map((paths) => paths.some((p) => real.files.indexOf(p) >= 0)),
+    'знак последнего коммита не совпал с изменёнными им путями');
+  assert.equal(data.last.length, data.files.length, 'знаков меньше, чем колонок');
 });
 
 test('метрика, которая не минификация, помечена приближением', () => {

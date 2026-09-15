@@ -11,6 +11,12 @@ function appTable() {
   const on = appView.files;
   const files = [];
   appData.files.forEach((f, i) => { if (on[i]) files.push(i); });
+  /* Колонки, которых коснулся последний коммит, идут впереди: отчёт пересобирается
+   * после каждого коммита, и первый вопрос читателя — что принесла эта правка. Внутри
+   * каждой части порядок прежний, из настроек: `sort` устойчив, а порядок колонок — это
+   * то, к чему читатель привык. Знак берётся из истории (её знает движок), а не из
+   * чисел: правка без изменения размера тоже правка. */
+  files.sort((a, b) => (appData.last[a] === true ? 0 : 1) - (appData.last[b] === true ? 0 : 1));
 
   const table = document.getElementById('grid');
   table.textContent = '';

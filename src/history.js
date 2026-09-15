@@ -158,7 +158,22 @@ export function measureHistory(cfg, root, known) {
     journalPrev: ''
   };
   commits.forEach((c, ci) => stepCommit(pass, c, ci));
-  return { rows: pass.rows, dropped: pass.dropped, mixed: pass.mixed, state: pass.state };
+  /* Какие колонки тронул последний коммит — по тому же плану чтения, по которому
+   * идёт перенос состояния: путь колонки есть в списке изменённых путей коммита.
+   * Страница ставит эти колонки впереди остальных: отчёт пересобирается после
+   * каждого коммита, и первый вопрос читателя — что принесла эта правка.
+   *
+   * Берётся последний коммит, задевший хотя бы одну колонку, — считая от верхушки
+   * назад. Коммиты мимо колонок (и, прежде всего, сам отчёт, который коммитит хук)
+   * пропускаются: правка отчёта — не правка проекта. Иначе знак зависел бы от
+   * собственного коммита отчёта: тот же прогон давал бы другие байты, отчёт
+   * перестал бы быть неподвижной точкой, а хук коммитил бы его по второму разу. */
+  let last = cfg.columns.map(() => false);
+  for (let i = commits.length - 1; i >= 0 && !last.some(Boolean); i--) {
+    const picks = reads.plan[i].picks.map((paths) => paths.length > 0);
+    if (picks.some(Boolean)) last = picks;
+  }
+  return { rows: pass.rows, dropped: pass.dropped, mixed: pass.mixed, state: pass.state, last: last };
 }
 
 /* Сверка с рабочим деревом отвечает на два вопроса, и оба обязательны: состояние

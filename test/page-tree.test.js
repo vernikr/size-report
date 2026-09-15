@@ -108,12 +108,13 @@ test('дерево файлов: папки по путям, три состоя
 });
 
 /* Дерево — дерево проекта, а не список колонок: файл, который в отчёт не попал,
- * стоит на своём месте, но подписью, а не галочкой (чисел для него не измеряли, и
- * переключать нечего), а причина названа во всплывающей строке — иначе читатель
- * решил бы, что файл потерялся. Причина приходит от движка знаком: «такой файл
- * колонкой быть не может» — это правило пакета, «в набор колонок не попал» — выбор
- * проекта. Счётчик папки со смешанным составом — доля: сколько в отчёте из сколько. */
-test('дерево показывает все файлы проекта, а вне отчёта — подписью с причиной', () => {
+ * стоит на своём месте, но его галочка снята и недоступна (чисел для него не
+ * измеряли, и переключать нечего), а причина названа во всплывающей строке — иначе
+ * читатель решил бы, что файл потерялся. Причина приходит от движка знаком: «такой
+ * файл колонкой быть не может» — это правило пакета, «в набор колонок не попал» —
+ * выбор проекта. Счётчик папки со смешанным составом — доля: сколько в отчёте из
+ * сколько. */
+test('дерево показывает все файлы проекта, а вне отчёта — со снятой галочкой', () => {
   const doc = openPage().window.document;
   const others = notMeasured();
   assert.ok(others.length > 0, 'в фикстуре нет ни одного файла вне колонок — проверять нечего');
@@ -121,8 +122,11 @@ test('дерево показывает все файлы проекта, а в�
   others.forEach((entry) => assert.ok(plains(doc).some((b) => b.title.indexOf(entry.path + ' · ') === 0),
     'в дереве нет файла проекта ' + entry.path));
   plains(doc).forEach((b) => {
-    assert.equal(b.querySelector('input'), null,
-      'у файла вне отчёта есть галочка: переключать нечего, а галочка обещает обратное');
+    const input = b.querySelector('input');
+    assert.notEqual(input, null, 'у файла вне отчёта нет галочки: строка выбилась из ряда');
+    assert.equal(input.disabled, true,
+      'галочку файла вне отчёта можно переключить: переключать нечего, а вид обещает обратное');
+    assert.equal(input.checked, false, 'галочка файла вне отчёта отмечена');
     assert.match(b.title, /не измеряется: /, 'подпись не говорит, почему файла нет в отчёте');
   });
 
@@ -148,6 +152,42 @@ test('дерево показывает все файлы проекта, а в�
   toggleBox(doc, dirInput(doc, 'docs/'), false);
   assert.equal(nowCells(doc), (data.files.length - measuredDocs + 1) * data.metrics.length,
     'галочка папки увела из таблицы не только её измеряемые файлы');
+
+
+});
+
+/* Папка, у которой включать нечего, остаётся на месте, но её галочка тоже снята и
+ * недоступна: вид у всех строк один, а причина — во всплывающей строке. Заодно
+ * проверяется порядок уровня: всё, чего в отчёте нет, стоит после того, что в нём
+ * есть, а не вперемешку — иначе искать в отчёте пришлось бы среди чужого.
+ *
+ * Набор «папок, где измерять нечего» считается по данным, а не по разметке: иначе
+ * проверка подтверждала бы сама себя и пропустила бы папку, помеченную недоступной
+ * зря. */
+test('папки вне отчёта — со снятой галочкой и после тех, что в отчёте', () => {
+  const doc = openPage().window.document;
+  const measured = data.files.map(where);
+  const empty = [...new Set(data.catalog.map((e) => e.path.split('/').slice(0, -1).join('/')))]
+    .filter((d) => d !== '' && !measured.some((p) => p.indexOf(d + '/') === 0)).sort();
+  const plain = [...doc.querySelectorAll('#panel .box.dir.plain')];
+  assert.deepEqual(plain.map((b) => b.querySelector('span').textContent.replace(/\/$/, '')).sort(),
+    empty, 'недоступные папки разошлись с теми, где измерять нечего');
+  plain.forEach((b) => {
+    assert.equal(b.querySelector('input').disabled, true, 'галочка папки вне отчёта переключается');
+    assert.equal(b.querySelector('input').checked, false, 'папка вне отчёта отмечена галочкой');
+  });
+
+  [...doc.querySelectorAll('#panel ul.tree')].forEach((ul) => {
+    const rows = [...ul.children].map((li) => {
+      const input = li.querySelector(':scope > .box input');
+      return input !== null && input.disabled === false;
+    });
+    const outside = rows.indexOf(false);
+    if (outside >= 0) {
+      assert.equal(rows.slice(outside).indexOf(true), -1,
+        'строка отчёта стоит после строк, которых в нём нет');
+    }
+  });
 });
 
 /* Складывание — это то, сколько дерева видно, и оно не должно трогать числа:
@@ -159,16 +199,22 @@ test('папку дерева можно сложить, и сложенное �
   const dom = openPage();
   const doc = dom.window.document;
   const fold = (d, prefix) => dirBox(d, prefix).closest('li').querySelector(':scope > .fold');
-  const under = (d, prefix) => dirBox(d, prefix).closest('li').querySelectorAll('.box').length;
+  const row = (d, prefix) => dirBox(d, prefix).closest('li');
   const before = nowCells(doc);
-  assert.ok(under(doc, 'src/') > 1, 'в фикстуре у папки нет поддерева — складывать нечего');
+  const table = doc.querySelector('#grid tbody tr');
 
   fold(doc, 'src/').dispatchEvent(new dom.window.Event('click'));
-  assert.equal(under(doc, 'src/'), 1, 'сложенная папка всё ещё показывает своё поддерево');
+  assert.equal(row(doc, 'src/').classList.contains('folded'), true,
+    'строка папки не помечена сложенной: поддерево не спрятать оформлением');
   assert.equal(dirInput(doc, 'src/').checked, true,
     'складывание папки поменяло её выбор: знак отвечает за вид, а галочка — за числа');
   assert.equal(nowCells(doc), before, 'складывание папки убрало числа из таблицы');
   assert.equal(fold(doc, 'src/').textContent, '▸', 'знак сложенной папки не сказал, что она сложена');
+  /* Складывание — чистый вид: таблица после него остаётся той же самой разметкой, а
+   * не собранной заново. Иначе каждый клик по знаку считал бы все строки и колонки,
+   * и дерево с длинной историей отвечало бы на него заметной задержкой. */
+  assert.equal(doc.querySelector('#grid tbody tr'), table,
+    'клик по знаку пересобрал таблицу: складывание считает числа, которых не меняет');
 
   /* Память: следующий заход открывается с тем же сложенным деревом и с полным
    * выбором. Ключ у складывания свой — иначе оно уехало бы в ссылку, а ссылку
@@ -177,8 +223,10 @@ test('папку дерева можно сложить, и сложенное �
   const next = openPage(seed).window.document;
   assert.equal(fold(next, 'src/').textContent, '▸',
     'сложенная папка разложилась на следующем заходе');
+  assert.equal(row(next, 'src/').classList.contains('folded'), true,
+    'память помнит знак, но не саму сложенность');
   assert.equal(fold(next, 'data/').textContent, '▾', 'чужая папка сложилась вместе с этой');
-  assert.deepEqual([...next.querySelectorAll('#panel input')].filter((b) => !b.checked), [],
+  assert.deepEqual([...next.querySelectorAll('#panel input')].filter((b) => !b.checked && !b.disabled), [],
     'память сложенного унесла с собой выключенные файлы');
   assert.deepEqual(Object.keys(seed).length, 1, 'запись о дереве легла не туда: ' + JSON.stringify(seed));
   assert.ok(Object.keys(seed)[0].indexOf(':tree') > 0,
