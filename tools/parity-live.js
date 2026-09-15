@@ -1,31 +1,31 @@
 #!/usr/bin/env node
-/* Сверяет движок пакета с эталоном, снятым с живого проекта: числа (`--json`) и
- * собранный отчёт на том же коммите — в двух окружениях сразу.
+/* Compares the package's engine with the golden taken from a live project: the numbers (`--json`) and
+ * the assembled report on one and the same commit, in two environments at once.
  *
- * Зачем отдельно от теста. Фикстура доказывает перенос на маленькой истории, где
- * все ловушки под контролем. Живой проект доказывает то, чего фикстура не может:
- * на настоящей истории в 149 коммитов и 27 колонок перенос не сдвинул ни одного
- * числа и ни одного байта артефакта. Идёт это десятки секунд, поэтому живёт
- * командой `pnpm run parity:live`, а не в общем прогоне тестов.
+ * Why apart from a test. The fixture proves the port on a small history where every trap is under
+ * control. A live project proves what the fixture cannot: on a real history of 149 commits and 27
+ * columns the port moved not a single number, and the report still comes out at the path the
+ * consumer named, carrying its own data and pulling nothing from outside. It needs the consumer
+ * project on disk and clones it, which is why it lives in the command `pnpm run parity:live` rather
+ * than in the general test run.
  *
- * Два окружения. Сверка идёт и как есть, и с нечитаемыми настройками машины
- * (`GIT_CONFIG_GLOBAL=/dev/null`): вывод обязан совпасть с эталоном в обоих.
- * Одного зелёного прогона мало — он доказывает, что числа совпали *здесь*, а не
- * что они не зависят от того, у кого какие настройки git.
+ * Two environments. The comparison runs both as things are and with the machine's settings
+ * unreadable (`GIT_CONFIG_GLOBAL=/dev/null`): the output has to match the golden in both. One green
+ * run is not enough — it proves the numbers matched *here* rather than that they do not depend on
+ * whose git settings are in play.
  *
- * Окружения идут вперемешку (у каждого свой клон), потому что каждое — это
- * отдельный процесс на своём ядре, а команды внутри окружения ждут друг друга:
- * проверка контрольного режима смотрит на артефакт, который только что собрал
- * `--write`. Клон у каждого окружения свой именно поэтому — общий клон и запись в
- * него из двух окружений одновременно были бы гонкой.
+ * The environments interleave (each has its own clone), because each is a separate process and the
+ * commands inside one environment wait for each other: the check of the check mode looks at the
+ * artifact `--write` has just built. Each environment has its own clone for that very reason — one
+ * shared clone written to by both at once would be a race.
  *
- * Работает на клонах: проект-потребитель не открывается на запись — иначе проверка
- * подменяла бы в нём собранный отчёт.
+ * It works on clones: the consumer project is never opened for writing — otherwise the check would
+ * replace the report built in it.
  *
- * Запуск:
- *   node tools/parity-live.js [--repo <путь-к-проекту>] [--bin <путь-к-движку>]
+ * Run:
+ *   node tools/parity-live.js [--repo <path-to-project>] [--bin <path-to-engine>]
  *
- * Коды выхода: 0 — паритет, 1 — расхождение, 2 — нет доступа к эталону или проекту.
+ * Exit codes: 0 — parity, 1 — a divergence, 2 — no access to the golden or the project.
  */
 
 import fs from 'node:fs';
@@ -41,9 +41,9 @@ const CONFIG = path.join(PARITY, 'config.json');
 const DEFAULT_REPO = path.join(ROOT, '..', 'figma', 'safe-resets');
 const DEFAULT_BIN = path.join(ROOT, 'bin', 'size.js');
 
-/* Среды сверки: обычная и с чужими настройками. У живого проекта пути только
- * ASCII, поэтому `core.quotePath` здесь ни при чём — проверяется сам факт
- * независимости вывода от настроек машины. */
+/* The environments of the comparison: the usual one and the one with someone else's settings. The
+ * live project has ASCII paths only, so `core.quotePath` has nothing to do here — what is checked is
+ * the fact itself: the output does not depend on the machine's settings. */
 const PROFILES = [
   { label: 'обычное окружение', env: null },
   { label: 'настройки машины не читаются (GIT_CONFIG_GLOBAL=/dev/null)', env: { GIT_CONFIG_GLOBAL: '/dev/null' } }
@@ -61,8 +61,8 @@ function parseArgs(args) {
   return out;
 }
 
-/* Отсутствие файла — тоже ответ («отчёта нет»), и он должен быть строкой сверки, а
- * не исключением на середине прогона. */
+/* A missing file is an answer too ("there is no report"), and it has to be a line of the comparison
+ * rather than an exception in the middle of the run. */
 function readIfExists(file) {
   try {
     return fs.readFileSync(file, 'utf8');
@@ -83,9 +83,9 @@ function firstDiff(a, b) {
   return 'различие в байтах при одинаковых строках';
 }
 
-/* Запуск без ожидания: окружения идут вперемешку, поэтому `spawn`, а не
- * `spawnSync`. Вывод собирается целиком — сверяется он побайтово — и склейка
- * кусков живёт в обвязке (`collectOutput`), а не здесь. */
+/* A launch without waiting: the environments interleave, hence `spawn` rather than `spawnSync`. The
+ * output is collected whole — it is compared byte for byte — and the joining of the chunks lives in
+ * the harness (`collectOutput`) rather than here. */
 function runCli(bin, dir, args, env) {
   return collectOutput(spawn(process.execPath, [bin, '--config', CONFIG].concat(args), {
     cwd: dir,
@@ -93,11 +93,10 @@ function runCli(bin, dir, args, env) {
   }));
 }
 
-/* Контракт данных обязан нести ту же правду, что замороженные числа: это одна и та
- * же история, разложенная по полям. Сверяется на живой истории — там, где
- * фикстура не может: строки, абсолютные значения, «сейчас» и итоги, которые
- * страница считает сама. Колонки, где файл удаляли и возвращали, из сверки дельт
- * выпадают и называются вслух (`BLOCKERS.md` §N4). */
+/* The data contract has to carry the same truth as the frozen numbers: it is the same history laid
+ * out in fields. It is compared on the live history, where the fixture cannot reach: the rows, the
+ * absolute values, "now" and the totals the page counts for itself. Columns where a file was deleted
+ * and returned fall out of the delta comparison and are named out loud (`BLOCKERS.md` §N4). */
 async function checkContract(bin, dir, env, frozen) {
   const res = await runCli(bin, dir, ['--data'], env);
   if (res.code !== 0) return { errors: ['--data не отдался (код ' + res.code + '): ' + res.stderr.trim()] };
@@ -153,23 +152,23 @@ async function checkContract(bin, dir, env, frozen) {
   return { errors: errors, gaps: gaps, rows: got.rows.length, files: got.files.length };
 }
 
-/* Одна сверка: строка о результате и признак «плохо» (0 или 1). Строки копятся в
- * общем списке окружения, а не печатаются по ходу: окружения идут вперемешку, и
- * живая печать перемешала бы два отчёта в один нечитаемый. */
+/* One comparison: a line about the result and a mark of "bad" (0 or 1). The lines accumulate in the
+ * environment's own list rather than being printed as they come: the environments interleave, and
+ * live printing would mix the two reports into one unreadable one. */
 function verdict(lines, ok, good, bad) {
   lines.push('    ' + (ok ? '✓ ' : '✗ ') + (ok ? good : bad));
   return ok ? 0 : 1;
 }
 
-/* Прогон не отдал ответа вовсе — сверять дальше нечего: окружение закрывается
- * сразу, но провал считается вместе с уже найденными. */
+/* The run gave no answer at all — there is nothing left to compare: the environment closes at once,
+ * but the failure is counted together with those already found. */
 function broken(lines, bad, why) {
   lines.push('    ✗ ' + why);
   return { bad: bad + 1, lines: lines };
 }
 
-/* Контракт данных — не побайтовая сверка, а раскладка той же истории по полям; его
- * ошибки печатаются не все, а первые три: остальные — следствие первой. */
+/* The data contract is not a byte comparison but the same history laid out in fields; its errors are
+ * printed not all at once but three at a time: the rest follow from the first. */
 function contractLines(lines, contract) {
   if (contract.errors.length === 0) {
     lines.push('    ✓ контракт данных несёт те же числа: ' + contract.rows + ' строк, '
@@ -181,7 +180,7 @@ function contractLines(lines, contract) {
   return 1;
 }
 
-/* Одно окружение целиком: свой клон, свои прогоны, свой список строк вывода. */
+/* One whole environment: its own clone, its own runs, its own list of output lines. */
 async function checkProfile(profile, expected, tmp) {
   const { bin, repo, head, data, frozen, artifactRel } = expected;
   const lines = ['— ' + profile.label];
@@ -196,11 +195,11 @@ async function checkProfile(profile, expected, tmp) {
   bad += verdict(lines, json.stdout === data, 'числа совпали с эталоном побайтово',
     'числа разошлись с эталоном: ' + firstDiff(json.stdout, data));
 
-  /* Отчёт — самодостаточная страница, а эталон снят с прежней статической таблицы:
-   * побайтовой сверки здесь больше нет, и это не потеря, а другой предмет. Верным
-   * обязано оставаться другое: файл появился по тому пути, который назвал сам
-   * потребитель, и ничего не тянет со стороны (внешняя ссылка сделала бы его
-   * неоткрываемым без сети — а он за тем и собирается, чтобы открываться с диска). */
+  /* The report is a self-contained page, while the golden was taken from the former static table:
+   * there is no byte comparison here any more, and that is not a loss but another subject. What has
+   * to stay true is something else: the file appeared at the path the consumer itself named, and it
+   * pulls nothing from outside (an external reference would make it unopenable without a network —
+   * and it is built exactly to be opened from disk). */
   const wrote = await runCli(bin, dir, ['--write'], profile.env);
   if (wrote.code !== 0) return broken(lines, bad, 'движок не собрал отчёт: ' + wrote.stderr.trim());
   const artifact = readIfExists(path.join(dir, artifactRel));

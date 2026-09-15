@@ -93,8 +93,10 @@ comment diff stays under the commit budget, otherwise it is split by file groups
   `tools/yaml.js` (611 → 608; journal entry `worklog/0085`, 2026-09-15). Both copies of the
   `core.quotePath=false` reasoning pointed at `harness.FROZEN`, a name that does not exist (the
   frozen copy is taken through `frozenTarget()`); both now point at what is there.
-- [ ] **M9d tools: live parity and the tarball** — `tools/parity-live.js`, `tools/pack-check.js`
-  (419).
+- [x] **M9d tools: live parity and the tarball** — `tools/parity-live.js`, `tools/pack-check.js`
+  (419 → 417; journal entry `worklog/0087`, 2026-09-15). Both were run live after the pass: the
+  report no longer promised "not a single byte of the artifact" (that comparison is gone) and the
+  tarball check no longer promised exit code 2, which no path in it returns.
 - [ ] **M9e tools: the gates** — `tools/gates/**` (769, 7 files).
 - [ ] **M9f tools: the synthetic project** — `tools/synthetic/**` (405).
 

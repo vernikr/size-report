@@ -1,23 +1,23 @@
 #!/usr/bin/env node
-/* Работает ли движок из собранного пакета, а не только из репозитория.
+/* Whether the engine works from an assembled package rather than from the repository alone.
  *
- * Зачем отдельно. Пакет читает соседние исходники с диска: сборка страницы
- * вклеивает `derived.js` и `page/app.js`, а модули ссылаются друг на друга
- * относительными путями. Такой модуль легко сделать работающим в репозитории и
- * ломающимся у того, кто его установил: достаточно, чтобы файл не доехал в
- * тарболл (`files` в `package.json`) или чтобы путь считался не от места модуля.
- * Поэтому проверка идёт с распакованного тарболла, а не из рабочего дерева.
+ * Why apart from the rest. The package reads neighbouring sources from disk: the page assembly glues
+ * in `derived.js` and `page/app.js`, and modules refer to each other by relative paths. Such a module
+ * is easy to make work in the repository and break in whoever installed it: a file that did not make
+ * it into the tarball (`files` in `package.json`) is enough, or a path counted from the wrong place.
+ * Hence the check runs from an unpacked tarball rather than from the working tree.
  *
- * Что сверяется: все исходники доехали; `--json` из пакета равен выводу движка из
- * репозитория; собранный отчёт — побайтово равен (путь берётся из настроек, а не
- * угадывается: у потребителя он свой).
+ * What is compared: every source arrived; `--json` from the package equals the engine's output from
+ * the repository; the assembled report is equal byte for byte (its path comes from the settings
+ * rather than a guess: a consumer has its own).
  *
- * Работает на клонах фикстуры: ни репозиторий, ни `docs/` проекта не трогаются.
+ * It works on clones of the fixture: neither the repository nor the project's `docs/` is touched.
  *
- * Запуск:
+ * Run:
  *   node tools/pack-check.js
  *
- * Коды выхода: 0 — пакет работает, 1 — расхождение, 2 — нет инструментов сборки.
+ * Exit codes: 0 — the package works, 1 — a divergence or a failed check (a missing build tool among
+ * them: its absence is caught by the same handler).
  */
 
 import fs from 'node:fs';
@@ -54,10 +54,11 @@ function clone(name) {
   return dir;
 }
 
-/* Состав каталога — по git, а не по диску: сверяется обещание поставки («все
- * исходники доехали»), а в каталоге рядом с ними лежит чужое — служебные файлы
- * finder'а и редакторов. На них проверка говорила «в пакет не доехали исходники»,
- * то есть называла не ту причину, и красный профиль на ровном месте (WORKLOG §71). */
+/* The directory's contents come from git rather than from disk: what is compared is the promise of
+ * the delivery ("every source arrived"), while the directory holds someone else's files beside them
+ * — the service files of Finder and of editors. On those the check used to say "sources did not make
+ * it into the package", that is, it named the wrong cause and turned the profile red for nothing
+ * (`worklog/archive/WORKLOG.md` §71). */
 function trackedEntries(dir) {
   const names = gitIn(ROOT, ['ls-files', dir]).split('\n').filter((l) => l !== '')
     .map((p) => p.slice(dir.length + 1).split('/')[0]);
@@ -73,27 +74,25 @@ try {
   const pkg = path.join(unpacked, 'package');
   ok('собран пакет', tarball);
 
-  /* Список `files` — обещание поставки, и проверяется оно с двух сторон: в нём не
-   * должно быть того, чего в репозитории нет (забытый файл или пустой каталог
-   * доезжает до выпуска как обещание), а в тарболл не должно попасть то, чего он
-   * не обещает. */
+  /* The `files` list is the promise of the delivery, and it is checked from both sides: it must not
+   * name what the repository does not have (a forgotten file or an empty directory travels to the
+   * release as a promise), and the tarball must not carry what the list does not promise. */
   const promised = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).files;
   const absent = promised.filter((entry) => !fs.existsSync(path.join(ROOT, entry)));
   if (absent.length > 0) bad('в files названо то, чего в репозитории нет', absent.join(' '));
   else ok('список files называет только существующее', promised.join(' '));
 
-  /* Часть файлов npm кладёт в тарболл сам, мимо списка (манифест, README,
-   * лицензии) — они не считаются лишними, иначе проверка ругалась бы на
-   * обещанный планом `LICENSE`. */
+  /* Some files npm puts into the tarball on its own, past the list (the manifest, and by npm's rules
+   * README and licences) — they are not counted as foreign, or the check would complain about what
+   * npm itself added. */
   const AUTO = /^(package\.json|README(\..*)?|LICEN[SC]E(\..*)?)$/i;
   const extra = fs.readdirSync(pkg).filter((entry) => !AUTO.test(entry) && promised.indexOf(entry) < 0);
   if (extra.length > 0) bad('в пакет попало то, что files не обещает', extra.join(' '));
   else ok('постороннего в пакете нет', fs.readdirSync(pkg).length + ' записей');
 
-  /* Файлы: сравнение по составу, а не по числу — иначе потеря и лишний файл
-   * могли бы уравновесить друг друга. Шаблоны проверяются наравне с исходниками:
-   * они и есть обещание «возьми и положи», а шаблон, не доехавший в поставку, —
-   * это обещание, которого нет. */
+  /* Files: compared by content, not by count — otherwise a loss and an extra file could balance each
+   * other out. Templates are checked alongside the sources: they are the "take it and put it down"
+   * promise, and a template that did not make it into the delivery is a promise that is not there. */
   [['src', 'исходники'], ['templates', 'шаблоны']].forEach(([dir, what]) => {
     const packed = path.join(pkg, dir);
     if (!fs.existsSync(packed)) {
@@ -106,8 +105,8 @@ try {
     else ok('все ' + what + ' в пакете', inRepo.length + ' записей');
   });
 
-  /* Шаблон проект берёт как есть, поэтому он обязан доехать побайтово: правка
-   * шаблона после сборки иначе разошлась бы с тем, что проект у себя видит. */
+  /* A project takes a template as it is, so it has to arrive byte for byte: an edit made after the
+   * assembly would otherwise differ from what the project has in hand. */
   trackedEntries('templates').forEach((f) => {
     const a = fs.readFileSync(path.join(ROOT, 'templates', f));
     const b = fs.readFileSync(path.join(pkg, 'templates', f));
@@ -115,9 +114,9 @@ try {
     else ok('шаблон в пакете побайтово тот же', f);
   });
 
-  /* Разбор модуля держится на файле рядом с собой (`parse-worker.js`), а не на
-   * пути от корня репозитория: из установленного пакета поток обязан подняться
-   * так же — иначе пользователь платит запуск Node на каждую клетку. */
+  /* Module parsing leans on the file beside it (`parse-worker.js`) rather than on a path from the
+   * repository root: from an installed package the thread has to rise the same way — otherwise the
+   * user pays a Node launch for every cell. */
   const parse = await import(pathToFileURL(path.join(pkg, 'src', 'parse.js')).href);
   parse.moduleError('export const a = 1;');
   if (parse.parseMode() !== 'thread') bad('разбор модуля в пакете ушёл в запуск, а не в поток');
