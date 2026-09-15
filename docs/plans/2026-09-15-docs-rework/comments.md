@@ -70,8 +70,9 @@ comment diff stays under the commit budget, otherwise it is split by file groups
   (302 → 292; journal entry `worklog/0078`, 2026-09-15).
 - [x] **M7a page: builder, nodes, panel, table assembly** — `src/page/app.js`, `build.js`,
   `dom.js`, `panel.js` (483 → 467; journal entry `worklog/0079`, 2026-09-15).
-- [ ] **M7b page: state and styles** — `src/page/state.js` (274), `src/page/table.js` (145),
-  `src/page/app.css` (250), `src/table.css` (35).
+- [x] **M7b page: state and styles** — `src/page/state.js`, `src/page/table.js`,
+  `src/page/app.css`, `src/table.css` (704 → 669; module M7 as a whole 1187 → 1136; journal entry
+  `worklog/0080`, 2026-09-15).
 - [ ] **M8 hook and tool** — `src/hook.js`, `src/tool.js` (472).
 - [ ] **M9 tools** — `tools/**` (3520; three or four commits, `tools/gates/**` and
   `tools/synthetic/**` last).

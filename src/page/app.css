@@ -1,16 +1,12 @@
-/* Оформление страницы отчёта — то, что стоит сверх общей таблицы (`src/table.css`):
- * холст и типографика, панель выбора, состояния пустоты и адаптации под
- * узкое окно. Чисел и цвета дельт здесь нет намеренно: их задаёт общая часть, и она
- * же попадает в статический артефакт, поэтому двух наборов одной таблицы не
- * бывает. Страница открывается с диска, без сервера и без сети, поэтому ни одной
- * внешней ссылки в ней быть не может: только системные семейства шрифтов
- * (`ui-sans-serif`) и системные цвета (`Canvas`, `CanvasText`, `AccentColor`),
- * которые есть в любой теме.
+/* The report page's styling — what stands on top of the shared table (`src/table.css`): the canvas and the typography,
+ * the panel of choices, the empty states and the adaptation to a narrow window. Numbers and the colour of a delta are
+ * absent here on purpose: the shared part sets them, and the package holds one set of styles rather than two. The page
+ * opens from disk, without a server and without a network, so it can hold no external reference at all: only system font
+ * families (`ui-sans-serif`) and system colours (`Canvas`, `CanvasText`, `AccentColor`), which every theme has.
  *
- * Общая часть заморожена байтами артефакта (`src/css.js`), поэтому всё, где
- * страница расходится с её геометрией, собрано в разделе «адаптации» с причиной:
- * растить общую часть нельзя, а на узком экране колонка коммита в 300px съедает
- * весь экран. */
+ * The shared part is frozen by the artifact's bytes (`src/css.js`), which is why everything where the page departs from
+ * its geometry is gathered in the "adaptations" section together with its reason: the shared part cannot grow, while on a
+ * narrow screen the 300px commit column would eat the whole screen. */
 
 :root {
   color-scheme: light dark;
@@ -22,8 +18,8 @@
   --tint: rgba(127, 127, 127, .07);
 }
 
-/* Типографика и ритм: один шаг между блоками (--gap), крупный заголовок,
- * приглушённая подпись — чтобы взгляд доходил до чисел, а не до служебного текста. */
+/* Typography and rhythm: one step between blocks (--gap), a large heading, a muted note — so that the eye reaches the
+ * numbers rather than the service text. */
 body {
   margin: 0;
   padding: var(--pad) var(--pad) 48px;
@@ -35,8 +31,8 @@ body {
 h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em; }
 .sub { margin: 0 0 calc(var(--gap) + 4px); color: var(--muted); font-size: 12.5px; }
 
-/* Панель выбора — карточка: она отделяет управление от данных и не сливается с
- * таблицей, которая начинается ниже. */
+/* The panel of choices is a card: it separates the controls from the data and does not merge with the table that begins
+ * below. */
 .panel {
   margin: 0 0 var(--gap);
   padding: 12px 14px 13px;
@@ -56,20 +52,18 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
 }
 .panel .cap { display: block; margin-bottom: 4px; }
 .panel .row { display: flex; flex-wrap: wrap; gap: 3px 6px; align-items: center; }
-/* Способ замера — видимым текстом под переключателями: словарь токенов и способ
- * сжатия выбираются настройками запуска, а не галочкой, поэтому читателю мало
- * навести мышь — он должен видеть, чем получено число. */
+/* The way of counting is visible text under the switches: the token dictionary and the way of compression come from the
+ * settings of the run rather than from a checkbox, so pointing a mouse is not enough — the reader has to see what produced
+ * the number. */
 .panel .about { margin: 5px 0 0; color: var(--muted); font-size: 11.5px; }
 
-/* Дерево файлов: вложенность показана отступом и линией уровня, папка — такой же
- * переключатель, как файл, только его галочка отвечает за всё поддерево, а число
- * рядом говорит, за сколько файлов. Список файлов длиннее окна, поэтому панель
- * прокручивается сама: иначе управление вытолкнуло бы таблицу за экран.
+/* The file tree: nesting is shown by an indent and a level line, and a folder is a switch like a file — only its checkbox
+ * answers for the whole subtree, while the number beside it says for how many files. The list is longer than the window,
+ * so the panel scrolls itself: otherwise the controls would push the table off the screen.
  *
- * На узком экране прокручивается сам список (панель там растёт вместе со
- * страницей), на широком — панель целиком (ниже): прокрутка одна, и она у того,
- * кто и вправду ограничен окном. Шрифт файлов — тот же, что у чисел таблицы:
- * подписей в списке много и они короткие, а рядом с ними стоит таблица. */
+ * On a narrow screen the list itself scrolls (the panel grows with the page there), on a wide one the whole panel does
+ * (below): there is one scroll, and it belongs to whoever is really bounded by the window. Files use the same font as the
+ * table's numbers: the list holds many short captions, and the table stands right next to it. */
 .panel .files { max-height: min(30vh, 320px); overflow: auto; font-size: 12.5px; }
 .panel .tree { margin: 0; padding: 0 0 0 14px; list-style: none; }
 .panel .tree .tree { margin-left: 14px; padding-left: 9px; border-left: 1px solid var(--line); }
@@ -77,13 +71,12 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
 .box.dir { font-weight: 600; }
 .box .n { margin-left: 1px; color: var(--muted); font-size: 11px; }
 
-/* Сложенная папка (класс на строке, ставится кликом по знаку): поддерево лежит в
- * разметке и просто не показывается. Так складывание ничего не пересобирает —
- * иначе каждый клик считал бы таблицу заново.
+/* A folded folder (a class on the row, set by a click on the sign): the subtree lies in the markup and is simply not shown.
+ * That way folding rebuilds nothing — otherwise every click would count the table anew.
  *
- * Знак складки: место под него есть у каждой строки (отступ строки), а сам он
- * только у папок — так листья и папки выстроены в один столбец. Он не часть
- * галочки: галочка отвечает за числа, знак — за то, сколько дерева видно. */
+ * The folding sign: every row has the room for it (the row's indent) while only folders carry one, which lines the leaves
+ * and the folders up in a single column. It is not part of the checkbox: the checkbox answers for the numbers, the sign for
+ * how much of the tree is visible. */
 .panel .tree li.folded > .tree { display: none; }
 .panel .tree li { position: relative; }
 .panel .tree li > .fold {
@@ -97,9 +90,8 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
 }
 .panel .tree li > .fold:hover { color: var(--ink); }
 
-/* Переключатель — метка вокруг поля ввода: и подпись, и цель нажатия одна, поэтому
- * по нему попадает и мышь, и клавиатура (Space на поле ввода), и вспомогательные
- * технологии. */
+/* A switch is a label around an input: one label and one click target, which is why a mouse, the keyboard (`Space` on the
+ * input) and assistive technology all reach it. */
 .box {
   display: inline-flex;
   gap: 6px;
@@ -111,25 +103,24 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
 .box:hover { background: var(--tint); }
 .box input { margin: 0; accent-color: AccentColor; }
 .box.all { font-weight: 600; }
-/* Файл или папка вне отчёта: галочка на месте, но снята и недоступна — чисел для
- * него не измеряли, и переключать нечего. Строка приглушена и на мышь не
- * отзывается: обещать нажатие нечем. */
+/* A file or folder outside the report: the checkbox is there but off and unavailable — no numbers were measured for it, so
+ * there is nothing to switch. The row is muted and does not respond to the mouse: there is nothing to promise a click
+ * with. */
 .box.plain { cursor: default; opacity: .55; }
 .box.plain:hover { background: none; }
 .box.plain input { cursor: default; }
 
-/* Расшифровки под деревом файлов нет намеренно: под списком она отодвигала
- * числа, а её содержимое и так стоит рядом с тем, что объясняет, — цвет дельт
- * называет сам знак числа, точность стоит под переключателями метрик, а знак
- * «файла ещё нет» — в подсказке клетки.
+/* There is no legend under the file tree, and on purpose: below the list it pushed the numbers away, while its content
+ * already stands next to what it explains — the colour of a delta is named by the sign of the number itself, accuracy
+ * stands under the metric switches, and the mark of a file that is not there yet lives in the cell's tooltip.
  *
- * Приближённое число помечено пунктиром, а не цветом: цвет в таблице занят дельтой
- * (рост и спад), и второй смысл на том же признаке читался бы как первый. */
+ * An approximate number is marked by a dashed line rather than a colour: colour in the table is taken by the delta (growth
+ * and fall), and a second meaning on the same sign would read as the first. */
 #grid td.approx { text-decoration: underline dotted; text-underline-offset: 2.5px; }
 
-/* Таблица — в своей рамке и со своим скроллом: шапка и колонка коммита липнут к ней
- * (правила липкости — в общей части), а не к странице, поэтому при прокрутке вбок
- * видно, чей это ряд, а при прокрутке вниз — что за колонка. */
+/* The table has a frame and a scroll of its own: the header and the commit column stick to it (the rules of stickiness
+ * live in the shared part) rather than to the page, so scrolling sideways shows whose row it is while scrolling down shows
+ * which column it is. */
 .shell {
   overflow: auto;
   max-height: calc(100vh - 300px);
@@ -137,12 +128,12 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
   border-radius: var(--radius);
   background: Canvas;
 }
-/* Числа плотнее текста страницы: их больше и они короче, а читаются по разрядам. */
+/* Numbers are denser than the page's text: there are more of them, they are shorter, and they are read by their digits. */
 #grid { font-size: 12.5px; }
 
-/* Сообщение о присланной ссылке — над таблицей, чтобы пропустить его было нельзя,
- * но таблицу оно не отодвигает: одна строка на месте страницы. Цвет берётся
- * системный (акцент), своих цветов у страницы нет. */
+/* The message about a link that came in stands above the table, so that it cannot be missed, while it does not push the
+ * table away: one line in the place of the page. Its colour is the system one (the accent), for the page keeps no colours
+ * of its own. */
 .notice {
   margin: 0 0 var(--gap);
   padding: 9px 13px;
@@ -153,8 +144,8 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
 }
 .notice[hidden] { display: none; }
 
-/* Состояния пустоты: когда таблицу не из чего собрать, страница говорит об этом
- * словами, а не пустой сеткой. */
+/* The empty states: when there is nothing to assemble a table from, the page says so in words rather than showing an empty
+ * grid. */
 .state {
   margin: var(--gap) 0 0;
   padding: 11px 13px;
@@ -168,28 +159,24 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
 .note { margin: 14px 0 0; max-width: 90em; color: var(--muted); font-size: 12px; }
 .note code { background: var(--tint); padding: 0 3px; border-radius: 3px; }
 
-/* Клавиатура: рамка фокуса видна на любом фоне (системный цвет акцента) и не
- * сдвигает разметку. Ссылки журнала и все переключатели доступны с Tab. */
+/* The keyboard: the focus ring is visible on any background (the system accent colour) and shifts no layout. Journal links
+ * and every switch are reachable with Tab. */
 :focus-visible { outline: 2px solid AccentColor; outline-offset: 2px; border-radius: 3px; }
 
-/* Широкая страница: панель выбора (метрики, дерево файлов) стоит **слева** от
- * таблицы, а страница целиком укладывается в окно. Это не украшение: на десктопе
- * бокового места много, а вертикального мало — переключатели и числа видны
- * одновременно, и ни прокрутка чисел, ни прокрутка списка файлов не уводит
- * управление за экран. Узкое окно эту же раскладку снимает (ниже): там столбцы
- * снова идут друг под другом, потому что рядом им не хватает ширины.
+/* A wide page: the panel of choices (metrics, file tree) stands **left** of the table, and the whole page fits the window.
+ * That is not decoration: a desktop has much side room and little vertical room — the switches and the numbers are visible
+ * at once, and neither scrolling the numbers nor scrolling the file list takes the controls off the screen. A narrow window
+ * drops this layout (below): there the columns run one under another again, because side by side they lack the width.
  *
- * Раскладка — сетка на `body`, а не обёртка в разметке: страница собирается
- * вклейкой глав (`src/page/build.js`), и добавлять ей узлы ради оформления значило
- * бы менять форму страницы в двух местах вместо одного. Строк пять, и они названы
- * по предмету: заголовок, сообщение о ссылке, **рабочая строка**, сообщение
- * пустоты и подпись. Тянется только рабочая — таблица получает всю оставшуюся
- * высоту, а панель не больше неё; при этом своя высота у панели не «сколько
- * получилось» (тогда она вытолкнула бы таблицу за экран), а та же рабочая строка,
- * внутри которой она прокручивается: список файлов длиннее окна — обычное дело.
+ * The layout is a grid on `body` rather than a wrapper in the markup: the page is assembled by pasting chapters
+ * (`src/page/build.js`), and adding nodes to it for the sake of styling would mean changing the page's shape in two places
+ * instead of one. There are five rows, named by subject: the heading, the message about a link, the **working row**, the
+ * empty state and the note. Only the working row stretches — the table gets all the remaining height and the panel no more
+ * than that; the panel's own height is not "whatever came out" (it would push the table off the screen) but that same
+ * working row, inside which it scrolls: a file list longer than the window is the usual case.
  *
- * Порог 900px — тот же, что у адаптаций ниже: одна граница на «широко» и «узко»,
- * иначе между двумя порогами страница осталась бы без ни одного правила. */
+ * The threshold of 900px is the same as the adaptations' below: one border between "wide" and "narrow", or the page would
+ * be left with no rule at all between two thresholds. */
 @media (min-width: 900px) {
   body {
     box-sizing: border-box;
@@ -208,22 +195,20 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
   #shell { grid-area: 3 / 2 / 4 / 3; }
   #state { grid-area: 4 / 2 / 5 / 3; align-self: start; }
   #note { grid-area: 5 / 2 / 6 / 3; }
-  /* Работа — на всю высоту, как и таблица: панель кончается там же, где она.
-   * Прокручивается панель, а не страница. Верхнего отступа у неё здесь нет:
-   * список проезжает под ним, и липкая строка категорий стояла бы не вплотную к
-   * краю, а под полосой проезжающих файлов. Отступ никуда не делся — он у первого
-   * поля, и уезжает вместе с ним. */
+  /* The working row runs the full height, as the table does: the panel ends where it ends. The panel scrolls rather than the
+   * page. It has no top padding here: the list drives under it, and the sticky row of categories would stand not flush with
+   * the edge but under a band of passing files. The padding has not gone anywhere — it is on the first field and travels
+   * away with it. */
   #panel { grid-area: 2 / 1 / -1 / 2; min-height: 0; margin-bottom: 0; padding-top: 0; overflow: auto; }
   .panel > fieldset:first-child { padding-top: 12px; }
-  /* Высоту таблицы здесь задаёт строка, а не окно: своё правило высоты ей нужно
-   * только в узком окне, где страница прокручивается целиком. */
+  /* Here the row rather than the window sets the table's height: it needs a height rule of its own only in a narrow window,
+   * where the whole page scrolls. */
   .shell { max-height: none; }
-  /* Прокрутка у панели одна: список файлов больше её не заводит, и поле «Файлы»
-   * не режет дерево своим потолком. */
+  /* The panel has a single scroll: the file list starts none of its own, and the "Files" field no longer cuts the tree with
+   * its ceiling. */
   .panel .files { max-height: none; overflow: visible; }
-  /* Переключатели категорий остаются на виду, пока листаешь дерево. Фон — тот же,
-   * что у панели (поверхность плюс её подсветка), иначе под ними читались бы
-   * проезжающие строки списка. */
+  /* The category switches stay in sight while the tree is scrolled. The background is the panel's own (the surface plus its
+   * tint), or the passing rows of the list would read through them. */
   .panel .cats {
     position: sticky;
     top: 0;
@@ -231,16 +216,15 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
     background-color: Canvas;
     background-image: linear-gradient(var(--tint), var(--tint));
   }
-  /* Без метрик таблицы нет, и растянутая пустая строка ей не место: свободное
-   * место этой строки забирает сообщение о пустоте, а не полоса над ним. */
+  /* Without metrics there is no table, and a stretched empty row has no place there: the empty state takes the free space of
+   * that row rather than the band above it. */
   body:has(#shell[hidden]) #state { grid-area: 3 / 2 / 4 / 3; }
 }
 
-/* Адаптации: единственное место, где страница правит общую геометрию, — потому что
- * общая часть заморожена байтами артефакта, а не потому что так удобнее. Порог —
- * 899px, а не 900: при ровно 900px обе половины применились бы к одной странице, и
- * от «узкой» в «широкой» остался бы потолок высоты таблицы — то есть пустое место
- * под ней на одном единственном размере окна. */
+/* Adaptations: the one place where the page overrides the shared geometry — because the shared part is frozen by the
+ * artifact's bytes, not because it is handier that way. The threshold is 899px rather than 900: at exactly 900px both halves
+ * would apply to one page, and the table's height ceiling would survive from the "narrow" into the "wide" one — that is,
+ * empty space under it at that single window size. */
 @media (max-width: 899px) {
   body { padding: 14px 14px 32px; }
   h1 { font-size: 18px; }

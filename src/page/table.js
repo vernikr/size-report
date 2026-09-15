@@ -2,11 +2,10 @@ import { cellParts, commitParts, nowModel, rowModel, valueParts } from '../deriv
 import { appEl } from './dom.js';
 import { appData, appUi, appView, appMetric } from './state.js';
 
-/* Приближённая клетка: пометка берётся из данных движка, а не выводится здесь из
- * пути файла, — правило точности живёт там же, где считаются числа. У клетки
- * файла это её собственное число, у итога — худшее из вошедших в него, иначе
- * сумма обещала бы точность, которой нет у слагаемых. Возвращается описание
- * метрики (её способ и идёт в подсказку клетки) либо ничего. */
+/* An approximate cell: the mark comes from the engine's data rather than being derived here from a file's path — the rule
+ * of accuracy lives where the numbers are counted. For a file's cell it is that number itself, for a total the worst of
+ * what went into it, or the sum would promise an accuracy its terms do not have. Returns the metric's description (its way
+ * of counting is what goes into the cell's tooltip) or nothing. */
 export function appApprox(where, files, key) {
   const marks = appData.approx[key];
   if (marks === undefined) return null;
@@ -18,13 +17,13 @@ export function appApprox(where, files, key) {
   return null;
 }
 
-/* Класс клетки собирается в одном месте: и пометка приближения, и пропуск
- * («файла нет») — свойства самой клетки, а не её содержимого. */
+/* The cell's class is assembled in one place: both the mark of approximation and the gap ("no such file") are properties
+ * of the cell itself rather than of its content. */
 function appCellClass(first, miss, approx) {
   return 'num' + (first ? ' g' : '') + (miss ? ' miss' : '') + (approx === null ? '' : ' approx');
 }
 
-// Разметка клетки строки-коммита: правила — в cellParts, здесь только узел.
+// The markup of a commit row's cell: the rules live in cellParts, only the node is here.
 export function appCell(cell, first, approx) {
   const parts = cellParts(cell.value, cell.delta, '−');
   const td = appEl('td', appCellClass(first, parts.miss, approx));
@@ -34,7 +33,7 @@ export function appCell(cell, first, approx) {
   return td;
 }
 
-// Разметка клетки верхней строки: правила — в valueParts.
+// The markup of the top row's cell: the rules live in valueParts.
 export function appValueCell(value, first, approx) {
   const parts = valueParts(value);
   const td = appEl('td', appCellClass(first, parts.miss, approx));
@@ -43,9 +42,8 @@ export function appValueCell(value, first, approx) {
   return td;
 }
 
-/* Подпись коммита — той же разметкой, что в статической таблице: дата, тема,
- * метка раздела журнала. Ширину колонки и обрезку длинной темы задаёт общая часть
- * оформления, поэтому колонка не прыгает при переключении файлов. */
+/* A commit's caption: the date, the subject, the journal section's mark. The column's width and the clipping of a long
+ * subject come from the shared part of the styling, which is why the column does not jump when files are switched. */
 export function appCommit(row) {
   const parts = commitParts(row, appData.report.showSha, row.href);
   const name = parts.href ? appEl('a', 'subj', parts.subject) : appEl('span', 'subj', parts.subject);
@@ -69,9 +67,9 @@ export function appSubHead(metrics) {
   return tr;
 }
 
-/* Состояния пустоты: когда чисел не будет вовсе, страница говорит об этом словами,
- * а не сеткой без колонок. Файлы можно выключить все — тогда остаётся общий объём,
- * и подсказка объясняет, почему колонок нет. */
+/* The empty states: when there will be no numbers at all, the page says so in words rather than showing a grid without
+ * columns. Every file can be switched off — then the total volume remains, and the note explains why there are no
+ * columns. */
 export function appState(metricsCount, filesCount) {
   const state = document.getElementById('state');
   const text = metricsCount === 0 ? appUi.empty : (filesCount === 0 ? appUi.noFiles : '');
@@ -80,9 +78,9 @@ export function appState(metricsCount, filesCount) {
   document.getElementById('shell').hidden = metricsCount === 0;
 }
 
-/* Шапка: строка групп (итог и файлы) и строка метрик под ней. Метрики повторяются
- * на каждый файл, поэтому подшапка собирается один раз, а дальше её узлы
- * переезжают в следующие — копий разметки не заводится. */
+/* The header: a row of groups (the total and the files) and a row of metrics under it. The metrics repeat for every file,
+ * so the sub-header is assembled once and its nodes then move on into the following ones — no copies of the markup are
+ * made. */
 export function appHead(shown, files, metrics) {
   const head = appEl('tr');
   const commit = appEl('th', 'c-commit', appUi.commit);
@@ -107,9 +105,9 @@ export function appHead(shown, files, metrics) {
   return thead;
 }
 
-/* Строка-коммит: подпись и числа. Дельты считает общий расчёт (`rowModel`) — тот
- * же, что считает статическую таблицу; здесь только узлы. Пометка приближения —
- * своя у каждой клетки: у итога по всем вошедшим файлам, у файла — по нему самому. */
+/* A commit row: the caption and the numbers. The deltas come from the shared calculation (`rowModel`) rather than from
+ * here — two ways to count one row would be two answers. The mark of approximation is each cell's own: for a total it
+ * covers every file that went into it, for a file that file alone. */
 export function appRow(r, metrics, files) {
   const row = appData.rows[r];
   const prev = r === 0 ? null : appData.rows[r - 1];
@@ -125,9 +123,8 @@ export function appRow(r, metrics, files) {
   return tr;
 }
 
-/* Тело: строки коммитов снизу вверх (свежие первыми) плюс верхняя строка «сейчас»
- * с абсолютными размерами на HEAD. Дельты под ней сходятся с ней, поэтому она и
- * стоит первой. */
+/* The body: the commit rows built from the newest down, plus the "now" row with the absolute sizes at HEAD. The deltas
+ * under it add up to it, which is why it stands first. */
 export function appBody(metrics, files) {
   const body = appEl('tbody');
   for (let r = appData.rows.length - 1; r >= 0; r--) body.appendChild(appRow(r, metrics, files));

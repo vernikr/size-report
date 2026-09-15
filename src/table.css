@@ -1,35 +1,34 @@
-/* Гарнитура одна на всю таблицу; числа выравниваются по разрядам за счёт
- * tabular-nums, а не за счёт моноширинного шрифта. */
+/* One type face for the whole table; numbers line up by their digits thanks to tabular-nums rather than through a
+ * monospaced font. */
 table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
 th, td { padding: 2px 7px; border-bottom: 1px solid rgba(127, 127, 127, .25); white-space: nowrap; }
-/* Шапка из двух строк: обе липкие, поэтому вторая сдвинута ровно на высоту первой
- * (line-height 20 + 2px нижней границы), иначе строки накладывались бы друг на друга. */
+/* A two-row header: both rows stick, so the second is offset by exactly the first one's height (line-height 20 plus the
+ * 2px bottom border), or the rows would overlap. */
 thead th { position: sticky; top: 0; z-index: 3; background: Canvas; text-align: center; line-height: 20px; padding: 0 7px; }
 thead tr:first-child th { border-bottom-width: 2px; }
 thead tr:last-child th { top: 22px; }
 .num { text-align: right; }
 .g { border-left: 1px solid rgba(127, 127, 127, .35); }
-/* Липкая левая колонка: фон непрозрачный (Canvas), иначе при скролле вправо под
- * клеткой были бы видны числа. Ярус выше соседних клеток (2) и ниже шапки (3);
- * угол шапки — выше всех, иначе группы колонок наползают на «Коммит». */
+/* The sticky left column: an opaque background (Canvas), or numbers would show through the cell when scrolling sideways. A
+ * tier above the neighbouring cells (2) and below the header (3); the header's corner is above them all, or the column groups
+ * would crawl over the commit column. */
 .c-commit { position: sticky; left: 0; z-index: 2; background: Canvas; text-align: left; font-weight: 400; }
 .c-commit a { color: inherit; }
 thead .c-commit { z-index: 6; }
-/* Ширину колонки задаёт этот блок. Без него содержимое ячейки выходило за её
- * границы и рисовалось поверх соседних чисел: у ячейки таблицы нет обрезки. */
+/* This block sets the column's width. Without it the cell's content went past its borders and was drawn over the neighbouring
+ * numbers: a table cell clips nothing. */
 .clip { display: flex; align-items: baseline; gap: 6px; width: 300px; }
 .when { flex: none; opacity: .7; }
 .subj { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; display: block; }
 .subj.plain { opacity: .7; }
 .sect { flex: none; opacity: .7; font-size: 11px; text-decoration: none; border-bottom: 1px dotted currentColor; }
-/* Рост зелёный, спад красный — по договорённости с заказчиком (рост — «больше
- * логики», а не тревога). */
+/* Growth green, fall red — by agreement with whoever asked for the report (growth is "more logic" rather than alarm). */
 .up { color: #1e8449; }
 .down { color: #c0392b; }
 .miss { opacity: .5; }
-/* Верхняя строка — текущие размеры: она же и объясняет, к чему относятся дельты. */
+/* The top row holds the current sizes: it is also what explains what the deltas refer to. */
 tr.now th, tr.now td { border-bottom: 2px solid rgba(127, 127, 127, .35); }
 tr.now .c-commit { font-weight: 600; }
-/* Подсветка строки — наложением, а не подменой фона: липкая колонка обязана
- * оставаться непрозрачной, иначе под ней при скролле видны числа. */
+/* A row's highlight is laid over rather than swapped in: the sticky column has to stay opaque, or numbers show through it
+ * when scrolling. */
 tbody tr:hover th, tbody tr:hover td { background-image: linear-gradient(rgba(127, 127, 127, .08), rgba(127, 127, 127, .08)); }
