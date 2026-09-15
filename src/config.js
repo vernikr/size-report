@@ -163,6 +163,29 @@ function checkJournal(cfg, fail) {
   try { new RegExp(cfg.journal.pattern); } catch (e) { fail('journal.pattern не компилируется: ' + e.message); }
 }
 
+/* Что настройки говорят про путь: `columns` — его отслеживает колонка, `excluded` — он
+ * объявлен исключением (`skip` и сам файл отчёта), `outside` — мимо того и другого.
+ * Суждение одно на два ответа: `check` спрашивает его про всю историю, `explain` — про
+ * один коммит. Знакомство считается по колонкам целиком, а не по метке: у колонки путей
+ * может быть несколько (переименование), и любой из них — она сама. */
+export function pathRoles(cfg) {
+  const tracked = new Set();
+  cfg.columns.forEach((col) => col.paths.forEach((p) => tracked.add(p)));
+  const excluded = new Set([cfg.output].concat(cfg.skip || []));
+  return (file) => {
+    if (tracked.has(file)) return 'columns';
+    return excluded.has(file) ? 'excluded' : 'outside';
+  };
+}
+
+/* Починка «мимо колонок» — один текст на два ответа, и он называет пути: команда без
+ * имён не команда. Текст собирается из имён, а не приписывает их по ветке, поэтому и
+ * предусматривать тут нечего: коммит без файлов вовсе починки не получает — на пустом
+ * списке её не зовут (см. `fixFor` в `src/explain.js`). */
+export function outsideFix(paths) {
+  return 'допишите эти пути колонкой или в «skip» файла ' + CONFIG_NAME + ': ' + paths.join(', ');
+}
+
 export function validateConfig(cfg) {
   const fail = (msg) => refuseCause('настройки неверны',
     'конфиг ' + cfg.path + ': ' + msg + '\n  починка: правьте ' + cfg.path);

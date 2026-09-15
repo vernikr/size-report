@@ -1,7 +1,7 @@
 import { assertFullHistory, readHistory, resolveCommit } from './git.js';
 import { measureHistory } from './history.js';
 import { cliCommand, refuseCause } from './refusal.js';
-import { CONFIG_NAME } from './config.js';
+import { outsideFix, pathRoles } from './config.js';
 
 /* Почему у коммита нет строки — ответ на конкретный вопрос про конкретный коммит.
  *
@@ -51,17 +51,15 @@ function lookup(root, commits, target) {
   return found[0];
 }
 
-/* Улики: что коммит тронул — колонки, исключённое, мимо колонок. Одна и та же
- * раскладка и у ответа, и у починки. */
+/* Улики: что коммит тронул — колонки, исключённое, мимо колонок. Суждение о роли пути
+ * — одно и живёт в настройках (`pathRoles`), здесь только раскладка его ответа. */
 function touchedOf(cfg, files) {
-  const tracked = new Set();
-  cfg.columns.forEach((col) => col.paths.forEach((p) => tracked.add(p)));
-  const excluded = new Set([cfg.output].concat(cfg.skip || []));
+  const role = pathRoles(cfg);
   const touched = { columns: [], excluded: [], untracked: [] };
+  const into = { columns: touched.columns, excluded: touched.excluded, outside: touched.untracked };
   files.forEach((f) => {
-    if (tracked.has(f)) { if (touched.columns.indexOf(f) < 0) touched.columns.push(f); return; }
-    if (excluded.has(f)) { if (touched.excluded.indexOf(f) < 0) touched.excluded.push(f); return; }
-    if (touched.untracked.indexOf(f) < 0) touched.untracked.push(f);
+    const bucket = into[role(f)];
+    if (bucket.indexOf(f) < 0) bucket.push(f);
   });
   return touched;
 }
@@ -72,15 +70,12 @@ const FIX = {
   flat: 'не требуется: числа не изменились — строка без единого числа читалась бы как поломка'
 };
 
-/* Слово выбирается индексом, а не тернарником: второй случай («мимо колонок ничего
- * не осталось» — коммит вообще без файлов) отчётом не встречается, и ветка была бы
- * вечно непокрытой строкой, то есть обещанием без проверки. */
-const WHAT = ['тронутые файлы', 'эти пути'];
-
+/* Починка по причине. У «мимо колонок» она одна на два ответа (`outsideFix`) и называет
+ * пути. У коммита без файлов (`--allow-empty`) называть нечего — значит, починки нет
+ * вовсе, а не команда без имён; этот случай и держит ветка. */
 function fixFor(reason, touched) {
   if (reason === 'outside') {
-    return 'допишите ' + WHAT[Number(touched.untracked.length > 0)]
-      + ' колонкой или в «skip» файла ' + CONFIG_NAME;
+    return touched.untracked.length === 0 ? null : outsideFix(touched.untracked);
   }
   return FIX[reason];
 }

@@ -1,7 +1,7 @@
 import { assertFullHistory, readHistory } from './git.js';
 import { measureHistory } from './history.js';
 import { sensorGaps } from './metrics.js';
-import { CONFIG_NAME } from './config.js';
+import { outsideFix, pathRoles } from './config.js';
 import { cliCommand } from './refusal.js';
 
 /* Полнота покрытия — ответ на вопрос «всё ли в истории попало в отчёт». Правило
@@ -46,19 +46,17 @@ function short(sha) {
 }
 
 /* Пути, тронутые историей, разложенные на три части: отслеживаемые колонками,
- * исключённые объявлением и незнакомые. Знакомство с путём проверяется по
- * колонкам целиком, а не по одной метке: у колонки путей может быть несколько
- * (переименование), и любой из них её и есть. */
+ * исключённые объявлением и незнакомые. Само суждение — одно и живёт в настройках
+ * (`pathRoles`), а здесь только его применение ко всей истории. */
 function pathCoverage(cfg, commits) {
-  const tracked = new Set();
-  cfg.columns.forEach((col) => col.paths.forEach((p) => tracked.add(p)));
-  const excluded = new Set([cfg.output].concat(cfg.skip || []));
+  const role = pathRoles(cfg);
   const seen = { covered: new Set(), excluded: new Set() };
   const unknown = new Map();
   commits.forEach((c) => {
     c.files.forEach((f) => {
-      if (tracked.has(f)) { seen.covered.add(f); return; }
-      if (excluded.has(f)) { seen.excluded.add(f); return; }
+      const kind = role(f);
+      if (kind === 'columns') { seen.covered.add(f); return; }
+      if (kind === 'excluded') { seen.excluded.add(f); return; }
       /* Коммит, заведший путь, — первый по истории (порядок чтения — от старых к
        * новым), и показывается он человеку как улика: по нему видно, чья это была
        * правка. */
@@ -121,7 +119,7 @@ export function coverageText(rep) {
       lines.push('    ' + u.path + ' — с ' + short(u.since) + ' «' + u.subject.slice(0, 60) + '»');
     });
     if (unknown.length > SHOW) lines.push('    … ещё ' + (unknown.length - SHOW));
-    lines.push('  починка: допишите эти пути колонкой или в «skip» файла ' + CONFIG_NAME
+    lines.push('  починка: ' + outsideFix(unknown.map((u) => u.path))
       + '; черновик колонок по расширениям даёт ' + cliCommand('--init draft.json'));
   } else {
     lines.push('✓ покрытие: ' + rep.history.commits + ' коммитов истории, ' + rep.history.rows

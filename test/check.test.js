@@ -143,6 +143,51 @@ test('объяснение: коммит мимо колонок отличае�
   assert.match(rep.fix, /колонкой или в «skip»/, 'починка не говорит, что делать с таким путём');
 });
 
+/* Одно суждение о «мимо колонок» и одна его фраза на два ответа: `check` спрашивает
+ * про всю историю, `explain` — про один коммит, а текст починки у обоих общий
+ * (`src/config.js`) и называет пути. Две фразы на одну ситуацию — дефект: зритель
+ * получает две разные команды, и одна из них может выйти без имён. */
+test('мимо колонок: полнота и объяснение говорят одну фразу с именами путей', () => {
+  const file = configWith('outside.json', (cfg) => {
+    cfg.columns = [{ label: 'code.js', paths: ['src/code.js'] }];
+    return cfg;
+  });
+  const STEM = 'допишите эти пути колонкой или в «skip» файла size-table.config.json: ';
+  const rep = JSON.parse(runSize(dir, ['--config', file, 'explain', '9dfe679', '--json']).stdout);
+  assert.equal(rep.fix.slice(0, STEM.length), STEM,
+    'объяснение говорит о таком пути своими словами:\n' + rep.fix);
+  assert.ok(rep.fix.indexOf(rep.touched.untracked[0]) > 0,
+    'починка объяснения не назвала путь:\n' + rep.fix);
+
+  const text = runSize(dir, ['--config', file, 'check']).stdout;
+  const head = '  починка: ';
+  const line = text.split('\n').filter((l) => l.indexOf(head) === 0).pop();
+  assert.notEqual(line, undefined, 'полнота не сказала, что делать:\n' + text);
+  assert.equal(line.slice(head.length, head.length + STEM.length), STEM,
+    'полнота говорит о таком пути своими словами:\n' + line);
+  assert.ok(line.indexOf(rep.touched.untracked[0]) > head.length,
+    'починка полноты не назвала путь:\n' + line);
+});
+
+/* Коммит без файлов (`git commit --allow-empty`) — тот же случай с другого конца: мимо
+ * колонок не осталось ничего, и команда починки без имён была бы враньём о том, что
+ * править. Поэтому починки тут нет вовсе, а не текст с пустым списком. */
+test('объяснение: коммит без файлов — починки нет, а не команда без имён', () => {
+  const side = cloneFixture(path.join(tmp, 'empty'));
+  gitIn(side, ['-c', 'user.name=fixture', '-c', 'user.email=fixture@local',
+    'commit', '-q', '--allow-empty', '-m', 'пустой коммит']);
+  const sha = gitIn(side, ['rev-parse', 'HEAD']).trim();
+  const res = runFixture(side, ['explain', sha, '--json']);
+  assert.equal(res.code, 0, 'объяснение пустого коммита — не ответ:\n' + res.stdout + res.stderr);
+  const rep = JSON.parse(res.stdout);
+  assert.equal(rep.reason, 'outside', 'причина пропуска названа не та: ' + rep.reason);
+  assert.deepEqual(rep.touched.untracked, [], 'у пустого коммита названы тронутые пути');
+  assert.equal(rep.fix, null, 'предложена починка без имён: ' + JSON.stringify(rep.fix));
+
+  const text = runFixture(side, ['explain', sha]).stdout;
+  assert.equal(/починка:/.test(text), false, 'в тексте команда починки без имён:\n' + text);
+});
+
 test('объяснение: слияние объясняется настройкой, которая его скрыла', () => {
   const file = configWith('nomerge.json', (cfg) => { cfg.rows.merges = false; return cfg; });
   const res = runSize(dir, ['--config', file, 'explain', '9326134']);
