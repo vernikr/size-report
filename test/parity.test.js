@@ -1,14 +1,11 @@
-/* Паритет переноса: движок пакета даёт ровно те байты, с которых снят эталон —
- * числа (`--json`) и артефакт. Замороженная копия, отличающая «сломался движок»
- * от «поехал эталон», живёт в соседнем наборе (`frozen.test.js`): это другой
- * предмет, и внутри файла проверки идут последовательно, а работа здесь —
- * запуск процессов, поэтому раскладка по файлам отдаёт проверкам ядра.
+/* The port's parity: the engine's package yields exactly the bytes the fixture's golden was taken
+ * from — numbers (`--json`) and the artifact. Telling "the engine broke" from "the golden moved" is
+ * the frozen copy's business, a subject of its own (`frozen.test.js`).
  *
- * Прогоны на чтение идут на общем клоне фикстуры и кэшируются (`readRun`): одна
- * и та же команда в одном окружении не должна запускаться дважды ради двух
- * проверок. Собирающие прогоны (`--write` и контроль на своём отчёте) берут
- * свой клон — они пишут файл, и общий клон был бы уже не тем, на котором стоят
- * числа.
+ * Read-only runs share one clone of the fixture and are cached (`readRun`): the same command in the
+ * same environment must not be run twice for two checks. Runs that write (`--write` and the control
+ * mode on their own report) take a clone of their own — they leave a file behind, and a shared clone
+ * would no longer be the one the numbers were taken on.
  */
 
 import { test, after } from 'node:test';
@@ -26,7 +23,7 @@ after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 const goldenText = fs.readFileSync(path.join(SYNTH, 'golden.json'), 'utf8');
 const goldenJson = JSON.parse(goldenText);
 
-/* Клон для прогонов на чтение: `--json` и проверка локали ничего не пишут. */
+/* The clone for read-only runs: `--json` and the locale check write nothing. */
 const PLAIN = sharedClone('plain', tmp);
 
 test('движок пакета: --json побайтово равен эталону', () => {
@@ -43,10 +40,9 @@ test('движок пакета: --write собирает отчёт и прох
   const wrote = runFixtureWith(PACKAGE, dir, ['--write']);
   assert.equal(wrote.code, 0, 'инструмент не собрал отчёт: ' + wrote.stderr.trim());
 
-  /* Собранный отчёт обязан быть самодостаточным: данные, оформление и программа —
-   * в нём самом, и ни одной внешней ссылки. Побайтовой сверки с замороженной
-   * копией здесь нет намеренно: та копия писала статическую таблицу, и сверять
-   * форму не с чем — числа уже сверены выше (`--json` побайтово равен эталону). */
+  /* The report has to be self-contained: data, styles and program inside it, no external reference.
+   * There is deliberately no byte comparison with the frozen copy's artifact: that copy wrote a static
+   * table, so there is no form to compare — the numbers were compared above. */
   const cfg = JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
   const report = fs.readFileSync(path.join(dir, cfg.output), 'utf8');
   ['src="', '<link '].forEach((mark) => assert.equal(report.indexOf(mark), -1,

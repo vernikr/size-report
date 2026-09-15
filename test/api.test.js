@@ -1,13 +1,12 @@
-/* Публичный API пакета: то, чем пользуются точка входа (`bin/size.js`) и тесты.
- * Список заморожен: разбиение движка по модулям не имеет права ни потерять имя,
- * ни добавить лишнее — добавленное имя означает, что наружу просочилась
- * внутренность модуля, а потерянное ломает того, кто на него опирался. */
+/* The package's public API: what the entry point (`bin/size.js`) and the checks use. The list is
+ * frozen: splitting the engine into modules may neither lose a name nor add one — an added name means
+ * some module's insides leaked out, a lost one breaks whoever leant on it. */
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as api from '../src/size-table.js';
 
-// По алфавиту — чтобы сверка не зависела от порядка реэкспортов.
+// In alphabetical order, so that the comparison does not depend on the order of the re-exports.
 const API = [
   'CATEGORY_EXTS', 'CATEGORY_ORDER', 'CONFIG_NAME', 'DEFAULT_CONFIG', 'EXIT', 'LOCALES',
   'METRICS', 'Refusal', 'STRATEGIES', 'USAGE', 'anchor', 'argValue', 'assertFullHistory',

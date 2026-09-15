@@ -203,9 +203,27 @@ comment diff stays under the commit budget, otherwise it is split by file groups
     "was X, now Y" stretches and one stale count ("a graph of eight dozen modules" — the sensor reports
     well over a hundred), and one future tense that had already happened (the required check `verify`
     is required, not about to become it).
-  - [ ] **M10g the contracts and the frozen copies** — `contract-data` (38), `frozen` (21),
-    `git-pins` (20), `environment` (17), `contract-derived` (16), `parity` (15), `runner` (10),
-    `crlf` (7), `api` (5).
+  - [x] **M10g the contracts and the frozen copies** — `contract-data` 187 → 185, `frozen` 90 → 87,
+    `git-pins` 87 → 85, `environment` 93 → 98, `contract-derived` 135 → 135, `parity` 74 → 70,
+    `runner` 37 → 35, `crlf` 46 → 45, `api` 30 → 29; 149 comment lines → 286 changed comment lines
+    (journal entry `worklog/0097`, 2026-09-15). Module M10 is closed here. **The duplication sensor
+    reddened on an edit that changed no code:** a clone's fingerprint is a hash of its fragment text,
+    and the two checks in `environment.test.js` shared a window holding one of the rewritten comments,
+    so the old fingerprint no longer matched and a new one appeared. Measured on two copies of the tree
+    (origin/main's comments against the new ones: 11 clones either way, one fingerprint different), and
+    no comment edit can mend it — hence the sensor's own advice, `вынести общее`: the shared read became
+    one `quotePath(args, env)` helper, the duplication is gone (11 → 10 clones), and behaviour, test
+    names and assertion messages are untouched. Claims dropped: the `REFACTOR.md` R-1.5 and R-3.4
+    addresses in `frozen`, and in `runner` the address `WORKLOG.md` §21 — which was also **wrong**: §21
+    of the archived journal is about CI, and the split-symbol failure is not recorded there at all.
+    Checked by measurement and kept: the frozen copy really does write a static table (`--write` run by
+    hand: `<style>` present, no `<script>` and no `id="data"`), which is why `parity` compares no
+    artifact bytes; the copy is run under `core.quotePath=false` (`frozenTarget`), which is what "the
+    copy has no fix for B1" means; `check:standards` re-takes both standards **with that copy**
+    (`make-fixture` and `parity-freeze` both call `legacyTool`); and one format only is exact — measured
+    from the contract, `package.json` is exact while every other format is measured by stripping,
+    because the fixture asks for no minifier (the default engine is `strip`), so the list of extensions
+    the old comment gave was both incomplete and beside its own reason.
 - [ ] **M11 shell and configs** — `.githooks/*`, `eslint.config.js`,
   `eslint.metrics.config.js`, `.dependency-cruiser.cjs` (~500). Known defects to fix here, found
   during M9e: `eslint.metrics.config.js` (line 5) names the ratchet `eslint-suppressions.json` —

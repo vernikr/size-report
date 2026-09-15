@@ -1,10 +1,9 @@
-/* Выкладка с переводами строк в CRLF — свидетель починки B2. При
- * `core.autocrlf=true` (значение по умолчанию в установке Git для Windows) git
- * выкладывает на диск CRLF, а в объектах держит LF; инструмент обязан видеть это
- * как обычную выкладку, а не как расхождение с историей и не отказываться
- * работать. Проверка сравнивает числа такой выкладки с обычной и с эталоном, а
- * собранный отчёт — с отчётом, собранным в обычной выкладке: сверка с рабочим
- * деревом не должна превратиться в пустышку.
+/* A working tree with CRLF newlines — the witness of the fix for B2 (`BLOCKERS.md`). Under
+ * `core.autocrlf=true` (the default of Git's installer for Windows) git lays CRLF on disk while
+ * keeping LF in objects, and the tool has to read that as an ordinary working tree: neither as a
+ * discrepancy with history nor a reason to refuse. The check compares such a tree's numbers with the
+ * ordinary tree's and with the standard, and the report it builds with the one built in an ordinary
+ * tree: the comparison against the working tree must not become an empty gesture.
  */
 
 import { test, after } from 'node:test';

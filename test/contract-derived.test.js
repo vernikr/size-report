@@ -1,14 +1,14 @@
-/* Производные величины считает страница, и они обязаны сходиться с артефактом:
- * итоги строки, дельты клетки и дельта итога. Считает их тот же код, что
- * исполняет страница (`src/derived.js`), — здесь он прогоняется прямо из файла
- * на диске, поэтому проверяется вклеенное, а не обещанное.
+/* Derived quantities are computed by the page, and they have to agree with the artifact: row totals,
+ * cell deltas and the delta of a total. The same code the page runs (`src/derived.js`) computes them —
+ * here it is run straight from the file on disk, so what is checked is what got embedded rather than
+ * what was promised.
  *
- * Отдельная забота — колонка файла, который уходил и вернулся: в ней две клетки
- * роста, а «сейчас» — один размер, поэтому сумма дельт больше текущего размера.
- * Такие колонки названы поимённо (`GAPS`), чтобы правило нельзя было поменять
- * молча; почему так и что с этим делать — в `BLOCKERS.md` §N4.
+ * A separate concern is the column of a file that left and came back: it holds two cells of growth
+ * while "now" is a single size, so its deltas sum to more than the current size. Such columns are
+ * named (`GAPS`) so the rule cannot be changed silently; why it is so and what could be done about it
+ * is in `BLOCKERS.md` §N4.
  *
- * Сам контракт — в `test/contract-data.test.js`, страница — в `page-view`.
+ * The contract itself is in `test/contract-data.test.js`, the page in `page-view`.
  */
 
 import { test, after } from 'node:test';
@@ -27,17 +27,17 @@ const { data, golden } = contractData(tmp, 'numbers');
 const allOn = () => data.files.map(() => true);
 const allMetrics = { raw: true, min: true };
 
-/* Вычислительная часть — тот же код, что исполняет страница. */
+/* The page math: the same code the page executes. */
 const derivedSrc = fs.readFileSync(path.join(ROOT, 'src', 'derived.js'), 'utf8');
 const pageMath = new Function(stripModules(derivedSrc)
   + '\nreturn { rowModel: rowModel, totalsOf: totalsOf };')();
 
-// Ключи включённых метрик — то, что вычислительная часть принимает на вход.
+// Keys of the enabled metrics: what the page math takes as input.
 function keysOn(view) {
   return data.metrics.filter((m) => view.metrics[m.key]).map((m) => m.key);
 }
 
-// Строки таблицы в терминах вычислительной части: то же, из чего рисуется отчёт.
+// Table rows in the page math's terms: the same thing the report is drawn from.
 const models = data.rows.map((row, r) => rowModel(row.values, r === 0 ? null : data.rows[r - 1].values,
   keysOn({ metrics: allMetrics }), allOn()));
 
@@ -83,10 +83,10 @@ test('у возвращённого файла сумма дельт больш�
   });
 });
 
-/* Итог по строке — тоже производная, и его дельта обязана быть суммой дельт по
- * включённым файлам. Одно исключение — исчезнувший файл: в его клетке «—» (дельты
- * нет), а из итога его объём уходит. Поэтому на такой строке сверяется само
- * правило: дельта итога = сумма дельт минус объём исчезнувшего (BLOCKERS.md §N4). */
+/* A row total is derived too, and its delta has to be the sum of the deltas of the enabled files. The
+ * one exception is a vanished file: its cell is "—" (no delta) while its volume leaves the total, so
+ * on such a row the rule itself is checked: total delta = sum of deltas minus the vanished volume
+ * (`BLOCKERS.md` §N4). */
 test('дельта итога равна сумме дельт по файлам', () => {
   const metrics = keysOn({ metrics: allMetrics });
   const on = allOn();

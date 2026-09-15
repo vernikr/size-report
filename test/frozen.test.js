@@ -1,15 +1,12 @@
-/* Замороженная копия движка: та самая ревизия, с которой снят эталон, и те самые
- * байты, которые она выдаёт. Нужна она как различитель: если эталон разошёлся с
- * обоими движками — поехал эталон, если только с пакетом — сломался пакет.
- * В дереве её нет: байты живут в истории и берутся оттуда по требованию
- * (`REFACTOR.md` R-1.5), а взятóе сверяется с записью о происхождении эталона —
- * там же, где и раньше, поэтому «замороженная» копия всё так же не может тихо
- * перестать ею быть.
+/* The frozen copy of the engine: the very revision the standard was taken with, and the very bytes it
+ * yields. It serves as a distinguisher: if the standard parted from both engines, the standard moved;
+ * if only from the package, the package broke. The copy is not in the tree — its bytes live in history
+ * and are fetched from there on demand — and what is fetched is compared with the record of the
+ * standard's origin, so a "frozen" copy cannot quietly stop being one.
  *
- * Полное воспроизведение обоих эталонов этой копией проверяет
- * `pnpm run check:standards` (он снимает их заново в стороне и сверяет байты),
- * и там же живёт снятие эталонов — а здесь остаётся то, ради чего проверка нужна
- * в наборе: копия всё ещё выдаёт те же числа, что записаны в эталоне.
+ * The full reproduction of both standards by this copy is checked by `pnpm run check:standards` (it
+ * takes them anew aside and compares bytes); what stays here is what the suite needs the check for: the
+ * copy still yields the numbers written in the standard.
  */
 
 import { test, after } from 'node:test';
@@ -42,9 +39,9 @@ test('замороженная копия — та ревизия, с котор
     'файл эталонных чисел изменён после снятия');
 });
 
-/* Манифест — запись о том, что лежит рядом, и она обязана сходиться с файлами:
- * правка эталона после снятия рукой иначе расходится молча, а по этим записям
- * сверяется и перенос, и живая история. */
+/* A manifest is the record of what lies next to it, and it has to agree with the files: an edit of a
+ * standard after it was taken would otherwise drift away silently, while both the port and the live
+ * history are compared against these records. */
 test('записанное в манифестах совпадает с файлами эталонов', () => {
   const synth = readJson(path.join(SYNTH, 'manifest.json'));
   Object.keys(synth.files).forEach((name) => {
@@ -68,14 +65,14 @@ test('фикстура и живой проект сняты одним инст
     'эталоны сняты разными инструментами');
 });
 
-/* Одна проверка вместо трёх (`REFACTOR.md` R-3.4): её предмет — происхождение
- * эталона («эти числа выдаёт та ревизия»), а не поведение копии, и это же
- * утверждение целиком и побайтово проверяет `pnpm run check:standards`, снимая оба
- * эталона заново. Здесь остаётся то, что видно в наборе и без пересъёма.
+/* Its subject is the origin of the standard ("these numbers are what that revision yields"), not the
+ * copy's behaviour, and the same claim whole and byte for byte is checked by
+ * `pnpm run check:standards`, which takes both standards anew. What is left here is what the suite
+ * sees without a re-take.
  *
- * Окружение — то же, в котором снимали эталон (у копии нет починки B1), поэтому
- * совпадение под ним и есть проверка закреплённости снятия: сними эталон без
- * закрепления — числа разошлись бы здесь, а не молча в чужой выкладке. */
+ * The environment is the one the standard was taken in (the copy has no fix for B1), so agreement
+ * under it is what checks the taking was pinned: take the standard without the pins and the numbers
+ * would part here rather than silently in someone else's working tree. */
 test('замороженная копия выдаёт те же числа, что записаны в эталоне', () => {
   requireTarget(FROZEN);
   const res = readRun(FROZEN, PLAIN, ['--json']);

@@ -1,19 +1,17 @@
-/* Контракт данных — то, что движок отдаёт странице: абсолютные значения и
- * устройство таблицы. Всё производное (дельты, суммы, «сейчас», фильтры) считает
- * страница, и этого в контракте быть не должно.
+/* The data contract — what the engine hands the page: absolute values and the shape of the table.
+ * Everything derived (deltas, totals, "now", filters) is computed by the page and must not be here.
  *
- * Проверяется на настоящем выводе, а не описанием:
+ * Checked against real output rather than a description:
  *
- *   1. числа контракта сверяются с замороженным эталоном паритета (той же снятой
- *      ревизией) — контракт обязан нести ту же правду, что и артефакт;
- *   2. в контракте нет ни одной производной величины (проверяется по составу
- *      полей, а не на слово);
- *   3. точность объявлена дважды и согласованно: у метрики — худшее в колонке, у
- *      клетки — её собственное число;
- *   4. у каждого файла есть категория, и она объявлена в данных.
+ *   1. the contract's numbers are compared with the fixture's frozen golden (taken by the same copy
+ *      of the engine) — the contract has to carry the same truth as the artifact;
+ *   2. the contract holds no derived quantity (checked by the set of fields, not on trust);
+ *   3. accuracy is declared twice and in agreement: the metric says the worst in the column, a cell
+ *      its own number;
+ *   4. every file has a category, and the category is declared in the data.
  *
- * Производные величины и страница — соседние наборы (`contract-derived`,
- * `page-view`, `page-choice`): файл разделён по предмету, а не по размеру.
+ * Derived quantities and the page are neighbouring suites (`contract-derived`, `page-view`,
+ * `page-choice`): the file is split by subject, not by size.
  */
 
 import { test, after } from 'node:test';
@@ -29,8 +27,8 @@ import { TOOL_PKG } from '../src/tool.js';
 const tmp = tempDir('contract-data');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-/* Контракт снимается один раз на весь набор: он зависит только от фикстуры и
- * настроек, а их одинаковость у разных клонов отдельно проверяет воспроизводимость. */
+/* The contract is taken once for the whole suite: it depends only on the fixture and the settings, and
+ * that different clones agree is checked separately, by reproducibility. */
 const { dir, text, data, golden } = contractData(tmp, 'numbers');
 
 test('контракт воспроизводим: два прогона дают те же байты', () => {
@@ -59,7 +57,7 @@ test('контракт несёт ту же правду, что заморож�
       'строка ' + (r + 1) + ': абсолютные значения разошлись с эталоном');
   });
 
-  // «Сейчас» — те же абсолютные значения, на которых стоят дельты артефакта.
+  // "Now" — the same absolute values the artifact's deltas stand on.
   const last = golden.rows[golden.rows.length - 1].cells;
   assert.deepEqual(data.now, last, 'текущие значения разошлись с последней строкой эталона');
 });
@@ -79,14 +77,14 @@ test('в контракте нет ни одной производной вел
     'движок посчитал итоги — это дело страницы: она одна знает, что включено');
 });
 
-/* Каталог — дерево проекта для страницы: все пути, которые видит git, а не только
- * колонки. Знак причины читается однозначно: пусто — файл измеряется (и тогда он
- * есть среди колонок), `rule` — колонкой быть не может (правило пакета), `choice` —
- * мог бы, но в набор не выбран. Проверка идёт по дереву git, а не по описанию. */
+/* The catalogue is the project tree for the page: every path git sees, not just the columns. A reason
+ * mark reads unambiguously: empty — the file is measured (and then it is among the columns), `rule` —
+ * it cannot be a column (a rule of the package), `choice` — it could be, but was not picked. The check
+ * runs against the git tree, not a description. */
 test('каталог называет все файлы проекта, а причину — только у тех, что вне отчёта', () => {
   const tracked = gitIn(dir, ['ls-files']).split('\n').filter((l) => l !== '').sort();
-  /* Сам отчёт назван всегда, и это часть правила, а не исключение: его
-   * отслеживаемость — свойство момента, и зависеть от неё отчёт не должен. */
+  /* The report itself is always named, and that is part of the rule rather than an exception: whether
+   * it is tracked is a property of the moment, and the report must not depend on it. */
   const artifactPath = data.report.artifact;
   const expected = tracked.indexOf(artifactPath) >= 0 ? tracked : tracked.concat([artifactPath]).sort();
   assert.deepEqual(data.catalog.map((e) => e.path).sort(), expected,
@@ -105,17 +103,17 @@ test('каталог называет все файлы проекта, а пр�
     'в каталоге нет ни одного файла с причиной «не выбран в колонки»');
 });
 
-/* Знак «этот колонки коснулся последний коммит» — факт из истории, и проверяется он
- * по самой истории: берётся последний коммит, задевший хотя бы одну колонку, — считая
- * от верхушки назад, потому что коммиты мимо колонок (и сам отчёт, который коммитит
- * хук) пропускаются. Страница по этим знакам ставит колонки впереди, и ошибка здесь
- * была бы незаметной: порядок колонок — не число, его не сверяет ни один эталон. */
+/* The mark "the last commit touched this column" is a fact from history and is checked against that
+ * history: the newest commit touching at least one column, counted from the tip backwards, because
+ * commits past the columns (and the report the hook commits) are skipped. The page puts the marked
+ * columns first, and a mistake here would go unnoticed: the order of columns is not a number, and no
+ * standard checks it. */
 test('последний коммит назван по истории: отмечены ровно тронутые колонки', () => {
   const aliases = data.files.map((f) => f.paths);
   const history = readHistory(dir);
   assert.ok(history.length > 0, 'в фикстуре нет истории — сверять знак не с чем');
-  /* Ищем от верхушки назад: знак ставит последний коммит, задевший 
-   * хотя бы одну колонку, — и колонка отмечена, если этот коммит её и задел. */
+  /* The mark is set by the newest commit that touched at least one column, and a column is marked if
+   * that commit touched it. */
   const real = [...history].reverse()
     .find((c) => c.files.some((f) => aliases.some((paths) => paths.indexOf(f) >= 0)));
   assert.notEqual(real, undefined, 'в истории фикстуры нет коммита, задевшего колонку');
@@ -134,14 +132,14 @@ test('метрика, которая не минификация, помечен
     'снятие комментариев выдаётся за минификацию: у метрики нет пометки приближения');
 });
 
-/* Точность объявлена дважды, и это не два ответа на один вопрос: у метрики —
- * худшее в колонке, у клетки — её собственное число. Фикстура для этого и нужна
- * смешанная: в ней рядом стоят точный формат (`package.json` — JSON теряет
- * только незначащие пробелы) и приближённые (`.js`, `.md`, `.toml`, `.txt`).
+/* Accuracy is declared twice, and these are not two answers to one question: for the metric it is the
+ * worst in the column, for a cell its own number. That is why the fixture is mixed: `package.json` is
+ * exact (JSON loses only insignificant whitespace — the one strategy that is minification itself),
+ * while every other format is measured by stripping, since the fixture's settings ask for no minifier.
  *
- * Проверяется согласие двух ответов, а не наличие поля: у метрики без единой
- * пометки не может стоять «приблизительно», а ряд пометок обязан покрывать ровно
- * все клетки — строки и «сейчас» порознь. */
+ * The agreement of the two answers is checked, not the presence of a field: a metric with not a single
+ * mark cannot say "approximate", and a row of marks has to cover exactly all cells — rows and "now"
+ * separately. */
 test('точность объявлена по клетке, а подпись метрики — худшее в колонке', () => {
   data.metrics.forEach((m) => {
     const marks = data.approx[m.key];
@@ -159,8 +157,8 @@ test('точность объявлена по клетке, а подпись �
       'в пометках есть знак кроме «точное/приближённое»: ' + marks.rows.slice(0, 40));
   });
 
-  /* Смешанность отчёта — то, ради чего этот ряд и заведён: если бы все клетки
-   * были одного знака, пометка по клетке ничего не добавляла бы к подписи. */
+  /* Mixedness is what this row exists for: were all cells of one mark, a per-cell mark would add
+   * nothing to the metric's label. */
   const min = (data.approx || {}).min;
   assert.notEqual(min, undefined, 'в контракте нет пометок приближённых клеток');
   const json = data.files.findIndex((f) => f.label === 'package.json');

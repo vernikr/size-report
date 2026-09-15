@@ -1,12 +1,10 @@
-/* Чтение вывода процесса: куски склеиваются буферами, а не приклеиваются к строке.
+/* Reading a process's output: chunks are joined as buffers rather than appended to a string.
  *
- * Зачем отдельная проверка. Кусок приходит с потока там, где его вернуло ядро, и
- * на выводе в сотни килобайт многобайтовый символ нет-нет да и попадёт на границу
- * между кусками. Живой паритет падал именно на этом — вместо расхождения чисел
- * выходило «цена неза��исимости», два символа-заменителя вместо буквы, — и падал
- * на случайном месте, потому что от места не зависит ничего
- * (`WORKLOG.md` §21). Проверяется механизм, а не текущий дефект: буква пишется
- * двумя `write()`, чтобы куски гарантированно разошлись.
+ * A chunk arrives where the kernel returned it, and in output of hundreds of kilobytes a multi-byte
+ * character does land on the boundary between chunks now and then. Joined by string, the letter turns
+ * into replacement characters, and the failure comes at a random spot because nothing depends on the
+ * spot. The mechanism is what is checked, not a current defect: the letter is written by two `write()`
+ * calls, so the chunks are guaranteed to split it.
  */
 
 import { test } from 'node:test';
@@ -14,8 +12,8 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { collectOutput } from '../tools/harness.js';
 
-/* Разрыв — между байтами одной буквы: первая половина уходит сразу, вторая с
- * задержкой, поэтому читатель их точно не склеит в один кусок. */
+/* The split is between the bytes of one letter: the first half leaves at once, the second after a
+ * delay, so the reader cannot join them into one chunk. */
 const SPLIT = 'process.stdout.write(Buffer.from([0xd0]));'
   + 'setTimeout(() => { process.stdout.write(Buffer.from([0xb9]));'
   + 'process.stdout.write("-конец\\n"); }, 30);';
