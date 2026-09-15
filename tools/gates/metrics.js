@@ -1,28 +1,28 @@
 #!/usr/bin/env node
-/* Датчик раздувания: размер и сложность функций, размер модулей, дубли веток,
- * вес тестов, пометки долга. Правила и пороги — в `eslint.metrics.config.js`,
- * здесь только запуск и храповик.
+/* The growth sensor: the size and complexity of functions, the size of modules, duplicated branches,
+ * the weight of tests, debt markers. The rules and thresholds live in `eslint.metrics.config.js`; here
+ * there is only the launch and the ratchet.
  *
- * **Храповик — встроенное подавление ESLint** (`.eslint-suppressions.json`): то, что
- * выше порога сегодня, лежит в базе и работы не блокирует; то, что появится
- * завтра, названо поимённо и валит гейт. Подавление считается по файлу и правилу,
- * а не по номеру строки, поэтому сдвиг строк не превращает базу в мусор.
- * База обновляется только человеком (`pnpm run baseline:metrics`) и только с
- * трейлером `Gate-Change:` — иначе это был бы способ пройти гейт, не поправив код.
- * Устаревшая запись (нарушение починили, а строка в базе осталась) гейт не валит:
- * чистка базы — дело человека, а не препятствие тому, кто чинит код.
+ * **The ratchet is ESLint's own suppressions** (`.eslint-suppressions.json`): what is above the
+ * threshold today sits in the baseline and blocks no work; what appears tomorrow is named one by one
+ * and fails the gate. A suppression is counted per file and rule rather than per line number, so
+ * shifting lines does not turn the baseline into rubbish. The baseline is updated by a person only
+ * (`pnpm run baseline:metrics`) and only with the `Gate-Change:` trailer — otherwise it would be a way
+ * to pass the gate without fixing code. A stale entry (the violation fixed, the line kept) does not
+ * fail the gate: cleaning the baseline is a person's business rather than an obstacle to whoever is
+ * fixing the code.
  *
- * Запуск: `pnpm run metrics` (гейт), `pnpm run verify:fast` (он же в быстром профиле).
- * Коды выхода: 0 — новых нарушений нет, 1 — есть (или прогон не состоялся).
+ * Run: `pnpm run metrics` (the gate), `pnpm run verify:fast` (the same in the fast profile).
+ * Exit codes: 0 — no new violations, 1 — there are some (or the run did not happen).
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { REPORTS, ROOT, bad, indent, ok, parseArgs, pathsOf, readJson, rel, run } from './common.js';
 
-/* База — по своему имени, а не по умолчанию ESLint (`eslint-suppressions.json`):
- * иначе её подхватывает и строгий линтер оформления (`eslint .`), у которого этих
- * правил нет, и падает на «подавления, которые больше не встречаются». */
+/* The baseline has a name of its own rather than ESLint's default (`eslint-suppressions.json`):
+ * otherwise the strict formatting linter (`eslint .`) picks it up too, has none of these rules, and
+ * fails on "suppressions that are no longer used". */
 const BASELINE = '.eslint-suppressions.json';
 const args = parseArgs(process.argv.slice(2), ['--paths', '--baseline'], []);
 const baselineName = args.flags['--baseline'] || BASELINE;
@@ -39,8 +39,8 @@ if (res.error || !fs.existsSync(report)) {
   process.exit();
 }
 
-/* Отчёт сортируется по файлу, строке и правилу: два прогона на одном дереве дают
- * один и тот же файл, а значит его видно в диффе. */
+/* The report is sorted by file, line and rule: two runs over one tree give one and the same file, so
+ * it is visible in a diff. */
 const found = [];
 readJson(report).forEach((file) => {
   file.messages.forEach((m) => {
@@ -49,7 +49,8 @@ readJson(report).forEach((file) => {
 });
 found.sort((a, b) => (a.file + ':' + a.line + ':' + a.rule).localeCompare(b.file + ':' + b.line + ':' + b.rule));
 
-/* Размер базы — часть вердикта: по ней видно, растёт храповик или чинится. */
+/* The size of the baseline is part of the verdict: it shows whether the ratchet is growing or being
+ * paid off. */
 const suppressions = fs.existsSync(path.join(ROOT, baselineName)) ? readJson(path.join(ROOT, baselineName)) : {};
 let inBaseline = 0;
 let baselineFiles = 0;

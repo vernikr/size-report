@@ -1,15 +1,14 @@
 #!/usr/bin/env node
-/* Датчик связей: циклы, сироты, направление слоёв. Правила — в
- * `.dependency-cruiser.cjs`, здесь запуск, печать и машинный отчёт.
+/* The dependencies sensor: cycles, orphans, the direction of layers. The rules live in
+ * `.dependency-cruiser.cjs`; here is the launch, the printing and the machine report.
  *
- * Храповик у этого датчика встроенный — `--ignore-known` и файл
- * `.dependency-cruiser-known-violations.json`. Сейчас он не нужен и намеренно не
- * заведён: дерево чистое, находка новая по определению. Появится терпимая находка —
- * её кладут в файл известных нарушений и это отдельное человеческое действие
- * (файл стережёт `gatefiles`, без трейлера `Gate-Change:` его не пронести).
+ * This sensor's ratchet is built in — `--ignore-known` and the file
+ * `.dependency-cruiser-known-violations.json`. It is not needed today and is deliberately not created:
+ * the tree is clean, so a finding is new by definition. Should a tolerable finding appear, it goes into
+ * the known-violations file, and that is a separate human action (the file is guarded by `gatefiles`:
+ * without the `Gate-Change:` trailer it cannot pass).
  *
- * Запуск: `pnpm run deps`. Коды выхода: 0 — находок нет, 1 — есть или прогон не
- * состоялся.
+ * Run: `pnpm run deps`. Exit codes: 0 — no findings, 1 — there are some or the run did not happen.
  */
 
 import fs from 'node:fs';
@@ -29,8 +28,8 @@ if (res.error || !fs.existsSync(report)) {
   process.exit();
 }
 
-/* Отчёт сортируется: правило, откуда, куда — чтобы диффился и читался одним
- * взглядом. `severity` из отчёта и есть вердикт: `error` валит, `warn` называется. */
+/* The report is sorted by rule, from and to, so that it diffs and reads in one glance. The `severity`
+ * from the report is the verdict: `error` fails the run, `warn` is named. */
 const found = readJson(report).summary.violations.map((v) => ({
   rule: v.rule.name,
   severity: v.rule.severity,

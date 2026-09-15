@@ -97,7 +97,14 @@ comment diff stays under the commit budget, otherwise it is split by file groups
   (419 → 417; journal entry `worklog/0087`, 2026-09-15). Both were run live after the pass: the
   report no longer promised "not a single byte of the artifact" (that comparison is gone) and the
   tarball check no longer promised exit code 2, which no path in it returns.
-- [ ] **M9e tools: the gates** — `tools/gates/**` (769, 7 files).
+- [x] **M9e tools: the gates** — `tools/gates/**` (769 → 767, 7 files; journal entry
+  `worklog/0088`, 2026-09-15). First gate files of the module, so the commit carries the
+  `Gate-Change:` trailer with its measurement. Three claims about *where and when* these scripts are
+  called turned out wrong: `gatefiles.js` does not run in CI (the range check is the `pre-push`
+  hook's job, and no profile step calls it), the shared harness serves six files rather than "five
+  sensors", and `dup.js` skipped its second look silently by `--no-ref` (than the ref-missing case
+  alone). Two time promises went too ("≤ 90 s", "tens of seconds"), as they would age with the
+  machine; the reason for the slow profile does not rest on them.
 - [ ] **M9f tools: the synthetic project** — `tools/synthetic/**` (405).
 
   The module was estimated at "three or four commits" before it was measured. A comment pass
@@ -106,7 +113,11 @@ comment diff stays under the commit budget, otherwise it is split by file groups
   plan says.
 - [ ] **M10 tests** — `test/*.test.js` (6221; four or five commits).
 - [ ] **M11 shell and configs** — `.githooks/*`, `eslint.config.js`,
-  `eslint.metrics.config.js`, `.dependency-cruiser.cjs` (~500).
+  `eslint.metrics.config.js`, `.dependency-cruiser.cjs` (~500). Known defect to fix here, found
+  during M9e: `eslint.metrics.config.js` (line 5) names the ratchet `eslint-suppressions.json` —
+  without the leading dot, that is, the very name the strict formatting linter picks up by default
+  (measured on ESLint 9.39.5: the file beside a config is read with no flag, and unused entries
+  fail the run with code 2). The baseline itself is `.eslint-suppressions.json`.
 
 Order within a module: the file a reader opens first (entry, then what it calls), so the
 diffs read in the same order as the code.

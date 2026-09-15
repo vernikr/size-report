@@ -1,35 +1,35 @@
 #!/usr/bin/env node
-/* Одна команда — источник правды: здесь и только здесь перечислено, что значит
- * «проверено». Локально и в CI гоняются одни и те же шаги в одном порядке, и
- * проверки, которой нет в профиле, в CI быть не может — за этим следит
- * `test/gates-verify.test.js` (он читает описания рабочих процессов и сверяет их с
- * этим списком).
+/* One command is the source of truth: here and only here is it spelled out what "checked" means.
+ * Locally and in CI the same steps run in the same order, and a check that is not in a profile cannot
+ * be in CI — `test/gates-verify.test.js` watches that (it reads the workflow descriptions and compares
+ * them with this list).
  *
- * **Профилей три, и разница между ними — цена шага, а не его важность.**
+ * **There are three profiles, and what separates them is what a step costs, not what it is worth.**
  *
- *   `fast`  — каждая правка и pre-commit: оформление, датчики, быстрый набор.
- *   `full`  — перед отправкой правки и в CI: то же плюс полный набор, паритет с живым
- *             проектом, воспроизводимость эталонов, работа из собранного пакета.
- *   `slow`  — по расписанию: то же плюс покрытие под c8 и тот же полный набор в среде
- *             без настроек git вовсе. Оба стоят десятки секунд, и без них полный
- *             профиль укладывается в цель по времени (≤ 90 с) — проверки при этом не
- *             выброшены, а названы здесь и гоняются по расписанию.
+ *   `fast`  — every edit and the pre-commit hook: formatting, the sensors, the fast suite.
+ *   `full`  — before sending an edit and in CI: the same plus the whole suite, parity with the live
+ *             project, reproducibility of the goldens, the work from an assembled package.
+ *   `slow`  — on a schedule: the same plus coverage under c8 and the same full suite in an environment
+ *             with no machine git settings at all. Both of those cost tens of seconds, which is why
+ *             they are named here and run on a schedule rather than thrown out; no time target is
+ *             promised for any profile (`tools/suites.js` says why).
  *
- * Шаги запускаются до конца, даже если ранний упал: чинить надо всё найденное, а не
- * то, на чём прогон споткнулся первым (у каждого шага свой вердикт на выходе).
+ * The steps run to the end even when an earlier one failed: everything found has to be fixed, not only
+ * the one the run tripped over first (each step has a verdict of its own).
  *
- * Запуск: `pnpm run verify:fast`, `pnpm run verify`, `pnpm run verify:slow`.
- * `node tools/gates/run.js --list full` печатает команды профиля (этим пользуются
- * проверка паритета с CI и человек). Коды выхода: 0 — всё зелено, 1 — что-то нет.
+ * Run: `pnpm run verify:fast`, `pnpm run verify`, `pnpm run verify:slow`.
+ * `node tools/gates/run.js --list full` prints a profile's commands (the CI parity check and a person
+ * use that). Exit codes: 0 — all green, 1 — something is not.
  */
 
 import path from 'node:path';
 import { bad, ok, parseArgs, run } from './common.js';
 
-/* Шаги: имя — оно же имя скрипта в `package.json`, чтобы человек мог запустить шаг
- * один. `why` — зачем шаг здесь (печатается в сводке). */
-/* Шаг «без настроек машины» называется по имени скрипта с оговоркой: это тот же
- * полный набор, но с одним ключом окружения — отдельным скриптом его не завести. */
+/* Steps: the name is the name of the script in `package.json`, so that a person can run one step
+ * alone. The text is why the step is here (printed in the summary), looked up by script name. */
+/* A step with no machine settings is the same full suite with one environment key, which a script of
+ * its own cannot carry: an environment key in `package.json` does not travel between shells. Hence a
+ * profile entry is a script plus an optional environment. */
 const STEPS = {
   'lint:strict': 'оформление: те же правила, что видны в диффе (существующий линтер пакета)',
   metrics: 'раздувание: размер и сложность функций, размер модулей, дубли веток, вес тестов, пометки долга',
@@ -44,16 +44,16 @@ const STEPS = {
   cover: 'покрытие: храповик по файлам (полный набор под c8)'
 };
 
-/* Шаг «без настроек машины» — тот же полный набор с одним ключом окружения: отдельным
- * скриптом его не завести (ключ окружения в `package.json` не переносится между
- * оболочками), а в CI он был ровно тем же набором с тем же ключом. Поэтому шаг — пара
- * «скрипт + окружение», и в профиле он идёт рядом с обычным прогоном. */
+/* The step with no machine settings is the same full suite with one environment key: a script of its
+ * own cannot carry it (an environment key in `package.json` does not travel between shells), and in CI
+ * it was exactly the same suite with the same key. Hence the pair of script and environment, standing
+ * beside the ordinary run in the profile. */
 const HERMETIC = { GIT_CONFIG_GLOBAL: '/dev/null' };
 const step = (script, env) => ({ script: script, env: env || null });
 const steps = (...items) => items.map((i) => (typeof i === 'string' ? step(i) : i));
 
-/* Полный профиль назван один раз: slow — это он же плюс два дорогих шага, и второй
- * список разошёлся бы с первым так же тихо, как расходятся любые две копии. */
+/* The full profile is spelled out once: slow is that same one plus two expensive steps, and a second
+ * list would diverge from the first as quietly as any two copies do. */
 const FULL = steps('lint:strict', 'metrics', 'dup', 'deps', 'test:all',
   'parity:live', 'check:standards', 'pack:check');
 
@@ -63,8 +63,8 @@ const PROFILES = {
   slow: FULL.concat(steps(step('test:all', HERMETIC), 'cover'))
 };
 
-/* Аргументы шага — по имени скрипта: у `parity:live` в CI приложен бандл истории
- * (живой проект приватный, ключа у проверки нет), у остальных ничего. */
+/* A step's arguments, by script name: `parity:live` gets a bundle of the history (the runner has no
+ * access to the consumer project itself), the rest get nothing. */
 const ARGS = { 'parity:live': ['--', '--repo', 'fixtures/live/history.bundle'] };
 
 function labelOf(entry) {
@@ -74,8 +74,8 @@ function labelOf(entry) {
 const args = parseArgs(process.argv.slice(2), [], ['--list']);
 const profile = args.rest[0];
 
-/* Команда шага как её видит человек и как её сверяет проверка паритета с CI:
- * `pnpm run <имя> [аргументы]`, а ключ окружения — префиксом. */
+/* A step's command as a person sees it and as the CI parity check compares it: `pnpm run <name>
+ * [arguments]`, with the environment key as a prefix. */
 function commandOf(entry) {
   const env = entry.env === null ? ''
     : Object.keys(entry.env).map((k) => k + '=' + entry.env[k]).join(' ') + ' ';
@@ -86,7 +86,8 @@ if (profile === undefined || PROFILES[profile] === undefined) {
   bad('verify: профиль не назван или незнаком (есть: ' + Object.keys(PROFILES).join(', ') + ')\n'
     + '    например: pnpm run verify:fast');
 } else if (args.flags['--list']) {
-  /* Машинный вид профиля: строка — команда. Им сверяются локальный прогон и CI. */
+  /* The machine-readable view of the profile: one line per command. The local run and CI are compared
+   * with it. */
   PROFILES[profile].forEach((entry) => { console.log(commandOf(entry)); });
 } else {
   const results = [];
@@ -94,8 +95,8 @@ if (profile === undefined || PROFILES[profile] === undefined) {
     const started = Date.now();
     const argv = ['run', entry.script].concat(ARGS[entry.script] || []);
     console.log('▶ ' + labelOf(entry) + ' — ' + STEPS[entry.script]);
-    /* Вывод шага не перехватывается: у каждого шага свой отчёт для человека, и
-     * склеивать его в чужой сводке незачем. Здесь важен код возврата. */
+    /* A step's output is not captured: every step has its own report for a person, and gluing it into
+     * someone else's summary would serve nothing. What matters here is the exit code. */
     const res = run('pnpm', argv, Object.assign({ stdio: 'inherit' },
       entry.env === null ? {} : { env: Object.assign({}, process.env, entry.env) }));
     const seconds = (Date.now() - started) / 1000;

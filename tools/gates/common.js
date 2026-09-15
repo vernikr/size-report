@@ -1,10 +1,10 @@
-/* Общее для датчиков: корень, разбор ключей, запуск процесса, машинные отчёты.
- * Одна копия на пять датчиков — иначе разбор ключей и запись отчёта разъезжаются
- * так же, как разъезжались два расчёта отчёта до R-1.1.
+/* Shared by the four sensors, the profile runner and the gate guard: the root, argument parsing,
+ * running a process, machine reports. One copy, since argument parsing and report writing drift apart
+ * otherwise the way any two copies do.
  *
- * Отчёты — машинные (JSON, две пробела, перевод строки в конце: диффится по
- * строкам) и лежат в `reports/`, а он в `.gitignore`: отчёт — это то, что смотрит
- * человек, а не то, что хранит история.
+ * The reports are machine-readable (JSON, two spaces, a trailing newline: they are diffed line by
+ * line) and live in `reports/`, which is in `.gitignore`: a report is what a person looks at, not what
+ * history keeps.
  */
 
 import fs from 'node:fs';
@@ -16,12 +16,13 @@ import { gitArgv, gitEnv } from '../../src/git.js';
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const REPORTS = path.join(ROOT, 'reports');
 
-/* Что вообще сканируется: настоящий код пакета. Конфиги в корне — датчики, они
- * сканируются собой же, и попадание их в свой обход дало бы самоссылку. */
+/* What is scanned at all: the code of the package. The root configs stay out: they configure these
+ * very sensors, and a sensor measuring the file its own thresholds live in would be measuring
+ * itself. */
 export const CODE = ['src', 'bin', 'tools', 'test'];
 
-/* Ключи разбираются одним способом на все датчики: `--ключ значение` и ключи-флаги;
- * всё остальное — пути. */
+/* Arguments are parsed one way for every sensor: `--flag value` and flag-only switches; everything
+ * else is a path. */
 export function parseArgs(args, values, bools) {
   const out = { flags: {}, rest: [] };
   for (let i = 0; i < args.length; i++) {
@@ -44,11 +45,11 @@ export function run(cmd, argv, options) {
   }, options || {}));
 }
 
-/* Чтение git — через границу пакета (`src/git.js`), а не как есть: там закреплены
- * настройки, которые меняют прочитанное (`core.quotePath` закавычивает не-английские
- * пути, локаль меняет разбор). Датчики читают имена файлов и сверяют их с правилами,
- * поэтому незакреплённое чтение было бы зелено здесь и красно на машине с настройками
- * по умолчанию (`BLOCKERS.md` §B1, `test/git-pins.test.js`). */
+/* Reading git goes through the package's boundary (`src/git.js`) rather than as it comes: the settings
+ * that change what is read are pinned there (`core.quotePath` quotes non-ASCII paths, the locale
+ * changes the parsing). The sensors read file names and compare them with rules, so an unpinned read
+ * would be green here and red on a machine with default settings (`BLOCKERS.md` §B1,
+ * `test/git-pins.test.js`). */
 export function git(args, options) {
   return run('git', gitArgv(args), Object.assign({ env: gitEnv() }, options || {}));
 }
@@ -57,8 +58,8 @@ export function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 
-/* Запись отчёта: каталог создаётся, а старый отчёт перезаписывается целиком —
- * «доклеенного» прошлого прогона в отчёте быть не должно. */
+/* Writing a report: the directory is created and an old report is overwritten whole — a report must
+ * not carry a past run glued into it. */
 export function writeReport(name, data) {
   fs.mkdirSync(REPORTS, { recursive: true });
   const file = path.join(REPORTS, name);
@@ -74,8 +75,8 @@ export function ok(text) {
   console.log('✓ ' + text);
 }
 
-/* Красный — это код возврата 1 и строка в stderr: у датчика один язык отчёта, и
- * он же язык отказа инструмента (`src/refusal.js`). */
+/* Red means exit code 1 and a line on stderr: a sensor has one language for its report, the same one
+ * the tool refuses in (`src/refusal.js`). */
 export function bad(text) {
   console.error('✗ ' + text);
   process.exitCode = 1;

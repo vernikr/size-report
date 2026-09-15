@@ -1,22 +1,19 @@
 #!/usr/bin/env node
-/* Датчик покрытия: храповик по файлам, а не абсолютный порог на весь репозиторий.
+/* The coverage sensor: a ratchet per file rather than one absolute threshold over the repository.
  *
- * **Почему храповик, а не процент.** Доля покрытия — не мера качества: она растёт
- * от пустых тестов и падает от новых тестов тоже. Поэтому база — не «сколько-то
- * процентов», а снимок по каждому файлу: упало ниже своего же — красный (значит,
- * код приехал без проверки), выросло — тихо хорошо.
+ * **Why a ratchet rather than a percentage.** A coverage share is no measure of quality: it grows from
+ * empty tests and falls from new tests just as well. Hence the baseline is not "some percent" but a
+ * snapshot per file: below its own — red (that is, code arrived without a check), above — quietly fine.
  *
- * **Почему полный набор.** Быстрый прогон файлов хука и диска не гоняет вовсе, и
- * покрытие по нему падало бы от кода, проверенного в полном наборе, — то есть гейт
- * валил бы исправную работу. Поэтому покрытие снимается на полном наборе и живёт в
- * slow-профиле (`pnpm run verify:slow`), а не на каждой правке: полный набор под c8
- * стоит десятки секунд.
+ * **Why the full suite.** The fast run does not run the hook and disk files at all, so coverage over it
+ * would fall from code that the full suite does cover — that is, the gate would fail working code.
+ * Coverage is therefore measured on the full suite and lives in the slow profile
+ * (`pnpm run verify:slow`) rather than on every edit.
  *
- * Запуск: `pnpm run cover` (храповик), `pnpm run baseline:coverage` (перезапись базы —
- * человеческое действие, трейлер `Gate-Change:` обязателен),
- * `node tools/gates/coverage.js --summary <файл> --baseline <файл>` (вердикт по
- * готовому отчёту — этим пользуются проверки датчика). Коды выхода: 0 — храповик
- * стоит, 1 — просадка или новый непокрытый файл.
+ * Run: `pnpm run cover` (the ratchet), `pnpm run baseline:coverage` (baseline rewrite — a human action,
+ * the `Gate-Change:` trailer required), `node tools/gates/coverage.js --summary <file> --baseline <file>`
+ * (a verdict over a ready report — what the sensor's own probes use). Exit codes: 0 — the ratchet
+ * stands, 1 — a regression or a new uncovered file.
  */
 
 import fs from 'node:fs';
@@ -26,14 +23,14 @@ import { REPORTS, ROOT, bad, indent, ok, parseArgs, readJson, rel, run } from '.
 const BASELINE = 'coverage-baseline.json';
 const METRICS = ['lines', 'branches', 'functions'];
 
-/* Сравнение базы со снятым покрытием: ниже базы по любой метрике — просадка; новый
- * файл, который ни разу не выполнился, — тоже: код без проверки не должен появляться
- * тихо. Файл, пропавший из отчёта, называется, но гейт не валит — его могли удалить.
+/* Comparing the baseline with the measured coverage: below the baseline on any metric is a regression,
+ * and so is a new file that never executed — code without a check must not appear quietly. A file gone
+ * from the report is named but does not fail the gate: it may have been deleted.
  *
- * Сравниваются два словаря одного вида — «путь от корня проекта → три доли»: тот же
- * вид, что записан в базу. Иначе храповик сравнивал бы базу с отчётом по разным
- * ключам (c8 отдаёт абсолютные пути) и объявлял бы просадкой всё дерево сразу —
- * ложный красный на живом прогоне, который нашёлся только на slow-профиле. */
+ * Both sides are dictionaries of one shape — "path from the project root → three shares", the shape
+ * recorded in the baseline. Otherwise the ratchet would compare the baseline with the report under
+ * different keys (c8 hands out absolute paths) and call the whole tree a regression at once — a false
+ * red found only on the slow profile. */
 function compare(baseline, now) {
   const regressions = [];
   const newFiles = [];
@@ -60,7 +57,7 @@ const baselineFile = path.isAbsolute(named) ? named : path.join(ROOT, named);
 let summary = null;
 
 if (args.flags['--summary']) {
-  /* Покрытие уже снято кем-то другим — здесь только вердикт. */
+  /* Coverage has already been measured by someone else: the verdict only. */
   summary = readJson(args.flags['--summary']);
 } else {
   const res = run('pnpm', ['exec', 'c8', 'node', 'tools/run-tests.js', 'full']);

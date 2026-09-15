@@ -1,36 +1,33 @@
 #!/usr/bin/env node
-/* Датчик дублей: копипаста (Type-1/2) и близнецы по токенам (Type-3, `similarity`).
- * Настройки — в `.jscpd.json`, здесь храповик и машинный отчёт.
+/* The duplication sensor: copy-paste (Type-1/2) and token twins (Type-3, `similarity`). The settings
+ * live in `.jscpd.json`; here are the ratchet and the machine report.
  *
- * **Отпечаток — свой, по содержимому, а не родной у jscpd, и это измеренный факт.**
- * Родная база jscpd (`--baseline`) привязана к пути выкладки: та же ревизия,
- * распакованная в другой каталог, даёт «15 новых клонов» на чистом дереве (проверено
- * дважды — на копии дерева и на выкладке из `git archive`). Значит на CI она красная
- * всегда, а в храповике нет смысла. Поэтому клон отпечатывается хешем своего же
- * текста (фрагмент + строки + токены): переезд файла, строки или всего репозитория
- * отпечаток не сдвигает, а новый дубль появляется сразу.
+ * **The fingerprint is its own, taken from the content rather than jscpd's own.** jscpd's `--baseline`
+ * is bound to the checkout path: the same revision unpacked in another directory reported the clones
+ * living in the tree as new, so on CI it would be red always and no ratchet could rest on it. Hence a
+ * clone is fingerprinted by a hash of its own text (fragment + lines + tokens): a moved file, shifted
+ * lines or another checkout do not shift the fingerprint, while a new duplicate shows up at once.
  *
- * **Храповик** — база отпечатков (`dup-baseline.json`): клоны, живущие сегодня, в базе
- * и гейт не валят; новый назван поимённо и валит. База обновляется только человеком
- * (`pnpm run baseline:dup`) и стережётся `gatefiles`: без трейлера `Gate-Change:` её
- * не пронести.
+ * **The ratchet** is the baseline of fingerprints (`dup-baseline.json`): the clones living today sit in
+ * the baseline and do not fail the gate, while a new one is named and does fail. The baseline is
+ * updated by a person only (`pnpm run baseline:dup`) and is guarded by `gatefiles`: without the
+ * `Gate-Change:` trailer it cannot pass.
  *
- * **Два взгляда, и второй важнее первого.** Первый — против файла базы (локально он и
- * есть храповик). Второй — против дерева `origin/main`, распакованного во временный
- * каталог: база строится заново, поэтому правка базы в самой ветке новый клон не
- * спрячет. Второй взгляд пропускается только там, где `origin/main` нет вовсе, и об
- * этом печатается строка — молчаливого «зелено» тут быть не должно.
+ * **Two looks, and the second matters more.** The first is against the baseline file (locally that is
+ * the ratchet). The second is against the tree of `origin/main` unpacked into a temporary directory:
+ * that tree's clones are counted from scratch, so editing the baseline inside the branch cannot hide a
+ * new clone. The second look is skipped by `--no-ref` or when the ref is missing; a missing ref prints
+ * a line, since a silent "green" must not read as a comparison.
  *
- * **Предел, названный пробой.** Копия участка в новый файл ловится, если участок
- * разбирается: целая функция (29 строк `readBlobs` из `git.js`) — 1 клон, она же,
- * обрезанная на середине (17 строк), — 0. Причина в самом jscpd: пары функций
- * сравниваются по дереву разбора, и файл, который не разбирается, из сравнения
- * выпадает. В коммит попадает разбирающийся код, поэтому для гейта это не дыра; а
- * проба датчика обязана брать целый файл, иначе она доказывает не то.
+ * **A limit, named by a probe.** A copy of a stretch of code is caught only if that stretch parses:
+ * jscpd compares pairs by parse tree and drops a file that does not parse, so half a function is
+ * invisible to it. Code reaching a commit parses, hence this is no hole for the gate; but the sensor's
+ * own probe has to copy a whole file, or it proves something other than what runs
+ * (`test/gates-dup.test.js`).
  *
- * Запуск: `pnpm run dup` (гейт), `pnpm run dup:ci` (только взгляд на ветку),
- * `pnpm run baseline:dup` (обновление базы). Коды выхода: 0 — новых нет, 1 — есть или
- * прогон не состоялся.
+ * Run: `pnpm run dup` (the gate), `pnpm run dup:ci` (the same with the ref named explicitly),
+ * `pnpm run baseline:dup` (baseline update). Exit codes: 0 — no new clones, 1 — there are some or the
+ * run did not happen.
  */
 
 import fs from 'node:fs';
@@ -45,15 +42,15 @@ const paths = pathsOf(args);
 const baselineName = args.flags['--baseline'] || BASELINE;
 const baselineFile = path.isAbsolute(baselineName) ? baselineName : path.join(ROOT, baselineName);
 
-/* Отпечаток клона: содержимое, а не место. Хеш — от текста фрагмента, числа строк и
- * токенов: у двух одинаковых клонов он один, у похожих — разный. */
+/* A clone's fingerprint: content, not place. The hash is taken over the fragment text, the line count
+ * and the token count, so two identical clones share one and merely similar ones differ. */
 function fingerprint(clone) {
   const text = clone.fragment + '\n' + clone.lines + ':' + clone.tokens;
   return createHash('sha256').update(text, 'utf8').digest('hex').slice(0, 16);
 }
 
-/* Один прогон по каталогу: jscpd отдаёт полный список клонов (базы у него больше
- * нет), отчёт читается из своего каталога, чтобы чужой файл числа не подменил. */
+/* One run over a directory: jscpd hands out the whole list of clones, and the report is read from this
+ * run's own directory, so that a file left from another run cannot stand in for the numbers. */
 function scan(label, root, dirs) {
   const out = path.join(REPORTS, 'dup', label);
   fs.rmSync(out, { recursive: true, force: true });
@@ -84,15 +81,15 @@ function scan(label, root, dirs) {
   };
 }
 
-/* Имя файла в отчёте — без пути сканирования: у взгляда на ветку это временный
- * каталог, и называть его человеку незачем. */
+/* A file name in the report carries no scan path: for the branch look that path is a temporary
+ * directory, which is of no use to whoever reads the output. */
 function shown(name, root) {
   const abs = path.resolve(root, name);
   return rel(abs);
 }
 
-/* Новые отпечатки: те, которых в базе нет или которых стало больше. Считается по
- * счётчикам, а не по вхождению: три одинаковых клона вместо одного — это два новых. */
+/* New fingerprints: those absent from the baseline or grown in number. Counted by counters rather than
+ * by presence: three identical clones where there was one are two new ones. */
 function newer(baselineCounts, counts) {
   const list = [];
   Object.keys(counts).sort().forEach((fp) => {
@@ -102,8 +99,8 @@ function newer(baselineCounts, counts) {
   return list;
 }
 
-/* Взгляд на ветку: дерево рефа распаковывается во временный каталог (`git archive`),
- * сканируется тем же конфигом, и в отчёте остаются только его клоны. */
+/* The branch look: the ref's tree is unpacked into a temporary directory (`git archive`) and scanned
+ * with the same config, its clones being the only ones the report keeps. */
 function refTree(ref, work) {
   const dir = path.join(work, 'ref');
   fs.mkdirSync(dir, { recursive: true });
@@ -146,9 +143,9 @@ const runs = [{
   new: newer(baseline, current.counts).map((n) => Object.assign({ against: 'файл базы' }, sample(current, n)))
 }];
 
-/* Взгляд на ветку целиком: распаковка, прогон по дереву и вердикт. Отдельной
- * функцией, а не ветвью внутри ветви — гнездо из четырёх уровней этот же датчик и
- * ловит (`max-depth`). */
+/* The whole branch look: unpacking, the run over that tree, the verdict. A function of its own rather
+ * than a branch inside a branch, since four levels of nesting is what this very sensor catches
+ * (`max-depth`). */
 function refLook(wantRef) {
   const work = fs.mkdtempSync(path.join(os.tmpdir(), 'size-report-dup-'));
   try {
