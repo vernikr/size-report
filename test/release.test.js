@@ -90,6 +90,17 @@ test('публикация не требует ни секрета, ни код�
   assert.equal(step(doc, 'npm поновее (для trusted publishing)').run, 'npm install -g npm@latest',
     'npm не поднят: trusted publishing требует 11.5.1, а с Node 22 приходит 10');
 
+  /* `registry-url` — не украшение шага: с ним setup-node пишет в `.npmrc` строку
+   * `_authToken=${NODE_AUTH_TOKEN}`, npm считает учётные данные заданными и за
+   * удостоверением OIDC не идёт, а публикация падает 404 при верно заведённом
+   * издателе. Реестр и так по умолчанию registry.npmjs.org, а выставленный явно
+   * адрес живёт в `publishConfig` манифеста. */
+  const setup = doc.jobs.release.steps.find((s) => String(s.uses || '').startsWith('actions/setup-node'));
+  assert.ok(setup, 'в описании выпуска нет шага setup-node: Node берётся неизвестно откуда');
+  assert.equal((setup.with || {})['registry-url'], undefined,
+    'setup-node получает `registry-url`: подставная строка `_authToken` в `.npmrc`'
+      + ' отменяет удостоверение OIDC, и публикация падает 404');
+
   const publish = step(doc, 'Публикация');
   assert.match(String(publish.if), /dry_run == false/,
     'настоящая публикация не отделена от черновой — черновой прогон уехал бы в реестр');

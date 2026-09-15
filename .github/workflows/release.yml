@@ -7,13 +7,13 @@ name: Release
 # Поэтому в настройках репозитория заводить нечего: в шагах ниже нет ни одного
 # `secrets.`, и это же стережёт `test/release.test.js`.
 #
-# Одного шага CI сделать не может — он ваш, и делается один раз на npmjs.com:
-#   пакет → Settings → Trusted Publisher → GitHub Actions, издатель:
-#   владелец `vernikr`, репозиторий `size-report`, рабочий процесс `release.yml`,
-#   окружение — пустое (эта работа окружения не объявляет).
-# После этого выпуск — это тег; проверить, что вход настроен, можно черновым
-# прогоном (Actions → Release → Run workflow, «dry run» включён по умолчанию):
-# он собирает пакет и печатает, что уехало бы в реестр, но не публикует.
+# Издатель заводится один раз и живёт на стороне npmjs.com, а не в этом файле:
+#   `npm trust github @vernikr/size-report --file release.yml --repo vernikr/size-report
+#   --allow-publish` — то же самое делает кнопка Trusted Publisher в настройках
+#   пакета; окружение пустое, потому что этот job его не объявляет.
+# Что связь есть, видно командой `npm trust list @vernikr/size-report`.
+# После этого выпуск — это тег; посмотреть, что уехало бы, можно черновым
+# прогоном (Actions → Release → Run workflow, «dry run» включён по умолчанию).
 #
 # Что job НЕ делает: не поднимает версию (её называет человек в манифесте и
 # `CHANGELOG.md` — и они сверяются с тегом, а не выдумываются здесь), не
@@ -42,11 +42,15 @@ jobs:
 
       - uses: pnpm/action-setup@v4
 
+      # `registry-url` здесь намеренно не указан: setup-node пишет тогда в `.npmrc`
+      # строку `_authToken=${NODE_AUTH_TOKEN}`, а с ней npm считает учётные данные
+      # заданными и за удостоверением OIDC не идёт — публикация падает 404 при
+      # верной настройке издателя. Адрес реестра и так по умолчанию
+      # registry.npmjs.org, а нужный явно прописан в `publishConfig` манифеста.
       - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
-          registry-url: https://registry.npmjs.org
 
       # Trusted publishing требует npm 11.5.1 и новее, а с Node 22 приходит npm 10.
       - name: npm поновее (для trusted publishing)
