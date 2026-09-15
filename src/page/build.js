@@ -2,27 +2,25 @@ import fs from 'fs';
 import { fill, LOCALES } from '../locales.js';
 import { PAGE_CSS, TABLE_CSS } from '../css.js';
 
-/* Экранирование текста в разметке — здесь, потому что единственный, кто собирает
- * разметку из данных, — эта сборка: остальное рисует страница узлами. */
+/* Escaping text for markup lives here, because this builder is the only place that turns data into markup: the rest
+ * is drawn as nodes by the page. */
 export function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-/* Сборка страницы отчёта: данные и программа в одном файле, внешних ссылок нет.
- * Оформление — тоже обычные файлы: общая часть таблицы (`table.css`) и своё
- * оформление страницы (`app.css`).
+/* Building the report's page: data and program in one file, with no external reference. The styling comes as ordinary
+ * files too: the table's shared part (`table.css`) and the page's own (`app.css`).
  *
- * Программа страницы — обычные исходники (главы `src/page/*.js` и общий расчёт
- * `src/derived.js`), а не строки в движке: их видит линтер, их же движок
- * вклеивает в страницу. Модульный синтаксис снимается при вклейке: в браузере,
- * открывшем файл с диска, разрешать `import` нечем, а объявления обязаны попасть
- * в общую область видимости в порядке вклейки — сперва расчёт, затем главы.
+ * The page's program is ordinary sources (the chapters in `src/page/*.js` and the shared calculation in
+ * `src/derived.js`) rather than strings inside the engine: a linter sees them, and the engine pastes them into the
+ * page. Module syntax is removed while pasting: in a browser that opened a file from disk there is nothing to resolve
+ * `import` with, and the declarations have to reach the shared scope in the order of pasting — the calculation first,
+ * then the chapters.
  *
- * Главы — по предметам страницы, и порядок вклейки (список ниже) — это порядок
- * объявлений в собранной программе: первым идёт расчёт, за ним состояние
- * выбора, узлы, панель, таблица и сборка. Главы — **срезы одного текста**: вклейка
- * склеивает их подряд, поэтому собранная страница осталась бы той же, если бы
- * главы снова стали одним файлом. */
+ * The chapters follow the page's subjects, and the order of pasting (the list below) is the order of declarations in
+ * the assembled program: the calculation first, then the choice's state, the nodes, the panel, the table and the
+ * assembling. The chapters are **slices of one text**: pasting glues them in a row, so the assembled page would stay
+ * the same if the chapters became one file again. */
 export function stripModules(src) {
   return src.split('\n')
     .filter((line) => !/^import\s.*;\s*$/.test(line))
@@ -34,16 +32,16 @@ export function pageSource(file) {
   return stripModules(fs.readFileSync(new URL(file, import.meta.url), 'utf8'));
 }
 
-/* Список глав — здесь же, а не в проверках: он один на сборку и на сторожа
- * (`test/page-view.test.js` читает ту же программу и сверяет её с исходниками). */
+/* The list of chapters lives here rather than in the tests: one copy for the builder and for the guard
+ * (`test/page-view.test.js` reads the same program and compares it with the sources). */
 export const PAGE_PARTS = ['./state.js', './dom.js', './panel.js', './table.js', './app.js'];
 
 export function pageScript() {
   return pageSource('../derived.js') + '\n' + PAGE_PARTS.map((part) => pageSource(part)).join('');
 }
 
-/* Подпись под заголовком: чем собран отчёт и где он лежит. Путь — текстом, а не
- * ссылкой: страница открывается с диска и ни от чего не зависит. */
+/* The note under the heading: what built the report and where it lies. The path is plain text rather than a link: the
+ * page opens from disk and depends on nothing. */
 function subText(data, page) {
   return fill(page.sub, {
     tool: data.tool.name,
@@ -52,8 +50,8 @@ function subText(data, page) {
   });
 }
 
-/* Тексты страницы: заголовки колонок, подписи панели, легенда и состояния. В
- * артефакт они не идут — это словарь страницы, а не отчёта. */
+/* The page's texts: column captions, panel labels, the legend and the empty states. They are the page's dictionary
+ * rather than the report's: the data block carries none of them, and the report's own words live in the locale. */
 function uiText(page, loc) {
   return {
     commit: loc.commit,
@@ -69,29 +67,28 @@ function uiText(page, loc) {
     linkForeign: page.linkForeign,
     linkBroken: page.linkBroken,
     linkExtra: page.linkExtra,
-    /* Точность — двумя словами: подпись метрики говорит про худшее в колонке,
-     * подсказка клетки — про её собственное число. */
+    /* Accuracy in two words: a metric's caption speaks about the worst in its column, while a cell's tooltip speaks
+     * about its own number. */
     exact: page.exact,
     approximate: page.approximate,
     approxCell: page.approximateCell,
-    /* Почему файла нет в отчёте — словами: причину называет движок знаком (`why`),
-     * а страница одевает знак в текст, как и всё остальное в панели. */
+    /* Why a file is not in the report, in words: the engine names the reason with a mark (`why`), and the page dresses
+     * the mark in text, as it does with everything else in the panel. */
     notMeasuredRule: page.notMeasuredRule,
     notMeasuredChoice: page.notMeasuredChoice,
     methodLabel: page.panelMethod,
     empty: page.emptyMetrics,
     noFiles: page.noFiles,
-    /* {command} подставляет страница: у неё есть данные, а {now} — уже здесь. */
+    /* {command} is substituted by the page, which holds the data, while {now} is filled in here. */
     note: page.note.replace(/\{now\}/g, loc.now)
   };
 }
 
-/* Что в файл не идёт. Первое — список пропущенных коммитов: он меняется от
- * коммита самого отчёта (тот, кому нечего сказать, попадает в список), и файл
- * перестал бы быть **неподвижной точкой** — пересборка после его же коммита давала
- * бы другие байты, а хук коммитил бы отчёт бесконечно. Странице этот список не
- * нужен вовсе: она его не показывает. Читателю он по-прежнему доступен — `--data`,
- * `--json` и `explain` отвечают этим же проходом. */
+/* What does not go into the file. First, the list of skipped commits: it changes with the report's own commit (one
+ * with nothing to say lands in the list), and the file would stop being a **fixed point** — a rebuild after its own
+ * commit would yield different bytes and the hook would commit the report forever. The page has no use for the list
+ * at all: it does not show it. It stays available to the reader — `--data`, `--json` and `explain` answer from the
+ * same run. */
 const NOT_IN_FILE = ['skipped'];
 
 export function pagePayload(data) {
@@ -100,10 +97,8 @@ export function pagePayload(data) {
   return out;
 }
 
-/* Страница отчёта — один файл: данные лежат в нём же, скрипт вклеен, внешних
- * ссылок нет. Поэтому она открывается двойным щелчком и работает без сети.
- * `<` в данных экранируется: иначе подпись коммита или путь закрыли бы тег
- * раньше времени (в JSON такой экранированный символ читается как обычный). */
+/* The report's page is one file: the data lies in it, the script is pasted in, there are no external references. Hence
+ * it opens with a double click and works without a network. */
 export function pageHtml(data, cfg) {
   const loc = LOCALES[cfg.locale];
   return '<!doctype html>\n<html lang="' + esc(loc.html) + '">\n<head>\n<meta charset="utf-8">\n'
@@ -122,9 +117,8 @@ export function pageHtml(data, cfg) {
     + '<script>\n' + pageScript() + '</script>\n</body>\n</html>\n';
 }
 
-/* JSON внутри страницы: `<` экранируется, иначе подпись коммита или путь закрыли
- * бы тег раньше времени (в JSON такой экранированный символ читается как самый
- * обычный). */
+/* JSON inside the page: `<` is escaped, or a commit's subject or a path would close the tag early (inside a JSON
+ * string such an escaped character reads as a most ordinary one). */
 function jsonInHtml(value) {
   return JSON.stringify(value).replace(/</g, '\\u003c');
 }
