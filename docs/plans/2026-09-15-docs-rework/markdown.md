@@ -232,8 +232,33 @@ files). The parts below are the order to work in; each is one commit.
   commit ends with code 5 and a stack — was recorded as **N16 in `BLOCKERS.md`** with the reproduction,
   the options and the cost, the code left untouched. References from `REFACTOR.md` R-4.2 and `PLAN.md`
   were renamed to the new heading, and journal references now name the archive path.
-- [ ] **M8 README 922–1044** — 104 Russian: steps 6–8 (the hook, the traps found by this very
-  instruction, an already installed copy).
+- [x] **M8 README, the hook and the tail** — steps 6–8: 102 Russian lines → **198 changed lines in one
+  file** (`worklog/0107`). README 990 → 986 lines, its Cyrillic 106 → **4**, and those four are all quoted
+  lines of the tool's own output (the warning about the table, the refusal registry, the hook's commit
+  signature), each named as a quotation at its own place. No reader had to be edited: the guards read this
+  text by paths, calls and section names only. **Two claims were wrong, each proved by measurement.**
+  (1) “A new column file has to be committed, or the check says “did not match the commit's tree”” — an
+  experiment in a scratch repository showed the run stays **green (code 0)** with an untracked new column:
+  the column simply has no numbers, and that message belongs to another check (state lost while carrying
+  between commits — the class of `BLOCKERS.md` B3); the advice stays, the named consequence is corrected.
+  (2) The minifier's refusal was again credited with “two ways out” (the fourth copy of a falsehood fixed
+  in M4b): in code, `minify.js` names **one** (`minify.ext` — switching to `strip` would hand the same file
+  to the guard, whose verdict would be the same), while the guard's own refusal names two
+  (out of `minify.guard`, or `minify.ext`) — so the trap now tells them apart. The timings (0.1 ms, the
+  54/86 ms of the worker against `node --check`) were replaced with a pointer at `REFACTOR.md` R-5.4, and
+  the claim that **time targets** are machine-checked went away: nothing guards them, because no time
+  target is declared at all (`tools/suites.js` says why) — the real list of guarded things is named
+  instead. Verified by code and by live runs: the hook installs itself (an install script plus the first
+  run, with the pnpm 10 caveat), commits only the report's path, does not commit an untracked first
+  report, is loop-free by construction (`commit-tree`, no row for the report, a lock), does not fail a
+  commit on its own refusal and keeps the cause for `doctor` (with `SIZE_REPORT_NO_HOOK` named as the
+  lever of the environment); **a merge does not run `post-commit`** — measured here on git 2.50.1 (three
+  ordinary commits → three `post-commit`; the merge → `post-merge` alone); with the minifier switched off
+  (`SIZE_REPORT_NO_OPTIONAL=1`) against a report built with it the check returns **code 1** and prints the
+  note about the other count — exactly as the text says; an uncommitted edit leaves the check green; and
+  the byte count and hash of the migrated project (225 673 B, `1bdb27e1…`, 95 × 27) are held by the frozen
+  parity reference (`fixtures/parity/manifest.json`) — the post-migration “91 × 25”, which nothing holds,
+  was dropped.
 - [ ] **M9 templates and the fixture notes** — `templates/README.md` 93 lines / 77 Russian,
   `fixtures/live/README.md` 32 / 22, `fixtures/parity/README.md` 20 / 15 (114 Russian, 3 files).
   `pack:check` ships `templates/`, so the full profile runs after this part.

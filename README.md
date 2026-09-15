@@ -705,7 +705,8 @@ engine gives, and by the same code as the engine's own calculation.
 
 **The order of edits:** code → `pnpm run sizes` → a commit with the table alone. The table is updated in a
 **commit of its own**, because a commit cannot have a row inside itself: update it together with the code
-and the tool warns (`! таблицу обновляли вместе с кодом: <sha>`) and names the commit that dropped out.
+and the tool warns (the text is quoted as the tool prints it: `! таблицу обновляли вместе с кодом: <sha>`)
+and names the commit that dropped out.
 The `size` check rebuilds the table and compares it with the file on disk, so it catches a forgotten
 rebuild too. Dropping the report from git altogether is possible as well: the completeness check exists
 for that, and `templates/ci.yml` says which step to put in its place when the report is not in git.
@@ -776,128 +777,123 @@ The cell of code 2 quotes the tool rather than describing it: those are the name
 word — which is why that one cell speaks the language of the command line, while the report's own texts
 are translated by the `locale` key.
 
-### 6. Отчёт обновляется сам после коммита
+### 6. The report updates itself after a commit
 
 ```bash
-pnpm exec size install-hook     # поставить post-commit и post-merge
-pnpm exec size uninstall-hook   # снять и вернуть проект к прежнему поведению
+pnpm exec size install-hook     # install post-commit and post-merge
+pnpm exec size uninstall-hook   # remove them and return the project to its previous behaviour
 ```
 
-Хуки ставятся **сами**, и это единственное, что проект замечает от установки пакета:
-после `npm i` — скриптом установки, у pnpm 10 — первым запуском инструмента (pnpm не
-исполняет скрипты зависимостей: «Ignored build scripts»; разрешить можно
-`pnpm.onlyBuiltDependencies: ["@vernikr/size-report"]` в своём манифесте). Ставшие
-файлы живут в `.git`, `git status` их не видит, снимаются командой выше. После
-каждого коммита и слияния отчёт пересобирается: каталог `docs` и файл `size-report.html`
-создаются, если их ещё нет, а **отслеживаемый** в git отчёт ложится отдельным коммитом
-с подписью `chore(report): отчёт пересобран после <sha>`. Коммитится только путь отчёта:
-чужой индекс и незакоммиченная работа не тронуты.
+The hooks install themselves, and that is the only thing a project notices about installing the package:
+after `npm i` by an install script, with pnpm 10 by the tool's first run (pnpm does not run dependency
+scripts — "Ignored build scripts"; it can be allowed with `pnpm.onlyBuiltDependencies:
+["@vernikr/size-report"]` in your manifest). The files land in `.git`, `git status` does not see them, and the
+command above takes them away. It installs only where that is safe — an ordinary hooks directory, no hook of
+someone else's, something to call the tool with — and stays silent where it is not. After every commit and
+merge the report is rebuilt: the `docs` directory and `size-report.html` are created if they are not there
+yet, and a report **tracked** by git lands as a commit of its own signed `chore(report): отчёт пересобран
+после <sha>` (the signature is quoted as the hook writes it, like every other line of the tool's output in
+this document). Only the report's path is committed: the tree comes from HEAD with that one path replaced, so
+neither someone's index nor uncommitted work can enter the commit.
 
-Первый отчёт — исключение из «сам»: файл создан, но не закоммичен, потому что новый
-файл в чужой истории — решение человека, а не услуга. Один `git add docs/size-report.html`
-(или обычный `git add -A`, если отчёт нужен в проекте) — и дальше он едет коммитами сам.
-Слияние обрабатывается тем же входом, что обычный коммит, но другим файлом —
-`post-merge`: git создаёт коммит слияния сам и `post-commit` при этом не зовёт.
+The first report is the exception: while the report is untracked the hook rebuilds it and says so in words
+instead of committing — adding a new file to someone else's history is a person's decision. One `git add
+docs/size-report.html` (or a plain `git add -A` if the report belongs in the project) and from then on it
+travels by commits itself. A merge is the same case as an ordinary commit, with one correction to what git
+does: the merge commit is made by git itself and does not run `post-commit`, hence the second file,
+`post-merge` (checked on git 2.50).
 
-Зацикливания нет по устройству, а не по флагу: коммит отчёта собирается
-плумбингом (`commit-tree` — хуков не зовёт), и сам отчёт строки не получает.
-Выключается автоматика двумя способами — `"hooks": {"enabled": false}` в
-настройках (хук остаётся, но молчит) или `size uninstall-hook`; в окружениях, где
-обновлять отчёт не нужно (CI, чужая машина, зависимости не поставлены), хук молчит
-сам и ничего не пишет в вывод коммита. Что он делает и чем кончился последний
-запуск, видно в `pnpm exec size doctor`; отказ инструмента коммит не роняет —
-причина едет одной строкой и остаётся в записи о запуске.
+There is no looping, and by construction rather than by a flag: the report's commit is assembled with
+plumbing (`commit-tree` calls no hooks at all), and the report itself gets no row, so the same rebuild yields
+the same bytes. A refusal by the tool does not bring the commit down — the commit has been made already: the
+cause is printed as one line and remembered, and `pnpm exec size doctor` shows what the hook did and how the
+last run ended. The automation is switched off in two ways — `"hooks": {"enabled": false}` in the settings
+(the hook stays but keeps quiet) or `size uninstall-hook` — while in an environment where updating is not
+wanted at all (CI, someone else's machine) the hook keeps quiet by itself: the hook file lies in `.git`
+rather than in git, so every clone has one of its own, and the body checks whether there is anything to call
+the tool with. `SIZE_REPORT_NO_HOOK` is the lever for one who would rather not edit the settings.
 
-### 7. Ловушки, найденные этой же инструкцией
+### 7. Traps found by this very instruction
 
-Две из них найдены прогоном и уже закрыты — они оставлены здесь как объяснение
-поведения, а не как обходные пути:
+Two of them were found by the walkthrough and are closed already — they are kept here as an explanation of
+behaviour rather than as workarounds:
 
-- **Модуль в расширении `.js`** (`import`/`export` в `.js` — обычное дело в
-  проектах с бандлером) измеряется как любой другой файл, с `type: module` в
-  манифесте или без него: гард разбирает результат и как скрипт, и как модуль.
-  Раньше он пробовал только скрипт и падал кодом 5 на самом `export`, обвиняя
-  стриппер; сегодня это невозможно, и правки в настройках не требуются
-  (`REFACTOR.md` R-4.6);
-- **Не JavaScript в графе** (разметка или типы прямо в `.js`) — это код 2 и
-  отказ, который называет причину и что править. Причина берётся с того способа,
-  которым файл считали: при `minify.engine: "esbuild"` отказ называет минификатор
-  и даёт два выхода (расширению — упрощение в `minify.ext` или способ `strip`), а
-  при упрощении — `minify.guard`. Стеком такой случай не выглядит ни там, ни там;
-- **Минификатора нет** (установка без необязательных зависимостей, платформа без
-  `esbuild`) — метрика честно отступает к упрощению: числа те же, что у `strip`,
-  способ говорит об этом словами, а **сборка** (`--write`) отдаёт **код 4** с
-  готовой починкой. У **проверки** в этом случае ответ из двух частей, и он назван
-  здесь потому, что именно её советует CI: если отчёт на диске собран с настоящим
-  минификатором, а прогон идёт без него, точность изменилась — значит числа в
-  таблице больше не совпадают с историей, и проверка скажет про расхождение
-  (**код 1**), показав разошедшуюся строку подписи, **и тут же назовёт другой счёт**
-  заметкой с готовой починкой. Вердикт при этом остаётся за расхождением: код 4
-  утверждал бы, что разница объясняется датчиком, а это никто не проверял —
-  расхождение может быть и правкой мимо отчёта (тот же порядок, что у `size check` и
-  у `doctor`: нарушение старше приближения). Починка в обоих случаях — `pnpm run
-  sizes`; на этом окружении она вернёт **код 4**.
-  Проверить это без переустановки можно окружением `SIZE_REPORT_NO_OPTIONAL=1` —
-  тем же приёмом это делает `test/minify.test.js`;
-- **Разбор модуля — рабочий поток, поднятый один раз на прогон** (`REFACTOR.md`
-  R-5.4): сам разбор стоит ~0,1 мс, а платится за него стартовой ценой потока
-  (≈ 54 мс) — и только если в измеряемых файлах вообще есть модули. Отступление
-  к `node --check` (≈ 86 мс на клетку) осталось на случай, когда файла потока нет
-  в упаковке, поток не ответил или в Node нет модулей vm;
-- **Новый файл-колонка должен быть закоммичен** до запуска: иначе проверка
-  состояния скажет «не совпало с деревом коммита» (сначала `git add` + коммит,
-  потом `pnpm run sizes`);
-- **Доковая правка — тоже правка.** Коммит, тронувший `WORKLOG.md` или любой
-  файл-колонку, получает в таблице строку, поэтому после него таблицу собирают
-  заново — иначе проверка говорит «расходится с историей git» и называет строку.
-  Незакоммиченная правка таблицу не двигает («сейчас» берётся из коммита), поэтому
-  сборка не ломается от того, что рядом с ней правят доки.
-- **`--init` не правит `.gitignore`** (`REFACTOR.md` R-4.8) — добавьте отчёты
-  руками, если им не место в истории.
+- **A module in a `.js` extension** (`import`/`export` in `.js` is ordinary in projects with a bundler) is
+  measured like any other file, with `type: module` in the manifest or without it: the guard parses the
+  result both as a script and as a module. It used to try the script alone and fell with code 5 on the
+  `export` itself, blaming the stripper; that is impossible today and no settings need editing
+  (`REFACTOR.md` R-4.6).
+- **Not JavaScript in a column** (markup or types straight in `.js`) is code 2 and a refusal naming the
+  reason and what to fix. The reason comes from the way the file was counted: with `minify.engine:
+  "esbuild"` the refusal names the minifier and its **one** way out (a simplification for that extension in
+  `minify.ext` — the `strip` way would hand the same file to the guard, whose verdict would be the same),
+  while with stripping it is the guard's refusal and **two** ways out (take the extension out of
+  `minify.guard`, or set `minify.ext`). Neither looks like a stack.
+- **No minifier** (an installation without the optional dependencies, a platform without `esbuild`) — the
+  metric honestly falls back to stripping: the numbers are the same as `strip`, the label says so in words,
+  and a **build** (`--write`) returns **code 4** with a ready fix. A **check** answers in two parts in that
+  case, and it is named here because it is what CI advises: if the report on disk was built with the real
+  minifier while the run goes without it, the accuracy has changed — the numbers in the table no longer
+  agree with the history, so the check says as much (**code 1**), showing the diverged signature row and
+  **naming the other count right there** in a note with a ready fix. The verdict stays with the divergence:
+  code 4 would claim the difference is explained by the sensor, and nobody checked that — the divergence
+  may also be an edit that went past the report (the same order as `size check` and `doctor`: a mismatch
+  outranks an approximation). The fix in both cases is `pnpm run sizes`; on this environment it returns
+  **code 4**. This can be checked without reinstalling by the `SIZE_REPORT_NO_OPTIONAL=1` environment — the
+  same way `test/minify.test.js` does it.
+- **The module parse is one worker raised once per a run** (`REFACTOR.md` R-5.4): the fallback to
+  `node --check` (a Node run per cell) remains for when the worker's file is not in the package, the worker
+  does not answer, or the Node build has no vm modules; and the worker is raised only if the measured files
+  hold modules at all. The measured price of both is in `REFACTOR.md` R-5.4 rather than promised in numbers
+  here.
+- **A new column file has to be committed** before the run: the table is built from commits, so a file git
+  does not track has nothing to measure and its column stays empty. The run itself does not complain — the
+  file is named by the settings rather than by the project — it is the numbers that would be missing in
+  silence. So `git add` + commit first, then `pnpm run sizes`.
+- **An edit to the journal is an edit too.** A commit that touched the journal or any column file gets a row
+  in the table, so the table is rebuilt after it — otherwise the check says "diverged from the git history"
+  and names the row. An uncommitted edit does not move the table ("now" comes from the commit), so a
+  rebuild is not broken by documentation being edited next to it.
+- **`--init` does not edit `.gitignore`** (`REFACTOR.md` R-4.8) — add the report by hand if it has no place
+  in the history.
 
-Проверено не на словах: раздел пройден покомандно на свежем репозитории (три
-коммита, ESM в `src/`) — протокол и найденные расхождения в `WORKLOG.md` §16, а
-пути, которые README называет своими, сверены с деревом. За этим следит сторож
-документации, и он падает вместе с документом, а не по желанию (`REFACTOR.md`
-R-4.1): пути, таблица файлов, зовы и ключи инструкций, числа проверок и цели по
-времени, ссылки на разделы и пин установки проверяются машинно. Формулировки,
-смысл и обещания о будущем машиной не проверяются — их держит человек.
+Not on words: the section was walked through command by command in a fresh repository, and the findings are
+in `worklog/archive/WORKLOG.md` §16. What keeps it true is the documentation guard (`REFACTOR.md` R-4.1):
+paths, the file table, the calls and flags of the instructions, the numbers of checks, references to sections
+and the install pin are checked by machine. **No time target is declared anywhere** — seconds depend on the
+window, so there is nothing to check against (`tools/suites.js` says why). Wording, meaning and promises
+about the future are not checked by machine; a person holds those.
 
-### 8. Если в проекте уже лежит копия инструмента
+### 8. If a copy of the tool is already in the project
 
-Порядок выше — для проекта, который подключает инструмент впервые. Когда копия
-уже лежит (свои `size-table.js` и его тесты), шаги идут в другом порядке; ниже —
-тот, которым переезжал `safe-resets` (`WORKLOG.md` §18):
+The order above is for a project wiring the tool in for the first time. When a copy is already there (its
+own `size-table.js` and its tests), the steps go in another order; below is the one `safe-resets` migrated
+by (`worklog/archive/WORKLOG.md` §18):
 
-1. **Установить, не удаляя копию** — две реализации какое-то время сосуществуют,
-   и это даёт бесплатную сверку на одном дереве: команда пакета с конфигом проекта
-   обязана собрать тот же артефакт байт в байт (у `safe-resets` — 225 673 Б,
-   sha256 `1bdb27e1…`). Не совпало — дальше не идём.
-2. **Перевести команды проекта на пакет:** `"test:sizes": "size"`,
-   `"sizes": "size --write"`.
-3. **Удалить копию** — и инструмент, и его тест: те же утверждения проверяет
-   набор пакета, а в проекте остаётся одна команда. Если тест звался из общего
-   раннера, шаг раннера становится одним и зовёт команду пакета, а не файл
-   проекта (в `safe-resets` путь берётся из манифеста установленного пакета,
-   чтобы шаг не знал внутренних имён файлов).
-4. **Убрать колонки удалённых файлов из настроек** и пересобрать артефакт
-   **отдельным коммитом**: коммиты, трогавшие только эти файлы, без них не
-   двигают ни одного числа, а такие коммиты строк не получают (у `safe-resets`
-   95 × 27 → 91 × 25).
-5. **Почистить документацию проекта:** ссылки на файлы инструмента заменяются
-   именем пакета и его командами, а описание внутренностей (стриппер, чтение
-   истории пачкой, вёрстка) из доков проекта уходит в доки пакета — иначе их две
-   копии и они разойдутся.
+1. **Install without removing the copy** — two implementations live side by side for a while, and that
+   gives a free comparison on one tree: the package's command with the project's config has to assemble the
+   same artifact byte for byte (for `safe-resets` — 225 673 B, sha256 `1bdb27e1…`, and both are frozen in
+   the parity reference, `fixtures/parity/manifest.json`). No match — do not go further.
+2. **Move the project's commands to the package:** `"test:sizes": "size"`, `"sizes": "size --write"`.
+3. **Remove the copy** — the tool and its test alike: the package's suite checks the same claims, and one
+   command stays in the project. If the test was called from a shared runner, the runner's step becomes a
+   single one calling the package's command rather than the project's file (in `safe-resets` the path comes
+   from the installed package's manifest, so the step knows no internal file names).
+4. **Take the deleted files' columns out of the settings** and rebuild the artifact in a **commit of its
+   own**: commits that touched only those files move no number without them, and such commits get no rows.
+5. **Clean the project's documentation:** references to the tool's files are replaced by the package's name
+   and its commands, while a description of the internals (the stripper, reading the history in batches,
+   the assembly) moves from the project's docs into the package's — otherwise there are two copies and they
+   will drift apart.
 
-Доступа к пакету не требуется ни локально, ни в CI — репозиторий публичный (§1),
-поэтому шага с ключом в этом порядке нет.
+No access to the package is needed either locally or in CI — the repository is public (§1), so there is no
+key step in this order.
 
-Что при этом теряется: проверки, которые сверяли настройки проекта с ожиданиями
-инструмента, отдельным набором больше не идут. Большую часть закрывает сама
-команда (чужой ключ или незнакомая метрика в конфиге — отказ с объяснением, файл
-таблицы не может быть колонкой), но _содержимое_ подписи (заголовок и команда
-починки взяты из конфига) не проверяет никто: если это важно, это одна проверка
-поверх `--data` в проекте.
+What is lost: the checks that compared the project's settings with the tool's expectations no longer run as
+a suite of their own. Most of them are covered by the command itself (an unknown flag or an unfamiliar
+metric in the config is a refusal with an explanation; the report file cannot be a column), but the
+_content of the signature_ (the heading and the fix command taken from the config) is checked by nobody: if
+that matters, it is one check on top of `--data` in the project.
 
 ## The gate against bloat
 
