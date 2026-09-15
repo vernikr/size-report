@@ -1,10 +1,10 @@
-/* Записка к фикстуре: что лежит рядом с бандлом и какие ловушки в истории.
+/* The fixture's note: what lies beside the bundle and which traps the history holds.
  *
- * Текст пишется в `fixtures/synthetic/README.md` и сверяется побайтово
- * (`pnpm run check:standards`), поэтому он — часть эталона, а не комментарий:
- * ловушку, которой в истории больше нет, отсюда убирают вместе с историей.
- * Список ловушек держится человеком ровно так же, как список чужих путей у
- * сторожа документации: проверка берёт воспроизводимость, а не верность описания.
+ * The text is written to `fixtures/synthetic/README.md` and compared byte for byte
+ * (`pnpm run check:standards`), so it is part of the golden rather than a comment: a trap the history
+ * no longer holds is removed from here together with the history. The list of traps is kept by a
+ * person exactly like the list of foreign paths in the documentation guard: the check takes
+ * reproducibility, not the truth of the description.
  */
 
 const TRAPS = [

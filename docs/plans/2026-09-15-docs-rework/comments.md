@@ -105,7 +105,15 @@ comment diff stays under the commit budget, otherwise it is split by file groups
   sensors", and `dup.js` skipped its second look silently by `--no-ref` (than the ref-missing case
   alone). Two time promises went too ("≤ 90 s", "tens of seconds"), as they would age with the
   machine; the reason for the slow profile does not rest on them.
-- [ ] **M9f tools: the synthetic project** — `tools/synthetic/**` (405).
+- [x] **M9f tools: the synthetic project** — `tools/synthetic/**` (405 → 403, 4 files; module M9
+  as a whole 3698 → 3660; journal entry `worklog/0090`, 2026-09-15). Module M9 is closed here. Two claims fell: the artifact path was
+  called a column of the settings (it is their `output`, and the ten columns are labelled paths), and
+  `content.js` claimed every edit names the trap it holds (only the edits holding a trap of their own
+  do). Everything else held, and the byte-compared fixture proved the data was left alone:
+  `pnpm run check:standards` rebuilds the fixture from these sources and finds 4 of 4 files equal.
+  Data-level staleness left alone on purpose: the note's warning branch is live but unprinted
+  (`manifest.json` says `localeStable: true`), and its text names a step of a finished plan — changing
+  it means re-taking the fixture, which is a decision, not a comment pass.
 
   The module was estimated at "three or four commits" before it was measured. A comment pass
   rewrites 60–80 % of a file's lines, and the commit budget is hard (≤ 600 changed lines, ≤ 10

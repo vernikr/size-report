@@ -1,11 +1,11 @@
-/* Содержимое фикстуры: что лежит в файлах синтетической истории.
+/* The fixture's content: what lies in the files of the synthetic history.
  *
- * Ловушки закодированы **текстом файлов**, а не флагами: движок обязан спотыкаться
- * на них сам. Поэтому почти каждая следующая версия файла — предыдущая с одной
- * правкой (`CODE_2` из `CODE_1`), и у правки названо, какую ловушку она держит.
+ * Traps are encoded by the **text of the files** rather than by flags: the engine has to trip over
+ * them on its own. So nearly every next version of a file is the previous one with a single edit
+ * (`CODE_2` from `CODE_1`), and an edit that holds a trap of its own says which one above it.
  *
- * Путь артефакта — здесь же: он и колонка в настройках, и файл в истории, и
- * расходиться этим двум нельзя.
+ * The artifact path lives here as well: it is the settings' `output` and a file in the history, and
+ * those two must not drift apart.
  */
 
 export const ARTIFACT = 'docs/size-table.html';
@@ -36,12 +36,11 @@ export const CODE_1 = [
 export const CODE_2 = CODE_1.replace('function label(name) {', 'var extra = 1;\nfunction label(name) {');
 export const CODE_3 = CODE_2.replace('var extra = 1;', 'var extra = 1;\nvar mixed = 2;');
 export const CODE_4 = CODE_3.replace('var mixed = 2;', 'var mixed = 2;\nvar markup = \'<a href="x">y & z</a>\';');
-// Замена символа на символ: объём не меняется ни в одной метрике — строки быть не
-// должно (иначе строка без единого числа читалась бы как поломка).
+// A character-for-character replacement shifts no metric's volume, so there must be no row at all
+// (a row without a single number would read as a breakage).
 export const CODE_5 = CODE_4.replace('var extra = 1;', 'var extra = 2;');
-// Ветки правят одну и ту же строку, поэтому слияние разрешается вручную. Размер
-// у каждой версии свой: иначе коммит не сдвинул бы ни одного числа и строки бы не
-// получил — а нам нужна именно строка слияния.
+// Both branches edit the same line, so the merge is resolved by hand. Each version has a size of
+// its own: a commit that shifted no number would get no row, and a merge row is the point here.
 export const CODE_BRANCH = CODE_5.replace('var half = 10 / 2 / 5;', 'var half = 20 / 2 / 5;');
 export const CODE_MAIN = CODE_5.replace('var half = 10 / 2 / 5;', 'var half = 10 / 2 / 50;');
 export const CODE_MERGED = CODE_5.replace('var half = 10 / 2 / 5;', 'var half = 20 / 2 / 50 + 1;');

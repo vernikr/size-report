@@ -5,13 +5,12 @@ import {
 } from './content.js';
 import { commit, git, initRepo, mergeConflicted, remove, write } from './repo.js';
 
-/* История фикстуры: каждая строка — коммит и то, что он делает. Ловушки
- * перечислены в README, который сборщик пишет рядом с бандлом (`./note.js`).
+/* The fixture's history: every entry is a commit and what it does. The traps are listed in the
+ * README that the builder writes beside the bundle (`./note.js`).
  *
- * Первые восемь коммитов — плоский список, потому что они и есть плоский список:
- * один за другим, без ветвления. Ветка, слияние и хвост из одиночных правок —
- * отдельные сюжеты, и они названы функциями: у каждого свой предмет, а не «ещё
- * немного коммитов».
+ * The first eight commits are one flat list because that is what they are: one after another, with
+ * no branching. The branch, its merge and the tail of single edits are stories of their own and are
+ * named as functions — each has a subject rather than being "some more commits".
  */
 
 export const HISTORY = [
@@ -67,8 +66,8 @@ export const HISTORY = [
   }
 ];
 
-/* Ветка: правка той же строки, что и на main, — слияние разрешается вручную,
- * поэтому у merge-коммита есть собственные изменения поверх первого родителя. */
+/* A branch: an edit of the very line main also edits, so the merge is resolved by hand and the
+ * merge commit carries changes of its own on top of its first parent. */
 function branchStory(dir) {
   git(dir, ['checkout', '-q', '-b', 'feature']);
   write(dir, 'src/code.js', CODE_BRANCH);
@@ -81,8 +80,8 @@ function branchStory(dir) {
   commit(dir, 'fixture: правка той же строки и служебного модуля');
 }
 
-/* Слияние, удаление и возврат файла: три ловушки про одно — клетка «—» против
- * нуля, и строка, которая считается по первому родителю. */
+/* The merge, the removal and the return of a file: three traps about one thing — an empty cell
+ * against a zero, and a row counted by the first parent. */
 function lossStory(dir) {
   mergeConflicted(dir, 'feature');
   write(dir, 'src/code.js', CODE_MERGED);
@@ -95,7 +94,7 @@ function lossStory(dir) {
   commit(dir, 'fixture: возврат файла');
 }
 
-/* Хвост: раздел журнала от коммита только журнала, незнакомый формат, пустой файл. */
+/* The tail: a journal section from a journal-only commit, an unknown format, an empty file. */
 function tailStory(dir) {
   write(dir, 'WORKLOG.md', WORKLOG_3);
   commit(dir, 'fixture: только журнал — раздел 3');

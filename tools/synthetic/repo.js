@@ -4,17 +4,17 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { MAX_BUF } from '../harness.js';
 import { gitArgv, gitEnv } from '../../src/git.js';
 
-/* Детерминированный репозиторий фикстуры: время, автор и обвязка git.
+/* The fixture's deterministic repository: time, author and the git harness.
  *
- * **Время и личность зафиксированы** — иначе sha коммитов не воспроизводимы, а они
- * и есть личность фикстуры: на них держатся и эталонные числа, и проверки переноса.
- * Отсчёт времени идёт от номера коммита (`tick`), поэтому порядок вызовов `commit`
- * — это и порядок дат: перестановка шагов истории поехала бы числами.
+ * **Time and identity are pinned** — or the commit shas would not be reproducible, and they are the
+ * fixture's identity: both the golden numbers and the move checks rest on them. Time is counted from
+ * the commit number (`tick`), so the order of `commit` calls is the order of dates as well:
+ * reordering the history's steps would shift the numbers.
  *
- * **Настройки git закреплены как у движка и у проверок**: фикстура собирается тем же
- * git, и её байты не должны зависеть от машины, на которой её собрали. Отсюда же
- * `core.autocrlf=false` при сборке: переводы строк в фикстуре — часть содержимого, а
- * не авто-правка рабочего дерева.
+ * **The git settings are pinned the way the engine and the checks have them**: the fixture is built
+ * by the same git, and its bytes must not depend on the machine that built it. Hence
+ * `core.autocrlf=false` at build time too: line endings are part of the fixture's content rather
+ * than an auto-edit of the working tree.
  */
 
 const BASE_MS = Date.UTC(2026, 0, 1, 7, 0, 0); // 2026-01-01 10:00:00 +03:00
@@ -22,7 +22,7 @@ const HOUR = 3600 * 1000;
 let tick = 0;
 
 export function stamp() {
-  const d = new Date(BASE_MS + (tick++) * HOUR + 3 * HOUR); // та же зона, что в подписи
+  const d = new Date(BASE_MS + (tick++) * HOUR + 3 * HOUR); // the same zone as in the stamp
   const p = (n) => String(n).padStart(2, '0');
   return d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate()) + 'T'
     + p(d.getUTCHours()) + ':' + p(d.getUTCMinutes()) + ':' + p(d.getUTCSeconds()) + '+03:00';
@@ -44,8 +44,8 @@ export function git(dir, args, env) {
   });
 }
 
-/* Настройки сборки: подписи не ставятся (они зависят от машины), переводы строк не
- * правятся (они часть содержимого). Список — часть личности фикстуры, а не мелочь. */
+/* Build settings: no signatures (they depend on the machine), no line-ending rewriting (line
+ * endings are content). The list is part of the fixture's identity rather than a detail. */
 export function initRepo(dir) {
   fs.mkdirSync(dir, { recursive: true });
   git(dir, ['init', '-q', '-b', 'main']);
@@ -64,9 +64,9 @@ export function commit(dir, subject) {
     { GIT_AUTHOR_DATE: when, GIT_COMMITTER_DATE: when });
 }
 
-/* Слияние доводится до открытой правки (`--no-commit`), и это проверка самой
- * фикстуры: если git слил сам, ловушка «слияние с правкой разрешения конфликта»
- * перестала существовать, а история при этом осталась бы сходящейся. */
+/* The merge is driven up to an open edit (`--no-commit`), and that is the fixture checking itself:
+ * had git merged on its own, the trap "a merge with a conflict resolution" would no longer exist
+ * while the history would still converge. */
 export function mergeConflicted(dir, branch) {
   const res = spawnSync('git', gitArgv(['merge', '--no-commit', '--no-ff', branch]), {
     cwd: dir, encoding: 'utf8', env: Object.assign({}, gitEnv(), AUTHOR)
