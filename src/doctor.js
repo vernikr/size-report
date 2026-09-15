@@ -15,13 +15,9 @@ import { tokenizer } from './tokens.js';
  *
  * Правило ответа: `ok` значит «делать нечего», а у находки назван уровень.
  * `action` — что-то надо сделать (и, где возможно, названа команда починки);
- * `note` — наблюдение: знать полезно, делать нечего. Код выхода — первый по
- * важности, а не «всё хорошо»: 2 — настройки нечитаемы (читать больше нечего),
- * 3 — история обрезана, 1 — покрытие неполно, 4 — число приближённо. Порядок
- * именно такой: сначала то, что мешает считать, потом то, что требует починки,
- * потом честная оговорка о счёте. Хук в этот порядок не входит: отчёт собирается
- * и без него, поэтому сломанный хук — находка без своего кода (вердикт `ok` при
- * этом всё равно «есть дело»).
+ * `note` — наблюдение: знать полезно, делать нечего. Код выхода считает один
+ * `verdictOf` в конце: шаги чтения только называют, что нашли (`troubles`), а что из
+ * найденного важнее — порядок в `WEIGHT`.
  *
  * Чего ответ не делает: не говорит, «правильно» ли выбраны колонки (это знает
  * проект), и не угадывает там, где данных нет, — отсутствие ответа называется
@@ -83,102 +79,117 @@ function dependencies(cfg) {
 
 /* Настройки: при нечитаемых ответ честно неполон (покрытие считать нечем), а
  * причина — не отказ, а находка: диагностика затем и нужна, чтобы назвать причину
- * и починку, — их и несёт текст отказа. */
-function readConfig(rep, root, configFile) {
+ * и починку, — их и несёт текст отказа. Вес обстоятельства шаг только **называет**
+ * (`troubles`), а важнее оно или нет — не его дело: решает `verdictOf`. */
+function readConfig(root, configFile) {
   try {
     const cfg = loadConfig(configFile, root);
-    rep.config = { file: configFile, ok: true, columns: cfg.columns.length, metrics: cfg.metrics };
-    return cfg;
+    return {
+      cfg: cfg,
+      report: { file: configFile, ok: true, columns: cfg.columns.length, metrics: cfg.metrics },
+      findings: []
+    };
   } catch (e) {
     if (!(e instanceof Refusal)) throw e;
-    rep.config = { file: configFile, ok: false, problem: e.message };
-    rep.findings.push({ level: 'action', what: e.message });
-    rep.exit = e.code;
-    return null;
+    return {
+      cfg: null,
+      report: { file: configFile, ok: false, problem: e.message },
+      findings: [{ level: 'action', what: e.message }],
+      troubles: { config: e.code }
+    };
   }
 }
 
-/* Хук: две находки, у каждой своя починка. Своего кода выхода у них нет — отчёт
- * собирается и без хука, поэтому сломанный хук меняет только вердикт. */
-function hookFindings(rep) {
-  const hooks = rep.hooks;
-  if (!hooks.installed) return;
+/* Хук: две находки, у каждой своя починка. Веса у них нет и своего кода выхода тоже —
+ * отчёт собирается и без хука, поэтому сломанный хук меняет только вердикт `ok`. */
+function hookFindings(hooks) {
+  const found = [];
+  if (!hooks.installed) return found;
   if (hooks.enabled === false) {
-    rep.findings.push({
+    found.push({
       level: 'action',
       what: 'хук установлен, но автоматика выключена настройкой hooks.enabled: отчёт обновляется руками',
       fix: 'верните «"hooks": {"enabled": true}» в файл настроек или снимите хук: ' + cliCommand('uninstall-hook')
     });
   }
   if (hooks.last !== null && HOOK_BAD.indexOf(hooks.last.result) >= 0) {
-    rep.findings.push({
+    found.push({
       level: 'action',
       what: 'хук: последний запуск не пересобрал отчёт — ' + hooks.last.why,
       fix: 'починьте то, на что жалуется причина, и пересоберите отчёт: ' + cliCommand('--write')
     });
   }
+  return found;
 }
 
-/* Покрытие — тот же ответ, что даёт `size check`. */
-function readCoverage(rep, cfg, root, configFile) {
+/* Покрытие — тот же ответ, что даёт `size check`, плюс два веса: неполнота пути — код 1,
+ * приближение датчика — код 4; неполнота старше, потому что без неё чисел нет вовсе.
+ * Что попадает в находки, а что нет: в отчёте целиком стоит блок покрытия (тот же текст,
+ * что у `size check`), поэтому неполнота второй раз не пересказывается — она весит. А по
+ * датчикам находка есть: `size check` печатает их строкой `!`, здесь они часть ответа. */
+function readCoverage(cfg, root, configFile) {
   if (cfg === null) {
-    rep.findings.push({
-      level: 'note',
-      what: 'покрытие не считалось: настройки нечитаемы — почините их и спросите снова'
-    });
-    return;
+    return {
+      report: null,
+      findings: [{
+        level: 'note',
+        what: 'покрытие не считалось: настройки нечитаемы — почините их и спросите снова'
+      }]
+    };
   }
   try {
-    rep.coverage = coverage(cfg, root, configFile);
+    const report = coverage(cfg, root, configFile);
+    return {
+      report: report,
+      findings: report.sensors.map((gap) => ({ level: 'action', what: gap.why, fix: gap.fix })),
+      troubles: report.ok
+        ? (report.sensors.length > 0 ? { sensor: EXIT.SENSOR } : {})
+        : { coverage: EXIT.VIOLATION }
+    };
   } catch (e) {
     if (!(e instanceof Refusal)) throw e;
-    rep.findings.push({ level: 'action', what: e.message });
-    rep.exit = e.code;
+    return {
+      report: null,
+      findings: [{ level: 'action', what: e.message }],
+      troubles: { history: e.code }
+    };
   }
 }
 
-/* Что попадает в находки, а что нет: в отчёте уже целиком стоит блок покрытия
- * (тот же текст, что у `size check`), поэтому неполнота здесь второй раз не
- * пересказывается — она меняет вердикт и код выхода. Находкой становится то,
- * чего в блоке покрытия нет: нечитаемые настройки, обрезанная история, а по
- * датчикам — их причина и починка (их `size check` печатает отдельной строкой
- * `!`, а здесь они часть того же ответа). Неполнота старше приближения: из
- * двух причин починки код выхода несёт ту, без которой чисел нет вовсе. */
-function coverageFindings(rep) {
-  if (rep.coverage === null) return;
-  rep.coverage.sensors.forEach((gap) => {
-    rep.findings.push({ level: 'action', what: gap.why, fix: gap.fix });
-  });
-  if (!rep.coverage.ok) rep.exit = EXIT.VIOLATION;
-  else if (rep.coverage.sensors.length > 0) rep.exit = EXIT.SENSOR;
+/* Вес обстоятельств — вот и весь порядок важности, и он один на весь модуль. Код выхода
+ * берётся у самого важного из найденного, а не у того, что нашлось позже: сначала чем
+ * считать нечем (настройки, история), потом неполное покрытие, потом оговорка о счёте.
+ * Хук в список не входит: отчёт собирается и без него (см. `hookFindings`). */
+const WEIGHT = ['config', 'history', 'coverage', 'sensor'];
+
+/* Вердикт — одно место, где обстоятельства превращаются в код выхода и в `ok`.
+ * «Делать нечего» — это ни одной находки-действия и сосчитанное полное покрытие: без
+ * покрытия вердикта нет, потому что считать больше нечего (см. заметку в `readCoverage`). */
+function verdictOf(rep, troubles) {
+  const found = WEIGHT.filter((kind) => troubles[kind] !== undefined);
+  rep.exit = found.length === 0 ? EXIT.OK : troubles[found[0]];
+  rep.ok = rep.coverage !== null && rep.coverage.ok
+    && !rep.findings.some((f) => f.level === 'action');
+  return rep;
 }
 
 export function doctor(root, configFile) {
+  const config = readConfig(root, configFile);
+  const hooks = hooksReport(root, config.cfg);
+  const cov = readCoverage(config.cfg, root, configFile);
   const rep = {
     schema: 1,
     ok: false,
     tool: { name: TOOL_PKG.name, version: TOOL_PKG.version },
     environment: environment(root),
-    config: null,
-    dependencies: null,
-    hooks: null,
-    coverage: null,
-    findings: [],
+    config: config.report,
+    dependencies: dependencies(config.cfg),
+    hooks: hooks,
+    coverage: cov.report,
+    findings: config.findings.concat(hookFindings(hooks), cov.findings),
     exit: EXIT.OK
   };
-  const cfg = readConfig(rep, root, configFile);
-  rep.dependencies = dependencies(cfg);
-  rep.hooks = hooksReport(root, cfg);
-  hookFindings(rep);
-  readCoverage(rep, cfg, root, configFile);
-  coverageFindings(rep);
-
-  /* «Делать нечего»: ни одной находки-действия и покрытие сосчитано и полно.
-   * Покрытие спрашивается отдельно, потому что его неполнота говорится не находкой,
-   * а блоком покрытия (см. выше), — а вердикт она менять обязана. */
-  rep.ok = rep.coverage !== null && rep.coverage.ok
-    && !rep.findings.some((f) => f.level === 'action');
-  return rep;
+  return verdictOf(rep, Object.assign({}, config.troubles, cov.troubles));
 }
 
 /* Итог последнего запуска хука словами: по нему человек понимает, что произошло
