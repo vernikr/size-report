@@ -1,93 +1,87 @@
-# Шаблоны для подключаемого проекта
+# Templates for a project wiring the tool in
 
-Два файла, которые проект берёт как есть: настройки, проходящие проверку самого
-инструмента, и описание проверки в CI. Ставятся они вместе с пакетом, поэтому
-лежат в его поставке (`files` в `package.json`) и стерегутся проверкой
-`test/templates.test.js`: черновик обязан быть валидным, а команды описания —
-существовать в инструменте.
+Two files a project takes as they are: settings that pass the tool's own check, and a description of the CI
+check. They are installed together with the package, which is why they travel in its delivery (`files` in
+`package.json`) and are guarded by `test/templates.test.js`: the draft has to be valid, and the commands of
+the description have to exist in the tool.
 
-| Файл | Куда | Что делать |
+| File | Where | What to do |
 |---|---|---|
-| `size-report.config.json` | `size-table.config.json` в корне проекта | **Поправить колонки** и, если нужно, остальное |
-| `ci.yml` | `.github/workflows/size-report.yml` | Ничего: файл работает как есть |
+| `size-report.config.json` | `size-table.config.json` in the project root | **Fix the columns** and, if needed, the rest |
+| `ci.yml` | `.github/workflows/size-report.yml` | Nothing: the file works as it is |
 
-Отчёт в проекте появляется без ручной работы: после установки пакета и первого
-запуска инструмент сам ставит хуки `post-commit`/`post-merge`, и `docs/` с
-`size-report.html` создаётся первым же коммитом. Снять автоматику — `size
-uninstall-hook`, выключить, не снимая, — `"hooks": {"enabled": false}`.
+The report appears in the project without manual work: after the package is installed and the tool runs for
+the first time, it installs the hooks `post-commit`/`post-merge` itself, and `docs/size-report.html` is
+created by the very first commit. To take the automation away — `size uninstall-hook`; to switch it off
+without removing it — `"hooks": {"enabled": false}`.
 
-## Настройки
+## Settings
 
-**Файл настроек заводить не нужно.** Без него инструмент выводит профиль из самого
-проекта: колонками — каждый отслеживаемый файл, который можно измерить (отчёт тогда
-описывает проект целиком, а не несколько самых крупных его файлов), журналом —
-первый знакомый (`WORKLOG.md`,
-`CHANGELOG.md`, …), файлом отчёта — `docs/`, если каталог есть, командой починки —
-объявленный скрипт `sizes`, ссылкой на коммит — адрес `origin`. О том, что настройки
-выведены, инструмент говорит строкой, а закрепляет их файлом `size --init`: дальше
-это обычные настройки, которые правят руками.
+**A settings file is not needed.** Without one the tool derives the profile from the project itself: the
+columns are every tracked file that can be measured (the report then describes the project as a whole rather
+than a few of its largest files), the journal is the first familiar one (`WORKLOG.md`, `CHANGELOG.md`, …),
+the report file is `docs/size-report.html`, the fix command is the declared `sizes` script, and the commit
+link comes from the `origin` address. That the settings were derived the tool says in a line, and it pins
+them to a file with `size --init`: from then on they are ordinary settings, edited by hand.
 
-Этот образец — для другого случая: хочется начать с правленого файла или посмотреть
-все ключи сразу. **Колонки в нём — пример**, а не список ваших файлов: в шаблоне стоят
-`README.md` и `package.json`, потому что они есть почти в любом проекте, и с ними
-первый отчёт соберётся сразу. Свои колонки — у `size --init` (он берёт их из вашего
-дерева и истории; доки в него входят): либо взять его файл целиком и перенести из
-шаблона ключи, которых там нет, либо скопировать шаблон и вписать колонки руками.
-Отсюда же растёт ожидаемое: колонки примерные, поэтому `size check` скажет, что
-README и журнал колонкой не отслеживаются, — так и задумано.
+This sample is for another case: starting from an edited file, or seeing all the keys at once. **Its columns
+are an example** rather than a list of your files: the template holds `README.md` and `package.json` because
+nearly any project has them, and with them the first report is assembled at once. Your own columns come from
+`size --init` (it takes them from your tree and history; documentation is included): either take its file
+whole and carry over the keys the template has and it does not, or copy the template and write the columns in
+by hand. The expectation grows from the same place: the columns are examples, so `size check` will name the
+paths that are not columns — the project's own sources and its journal — and that is deliberate.
 
-Что стоит знать про значения шаблона:
+What is worth knowing about the template's values:
 
-- `metrics: ["raw", "min", "tok"]` — три измерения отчёта. `min` считается
-  настоящим минификатором (`minify.engine: "esbuild"`), а `tok` — словарём
-  `o200k_base`. Оба едут необязательными зависимостями пакета и ставятся обычной
-  установкой; если их нет (установка без необязательных зависимостей, платформа
-  без них), инструмент работает, но честно говорит, что числа получены другим
-  счётом, и отдаёт **код 4** — это не ошибка настройки, а названное приближение.
-- `fixCommand` — команда, которую цитирует подпись отчёта и отказы. В шаблоне это
-  `node node_modules/@vernikr/size-report/bin/size.js --write` — путь к
-  установленному пакету внутри проекта. **Имени пакета как команды здесь быть не
-  может:** `npx <имя>` в проекте без установленного пакета уходит в реестр и тянет
-  пакет по сети, то есть совет, который должен выручать, зависит от доступа к
-  реестру и от того, что там лежит. Если в проекте есть свой
-  скрипт, например `pnpm run sizes`, — впишите его: подпись отчёта будет вести
-  к нему.
-- `journal: null` — ссылок на разделы журнала не будет. Если в проекте есть
-  `WORKLOG.md` или `CHANGELOG.md`, поставьте объект с `path`, `url`, `pattern` —
-  именно этот объект выводит `size --init`, когда журнал в проекте есть.
-- `paths` внутри колонки — псевдонимы одного файла: если файл переименовывали,
-  перечислите и старое имя, и новое, и колонка не разорвётся.
-- `output: "docs/size-report.html"` — файл отчёта (он один: самодостаточная страница со всеми числами, фильтрами и ссылкой); каталог инструмент создаст сам. Хук обновления ставится сам — скриптом установки (npm, yarn) или первым запуском (pnpm 10 не исполняет скрипты зависимостей, если не разрешить `pnpm.onlyBuiltDependencies`), и после каждого коммита отчёт пересобирается. Первый отчёт остаётся неотслеживаемым, пока вы не добавите его в git; дальше он обновляется коммитами сам.
+- `metrics: ["raw", "min", "tok"]` — the report's three measurements. `min` is counted by the real minifier
+  (`minify.engine: "esbuild"`) and `tok` by the `o200k_base` dictionary. Both travel as optional
+  dependencies of the package and are installed by an ordinary installation; without them (an installation
+  without the optional dependencies, a platform that has none) the tool still works, but says honestly that
+  the numbers were counted another way, and returns **code 4** — that is a named approximation rather than
+  an error of the settings.
+- `fixCommand` — the command the report's signature and the refusals quote. In the template it is
+  `node node_modules/@vernikr/size-report/bin/size.js --write` — the path to the installed package inside
+  the project. **The package name as a command cannot stand here:** `npx <name>` in a project without the
+  installed package goes to the registry and pulls the package over the network, so the advice that is meant
+  to help would depend on access to the registry and on what lies there. If the project has a script of its
+  own — `pnpm run sizes`, say — write it in: the report's signature will lead to it.
+- `journal: null` — there will be no references to journal sections. If the project has `WORKLOG.md` or
+  `CHANGELOG.md`, put an object with `path`, `url` and `pattern`: that very object is what `size --init`
+  derives when the project has a journal.
+- `paths` inside a column are aliases of one file: if the file was renamed, list both the old name and the
+  new one, and the column will not break apart.
+- `output: "docs/size-report.html"` — the report file (there is one of it: a self-contained page with all the
+  numbers, the filters and the link); the tool creates the directory itself. The updating hook is installed by
+  itself — by the install script (npm, yarn) or by the first run (pnpm 10 does not run dependency scripts
+  unless `pnpm.onlyBuiltDependencies` allows it) — and the report is rebuilt after every commit. The first
+  report stays untracked until you add it to git; from then on it updates itself by commits.
 
-## Проверка в CI
+## The check in CI
 
-Скопируйте `ci.yml` в `.github/workflows/size-report.yml` — правок он не требует,
-если проект на `pnpm`. Что он делает и почему именно так, написано в его
-комментариях; коротко: собирает таблицу заново и сверяет с файлом на диске,
-а затем снимает данные отчёта дважды — обычно и в среде, где настроек git нет
-вовсе (`GIT_CONFIG_GLOBAL=/dev/null`), — и сравнивает снимки побайтово. Второе и
-есть проверка того, что числа не зависят от машины.
+Copy `ci.yml` to `.github/workflows/size-report.yml` — it needs no edits if the project is on `pnpm`. What it
+does and why exactly so is written in its comments; in short: it assembles the table again and compares it
+with the file on disk, then takes the report's data twice — usually and in an environment with no git
+settings at all (`GIT_CONFIG_GLOBAL=/dev/null`) — and compares the snapshots byte for byte. The second one is
+the check that the numbers do not depend on the machine.
 
-Своих секретов описание не требует и не должно: пакет ставится из публичного
-репозитория, а pnpm тянет его архив по HTTPS — ни ключа, ни токена ни установке,
-ни самой проверке не нужно. Если проект уйдёт на приватный registry или на свою
-копию пакета, шаг с ключом придётся добавить самому: заводить его в шаблоне за
-проект инструмент не должен.
+It needs no secrets of its own, and must not: the package is installed from a public repository, and pnpm
+pulls its archive over HTTPS — neither the installation nor the check itself needs a key or a token. Should
+the project move to a private registry or to a copy of the package of its own, the key step will have to be
+added by hand: bringing it into the template on the project's behalf is not the tool's business.
 
-Для `npm` и `yarn` в файле сказано, какие две строки заменить.
+For `npm` and `yarn` the file itself says what to replace.
 
-Проверки полноты (`pnpm exec size check`) в шаблоне намеренно нет: она требует,
-чтобы **каждый** путь истории был колонкой или исключением, — а колонки в шаблоне
-примерные, и на проекте, где они ещё не подобраны, такая проверка была бы красной
-не по делу. Когда колонки обрисуют проект, добавьте шаг сами: `check` назовёт
-пути, которые колонкой не отслеживаются, и коммиты, которые их завели; те, что
-считать не нужно, вписываются в `skip` — тот же список делает путь и исключением.
-Про один коммит отвечает `pnpm exec size explain <sha>`.
+There is deliberately no completeness check (`pnpm exec size check`) in the template: it demands that
+**every** path of the history be a column or an exception, while the template's columns are examples — and in
+a project whose columns are not chosen yet such a check would be red for no reason. Once the columns describe
+the project, add the step yourself: `check` names the paths a column does not track and the commits that
+introduced them; those that need not be counted go to `skip` — the same list makes a path an exception as
+well. About a single commit `pnpm exec size explain <sha>` answers.
 
-## Чего в шаблонах нет
+## What the templates do not have
 
-Блока для файлов агентов проекта (`AGENTS.md` и подобных) здесь нет намеренно:
-требования такого файла не просят, а выдумывать формат чужого репозитория
-инструмент не должен. Что агенту нужно знать, он возьмёт из `size --help` и
-`size --data` — команды и данные описаны в `README.md` пакета, раздел
-«For an AI agent».
+A block for the project's own agent files (`AGENTS.md` and the like) is deliberately absent here: the
+requirements do not ask for such a file, and inventing the format of someone else's repository is not
+something the tool should do. What an agent needs to know it will take from `size --help` and `size --data` —
+the commands and the data are described in the package's `README.md`, section "For an AI agent".
