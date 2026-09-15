@@ -1,9 +1,10 @@
 #!/bin/sh
-# Перед отправкой: тот же быстрый профиль (уже пройденный на коммиты, но коммитов в
-# отправке бывает несколько) плюс то, что CI проверит по диапазону — трейлер
-# `Gate-Change:` у каждого коммита, тронувшего гейт-файл. Полный набор здесь не
-# гоняется: он дорогой, а его место — `pnpm run verify` и CI.
-# Ставится один раз: `pnpm run hooks:install` (core.hooksPath = .githooks).
+# Before a push: the same fast profile (every commit has passed it, but a push carries several) plus the
+# check of the `Gate-Change:` trailer on every commit of the range that touched a gate file. That check
+# has no other home — CI runs the profile, and no step of it looks at trailers — so a push is where it
+# happens, and a machine that never pushes never runs it. The full set is not run here: it is expensive,
+# and `pnpm run verify` and CI are its place.
+# Installed once: `pnpm run hooks:install` (core.hooksPath = .githooks).
 set -e
 if ! command -v pnpm >/dev/null 2>&1; then
   echo "pre-push: pnpm не найден в PATH — быстрый профиль не выполнен" >&2

@@ -1,18 +1,18 @@
 #!/bin/sh
-# Отчёт об объёме обновляется после каждого коммита — без ручного шага.
+# The size report is refreshed after every commit — with no manual step.
 #
-# Живёт здесь (в `.githooks`, а не в `.git/hooks`), потому что в проекте задан
-# `core.hooksPath = .githooks`: каталог хуков у него свой и версионируется. Поэтому
-# строку зова инструмента вписал человек (так и советует `size install-hook`, когда
-# видит чужой каталог хуков), а не сам инструмент: править версионируемый каталог
-# вслепую он отказывается.
+# It lives here (in `.githooks` rather than `.git/hooks`) because the project sets `core.hooksPath =
+# .githooks`: that hooks directory is its own and is versioned. So the line calling the tool was written
+# by a person — which is what `size install-hook` advises when it meets someone else's hooks directory
+# (versioned, and possibly lying in another repository) — and not by the tool itself: it refuses to edit a
+# versioned directory blind.
 #
-# Что делает зов: пересобирает `docs/size-report.html` и, если файл в git, кладёт его
-# отдельным коммитом (плумбингом — индекс и незакоммиченная работа не тронуты).
-# Коммит уже сделан к этому моменту, поэтому отказ инструмента ничего не роняет.
+# What the call does: rebuilds `docs/size-report.html` and, if the file is in git, commits it on its own
+# (with plumbing, so the index and the uncommitted work are untouched). The commit has already happened by
+# then, so a refusal of the tool breaks nothing.
 #
-# Снять автоматику: убрать строку `exec` ниже. Тише сделать нельзя (`hooks.enabled`
-# относится к хукам, поставленным в `.git`), поэтому выключатель тут — сам файл.
+# Turning the automation off: remove the `exec` line below. There is no quieter switch (`hooks.enabled`
+# is about hooks installed into `.git`), so the switch here is the file itself.
 command -v node >/dev/null 2>&1 || exit 0
 [ -f ./node_modules/@vernikr/size-report/bin/size.js ] || exit 0
 exec node ./node_modules/@vernikr/size-report/bin/size.js hook-run

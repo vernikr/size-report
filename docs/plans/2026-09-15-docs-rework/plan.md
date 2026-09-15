@@ -39,6 +39,10 @@ behind a decision survives the next rewrite.
 1. **`comments.md`** — self-contained, and every chunk is provable by the sensors that
    already watch those files (`lint:strict`, `metrics`, `deps`, the fast suite). Done
    module by module, one commit per module as long as it fits the commit budget.
+   **Closed 2026-09-15**: eleven modules, one commit each (`M1` … `M11`), every one with its
+   numbers and the claims it deleted recorded in `worklog/`; the code was left alone, with a
+   single named exception (one shared helper in `test/environment.test.js`, which the
+   duplication sensor demanded — `worklog/0097`).
 2. **`markdown.md`** — largest reader impact first, one document per commit, because the
    documentation guards read the *shape* of these files and have to be edited in step.
 

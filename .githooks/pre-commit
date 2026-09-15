@@ -1,9 +1,8 @@
 #!/bin/sh
-# Быстрый профиль на каждую правку: оформление, датчики раздувания и быстрый набор
-# проверок — те же команды, что в CI (список один, `tools/gates/run.js`).
-# Полный профиль (`pnpm run verify`) тяжелее и живёт в CI и перед отправкой правки,
-# а не в хуке: хук — это секунды.
-# Ставится один раз: `pnpm run hooks:install` (core.hooksPath = .githooks).
+# The fast profile on every edit: formatting, the bloat sensors and the fast set of checks — the same
+# commands as CI, taken from one list (`tools/gates/run.js`). The full profile is heavier and belongs to
+# CI and to a person before a push, not to a hook: a hook is seconds.
+# Installed once: `pnpm run hooks:install` (core.hooksPath = .githooks).
 set -e
 if ! command -v pnpm >/dev/null 2>&1; then
   echo "pre-commit: pnpm не найден в PATH — быстрый профиль не выполнен" >&2
@@ -11,15 +10,14 @@ if ! command -v pnpm >/dev/null 2>&1; then
   exit 1
 fi
 
-# Окружение коммита снимается перед прогоном набора: git отдаёт хуку переменные
-# про **свой** индекс и префикс (измерено: `GIT_INDEX_FILE` и `GIT_PREFIX`), а при
-# коммите, названном путями (`git commit -- файл`), индекс подменяется временным и
-# исчезает вместе с коммитом. Набор проверок зовёт git сам и в подкаталогах-клонах,
-# поэтому унаследованный чужой индекс уводит его записи в этот же файл: прогон
-# краснеет причинами, которых у дерева нет («invalid object … for 'data/table.toml'»,
-# «ENOENT: … src/code.js»), а настоящий индекс репозитория остаётся пустым — и это
-# уже потеря, а не шум. Настройки, за которые отвечает сам коммит (имя, дата,
-# редактор), не трогаются: они к git-чтению проверок отношения не имеют.
+# The commit's environment is dropped before the set runs: git hands a hook variables about **its own**
+# index and prefix (measured on 2.50.1: `GIT_INDEX_FILE` is `.git/index`, or a temporary `next-index-*.lock`
+# when the commit is named by paths — that one disappears with the commit; `GIT_PREFIX` is the
+# subdirectory when committing from one). The checks call git themselves and inside clones, so an
+# inherited index sends their writes into that same file: the run reddens with causes the tree does not
+# have («invalid object … for 'data/table.toml'», «ENOENT: … src/code.js»), and — the real loss — the
+# repository's own index stays empty. Settings the commit itself owns (name, date, editor) are left
+# alone: they have nothing to do with the checks' git reads.
 unset GIT_INDEX_FILE GIT_PREFIX
 
 exec pnpm run verify:fast

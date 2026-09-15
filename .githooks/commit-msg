@@ -1,7 +1,7 @@
 #!/bin/sh
-# Защита гейт-файлов: правка порогов, баз, правил датчиков и самой обвязки проверок
-# возможна только с трейлером `Gate-Change: <причина>` в сообщении коммита.
-# Гейт не платит за себя ничем: это чтение списка файлов и строки, без прогонов.
-# Ставится один раз: `pnpm run hooks:install` (core.hooksPath = .githooks).
+# Gate files: a change to thresholds, baselines, sensor rules or the harness of the checks passes only
+# with a `Gate-Change: <reason>` trailer in the commit message. The gate costs nothing of its own: it
+# reads a list of files and one line, and runs nothing.
+# Installed once: `pnpm run hooks:install` (core.hooksPath = .githooks).
 set -e
 node tools/gates/gatefiles.js --commit-msg "$1"

@@ -1,25 +1,23 @@
-/* Линтер пакета. Правила взяты у проекта-потребителя (`safe-resets/eslint.config.mjs`),
- * чтобы модуль не воевал с ним оформлением, плюс одно механическое правило против
- * склейки операторов в одну строку: такая строка уже проскакивала при переносе
- * кода — на одной строке оказался `} else {` и следующий за ним оператор, а
- * `indent` этого не видел, потому что отступ строки оставался верным.
+/* The package's linter. The rules are taken from the consumer project (`safe-resets/eslint.config.mjs`)
+ * so that the module does not fight it over formatting, plus one mechanical rule against two statements
+ * glued into one line: such a line has already slipped through while code was being moved — `} else {`
+ * ended up on one line with the statement after it, and `indent` did not see it, because the line's
+ * indentation stayed right.
  *
- * Строки-однострочники в этом коде — обычное дело (`if (...) return;`, тело
- * `forEach` из двух операторов), поэтому запрещать несколько операторов в строке
- * нечем: `max-statements-per-line` рубит принятый стиль (39 замечаний на чистом
- * дереве), а саму склейку всё равно не ловит — оператор на той строке был один.
- * Выдаёт её лишний пробел, оставшийся от склейки, и по нему бьёт `no-multi-spaces`.
+ * One-statement lines are ordinary here (`if (...) return;`, a `forEach` body of two statements), so there
+ * is nothing to forbid several statements per line with: `max-statements-per-line` cuts the accepted style
+ * and does not catch the gluing anyway — the statement on that line was a single one. The glue gives
+ * itself away by a leftover extra space, and `no-multi-spaces` is what hits it.
  *
- * Конфигурация плоская (ESLint 9), а имя файла — `.js`, не `.mjs`: пакет объявлен
- * модулем (`"type": "module"`), и `.js` в нём уже модуль.
+ * The configuration is flat (ESLint 9), and the file name is `.js`, not `.mjs`: the package is declared a
+ * module (`"type": "module"`), so `.js` already is one here.
  *
- * Что линтуется: настоящий код — `bin/`, `src/`, `tools/`, `test/` и сам этот
- * файл. `fixtures/` исключены целиком: там лежат данные (бандлы истории) и
- * замороженная копия старой реализации, к которой правила пакета неприменимы.
+ * What is linted: real code — `bin/`, `src/`, `tools/`, `test/` — and the configuration files in the root.
+ * `fixtures/` is excluded whole: data lives there (history bundles, the taken standards with their
+ * manifests), and the package's rules do not apply to it.
  *
- * Запуск: `pnpm run lint` (совет, не блокирует) и `pnpm run lint:strict` (падает).
- * Текущее дерево обязано давать ноль замечаний — база чистая, а не «включили и
- * завалили».
+ * Run: `pnpm run lint` (advice, does not block) and `pnpm run lint:strict` (fails). The tree is expected
+ * to yield zero findings: no baseline, no "switched it on and let it drown".
  */
 export default [
   {
@@ -38,7 +36,7 @@ export default [
       }
     },
     rules: {
-      // Причина отказа теряется молча — пишем `catch (_e)`, если молчание намеренно.
+      // A silent refusal cause is lost; write `catch (_e)` when the silence is deliberate.
       'no-unused-vars': ['warn', {
         args: 'none',
         varsIgnorePattern: '^_',
@@ -47,28 +45,28 @@ export default [
       }],
       'no-undef': 'warn',
       'block-scoped-var': 'warn',
-      // `==` допускаем только против `null`.
+      // `==` is allowed against `null` only.
       eqeqeq: ['warn', 'always', { null: 'ignore' }],
-      // Отступы — 2 пробела; единственное правило, которое считается ошибкой и
-      // правится командой `pnpm exec eslint --fix`.
+      // Indentation is 2 spaces; the only rule counted as an error, and the one `pnpm exec eslint --fix`
+      // repairs.
       indent: ['error', 2, { SwitchCase: 1 }],
-      // Против той самой склейки: она выдаёт себя провалом пробелов между
-      // операторами (`} else {      const …`). Выравнивание комментария в конце
-      // строки под соседние — не провал в коде, поэтому оно исключено.
+      // Against that very gluing: it gives itself away by broken spacing between statements
+      // (`} else {      const …`). Aligning an end-of-line comment with its neighbours is no break in the
+      // code, so it is exempt.
       'no-multi-spaces': ['error', { ignoreEOLComments: true }]
     }
   },
   {
-    // Программа страницы — единственное, что исполняется в браузере, и она
-    // вклеивается в собранную страницу **одним скриптом**: у глав (`src/page/*.js`)
-    // одна область видимости, и для линтера это видно только так.
+    // The page's program is the only thing running in a browser, and it is embedded into the assembled
+    // page as **one script**: the chapters (`src/page/*.js`) share one scope, and only this way is that
+    // visible to the linter.
     //
-    // Поэтому здесь два набора имён: сам браузер и то немногое, что главы делят
-    // между собой. Общие имена — не лазейка, а запись факта: переключатели панели
-    // просят перерисовку (`appRender` объявляет глава сборки), а три обстоятельства
-    // первой отрисовки заводит глава состояния, а переставляет глава сборки.
-    // Импорт на эти имена завёл бы кольцо связей (`deps`), которого в собранной
-    // странице нет: там это один скрипт, а не ссылки между модулями.
+    // Hence two sets of names here: the browser itself and the little the chapters share. The shared names
+    // are not a loophole but a record of fact: the panel's switches ask for a redraw (`appRender` is
+    // declared by the assembly chapter), and the three circumstances of the first draw are brought up by
+    // the state chapter and set by the assembly one. An import on these names would make a cycle
+    // (`deps`) that the assembled page does not have: there it is one script, not references between
+    // modules.
     files: ['src/page/*.js'],
     languageOptions: {
       globals: {
@@ -82,8 +80,8 @@ export default [
     }
   },
   {
-    // `reports/` — машинные отчёты датчиков (`tools/gates/`): они в `.gitignore`,
-    // и линтеру там делать нечего.
+    // `reports/` holds the sensors' machine reports (`tools/gates/`): they are in `.gitignore`, and the
+    // linter has nothing to do there.
     ignores: ['node_modules/', '.freebuff/', 'fixtures/', 'reports/']
   }
 ];

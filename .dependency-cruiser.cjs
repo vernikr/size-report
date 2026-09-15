@@ -1,13 +1,15 @@
-/* Датчик связей: циклы, сироты, направление слоёв. Отдельно от тестов и линтера,
- * потому что класс дефекта свой — файл может быть чист по правилам и при этом
- * врастать в цикл или тянуть из прода то, что прода знать не должна.
+/* The dependencies sensor: cycles, orphans, the direction of layers. Apart from the checks and the linter
+ * because the defect class is its own — a file can be clean by the rules and still grow into a cycle or
+ * pull into the product what the product must not know.
  *
- * Замер текущего дерева: 80 модулей, 346 связей, находок ноль — значит храповик
- * чистый: любая находка новая по определению, и `--ignore-known` не нужен, пока
- * она одна. Появится находка, которую признали терпимой, — её кладут в
- * `.dependency-cruiser-known-violations.json` и это отдельное человеческое действие.
+ * The ratchet of this sensor lives in `tools/gates/deps.js` (`--ignore-known` and the known-violations
+ * file): it stays unused while the tree is clean, and tolerating a finding is a person's decision rather
+ * than a sensor's move.
  *
- * Запуск: `pnpm run deps` (гейт, разбор в `tools/gates/deps.js`).
+ * The `comment` of every rule below is printed with the finding: it is the sensor's verdict, in the same
+ * language as the other verdicts, and not a remark for the reader of this file.
+ *
+ * Run: `pnpm run deps`.
  */
 
 module.exports = {

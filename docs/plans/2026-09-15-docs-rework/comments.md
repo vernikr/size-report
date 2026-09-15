@@ -224,16 +224,38 @@ comment diff stays under the commit budget, otherwise it is split by file groups
     from the contract, `package.json` is exact while every other format is measured by stripping,
     because the fixture asks for no minifier (the default engine is `strip`), so the list of extensions
     the old comment gave was both incomplete and beside its own reason.
-- [ ] **M11 shell and configs** — `.githooks/*`, `eslint.config.js`,
-  `eslint.metrics.config.js`, `.dependency-cruiser.cjs` (~500). Known defects to fix here, found
-  during M9e: `eslint.metrics.config.js` (line 5) names the ratchet `eslint-suppressions.json` —
-  without the leading dot, that is, the very name the strict formatting linter picks up by default
-  (measured on ESLint 9.39.5: the file beside a config is read with no flag, and unused entries
-  fail the run with code 2). The baseline itself is `.eslint-suppressions.json`. Second find, from
-  M10f: that same header dates its thresholds by `` `WORKLOG.md` §14 `` — a root file that has not
-  existed since the journal moved, and a section address pointing into a document this work rewrites.
-  Third, also M10f: the same header comments are in Russian (the file is a config rather than code,
-  so it sat outside every module until now).
+- [x] **M11 shell and configs** — `.githooks/commit-msg` 7 → 7, `.githooks/post-commit` 18 → 18,
+  `.githooks/pre-commit` 25 → 23, `.githooks/pre-push` 16 → 17, `eslint.config.js` 89 → 87,
+  `eslint.metrics.config.js` 241 → 245, `.dependency-cruiser.cjs` 71 → 73; 128 Russian comment lines →
+  259 changed lines (journal entry `worklog/0098`, 2026-09-15). **The subplan is closed here.** All
+  seven files are gate files, so the commit carries the `Gate-Change:` trailer with its measurement.
+  The three known defects are fixed: the metrics header now names the ratchet
+  `.eslint-suppressions.json` **and says why the dot matters** (a flagless ESLint run reads the
+  undotted default location beside its own config, and stale entries there fail that run with code 2),
+  the threshold table is dated by `worklog/archive/WORKLOG.md` §58.3 — the section that really holds it
+  and a document this work does not rewrite — instead of the root `WORKLOG.md` §14 (a file that no
+  longer exists, and a section about the shared harness and test speed). Claims deleted as false, each
+  measured: `pre-push` promised that CI checks the `Gate-Change:` trailer over the range, while CI runs
+  the profile and no step of it reads trailers (checked in all three workflows) — the range check lives
+  in that hook alone; the linter header explained the `fixtures/` exclusion by "the frozen copy of the
+  old implementation" lying there, but that copy left the tree for the history in `d36c88f` (the
+  directory holds data: bundles and taken standards); the metrics header promised that every rejected
+  rule was rejected for a measured reason, naming `sonarjs/no-duplicate-string` **twice** and
+  `sonarjs/no-nested-template-literals` beside it, while the archive (§58.8) lists only the first and
+  the second reports nothing anywhere in the tree today (measured: 42 findings for the first, 0 for the
+  second); the same header quoted a function-length distribution (p50 7 / p90 27 / p99 73 / max 118,
+  "14 functions above 60") that belongs to the tree of that measurement — today the longest function is
+  58 lines and nothing is above the threshold (measured with the rule at `max: 0` over `src bin tools
+  test`: 1537 functions) — so the figures now name their source and their date rather than the present
+  tense; and `max-statements-per-line` was justified by "39 findings on a clean tree" while it reports
+  82 today, so the count is gone and the reason (it cuts the accepted style, and does not catch the
+  gluing anyway) stays. Kept as measured: `git` passes a hook `GIT_INDEX_FILE` (`.git/index`, or a
+  temporary `next-index-*.lock` for a commit named by paths) and `GIT_PREFIX` (the subdirectory) —
+  re-measured on 2.50.1, which is why `pre-commit` drops them; the page's shared globals are exactly
+  the ones the chapters declare and set. Judgement call, named: the `comment` of every
+  dependency-cruiser rule and the `messages` of the local rules stay Russian — the sensor prints them
+  as its verdict (`tools/gates/deps.js` puts the rule comment into `reports/deps.json`), and verdicts
+  and other printed strings are out of scope.
 
 Order within a module: the file a reader opens first (entry, then what it calls), so the
 diffs read in the same order as the code.

@@ -1,31 +1,36 @@
-/* Датчики раздувания кода: размер и сложность, дубли веток, вес тестов, долги в
- * пометках. Отдельно от `eslint.config.js`: там оформление (какая строка как
- * выглядит), здесь — размеры и структура. Пороги взяты из замера текущего дерева
- * (`WORKLOG.md` §14, таблица замеров), а не из головы: всё, что выше порога, лежит
- * в `eslint-suppressions.json` и разбирается постепенно, новое — краснеет сразу.
+/* The bloat sensors: size and complexity, duplicated branches, the weight of the checks, debt markers.
+ * Apart from `eslint.config.js`: that one is formatting (how a line looks), this one is sizes and
+ * structure. The thresholds come from a measurement of the tree rather than from a guess — the table is in
+ * the journal of that work (`worklog/archive/WORKLOG.md` §58.3, with the counts behind every figure).
+ * Every figure there describes that day's tree, so it is re-taken (`pnpm run baseline:metrics`) rather than
+ * quoted again here.
  *
- * Запуск: `pnpm run metrics` (гейт), обновление храповика — `pnpm run baseline:metrics`
- * (человеческое действие, помечается трейлером `Gate-Change:`).
+ * The ratchet is `.eslint-suppressions.json`, and the leading dot is deliberate: a flagless ESLint run
+ * reads its default suppressions location (the undotted name) next to its own config, and stale entries
+ * there fail that run (measured on 9.39.5, exit code 2). What lies above a threshold today sits in the
+ * file and is worked off gradually (`pnpm run metrics` stays green), while something new reddens at once.
  *
- * Сканируется только настоящий код — `src`, `bin`, `tools`, `test` (пути задаёт
- * `tools/gates/run.js`). Конфиги в корне датчиками не собираются: в этом файле
- * живут сами слова пометок и пороги, и он сам был бы первым нарушителем.
+ * Run: `pnpm run metrics` (the gate); updating the ratchet is `pnpm run baseline:metrics` (a human action,
+ * and the file is a gate file: without the `Gate-Change:` trailer the change cannot pass).
  *
- * Отвергнуто при настройке (чтобы не включили снова «чтобы было строже»):
- * `sonarjs/no-duplicate-string` — 200+ замечаний на русских сообщениях об отказе,
- * где повтор — часть текста, а не дубль; `sonarjs/no-duplicate-string` и
- * `sonarjs/no-nested-template-literals` шумят на шаблонах разметки.
+ * Only real code is scanned — `src`, `bin`, `tools`, `test` (the paths are set by `tools/gates/run.js`).
+ * The root configs are not collected by the sensors: the marker words and the thresholds themselves live in
+ * this file, and it would be their first offender.
+ *
+ * Rejected while the sensors were set up (so that none of it is switched on again "to be stricter"):
+ * `sonarjs/no-duplicate-string` — on the Russian refusal texts a repetition is part of the text rather than
+ * a duplicate; `knip` (dead code), `ast-grep`, `size-limit`, the secrets scanners, an absolute coverage
+ * threshold and mutation testing — the journal above gives the reason for each (§58.8).
  */
 
 import sonarjs from 'eslint-plugin-sonarjs';
 
-/* Термины долгов — здесь, а не в сканируемом файле: иначе правило нашло бы
- * само себя. Список — тот же, что у `no-warning-comments` по умолчанию, плюс
- * русская пометка «отложено». */
+/* The debt terms live here rather than in a scanned file: otherwise the rule would find itself. The list
+ * is the one `no-warning-comments` has by default, plus the Russian marker "отложено". */
 const DEBT_TERMS = ['todo', 'fixme', 'xxx', 'hack', 'отложено'];
 
-/* Обход дерева без слушателей: нужен внутри одного правила (тело проверки), а не
- * на узлах файла. `parent` пропускается — по нему ходят только наверх. */
+/* A walk over the tree with no listeners: needed inside one rule (a check's body) rather than at a file's
+ * nodes. `parent` is skipped: it is only ever walked upwards. */
 function walk(node, visit) {
   if (node === null || typeof node !== 'object') return;
   if (Array.isArray(node)) {
@@ -40,10 +45,10 @@ function isNamed(node, name) {
   return node !== null && node !== undefined && node.type === 'Identifier' && node.name === name;
 }
 
-/* Проверка набора: `test(имя, { … })` — умолчание в первом аргументе — и функции
- * проверок из `node:test` живут на одних именах, поэтому разбирается только
- * `test(...)`; `describe` в этом наборе не используется и назван молчанием, а не
- * правилом (правило на несуществующем — украшение). */
+/* A suite's check: `test(name, { … })` — the options object is the second argument — and the check
+ * functions of `node:test` share the same names, so only `test(...)` is parsed; `describe` is not used in
+ * this suite and is named by that silence rather than by a rule (a rule over something that does not exist
+ * is decoration). */
 function isTestCall(node) {
   return node.callee.type === 'Identifier' && node.callee.name === 'test'
     && node.arguments.length > 0;
@@ -60,8 +65,8 @@ function assertCalls(body) {
   return found;
 }
 
-/* Значение без сравнения: `assert.ok(x)`, `assert(x)`, `assert.ok(true)` —
- * утверждение проходит на всём, что не falsy, и не говорит, что именно ждали. */
+/* A value without a comparison: `assert.ok(x)`, `assert(x)`, `assert.ok(true)` — such an assertion passes
+ * on anything truthy and never says what was expected. */
 function isWeakAssert(node) {
   if (node.type !== 'CallExpression') return false;
   const callee = node.callee;
@@ -74,12 +79,10 @@ function isWeakAssert(node) {
   return first.type === 'Identifier' || (first.type === 'Literal' && typeof first.value === 'boolean');
 }
 
-/* Помощники файла, внутри которых есть утверждение: проверка, зовущая такого
- * помощника, утверждает по существу. Без этого правило било бы по исправным тестам
- * (в наборе таких пять — они зовут `refusal`, `assertCatchesDiskEdit`, `moduleInJs`,
- * `verify`), а ложные срабатывания и есть та причина, по которой гейты отключают.
- * Чужой помощник (`tools/harness.js`) так не виден — он остаётся в базе и назван
- * там же, где храповик. */
+/* A file's own helpers with an assertion inside: a check calling such a helper does assert in substance.
+ * Without this the rule would hit sound checks (in this suite they call `refusal`,
+ * `assertCatchesDiskEdit`, `moduleInJs`, `verify`), and false findings are exactly why gates get switched
+ * off. A helper from another file (`tools/harness.js`) is invisible here: the rule sees one file. */
 function assertingNames(program) {
   const named = [];
   const own = (node, name) => { if (assertCalls(node.body) > 0) named.push(name); };
@@ -164,9 +167,9 @@ const local = {
         messages: { marker: 'пометка долга «{{term}}»: без ратчета долг копится молча' }
       },
       create(ctx) {
-        /* Комментарии читаются обходом `sourceCode`, а не слушателями `Line`/`Block`:
-         * обход узлов их не посещает — на этом первая редакция правила и молчала
-         * (правило было, нарушения не было). Проба поймала это сразу. */
+        /* Comments are read through `sourceCode`, not through `Line`/`Block` listeners: a walk over the
+         * nodes does not visit them — the first edition of this rule was silent for exactly that reason
+         * (the rule was there, the finding was not), and the probe caught it at once. */
         return {
           'Program:exit'() {
             ctx.sourceCode.getAllComments().forEach((comment) => {
@@ -184,13 +187,13 @@ const local = {
   }
 };
 
-/* `reports/` здесь НЕ в игноре, хотя у линтера (`eslint.config.js`) и в `.gitignore`
- * он назван, — и это условие одной пробы, а не расхождение. Проба датчика пишет файл
- * с нарочным нарушением в `reports/probe/`: остаток от оборванного прогона не должны
- * видеть ни `git status`, ни `lint:strict`. Датчику же файл нужен видимым: он зовётся
- * явным путём (`--paths`), а игнор глушит и явный путь — с `reports/` здесь проба
- * краснела бы на самом игноре («File ignored because of a matching ignore pattern»),
- * а не на нарушении. Обход по умолчанию (`src`, `bin`, `tools`, `test`) сюда не заходит. */
+/* `reports/` is deliberately NOT ignored here, although the linter (`eslint.config.js`) and `.gitignore`
+ * name it — and that is a condition of one probe rather than a disagreement. The probe of this sensor writes
+ * a file with a deliberate violation into `reports/probe/`: a leftover of an interrupted run must be
+ * invisible both to `git status` and to `lint:strict`. The sensor has to see the file, though: it is called
+ * by an explicit path (`--paths`), and an ignore silences an explicit path too — with `reports/` here the
+ * probe would go red on the ignore itself ("File ignored because of a matching ignore pattern") instead of
+ * on the violation. The default walk (`src`, `bin`, `tools`, `test`) never gets there. */
 export default [
   { ignores: ['node_modules/', 'fixtures/', '.freebuff/'] },
   {
@@ -207,9 +210,10 @@ export default [
     plugins: { sonarjs, local },
     linterOptions: { reportUnusedDisableDirectives: 'error', noInlineConfig: true },
     rules: {
-      // Размер и форма. Порог — из распределения замеров: например, длина функции
-      // (p50 7, p90 27, p99 73, max 118) режется по 60 — выше него лежит 14
-      // функций, то есть хвост за p98, а не середина.
+      // Size and shape. Every threshold sits in the tail of the measured distribution rather than in its
+      // middle: function length is cut at 60, above which the p98 tail of that measurement lay (its p50 7 /
+      // p99 73 / max 118 belong to the table in `worklog/archive/WORKLOG.md` §58.3 and describe that day's
+      // tree, not this one).
       complexity: ['error', 12],
       'max-lines-per-function': ['error', { max: 60 }],
       'max-statements': ['error', 30],
@@ -218,19 +222,19 @@ export default [
       'max-nested-callbacks': ['error', 5],
       'max-lines': ['error', { max: 450 }],
       'max-classes-per-file': ['error', 1],
-      // Дубли-ветки и копии функций: клоны по токенам ищет `dup`, здесь — то, что
-      // по токенам не видно (две одинаковые ветки — это три строки).
+      // Duplicated branches and copies of functions: token clones are `dup`'s business, this is what tokens
+      // do not show (two identical branches are three lines).
       'sonarjs/no-identical-functions': 'error',
       'sonarjs/no-duplicated-branches': 'error',
       'sonarjs/cognitive-complexity': ['error', 15],
-      // Долги: пометка в комментарии без ратчета; само подавление правила —
-      // тоже нарушение (`noInlineConfig` ниже), иначе гейт гасится одной строкой.
+      // Debt: a marker in a comment with no ratchet behind it; suppressing a rule is itself a finding
+      // (`noInlineConfig` below), or the gate could be silenced by one line.
       'local/no-debt-marker': 'error'
     }
   },
   {
-    // Тесты: проверка обязана что-то утверждать, слабое утверждение — на счету,
-    // выключенную проверку звать нельзя (её считают пройденной).
+    // The checks: a check has to assert something, a weak assertion is counted, and a switched-off check
+    // must not be called (it is taken for passed).
     files: ['test/**/*.js'],
     rules: {
       'local/assert-in-test': 'error',
