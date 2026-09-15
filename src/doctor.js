@@ -16,8 +16,9 @@ import { tokenizer } from './tokens.js';
  * Правило ответа: `ok` значит «делать нечего», а у находки назван уровень.
  * `action` — что-то надо сделать (и, где возможно, названа команда починки);
  * `note` — наблюдение: знать полезно, делать нечего. Код выхода считает один
- * `verdictOf` в конце: шаги чтения только называют, что нашли (`troubles`), а что из
- * найденного важнее — порядок в `WEIGHT`.
+ * `verdictOf` в конце: шаги чтения только называют вид обстоятельства (`troubles`),
+ * а и порядок видов, и код каждого — один список `WEIGHT`. Своего кода у шага нет,
+ * поэтому разойтись эти два ответа не могут.
  *
  * Чего ответ не делает: не говорит, «правильно» ли выбраны колонки (это знает
  * проект), и не угадывает там, где данных нет, — отсутствие ответа называется
@@ -87,7 +88,8 @@ function readConfig(root, configFile) {
     return {
       cfg: cfg,
       report: { file: configFile, ok: true, columns: cfg.columns.length, metrics: cfg.metrics },
-      findings: []
+      findings: [],
+      troubles: []
     };
   } catch (e) {
     if (!(e instanceof Refusal)) throw e;
@@ -95,7 +97,7 @@ function readConfig(root, configFile) {
       cfg: null,
       report: { file: configFile, ok: false, problem: e.message },
       findings: [{ level: 'action', what: e.message }],
-      troubles: { config: e.code }
+      troubles: ['config']
     };
   }
 }
@@ -122,8 +124,9 @@ function hookFindings(hooks) {
   return found;
 }
 
-/* Покрытие — тот же ответ, что даёт `size check`, плюс два веса: неполнота пути — код 1,
- * приближение датчика — код 4; неполнота старше, потому что без неё чисел нет вовсе.
+/* Покрытие — тот же ответ, что даёт `size check`, плюс вид обстоятельства, если оно есть:
+ * неполнота пути или приближение датчика (вес у видов разный — `WEIGHT`); неполнота
+ * старше, потому что без неё чисел нет вовсе.
  * Что попадает в находки, а что нет: в отчёте целиком стоит блок покрытия (тот же текст,
  * что у `size check`), поэтому неполнота второй раз не пересказывается — она весит. А по
  * датчикам находка есть: `size check` печатает их строкой `!`, здесь они часть ответа. */
@@ -134,7 +137,8 @@ function readCoverage(cfg, root, configFile) {
       findings: [{
         level: 'note',
         what: 'покрытие не считалось: настройки нечитаемы — почините их и спросите снова'
-      }]
+      }],
+      troubles: []
     };
   }
   try {
@@ -142,32 +146,40 @@ function readCoverage(cfg, root, configFile) {
     return {
       report: report,
       findings: report.sensors.map((gap) => ({ level: 'action', what: gap.why, fix: gap.fix })),
-      troubles: report.ok
-        ? (report.sensors.length > 0 ? { sensor: EXIT.SENSOR } : {})
-        : { coverage: EXIT.VIOLATION }
+      troubles: report.ok ? (report.sensors.length > 0 ? ['sensor'] : []) : ['coverage']
     };
   } catch (e) {
     if (!(e instanceof Refusal)) throw e;
+    /* Внутри покрытия отказывают двое, и род у них разный: обрезанной истории —
+     * свой вид (`assertFullHistory`), а неразобранному файлу — настройки: числа
+     * нет из-за них, и починка у него настройками же. Вид выбирается по коду
+     * отказа — эти два кода и есть весь выбор. */
     return {
       report: null,
       findings: [{ level: 'action', what: e.message }],
-      troubles: { history: e.code }
+      troubles: [e.code === EXIT.SHALLOW ? 'history' : 'config']
     };
   }
 }
 
-/* Вес обстоятельств — вот и весь порядок важности, и он один на весь модуль. Код выхода
- * берётся у самого важного из найденного, а не у того, что нашлось позже: сначала чем
- * считать нечем (настройки, история), потом неполное покрытие, потом оговорка о счёте.
+/* Вес обстоятельств — вот и весь порядок важности, и он один на весь модуль: ключи идут
+ * по важности, значения — код каждого вида. Код выхода берётся у самого важного из
+ * найденного, а не у того, что нашлось позже: сначала чем считать нечем (настройки,
+ * история), потом неполное покрытие, потом оговорка о счёте.
  * Хук в список не входит: отчёт собирается и без него (см. `hookFindings`). */
-const WEIGHT = ['config', 'history', 'coverage', 'sensor'];
+const WEIGHT = {
+  config: EXIT.CONFIG,
+  history: EXIT.SHALLOW,
+  coverage: EXIT.VIOLATION,
+  sensor: EXIT.SENSOR
+};
 
 /* Вердикт — одно место, где обстоятельства превращаются в код выхода и в `ok`.
  * «Делать нечего» — это ни одной находки-действия и сосчитанное полное покрытие: без
  * покрытия вердикта нет, потому что считать больше нечего (см. заметку в `readCoverage`). */
 function verdictOf(rep, troubles) {
-  const found = WEIGHT.filter((kind) => troubles[kind] !== undefined);
-  rep.exit = found.length === 0 ? EXIT.OK : troubles[found[0]];
+  const found = Object.keys(WEIGHT).filter((kind) => troubles.indexOf(kind) >= 0);
+  rep.exit = found.length === 0 ? EXIT.OK : WEIGHT[found[0]];
   rep.ok = rep.coverage !== null && rep.coverage.ok
     && !rep.findings.some((f) => f.level === 'action');
   return rep;
@@ -189,7 +201,7 @@ export function doctor(root, configFile) {
     findings: config.findings.concat(hookFindings(hooks), cov.findings),
     exit: EXIT.OK
   };
-  return verdictOf(rep, Object.assign({}, config.troubles, cov.troubles));
+  return verdictOf(rep, config.troubles.concat(cov.troubles));
 }
 
 /* Итог последнего запуска хука словами: по нему человек понимает, что произошло
