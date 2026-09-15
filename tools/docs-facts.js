@@ -1,22 +1,22 @@
-/* Чтение фактов из документации — одна копия на четыре проверки
- * (`test/docs-paths`, `docs-commands`, `docs-numbers`, `docs-pin`). Класс дефекта,
- * ради которого всё это заведено, один и повторился четырежды: документ называет
- * то, чего уже нет — путь после переезда, число проверок, команду или ключ,
- * которых инструмент не знает, «пересобирается побайтово» про мёртвую команду.
- * Прозой это не гарантируется, поэтому проверка идёт по фактам: дерево git,
- * история фикстуры, справка инструмента (`USAGE`), объявления проверок в наборах,
- * разделы документов-целей.
+/* Facts read out of the documentation — one copy for four checks (`test/docs-paths`,
+ * `docs-commands`, `docs-numbers`, `docs-pin`). The defect class they exist for is one: a
+ * document names what is gone — a path after a move, a check count, a command or a flag the
+ * tool does not know, "rebuilt byte for byte" about a dead command. Prose cannot promise that,
+ * so the checks read facts instead: the git tree, the fixture's history, the tool's help
+ * (`USAGE`), the check declarations in the suites, the sections of the target documents.
  *
- * Что остаётся человеку, и это названо, а не спрятано: формулировки и смысл,
- * обещания о будущем, верность описания роли файла (таблица сверяется с деревом
- * на существование и полноту, но не на то, что роль описана правильно) и
- * совпадение счёта объявлений с числом проверок в выводе раннера — оно держится
- * тем, что проверок нет нигде, кроме начала строки (это сторож тоже проверяет).
+ * What stays with the person, said out loud: wording and meaning, promises about the future,
+ * whether a file's role is described correctly (the table is checked against the tree for
+ * existence and completeness, not for a right description), and the declaration count matching
+ * the checks the runner reports — that one holds because a check appears nowhere but at the
+ * start of a line (the guard checks that too).
  *
- * Вне проверки два документа, и по делу: `worklog/archive/WORKLOG.md` — журнал прошлого (числа и
- * пути там снимок на момент записи, и они обязаны стареть), `docs/module-design.md`
- * — проект выноса, то есть описание цели, а не сегодняшнего дерева. Ссылки на их
- * разделы при этом проверяются: они цель, а не источник утверждений.
+ * Three documents stay out of the fact check, each for its own reason:
+ * `worklog/archive/WORKLOG.md` is the journal of the past (its numbers and paths are a snapshot
+ * and are supposed to age), `docs/requirements.md` says what the tool is meant to be,
+ * `docs/module-design.md` is the plan of the move — both are targets, not the state of today's
+ * tree. References to their sections are checked all the same: they are a target, not a source
+ * of claims.
  */
 
 import fs from 'node:fs';
@@ -35,36 +35,35 @@ const CALL = ESC('node node_modules/' + PKG + '/bin/size.js');
 /* Документы, которые описывают **сегодняшнее** состояние репозитория. */
 export const DOCS = ['README.md', 'PLAN.md', 'REFACTOR.md', 'BLOCKERS.md', 'templates/README.md', 'CHANGELOG.md'];
 
-/* Пути, которых в репозитории нет и быть не должно: чужие или плановые. Список
- * ведёт человек — проверка требует лишь, чтобы новый такой путь попал сюда
- * осознанно, а не проскочил молча. */
+/* Paths a document may name although the tree has no such file: the consumer project's, the
+ * ones the tree has shed, the planned ones. The list is kept by hand — the check asks only that
+ * a new such path lands here deliberately rather than slips through unnoticed. */
 export const FOREIGN = [
-  // проект-потребитель: его файлы, настройки и скрипты
+  // the consumer project: its files, settings and scripts
   'size-table.config.json', 'docs/size-table.html', 'docs/size-report.html',
   '.github/workflows/size-report.yml', 'node_modules/' + PKG + '/templates/ci.yml',
   'tools/size-table.js', 'tests/size-table.js',
   '../figma/safe-resets/docs/ROADMAP.md', '../figma/safe-resets/docs/TESTING.md', '../figma/safe-resets/AGENTS.md',
-  // прошлое: путь, под которым лежали байты замороженной копии реализации, — она
-  // выведена из дерева (REFACTOR.md R-1.5), а документы называют её по-прежнему
+  // past: the path the frozen copy of the implementation used to sit under — the copy is out
+  // of the tree now, and records still name it
   'fixtures/legacy/size-table.cjs',
-  // прошлое: набор контракта разделён по предмету на четыре файла (WORKLOG §59),
-  // а исторические записи называют его прежним именем — и это правда о них
+  // past: the contract suite was split by subject into four files, and historical records call
+  // it by its former name — which is true of them
   'test/contract.test.js',
-  // прошлое: отчёт сведён к одному файлу — самодостаточной странице, поэтому
-  // статическую форму (сборка разметки и её оформление) убрали из дерева; записи
-  // прошлых проходов называют эти файлы по-прежнему, и это правда о них
+  // past: the report became one file — a self-contained page — so the static form (markup
+  // assembly and its styling) left the tree; past records still name these files, and that is
+  // true of them
   'src/render.js', 'src/artifact.css',
-  // плановое: то, что описано как цель, а не как факт
+  // planned: described as a goal, not as a fact
   'dist/app.js', '.size-report/report.html', '.size-report/data.json',
   'docs/METHODS.md', 'docs/DATA-FORMAT.md', 'docs/ARCHITECTURE.md',
   'docs/ROADMAP.md', 'docs/TESTING.md', 'tests/harness.js', 'tests/doc-sync.js',
-  // пример в тексте: так выглядит отказ инструмента на чужой поломке (§B3)
+  // an example in the text: how the tool's refusal on someone else's broken project looks
   'src/only-in-merge.js'
 ];
 
-/* Документы, на разделы которых ссылаются остальные, — цель ссылки, а не
- * источник утверждений. Имя берётся по basename: в тексте пишут и `PLAN.md`, и
- * `docs/requirements.md`. */
+/* Documents other documents point at by section — the target of a reference, not a source of
+ * claims. The name matches by basename: text writes both `PLAN.md` and `docs/requirements.md`. */
 export const TARGETS = [
   'README.md', 'PLAN.md', 'REFACTOR.md', 'BLOCKERS.md', 'worklog/archive/WORKLOG.md',
   'docs/requirements.md', 'docs/module-design.md'
@@ -76,9 +75,9 @@ tracked.forEach((f) => {
   const parts = f.split('/');
   for (let i = 1; i < parts.length; i++) dirs.add(parts.slice(0, i).join('/'));
 });
-/* Путь существует, если он есть в дереве или под ним лежит отслеживаемый файл.
- * Документ вправе назвать путь не от корня (`page/app.js` рядом с `src/page/`) —
- * имя должно существовать, а длина префикса — его личное дело. */
+/* A path exists when the tree has it or a tracked file lies under it. A document may name a path
+ * without its prefix (`page/app.js` beside `src/page/`): the name has to exist, the length of the
+ * prefix is its own business. */
 export const inTree = (p) => tracked.indexOf(p) >= 0 || dirs.has(p.replace(/\/$/, ''))
   || tracked.some((f) => f.slice(-(p.length + 1)) === '/' + p);
 
@@ -86,16 +85,15 @@ export function read(doc) {
   return fs.readFileSync(path.join(ROOT, doc), 'utf8');
 }
 
-/* Раздел целиком: от заголовка до следующего такого же уровня или до конца. */
+/* A whole section: from its heading to the next one of the same level, or to the end. */
 export function withoutSection(text, title) {
   return text.replace(new RegExp('## ' + title + '[\\s\\S]*?(?=\\n## |$)'), '');
 }
 
-/* Утверждение о сегодняшнем дне — это текст без того, что называет
- * **отсутствующее** (раздел «Чего ещё нет» и строка-примечание `>`, которая
- * объясняет оговорку): проверять их как обещания — придирка к формулировке.
- * Раздел же о подключении чужого проекта выкидывается только там, где речь о
- * **путях**: пути в нём чужие, а команды — наши, и они обязаны быть живыми. */
+/* A claim about today is the text without what names the **absent** (the "not yet" section and
+ * the `>` remark explaining the caveat): checking those as promises would be nitpicking at
+ * wording. The section about wiring the tool into another project is dropped only where
+ * **paths** are concerned: its paths are someone else's, its commands are ours and must work. */
 export const NOT_TODAY = { 'README.md': ['Чего ещё нет', 'Для ИИ-агента'] };
 export const OWN_PROJECT = { 'README.md': ['Как подключить к своему проекту'] };
 export function facts(doc, sections) {
@@ -104,20 +102,20 @@ export function facts(doc, sections) {
   return text.replace(/^>.*$/gm, '');
 }
 
-// Код-спаны документа: в них и живут пути, команды и ключи.
+// The document's code spans: paths, commands and flags live there.
 export function spans(text) {
   return [...text.matchAll(/`([^`\n]+)`/g)].map((m) => m[1]);
 }
 
-/* Похоже ли слово на **файл** в репозитории: есть слэш и расширение у последнего
- * куска. Каталоги проверка не берёт: `dist/`, `build/`, `node_modules/` в тексте —
- * это категория («результаты сборки»), а не утверждение о репозитории, и требовать
- * их существования были бы придиркой. Перечисление расширений (`.md/.toml/.txt`) и
- * адреса (`file://…`) — не пути. */
+/* Whether a word looks like a **file** of the repository: it has a slash and an extension in its
+ * last part. Directories are not taken: `dist/`, `build/`, `node_modules/` in prose name a
+ * category ("build results") rather than a claim about the repository, and demanding they exist
+ * would be nitpicking. A list of extensions (`.md/.toml/.txt`) and addresses (`file://…`) are not
+ * paths either. */
 export function looksLikePath(tok) {
   if (tok.indexOf('/') < 0 || tok.indexOf('://') >= 0 || tok.indexOf('//') >= 0) return false;
-  /* Пакет с версией (`@vernikr/size-report@1.1.2-draft.0`) — не путь: последний кусок
-   * выглядит как имя с расширением только из-за номера версии. */
+  /* A package with a version (`@vernikr/size-report@1.1.2-draft.0`) is not a path: only the
+   * version makes its last part look like a name with an extension. */
   if (tok[0] === '@' && /@[^/]+$/.test(tok)) return false;
   if (/[{<*…«»\\}]/.test(tok) || tok.indexOf(' ') >= 0) return false;
   const parts = tok.split('/');
@@ -126,14 +124,14 @@ export function looksLikePath(tok) {
   return /\.\w{1,6}$/.test(parts[parts.length - 1]);
 }
 
-/* Команды и ключи — из справки инструмента: отдельного их списка нет и заводить
- * его нельзя, иначе сторож и справка разойдутся молча. */
+/* Commands and flags come from the tool's help: there is no second list and there must not be
+ * one — the guard and the help would diverge in silence. */
 export const usageCommands = USAGE.split('\nКоманды:\n')[1].split('\n\n')[0]
   .split('\n').map((l) => l.trim().split(/\s+/)[0]).filter((w) => w !== '');
 export const usageFlags = [...USAGE.matchAll(/--[a-z][a-z-]*/g)].map((m) => m[0]);
 
-/* Зов инструмента: либо код-спан, либо строка блока кода (там, где его запускают,
- * а не упоминают в прозе). Хвост после `#` — комментарий примера, не аргументы. */
+/* A call to the tool: either a code span or a line of a code block (where it is run, not
+ * mentioned in prose). A tail after `#` is the example's own comment, not arguments. */
 const CALL_START = new RegExp('^\\s*(?:size|pnpm exec size|npm exec size|' + CALL + '|node bin/size\\.js|npx ' + ESC(PKG) + ')\\s');
 export function invocations(text) {
   const lines = text.split('\n').filter((l) => CALL_START.test(l))
@@ -141,7 +139,7 @@ export function invocations(text) {
   return spans(text).concat(lines);
 }
 
-/* Слова зова без имени инструмента: `pnpm exec size check --json` → ['check', …]. */
+/* The call's words without the tool's name: `pnpm exec size check --json` → ['check', …]. */
 export function callWords(call) {
   return call.replace(/^pnpm exec /, '').replace(/^npm exec /, '')
     .replace(new RegExp('^npx ' + ESC(PKG)), 'size')
@@ -149,9 +147,8 @@ export function callWords(call) {
     .trim().split(/\s+/).slice(1);
 }
 
-/* Команды, которые зовёт инструкция: первое слово зова — только оно и может быть
- * командой. Список берётся из тех же зовов, что проверяет соседняя проверка:
- * второй парсер неизбежно разошёлся бы с первым. */
+/* The commands the instructions call: only the first word of a call can be one. The list comes
+ * from the same calls the neighbour check parses — a second parser would diverge from the first. */
 export function calledCommands() {
   const out = new Set();
   ['README.md', 'templates/README.md'].forEach((doc) => {
@@ -163,9 +160,9 @@ export function calledCommands() {
   return out;
 }
 
-/* Команды из справки закреплённой ревизии: файл читается из истории git, а не из
- * дерева, потому что справка там — другая. Секция «Команды» — список строковых
- * литералов, и имя команды в каждом — первое слово. */
+/* The commands of the pinned revision's help: the file is read from git history rather than from
+ * the tree, because that help is a different one. The «Команды» section is a list of string
+ * literals, and the first word of each is a command's name. */
 export function commandsAt(rev) {
   const src = gitIn(ROOT, ['show', rev + ':src/refusal.js']);
   const section = src.split("'Команды:'")[1];
@@ -173,12 +170,11 @@ export function commandsAt(rev) {
   return [...section.split("'Режимы:'")[0].matchAll(/^\s*'\s+([a-z][a-z-]*)/gm)].map((m) => m[1]);
 }
 
-/* Прогоны набора, как их называет README: команда и сколько проверок она берёт.
- * Читается таблицей, потому что это утверждение о числах, а не проза (и потому что
- * одно и то же число в двух формулировках стареет дважды). Сверяет его сторож
- * документации — что документ не врёт о числе проверок; секунд в таблице нет,
- * потому что прогон за время не держится (`tools/suites.js`), и обещать их
- * документу нечем. */
+/* The suite runs as README names them: the command and how many checks it takes. Read as a table
+ * because this is a claim about numbers rather than prose (and because one number in two wordings
+ * ages twice). The documentation guard checks it — that the document does not lie about the
+ * count. The table has no seconds: a run does not hold to a time (`tools/suites.js`), so there is
+ * nothing to promise. */
 export function publishedRuns() {
   const text = read('README.md');
   const quick = text.match(/^\|\s*Быстрый[^|]*\|\s*`pnpm test`\s*\|\s*\*\*(\d+) из (\d+)\*\*\s*\|/m);
@@ -189,9 +185,9 @@ export function publishedRuns() {
   };
 }
 
-/* Разделы документа: заголовок (`## 4.5.`, `## B1.`), нумерованный пункт внутри
- * раздела (`4.8.4` — четвёртый пункт §4.8), строка плана (`| R-4.12 |`) и заметка
- * (`- **N8.`). Всё это адреса, по которым документ ссылается на себя. */
+/* A document's sections: a heading (`## 4.5.`, `## B1.`), a numbered item inside a section
+ * (`4.8.4` is the fourth item of §4.8), a plan row (`| R-4.12 |`) and a note (`- **N8.`).
+ * These are the addresses a document refers to itself by. */
 export function sectionsOf(text) {
   const keys = new Set();
   let heading = '';
@@ -202,9 +198,9 @@ export function sectionsOf(text) {
       keys.add(heading);
       return;
     }
-    // Пункт с полным номером (`25.5.`, `4.8.4.`) и пункт без него под разделом
-    // (`4.` внутри §4.8 — это §4.8.4). Закрытая заметка остаётся зачёркнутой, но
-    // адресом быть не перестаёт.
+    // An item with a full number (`25.5.`, `4.8.4.`) and one without it under a section (`4.`
+    // inside §4.8 is §4.8.4). A closed note stays struck through but does not stop being an
+    // address.
     m = line.match(/^(\d+(?:\.\d+)+)\.\s/);
     if (m) keys.add(m[1]);
     m = line.match(/^(\d+)\.\s/);

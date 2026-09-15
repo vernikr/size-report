@@ -84,8 +84,11 @@ comment diff stays under the commit budget, otherwise it is split by file groups
 - [x] **M9a tools: the shared part of the run** — `tools/harness.js`, `tools/run-tests.js`,
   `tools/suites.js`, `tools/check-standards.js` (752 → 728; journal entry `worklog/0083`,
   2026-09-15).
-- [ ] **M9b tools: facts, probes, refusals** — `tools/docs-facts.js`, `tools/gate-probe.js`,
-  `tools/page-harness.js`, `tools/refusals.js` (742).
+- [x] **M9b tools: facts, probes, refusals** — `tools/docs-facts.js`, `tools/gate-probe.js`,
+  `tools/page-harness.js`, `tools/refusals.js` (742 → 737; journal entry `worklog/0084`,
+  2026-09-15). The outdated registry justification turned up here a sixth time (in the catalogue,
+  at the "nothing to call the tool with" advice), found by searching the tree for its wording
+  after the five places of M8-fix were done.
 - [ ] **M9c tools: frozen and live copies** — `tools/make-fixture.js`, `tools/parity-freeze.js`,
   `tools/yaml.js` (611).
 - [ ] **M9d tools: live parity and the tarball** — `tools/parity-live.js`, `tools/pack-check.js`

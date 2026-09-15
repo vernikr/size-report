@@ -1,51 +1,50 @@
-/* Каталог отказов: что инструмент говорит, когда отказывается работать.
+/* The catalogue of refusals: what the tool says when it declines to work.
  *
- * **Зачем он отдельным файлом.** Отказ — это ответ человеку, и ответ обязан быть
- * правдивым: названная причина совпадает с тем, что случилось, а команда починки
- * существует. Прозой это не гарантируется, а живой прогон находил ложную причину
- * четыре раза подряд (B1, B3, разбор аргументов, `explain HEAD`) — и каждый раз
- * случайно. Поэтому здесь по строке на каждый отказ, и проверок у каталога две —
- * на две половины обещания: `test/refusals.test.js` **вызывает** отказ и сверяет,
- * что он сказал обещанное, а `test/refusals-catalog.test.js` читает исходники и
- * требует, чтобы **у каждого места отказа был свой пункт** — карты `SITES` (броски)
- * и `PRINTED` (отказы, напечатанные без исключения). Новое место без пункта —
- * красный прогон: отказ не может появиться без проверки.
+ * **Why it is a file of its own.** A refusal is an answer to a person, and the answer must be
+ * true: the named cause matches what happened, and the command it offers exists. Prose cannot
+ * promise that, and a live run proved it — a false or empty cause four times in a row, every time
+ * by accident. Hence one line per refusal, and two checks over two halves of the promise:
+ * `test/refusals.test.js` **calls** the refusal and compares it with what was promised, while
+ * `test/refusals-catalog.test.js` reads the sources and requires **every refusal site to have an
+ * entry** — the maps `SITES` (throws) and `PRINTED` (printed without an exception). A new site
+ * without an entry turns the run red: a refusal cannot appear without a check.
  *
- * **Что значит «сказал обещанное».** `must` — фразы, которых в выводе не хватает,
- * если текст стал врать или разучился помогать: причина названа, а виновника нет;
- * команда починки пропала; вместо причины пришла подсказка не о том. Фразы
- * проверяются дословно, поэтому они и есть договор о тексте.
+ * **What "said what was promised" means.** `must` lists the phrases whose absence means the text
+ * started lying or stopped helping: the cause is named but the culprit is not; the fixing command
+ * is gone; a hint about the wrong thing arrives instead of a cause. The phrases are compared word
+ * for word, so they are the agreement about the text.
  *
- * `truth` — одна строка на русском: что именно этот отказ обязан донести. Машиной
- * она не проверяется (это смысл, а не подстрока) — она существует, чтобы автор
- * нового отказа не мог написать её, не подумав.
+ * `truth` is one Russian line per case: what exactly this refusal owes the person. No machine
+ * checks it (it is meaning, not a substring) — it exists so that the author of a new refusal cannot
+ * write it without thinking.
  *
- * **Три способа проверки.**
- *   - `scenario` — отказ вызывается прогоном и сверяется с кодом и фразами: в
- *     клоне фикстуры, в пустом каталоге или в подготовленном сценарии (их список и
- *     устройство — `test/refusals.test.js`).
- *   - `coveredBy` — отказ требует тяжёлой подготовки (свой коммит в клоне), и его
- *     уже стережёт другая проверка: каталог называет файл и фразы, которые та
- *     проверка утверждает. Так «кто это проверяет» не остаётся догадкой, а
- *     исчезнувшая проверка видна — файла или фразы в нём не станет.
- *   - `uncatchable` — отказ нечем вызвать проверкой. Таких в наборе ровно один, и
- *     причина сказана словами: это и есть честный ответ на вопрос, что осталось
- *     на человеке.
+ * **Three ways to check.**
+ *   - `scenario` — the refusal is called by a run and compared with its code and phrases: in a
+ *     clone of the fixture, in an empty directory or in a prepared scenario (their list and device
+ *     live in `test/refusals.test.js`).
+ *   - `coveredBy` — the refusal needs heavy preparation (its own commit in a clone), and another
+ *     check already guards it: the catalogue names the file and the phrases that check asserts. So
+ *     "who checks this" stays no guess, and a check that disappears is visible — the file, or the
+ *     phrase in it, will be gone.
+ *   - `uncatchable` — nothing can make the refusal happen in a check. There is exactly one in the
+ *     set, and the reason is stated: that is the honest answer to what remains with a person.
  *
- * **Чего каталог не берёт.** Формулировки вне `must` (смысл и тон), полноту
- * объяснения, верность того, что человек видит в `--json`, и знак «!» — это не
- * отказ, а примечание (приближение, смешанный коммит, выключенная автоматика,
- * черновик без колонок), и свой код выхода у него нулевой. Это остаётся на
- * человеке, и об этом сказано в доке проверки, а не подразумевается.
+ * **What the catalogue does not take.** Wording outside `must` (meaning and tone), the completeness
+ * of an explanation, the truth of what a person sees in `--json`, and the "!" mark — that one is a
+ * remark rather than a refusal (an estimate instead of an exact count, derived settings, a draft
+ * without columns), and the catalogue counts it as no refusal. What the mark does to the run's code
+ * is no business of the catalogue either: the sensor note turns it into code 4, the other two leave
+ * the verdict as it was. That remains with the person, and `test/refusals.test.js` says so in its
+ * own header rather than assuming it.
  */
 
-/* Места отказа, которые бросают исключение: причина (`refuseCause`) или код
- * (`refuse(EXIT.…)`), и сколько таких мест в исходниках. Число — не украшение:
- * новое место с уже объявленной причиной меняет его и роняет проверку, а значит
- * автор посмотрит на каталог и допишет пункт. `src/refusal.js` не считается: он и
- * есть механизм отказа, а не место, где инструмент отказывается. */
+/* Refusal sites that throw: a cause (`refuseCause`) or a code (`refuse(EXIT.…)`), and how many
+ * such sites the sources hold. The number is no decoration: a new site with an already declared
+ * cause changes it and turns a check red, so its author will look at the catalogue and write the
+ * entry. `src/refusal.js` does not count — it is the mechanism of refusal, not a place where the
+ * tool refuses. */
 export const SITES = {
-  // грамматика командной строки (src/args.js)
+  // command-line grammar (src/args.js)
   'незнакомый ключ': 1,
   'повтор ключа': 1,
   'ключ без значения': 1,
@@ -57,36 +56,36 @@ export const SITES = {
   'нет коммита': 1,
   'нет ответа в JSON': 1,
   'два ответа сразу': 1,
-  // черновик настроек (src/init.js)
+  // the settings draft (src/init.js)
   'конфиг уже есть': 1,
-  // настройки и проект (src/config.js)
+  // settings and the project (src/config.js)
   'нет git': 1,
   'не git-репозиторий': 1,
   'нет файла настроек': 1,
   'настройки не разобраны': 1,
   'настройки неверны': 1,
-  // история (src/explain.js, src/git.js)
+  // history (src/explain.js, src/git.js)
   'нет такого коммита': 1,
   'коммит назван неточно': 1,
   'коммит вне истории': 1,
   'EXIT.SHALLOW': 1,
-  // хук (src/hook.js)
+  // the hook (src/hook.js)
   'чужой хук': 2,
   'чужой core.hooksPath': 1,
   'нечем звать инструмент': 1,
-  // измерение (src/strip/guard.js, src/minify.js)
+  // measurement (src/strip/guard.js, src/minify.js)
   'файл не JavaScript': 1,
   'минификатор не разобрал': 1,
-  // сверка с деревом (src/history.js) — не причина, а код: это расхождение, а не
-  // неверный вызов
+  // the tree comparison (src/history.js) — a code, not a cause: this is a divergence, not a
+  // wrong call
   'EXIT.VIOLATION': 2
 };
 
-/* Отказы, которые печатаются и возвращают код, а не бросают: их механизм другой
- * (знак «✗» плюс код выхода), и потому их считает своя карта. `src/hook.js` и
- * `src/doctor.js` здесь тоже есть, но не как отказы человека: первый пишет в
- * журнал хука, второй ставит метки в отчёте — они в карте, чтобы новое «✗» в этих
- * файлах не проскочило молча, а не потому, что это отказ. */
+/* Refusals that print and return a code instead of throwing: their mechanism is another one (the
+ * "✗" mark plus an exit code), so their own map counts them. `src/hook.js` and `src/doctor.js` are
+ * here too, though not as refusals to a person: the first writes to the hook's journal, the second
+ * prints a mark for its own verdict and for each action finding. They sit in the map so that a new
+ * "✗" in those files cannot slip through in silence, not because it is a refusal. */
 export const PRINTED = {
   'src/cli.js': 2,
   'src/modes.js': 2,
@@ -95,21 +94,20 @@ export const PRINTED = {
   'src/hook.js': 4
 };
 
-/* Заготовки в выводе: подстановки в `args` (пути и имена, которые создаёт сама
- * проверка). Держатся здесь, а не в тесте, чтобы каталог читался как договор. */
+/* Placeholders in the output: substitutions in `args` (paths and names the check itself creates).
+ * They live here rather than in the check, so that the catalogue reads as an agreement. */
 export const PLACEHOLDER = '@';
 
-/* Признак совета в выводе: маркер и всё, что за ним до конца строки. Маркеры —
- * те слова, которыми отказ говорит «сделайте так»: `починка:`, `создайте его:`,
- * `соберите её:`, а у обрезанной истории — `локально:` и `в CI:`. По ним совет
- * вынимается из вывода, поэтому новый совет в существующем отказе виден проверке, а
- * не только глазу: у случая, который печатал совет, обязано быть объявление.
+/* The sign of advice in the output: a marker and everything after it to the end of the line. The
+ * markers are the words a refusal says "do this" with: `починка:`, `создайте его:`, `соберите её:`,
+ * and for a truncated history `локально:` and `в CI:`. Advice is taken out of the output by them, so
+ * new advice inside an existing refusal is visible to a check rather than to an eye alone: a case
+ * that printed advice owes a declaration.
  *
- * Граница сказана вслух: маркера нет — строки для проверки нет тоже. Поэтому
- * совет, добавленный без маркера, надо и заводить с маркером, а советы **не**-отказов
- * (успешный ответ `explain`, подсказка `--init`, находки `doctor`) в каталог не
- * попадают вовсе: их держат их собственные проверки, названные в шапке
- * `test/refusals.test.js`. */
+ * The border is said out loud: no marker, no line to check. So advice added without a marker has to
+ * be written with one, and the advice of **non**-refusals (a successful `explain`, the `--init`
+ * hint, `doctor` findings) never enters the catalogue: their own checks, named in the header of
+ * `test/refusals.test.js`, hold them. */
 const ADVICE_LINE = /(?:починка|создайте его|соберите её|локально|в CI): (.+)$/;
 
 export function adviceOf(out) {
@@ -117,22 +115,23 @@ export function adviceOf(out) {
     .filter((s) => s !== undefined).map((s) => s.trim());
 }
 
-/* По строке на отказ. Порядок — по группам, как в `CONFIG_CAUSES`.
+/* One line per refusal, ordered by groups as in `CONFIG_CAUSES`.
  *
- * `advice` — совет этого отказа, и он есть у каждого случая, даже когда совета нет
- * (`advice: []`): отказ без совета — тоже обещание, и оно проверяется.
- *   - `run` — совет это команда, и она **выполняется** в том состоянии, которое её
- *     напечатало: `expect` — код, который она обязана дать, `mustFix` — после неё
- *     отказ обязан уйти (ни одной из `must`-фраз в новом выводе нет), `inClone` —
- *     выполнять в своей копии фикстуры (совет пишет в проект), `inEmpty` — в пустом
- *     репозитории, `env` — своё окружение. `args` — форма зова (`cliCommand`), `text` —
- *     готовая строка из вывода (так зовётся git и команда из настроек проекта).
- *   - `template` — форма с подстановкой (`<файл>`, `<коммит>`): выполнять нечего,
- *     подставляет человек, а проверяется то, что имена команд и ключей в форме есть.
- *   - `manual` — совет не команда, а действие человека: `why` говорит, почему его
- *     нечем выполнить. Если в совете названа проверяемая альтернатива, она
- *     проверяется полем `works` — теми же словами, что `run`.
- *   - `coveredBy` — совет исполняет другая проверка: названы файл и строка в нём. */
+ * `advice` is the advice of this refusal, and every case has one even when there is none
+ * (`advice: []`): a refusal without advice is a promise too, and it is checked.
+ *   - `run` — the advice is a command, and it is **run** in the state that printed it: `expect` is
+ *     the code it must give, `mustFix` means the refusal has to be gone after it (none of the `must`
+ *     phrases in the new output), `inClone` runs it in an own copy of the fixture (the advice writes
+ *     into the project), `inEmpty` in an empty repository, `env` gives it its own environment.
+ *     `args` is the shape of the call (`cliCommand`), `text` a ready line from the output (that is
+ *     how git and a command from the project's settings are called).
+ *   - `template` — a shape with a substitution (`<файл>`, `<коммит>`): there is nothing to run, a
+ *     person does the substituting, and what is checked is that the names of commands and flags in
+ *     the shape exist.
+ *   - `manual` — the advice is not a command but an action of a person: `why` says why it cannot be
+ *     run. When the advice names a checkable alternative, the field `works` checks it — in the same
+ *     words as `run`.
+ *   - `coveredBy` — another check runs the advice: the file and the line in it are named. */
 
 export const CASES = [
   { key: 'незнакомый ключ', scenario: 'fixture', args: ['--wite'], code: 2,
@@ -271,8 +270,8 @@ export const CASES = [
   { key: 'нечем звать инструмент', scenario: 'src-copy', args: ['--config', '@config', 'install-hook'], code: 2,
     must: ['не нашлось чем звать инструмент', 'поставьте пакет зависимостью'],
     truth: 'сказано, что хук ставить нечем (а не «хук будет молчать»: его ещё нет)',
-    // Совет называет ту же установку, что и README (сверяет `test/docs-pin.test.js`):
-    // имя пакета в реестре занято чужим пакетом, и `add -D <имя>` поставил бы его.
+    // The advice names an install inside the project rather than the package name: a call by the
+    // name goes to the registry, which serves a revision the project never pinned.
     advice: [{ kind: 'manual', text: 'поставьте пакет зависимостью проекта',
       why: 'установка — сеть и чужой проект: исполняет её человек, а проверено то, что можно — совет называет ссылку из манифеста, а не имя из реестра' }] },
 
