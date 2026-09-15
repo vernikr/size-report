@@ -73,7 +73,12 @@ comment diff stays under the commit budget, otherwise it is split by file groups
 - [x] **M7b page: state and styles** — `src/page/state.js`, `src/page/table.js`,
   `src/page/app.css`, `src/table.css` (704 → 669; module M7 as a whole 1187 → 1136; journal entry
   `worklog/0080`, 2026-09-15).
-- [ ] **M8 hook and tool** — `src/hook.js`, `src/tool.js` (472).
+- [x] **M8 hook and tool** — `src/hook.js`, `src/tool.js` (472 → 452; journal entry `worklog/0081`,
+  2026-09-15).
+- [ ] **M8-fix, found outside the module** — the same outdated justification ("the registry name is
+  someone else's package") still stands in `src/refusal.js`, `src/config.js`, `src/project.js` and
+  `test/docs-pin.test.js`: the registry holds *this* package under its scoped name, while the bare
+  `size-report` is the foreign one. Verified in `worklog/0081`; one small comments-only commit.
 - [ ] **M9 tools** — `tools/**` (3520; three or four commits, `tools/gates/**` and
   `tools/synthetic/**` last).
 - [ ] **M10 tests** — `test/*.test.js` (6221; four or five commits).

@@ -8,64 +8,53 @@ import { loadConfig } from './config.js';
 import { TOOL_PKG } from './tool.js';
 import { rebuild } from './artifact.js';
 
-/* Хуки `post-commit` и `post-merge`: после каждого коммита и слияния отчёт
- * пересобирается сам, а если он лежит в git — ложится отдельным коммитом.
- * Требования §7.1–§7.3 (автообновление, защита от зацикливания, отключаемость) и
- * шаг 5 плана.
+/* The `post-commit` and `post-merge` hooks: after every commit and merge the report rebuilds itself and, when it is tracked
+ * by git, lands as a commit of its own.
  *
- * Что он делает и почему именно так:
+ * What it does, and why exactly so:
  *
- * - **Ставится сам** — после установки пакета (`bin/postinstall.js`) и при первом
- *   запуске в проекте (`autoInstall`, зовётся из входа): от человека не требуется
- *   ни ручного шага, ни файла настроек, иначе первого обновления отчёта он не
- *   увидел бы вовсе. Ставится там, где это безопасно (обычный `.git/hooks`, нет
- *   чужого хука, есть чем звать инструмент, не CI); где небезопасно — молчит.
- *   Снимается явной командой (`uninstall-hook`), и проект возвращается к прежнему
- *   поведению: и поставленное, и снятое — одно и то же место состояния (`git-dir`).
- *   Ручная команда (`install-hook`) остаётся: она называет причину, когда поставить
- *   не удалось, а тихая постановка причин не объясняет.
- * - **Сам коммитов не создаёт** — за одним исключением: отчёт, лежащий в git,
- *   коммитится отдельно от кода. Раньше это делал человек (отсюда ловушка «правка
- *   кода и таблицы в одном коммите»), и хук для того и нужен, чтобы ручного шага не
- *   было. Правило одно на два состояния проекта: отчёт в git — отдельный коммит;
- *   отчёт вне git — только пересборка (ровно то, что описано в требованиях §7.2:
- *   пересборка коммита не порождает).
- * - **Коммитит только путь отчёта**: дерево берётся от HEAD, и в нём подменяется
- *   ровно путь отчёта, поэтому в коммит физически не может попасть ничего другого —
- *   ни индекс, ни чужая незакоммиченная работа («не может потерять работу»).
- * - **Слияние — такой же случай, как обычный коммит**, но с одной поправкой к тому,
- *   что зовёт git: `post-commit` при `git merge` не выполняется (git создаёт коммит
- *   слияния сам), поэтому ставится ещё и `post-merge`. Строка слияния ложится в
- *   отчёт по общему правилу (`rows.merges`), а поведение при вызове второго файла
- *   то же, что при повторном запуске: пересобирать нечего — коммита нет.
- * - **Зацикливание невозможно по двум причинам.** Коммит отчёта собирается
- *   плумбингом (`commit-tree`), а он хуков не зовёт вовсе, — вложенного запуска не
- *   бывает по устройству, а не по флагу в окружении. И сам отчёт — путь, который
- *   строки не получает (инвариант «строка про коммит не может лежать внутри самого
- *   коммита»), поэтому та же пересборка даёт те же байты и второго коммита не будет.
- *   Плюс замок, чтобы два хука не пошли одновременно.
- * - **Отказ инструмента не роняет коммит.** Коммит уже сделан, и блокировать в нём
- *   нечего (требование §8: инструмент только показывает). Причина печатается одной
- *   строкой и запоминается — её видно в `size doctor` (`src/doctor.js`).
- * - **В окружениях, где обновлять отчёт не нужно** (интеграция, чужая машина,
- *   зависимостей нет) хук молчит: сам файл хука в git не едет — он лежит в `.git`,
- *   то есть у каждого клона свой, — а внутри есть проверки «есть ли чем звать
- *   инструмент».
+ * - **It installs itself** — after the package is installed (`bin/postinstall.js`) and on the first run in a project
+ *   (`autoInstall`, called from the entry point): a person needs neither a manual step nor a settings file, or he would
+ *   never see the first rebuild at all. It installs where that is safe (an ordinary `.git/hooks`, no one else's hook,
+ *   something to call the tool with, not CI) and stays silent where it is not. It is removed by an explicit command
+ *   (`uninstall-hook`), which returns the project to its previous behaviour: both the installing and the removing live in
+ *   one place of state (`git-dir`). The manual command (`install-hook`) stays as well: it names the cause when installing
+ *   failed, while the silent path explains nothing.
+ * - **It creates no commits of its own** — with one exception: a report tracked by git is committed separately from the
+ *   code. A person used to do that (hence the trap of an edit of code and of the report in one commit), and the hook
+ *   exists so that the manual step is gone. One rule for the two states of a project: the report in git is a commit of its
+ *   own, the report outside git is a rebuild alone — a rebuild produces no commit.
+ * - **It commits the report's path alone**: the tree comes from HEAD with exactly the report's path replaced in it, so
+ *   nothing else can physically enter the commit — neither the index nor someone's uncommitted work.
+ * - **A merge is the same case as an ordinary commit**, with one correction to what git calls: a merge does not run
+ *   `post-commit` (git creates the merge commit itself), hence the second hook file, `post-merge`. The merge's row lands
+ *   in the report by the usual rule (`rows.merges`), and the second file behaves like a repeated run: there is nothing to
+ *   rebuild — there is no new commit.
+ * - **A loop is impossible for two reasons.** The report's commit is assembled with plumbing (`commit-tree`), which calls
+ *   no hooks at all — a nested run cannot happen by construction rather than by a flag in the environment. And the report
+ *   itself is a path that gets no row (the invariant "a row about a commit cannot lie inside that commit"), so the same
+ *   rebuild yields the same bytes and there will be no second commit. A lock is there besides, so that two hooks do not
+ *   run at once.
+ * - **A refusal by the tool does not bring the commit down.** The commit has been made already and there is nothing to
+ *   block in it — the tool only shows. The cause is printed as one line and remembered: `size doctor` shows it
+ *   (`src/doctor.js`).
+ * - **In environments where the report needs no updating** (integration, someone else's machine, no dependencies) the hook
+ *   stays silent: the hook file itself does not travel in git — it lies in `.git`, so every clone has one of its own —
+ *   while the body checks whether there is anything to call the tool with.
  *
- * Место состояния — git-каталог (`<git-dir>/size-report/`), а не рабочее дерево:
- * иначе замок и запись о запуске торчали бы в `git status` как неотслеживаемые
- * файлы. Состояние локально для клона, как и сам хук. */
+ * The state lives in the git directory (`<git-dir>/size-report/`) rather than in the working tree: otherwise the lock and
+ * the record of a run would stand out in `git status` as untracked files. The state is local to a clone, as the hook
+ * itself is. */
 
-// Второй выключатель: окружение, где автообновление не нужно вовсе (CI, чужая
-// машина), — и явный рубильник для тех, кто не хочет править настройки.
+// The second switch: an environment where auto-updating is not wanted at all (CI, someone else's machine) — and an explicit
+// lever for those who would rather not edit the settings.
 const NO_HOOK = 'SIZE_REPORT_NO_HOOK';
-/* Два файла, а не один: на обычный коммит git зовёт `post-commit`, а на слияние —
- * только `post-merge` (`post-commit` при `git merge` не выполняется вовсе). Вход
- * у обоих один, поэтому лишнего запуска не бывает: тот, что сработал вторым,
- * видит, что менять нечего, и молчит. */
+/* Two files rather than one: git calls `post-commit` for an ordinary commit, while a merge only runs `post-merge`
+ * (`post-commit` is not run for `git merge` at all — checked on git 2.50 in `test/hook.test.js`). Both share one entry
+ * point, so a spare run does not happen: whichever fires second sees there is nothing to change and stays silent. */
 const HOOKS = ['post-commit', 'post-merge'];
-// Метка «этот файл наш»: по ней хук отличается от чужого, который перезаписывать
-// нельзя, и по ней же снятие понимает, что удалять.
+// The mark "this file is ours": the hook differs by it from someone else's, which must not be overwritten, and the removal
+// reads it to know what to delete.
 const MARK = '# size-report: hook';
 const STATE = 'hook.json';
 const LOCK = 'hook.lock';
@@ -78,10 +67,9 @@ function stateDir(root) {
   return path.join(gitDir(root), 'size-report');
 }
 
-/* Куда git читает хуки. `core.hooksPath` перебивает `.git/hooks`, и это чужая
- * настройка: такой каталог часто лежит в другом репозитории и версионируется, а
- * вставлять строку в чужой скрипт — править чужой файл. Поэтому с чужим путём
- * установка отказывает и называет готовую строку. */
+/* Where git reads hooks from. `core.hooksPath` overrides `.git/hooks`, and that is someone else's setting: such a
+ * directory often lies in another repository and is versioned, while inserting a line into someone else's script means
+ * editing someone else's file. Hence with a custom path the install refuses and names a ready line. */
 function hooksDir(root) {
   const custom = gitTry(root, ['config', '--get', 'core.hooksPath']);
   if (custom.status === 0 && custom.stdout.trim() !== '') {
@@ -94,10 +82,9 @@ function hookFile(root, name) {
   return path.join(hooksDir(root).dir, name);
 }
 
-/* Движок, которым хук зовёт инструмент, — тот, что нашла бы сама установка. Путь
- * записывается в скрипт на время установки: у монорепозитория `node_modules` может
- * лежать выше корня проекта, и общий относительный путь там не работает. Путь
- * цитируется: в нём может стоять пробел, а хук — это sh, а не список аргументов. */
+/* The engine the hook calls the tool with — the one the install itself would have found. The path is written into the
+ * script at install time: in a monorepo `node_modules` may lie above the project root, where a common relative path does
+ * not work. The path is quoted: it may hold a space, and a hook is sh rather than a list of arguments. */
 function hookEntry(root) {
   const candidates = [
     path.join(root, 'node_modules', TOOL_PKG.name, 'bin', 'size.js'),
@@ -114,15 +101,14 @@ function shQuote(text) {
   return '"' + text.replace(/(["\\$`])/g, '\\$1') + '"';
 }
 
-// Готовая строка для чужого хука: её копируют как есть, поэтому она без метки.
+// A ready line for someone else's hook: it is copied as it stands, which is why it carries no mark.
 function runLine(entry) {
   return 'node ' + entry.path + ' hook-run';
 }
 
-/* Тело хука. Проверки перед запуском — это ответ «что он НЕ делает там, где
- * обновлять нечего»: без `node` (GUI-клиент git с урезанным PATH) и без движка
- * (зависимости не поставлены, клон без установки) хук выходит молча — шум после
- * каждого коммита был бы хуже отсутствия автоматики. */
+/* The hook's body. The checks before the run are the answer to "what it does NOT do where there is nothing to update":
+ * without `node` (a git GUI client with a trimmed PATH) and without the engine (dependencies not installed, a clone
+ * without an install) the hook exits silently — noise after every commit would be worse than no automation. */
 function script(entry) {
   return '#!/bin/sh\n'
     + MARK + ': обновление отчёта после коммита.\n'
@@ -134,8 +120,8 @@ function script(entry) {
     + 'exec node ' + entry.quoted + ' hook-run\n';
 }
 
-/* Состояние хука для `size doctor`: установлен ли и чем кончился последний
- * запуск. Ничего не считает и ни к чему не обязывает. */
+/* The hook's state for `size doctor`: whether it is installed and how its last run ended. It counts nothing and commits
+ * to nothing. */
 export function hookStatus(root) {
   const files = HOOKS.map((name) => hookFile(root, name));
   return {
@@ -149,8 +135,8 @@ function isOurs(file) {
   return fs.existsSync(file) && fs.readFileSync(file, 'utf8').indexOf(MARK) >= 0;
 }
 
-/* Запись о последнем запуске. Отсутствие файла — «хук ещё не запускался», а не
- * ошибка: до первого коммита её и не должно быть. */
+/* The record of the last run. A missing file means "the hook has not run yet" rather than an error: before a first commit
+ * there is nothing to record. */
 function hookState(root) {
   try {
     return JSON.parse(fs.readFileSync(path.join(stateDir(root), STATE), 'utf8'));
@@ -162,8 +148,8 @@ function hookState(root) {
 export function installHook(root, cfg) {
   const entry = hookEntry(root);
   if (entry === null) {
-    // Совет называет ту установку, которой учит README: имя пакета в реестре занято
-    // чужим пакетом, и `add -D <имя>` поставил бы его (REFACTOR R-4.21).
+    // The advice names the very installation the README teaches — the git link pinned to this release, so that the advice
+    // cannot drift from the release the documentation describes.
     const spec = installSpec();
     refuseCause('нечем звать инструмент', 'не нашлось чем звать инструмент: хук без него молчал бы'
       + ' после каждого коммита.\n'
@@ -214,15 +200,15 @@ export function installHook(root, cfg) {
   return { code: EXIT.OK, lines: lines };
 }
 
-/* Постановка без спроса. Отвечает списком путей, если поставила, и `null`, если не
- * тронула ничего, — второй ответ не ошибка, а норма: эта услуга фоновая, и там, где
- * она не к месту, её просто нет. Поэтому всё, что мешает поставить, решается
- * молчанием, а не отказом: отказ от фоновой работы после каждого запуска был бы
- * шумом, а причина уже названа точной командой (`install-hook`).
+/* Installing without being asked. It answers with the list of paths when it installed and with `null` when it touched
+ * nothing — the second answer is the norm rather than an error: this service is a background one, and where it does not
+ * belong it simply is not there. Hence everything that prevents installing is settled by silence rather than by a refusal:
+ * a refusal of background work after every run would be noise, while the cause is already named by the exact command
+ * (`install-hook`).
  *
- * Чужой `core.hooksPath` сюда же: этот каталог версионируется и часто лежит в
- * другом репозитории — вписывать строку в чужой файл по своей воле нельзя, и
- * человек берёт её у `install-hook` (готовую и без метки). */
+ * Someone else's `core.hooksPath` belongs here too: that directory is versioned and often lies in another repository —
+ * writing a line into someone else's file on one's own initiative is not for the tool, and the person takes the line from
+ * `install-hook` (ready and without a mark). */
 export function autoInstall(root, cfg) {
   if (process.env.CI || process.env[NO_HOOK]) return null;
   if (cfg !== null && cfg.hooks.enabled === false) return null;
@@ -240,14 +226,14 @@ export function autoInstall(root, cfg) {
     });
     return files.map((f) => path.relative(root, f));
   } catch (_e) {
-    /* Не git-репозиторий, нет прав на `.git`, чужой формат — всё это значит одно:
-     * автоматики здесь не будет, а работа инструмента от неё не зависит. */
+    /* Not a git repository, no rights on `.git`, a foreign format — all of it means one thing: there will be no automation
+     * here, while the tool's work does not depend on it. */
     return null;
   }
 }
 
-/* Снятие: убирается только то, что поставили мы. Файл не «похож на наш», а помечен
- * меткой, иначе чужой хук был бы стёрт молча. */
+/* Removing takes away only what we installed. A file is not "like ours" but carries the mark, or someone else's hook would
+ * be wiped in silence. */
 export function uninstallHook(root) {
   const files = HOOKS.map((name) => hookFile(root, name));
   const rels = files.map((f) => path.relative(root, f));
@@ -266,10 +252,9 @@ export function uninstallHook(root) {
   return { code: EXIT.OK, lines: ['✓ хук снят: ' + rels.join(', ') + ' (проект ведёт себя как до установки)'] };
 }
 
-/* Замок: два хука одновременно (например, коммит из двух терминалов) не должны
- * пересобирать один файл. Замок с живым владельцем — «уже идёт»; замок, оставшийся
- * от убитого процесса, забирается: иначе однажды прерванный прогон запретил бы хук
- * навсегда. */
+/* The lock: two hooks at once (a commit from two terminals, say) must not rebuild one file. A lock with a live owner means
+ * "already running"; a lock left by a killed process is taken over — otherwise a run interrupted once would forbid the hook
+ * forever. */
 function acquire(root) {
   const file = path.join(stateDir(root), LOCK);
   fs.mkdirSync(stateDir(root), { recursive: true });
@@ -302,28 +287,26 @@ function alive(pid) {
   }
 }
 
-/* Запись о запуске для `size doctor`. Её провал (нет прав, нет каталога) не должен
- * становиться шумом после коммита: это не то, ради чего хук запускают. */
+/* The record of a run for `size doctor`. Its failure (no rights, no directory) must not become noise after a commit: the
+ * record is not what a hook is run for. */
 function record(root, fields, note) {
   const state = Object.assign({ schema: 1, at: new Date().toISOString() }, fields);
   try {
     fs.mkdirSync(stateDir(root), { recursive: true });
     fs.writeFileSync(path.join(stateDir(root), STATE), JSON.stringify(state, null, 2) + '\n');
   } catch (_e) {
-    // см. выше: запись — не цель прогона
+    // See above: the record is not the goal of the run.
   }
   return { code: EXIT.OK, note: note === undefined ? '' : note };
 }
 
-/* Коммит отчёта собирается плумбингом, а не `git commit --only`: `--only` отказывает
- * на слиянии («cannot do a partial commit during a merge» — MERGE_HEAD жив, пока хук
- * `post-merge` работает), а развилка «обычный случай так, слияние иначе» оставила бы
- * один из двух путей почти без хода. Дерево берётся от HEAD, и в нём подменяется
- * ровно путь отчёта, поэтому в коммит не может попасть ни индекс, ни чужая правка,
- * а `commit-tree` хуков не зовёт — вложенного запуска не бывает по устройству.
- * Подпись коммита не спрашивается: настройка машины не должна останавливать коммит.
- * Дешёвый индекс здесь — временный: настоящий трогается один раз, и только в записи
- * об отчёте, иначе после коммита дерево было бы грязным. */
+/* The report's commit is assembled with plumbing rather than `git commit --only`: `--only` refuses during a merge ("cannot
+ * do a partial commit during a merge" — MERGE_HEAD is alive while the `post-merge` hook runs), while a fork of "the
+ * ordinary case this way, a merge that way" would leave one of the two paths almost untested. The tree comes from HEAD with
+ * exactly the report's path replaced in it, so neither the index nor someone else's edit can enter the commit, and
+ * `commit-tree` calls no hooks — a nested run cannot happen by construction. No signature is asked for the commit: a
+ * machine's setting must not stop a commit. The index used here is a temporary one: the real index is touched once, and
+ * only with the report's own entry, or the tree would be left dirty after the commit. */
 function commitReport(root, job) {
   const { rel, file, message, branch, head } = job;
   const fail = (why) => ({ ok: false, why: why });
@@ -389,10 +372,9 @@ function runLocked(root, configFile, sha) {
   if (cfg.hooks.enabled === false) {
     return record(root, { result: 'skipped', head: sha, report: cfg.output, why: 'выключено настройкой hooks.enabled' });
   }
-  /* Отделённый HEAD — это rebase, cherry-pick и bisect: коммитить в такое состояние
-   * нельзя (запись окажется ни на одной ветке), а пересобирать отчёт по промежуточному
-   * состоянию некому. Слиянию это не мешает: `post-merge` приходит уже после того,
-   * как коммит слияния создан. */
+  /* A detached HEAD means rebase, cherry-pick and bisect: committing into such a state is not allowed (the record would
+   * land on no branch), and nobody is there to rebuild the report from an intermediate state. It does not hinder a merge:
+   * `post-merge` comes once the merge commit has been created. */
   const branch = gitTry(root, ['symbolic-ref', '-q', 'HEAD']).stdout.trim();
   if (branch === '') {
     return record(root, { result: 'skipped', head: sha, report: cfg.output, why: 'HEAD отделён (rebase, cherry-pick, bisect)' });
@@ -402,10 +384,10 @@ function runLocked(root, configFile, sha) {
   try {
     out = rebuild(cfg, root);
   } catch (e) {
-    /* Отказ инструмента (нет истории, не разобрался файл, нет настроек) — это не
-     * отказ хука: коммит уже сделан, и валить его нечем и незачем. Причина едет
-     * в `size doctor`, а человеку хватает одной строки. Неожиданная ошибка — дефект
-     * инструмента, и стек печатается: иначе его нечем разбирать. */
+    /* A refusal by the tool (no history, an unparsed file, no settings) is not a refusal by the hook: the commit has been
+     * made, and there is nothing and no reason to bring it down. The cause goes to `size doctor`, while one line is enough
+     * for a person. An unexpected error is a defect of the tool and its stack is printed: otherwise there is nothing to
+     * investigate it with. */
     if (e instanceof Refusal) {
       return record(root, { result: 'refused', head: sha, report: cfg.output, why: e.message }, '✗ size-report: ' + e.message.split('\n')[0]);
     }
@@ -416,8 +398,7 @@ function runLocked(root, configFile, sha) {
   return storeReport(root, cfg, branch, sha, out.file);
 }
 
-/* Запись отчёта после пересборки: не отслеживается — сказать словами, не
- * изменился — ничего не делать, изменился — закоммитить. */
+/* Storing the report after a rebuild: not tracked — say so in words, unchanged — do nothing, changed — commit it. */
 function storeReport(root, cfg, branch, head, file) {
   const rel = path.relative(root, file);
   if (gitTry(root, ['ls-files', '--error-unmatch', '--', rel]).status !== 0) {
