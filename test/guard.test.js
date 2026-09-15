@@ -1,13 +1,12 @@
-/* Разбор модуля — цена, а не строгость. Гард компиляции обязан понимать модуль
- * (`import`/`export` в `.js` — обычное дело у проекта с бандлером), но разбор
- * модуля стоил запуска Node на каждую клетку (86–97 мс), то есть минуты на
- * истории, где модуль меняется каждым коммитом. Теперь модуль разбирает один
- * рабочий поток на прогон (`src/parse.js`), а запуск остаётся отступлением.
+/* Parsing a module is a price, not a matter of strictness. The compilation guard has to understand a module
+ * (`import`/`export` in `.js` is ordinary for a project with a bundler), but a Node run per cell costs tens
+ * of milliseconds — minutes over a history where the module changes with every commit. So one worker thread
+ * parses the module per run (`src/parse.js`), and the run remains the fallback.
  *
- * Здесь проверяется то, что делает ускорение законным: разбор идёт потоком, а не
- * тихим отступлением; оба пути дают один и тот же вердикт на одних и тех же
- * текстах; отступление работает без файла потока — тем же вердиктом, а не
- * молчанием; сотни разборов в одном прогоне дешевле одного запуска Node.
+ * What is checked here is what makes the speed-up lawful: parsing goes through the thread rather than
+ * quietly falling back; both paths give the same verdict on the same texts; the fallback works without the
+ * worker file — with the same verdict rather than in silence; and hundreds of parses in one run are cheaper
+ * than a single Node run.
  */
 
 import { test, after } from 'node:test';
@@ -21,10 +20,9 @@ import { ROOT, tempDir } from '../tools/harness.js';
 const tmp = tempDir('guard');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-/* Образцы — по одному на каждую развилку разбора: модуль, скрипт, модуль с
- * верхнеуровневым `await`, пустой модуль, битый модуль, битый оператор,
- * незакрытый шаблон и разметка прямо в `.js` (её гард и обязан отличить от своей
- * поломки). */
+/* Samples — one per fork of the parsing: a module, a script, a module with a top-level `await`, an empty
+ * module, a broken module, a broken statement, an unclosed template and markup right in `.js` (which the
+ * guard has to tell from its own breakage). */
 const SAMPLES = [
   'export const a = 1;\n',
   'const a = 1;\n',
@@ -36,9 +34,8 @@ const SAMPLES = [
   'export const a = `текст;\n'
 ];
 
-/* Копия одного `parse.js` без файла потока — так выглядит неполная упаковка:
- * `parse-worker.js` не доехал. Разбор обязан остаться прежним: тем же вердиктом,
- * а не молчанием и не стеком. */
+/* A copy of one `parse.js` without the worker file — how an incomplete package looks: `parse-worker.js`
+ * never arrived. The parsing has to stay as it was: the same verdict rather than silence or a stack. */
 function withoutThread() {
   const dir = path.join(tmp, 'no-worker');
   fs.mkdirSync(dir, { recursive: true });
@@ -67,9 +64,9 @@ test('сотни разборов дешевле одного запуска Nod
   for (let i = 0; i < 300; i++) moduleError('export const a = ' + i + ';\n');
   const spent = performance.now() - started;
   assert.equal(parseMode(), 'thread');
-  // Отступление стоит 86–97 мс на разбор, поэтому те же 300 текстов прежним
-  // путём заняли бы около 26 с. Порог намеренно грубый: проверка стережёт
-  // порядок цены, а не такт машины.
+  // The fallback costs a Node run per parse, so the same 300 texts the old way would take tens of seconds.
+  // The threshold is deliberately coarse: the check guards the order of the price, not the machine's
+  // ticking.
   assert.ok(spent < 1000,
     '300 разборов заняли ' + spent.toFixed(0) + ' мс — это похоже на запуск на каждый текст');
 });

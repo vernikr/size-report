@@ -151,8 +151,22 @@ comment diff stays under the commit budget, otherwise it is split by file groups
     from the pinned git reads. Dropped: three addresses into documents this same work rewrites
     (§7.1–§7.3, step 5, `REFACTOR.md` §3) and the fixture's commit count — the substance stays as
     words.
-  - [ ] **M10d the measures** — `doctor` (45), `minify` (36), `check` (35), `guard` (19),
-    `tokens` (18).
+  - [x] **M10d the measures** — `doctor` 275 → 270, `minify` 286 → 285, `check` 261 → 256,
+    `guard` 75 → 72, `tokens` 195 → 196; 153 comment lines → 295 changed lines in 5 files (journal
+    entry `worklog/0094`, 2026-09-15). Four claims fell. `tokens` attributed its anchor ("`hello
+    world`" = 2) to the tiktoken documentation, which states no such count — the phrase appears there
+    only in a decode/encode round-trip, so the anchor is now named as hand-written (verified against the
+    dictionary: 2 in both encodings, 5 versus 7 for the Russian string). `guard` justified its coarse
+    threshold with "86–97 ms per parse, ~26 s for 300", re-measured at 70.6 ms and 21.7 s — the figures
+    had drifted while the threshold does not depend on them, so only orders of magnitude stay. `minify`
+    named three extensions as the minifier's whole answer while the engine's `MINIFY_LOADERS` also holds
+    `.cjs`/`.ts`/`.mts`/`.cts`. `doctor` promised the coverage block "byte for byte" equal to `size
+    check` while the check compares parsed data. Dropped: three `REFACTOR.md` §3 addresses and the
+    "budget of time" formula (no run in this project promises seconds), plus "taken from the code's
+    side" narration in `check`. Measured and kept: `3294a69` is the fixture's root commit and it added
+    `README.md` (16 commits, matching `rep.history.commits`); both frozen fixtures were taken under
+    ballast removal (no `minify` key); `.json` is the only exact strategy; the coverage kind is picked
+    by the refusal's code and `WEIGHT` puts coverage ahead of a sensor.
   - [ ] **M10e the documentation guards and the release** — `docs-commands` (48), `release` (40),
     `templates` (39), `changelog` (25), `docs-numbers` (15), `docs-pin` (13), `docs-paths` (12).
   - [ ] **M10f the probes of the gates** — `gates-metrics` (46), `gates-verify` (31), `suites` (22),

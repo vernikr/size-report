@@ -1,15 +1,15 @@
-/* Токены — третье измерение отчёта: «вес для языковой модели». Здесь проверяется
- * то, что делает счёт честным, а не только присутствующим: число снято именно тем
- * словарём, который просили в настройках (кодировка — часть счёта, а не подробность),
- * приближённое значение названо приближённым, а формат, для которого токены смысла
- * не имеют, не выдаётся за посчитанный.
+/* Tokens — the third measurement of the report: "weight for a language model". What is checked is what
+ * makes the count honest rather than merely present: the number is taken with the very dictionary the
+ * settings asked for (the encoding is part of the count rather than a detail), an approximate value is
+ * named approximate, and a format for which tokens are meaningless is not passed off as counted.
  *
- * Числа-якоря: `hello world` = 2 токена — это пример из документации tiktoken, то
- * есть проверка не круговая; остальные сняты словарём на фиксированных строках и
- * стерегут обвязку (какая кодировка, нет ли нормализации текста по пути).
+ * The anchors are numbers written by hand for fixed texts rather than derived from the code under check, so
+ * the check is not circular (any other implementation of the same encoding can be held against them); the
+ * rest were taken with the dictionary on fixed strings and guard the wiring — which encoding, whether the
+ * text is normalised on the way.
  *
- * Отсутствие словаря проверяется тем же окружением, что и у минификатора
- * (`SIZE_REPORT_NO_OPTIONAL`) — установка без необязательных зависимостей.
+ * A missing dictionary is checked in the same environment as the minifier (`SIZE_REPORT_NO_OPTIONAL`) — an
+ * install without the optional dependencies.
  */
 
 import { test, after } from 'node:test';
@@ -31,8 +31,8 @@ const OFF = { SIZE_REPORT_NO_OPTIONAL: '1' };
 const O200K = { family: 'openai', encoding: 'o200k_base' };
 const CL100K = { family: 'openai', encoding: 'cl100k_base' };
 
-/* Копия эталонных настроек с токенами: история и колонки те же, поэтому числа
- * сравнимы с raw и min той же ревизии. */
+/* A copy of the reference settings with tokens: the history and the columns stay the same, so the numbers
+ * are comparable with `raw` and `min` of the same revision. */
 function configAs(name, metrics, tokens, extra) {
   const cfg = readJson(CONFIG);
   cfg.metrics = metrics;
@@ -46,18 +46,18 @@ function configAs(name, metrics, tokens, extra) {
 const TOK = configAs('tok', ['raw', 'min', 'tok'], O200K);
 const NO_TOK = configAs('no-tok', ['raw', 'min'], null);
 
-// Кодовые точки, а не единицы UTF-16: так же считает и оценка по длине.
+// Code points rather than UTF-16 units: the estimate by length counts the same way.
 function codePoints(text) {
   return [...text].length;
 }
 
 test('счёт идёт тем словарём, который просили: кодировка — часть числа', () => {
-  // Пример из документации tiktoken: `hello world` — два токена.
+  // A hand-written anchor: for this phrase the count is fixed by the text, not derived from this code.
   assert.equal(tokenCount('hello world', O200K), 2, 'якорное число словаря не совпало');
   assert.equal(tokenCount('', O200K), 0, 'пустой файл — не ноль токенов');
   assert.equal(tokenCount('hello world', CL100K), 2, 'латиница в cl100k_base считается иначе');
 
-  // Русский текст считается по-разному в разных кодировках — и это не подробность.
+  // Russian text counts differently under different encodings — and that is no detail.
   const ru = 'Привет, мир!';
   assert.equal(tokenCount(ru, O200K), 5, 'o200k_base посчитал русскую строку иначе');
   assert.equal(tokenCount(ru, CL100K), 7, 'cl100k_base посчитал русскую строку иначе');
@@ -85,7 +85,7 @@ test('в отчёте токены — не байты и не минифици�
       'токены совпали с минифицированным размером у «' + col.label + '»: это разные величины');
     ratios.push(cell.raw / cell.tok);
   });
-  // Байт на токен — не постоянная: у кода, русского текста и JSON она своя.
+  // Bytes per token is no constant: code, Russian text and JSON each have their own.
   const spread = Math.max.apply(null, ratios) / Math.min.apply(null, ratios);
   assert.ok(spread > 2,
     'байт на токен почти не различается по файлам (' + spread.toFixed(2) + '): '
@@ -93,7 +93,8 @@ test('в отчёте токены — не байты и не минифици�
 });
 
 test('без словаря счёт идёт оценкой по длине — и это названо и посчитано', () => {
-  // О метрике не просили — словарь и не нужен: отчёт выходит обычным кодом.
+  // No metric asked for it — so the dictionary is not needed either: the report comes out with an ordinary
+  // code.
   const quiet = runSize(PLAIN, ['--config', NO_TOK, '--json'], OFF);
   assert.equal(quiet.code, EXIT.OK,
     'без токенов в метриках прогон споткнулся о отсутствующий словарь: ' + quiet.stderr.trim());
@@ -112,7 +113,7 @@ test('без словаря счёт идёт оценкой по длине —
   assert.ok(view.method.indexOf('недоступен') >= 0, 'способ не говорит, почему счёт оценкой');
   assert.ok(view.method.indexOf('4.0.0') < 0, 'способ называет версию словаря, которого нет');
 
-  // Оценка — ровно тот коэффициент, который назван в способе, а не «похожее число».
+  // The estimate is exactly the coefficient the method names, not "a similar number".
   const text = fs.readFileSync(path.join(PLAIN, 'src', 'code.js'), 'utf8');
   const ci = JSON.parse(data.stdout).files.findIndex((f) => f.label === 'code.js');
   assert.equal(JSON.parse(data.stdout).now[ci].tok, estimate(text),

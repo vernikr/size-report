@@ -1,17 +1,14 @@
-/* Полнота покрытия (`size check`) и объяснение пропущенной строки (`size explain`).
+/* Coverage (`size check`) and the explanation of a skipped row (`size explain`).
  *
- * Обе команды отвечают на вопросы, которые до сих пор приходилось разбирать
- * руками: «изменение прошло мимо отчёта?» и «почему у этого коммита нет строки?».
- * Поэтому проверяются они не формой ответа, а случаями из фикстуры — настоящими
- * коммитами: «только отчёт», «замена символа без изменения объёма», «только
- * журнал», слияние, — и тем, чего инструмент не имеет права утверждать: путь,
- * объявленный колонкой или исключением, не должен считаться непокрытым, а
- * починка настроек не должна двигать числа отчёта.
+ * Both commands answer questions that otherwise take manual sorting out: "did the change pass the report
+ * by?" and "why has this commit no row?". So they are checked by cases taken from the fixture — real
+ * commits: "report only", "a character replaced without a change in volume", "journal only", a merge —
+ * and by what the tool has no right to assert: a path declared a column or an exception must not count as
+ * uncovered, and a settings fix must not shift the report's numbers.
  *
- * Клон фикстуры — общий на набор и только на чтение: обе команды ничего не пишут.
- * Прогонов здесь много (по одному на случай — каждый запуск процесса и несколько
- * вызовов git), поэтому файл держится одним из самых дорогих в наборе: цена
- * названа в бюджете времени (`REFACTOR.md` §3), а не спрятана.
+ * The shared clone is read-only for the suite: both commands write nothing, and the cases that do write take
+ * a clone of their own. There are many runs here — one per case, each a process run and several git calls —
+ * and that is the whole cost of the file.
  */
 
 import { test, after } from 'node:test';
@@ -27,11 +24,11 @@ after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 const dir = sharedClone('plain', tmp);
 
-// Путь, которого нет ни в колонках фикстуры, ни в её исключениях: его и заводит
-// полнота. Коммит, заведший его, — первый в истории (`3294a69`).
+// A path that is neither a column of the fixture nor in its exceptions: coverage is what brings it up.
+// The commit that brought it is the first of the history (`3294a69`).
 const LOOSE = 'README.md';
 const LOOSE_SINCE = '3294a69';
-// Коммиты фикстуры, выпавшие без строки (эталон `--json` говорит то же).
+// Commits of the fixture that were dropped without a row (the `--json` reference says the same).
 const ONLY_REPORT = 'cd78fd9';
 const NO_VOLUME = '9fee206';
 
@@ -125,10 +122,9 @@ test('объяснение: строка есть — сказано, котор
   assert.deepEqual(rep.touched.untracked, [], 'выдуман непокрытый путь: ' + JSON.stringify(rep.touched));
 });
 
-/* Разница, которой нет в строке отчёта: «мимо колонок» — это не то же самое, что
- * «числа не сдвинулись». Коммит только журнала её и показывает: журнал колонкой
- * не отслеживается, объём от него не меняется, и человеку важно знать, почему
- * именно строки нет. */
+/* A difference that is not in the report's row: "outside the columns" is not the same thing as "the
+ * numbers did not move". A commit touching the journal alone shows it: the journal is not tracked as a
+ * column, its volume does not shift, and a person needs to know why exactly there is no row. */
 test('объяснение: коммит мимо колонок отличается от «числа не сдвинулись»', () => {
   const file = configWith('few.json', (cfg) => {
     cfg.columns = [{ label: 'code.js', paths: ['src/code.js'] }];
@@ -143,10 +139,10 @@ test('объяснение: коммит мимо колонок отличае�
   assert.match(rep.fix, /колонкой или в «skip»/, 'починка не говорит, что делать с таким путём');
 });
 
-/* Одно суждение о «мимо колонок» и одна его фраза на два ответа: `check` спрашивает
- * про всю историю, `explain` — про один коммит, а текст починки у обоих общий
- * (`src/config.js`) и называет пути. Две фразы на одну ситуацию — дефект: зритель
- * получает две разные команды, и одна из них может выйти без имён. */
+/* One judgement about "outside the columns" and one phrase for it in two answers: `check` asks about the
+ * whole history, `explain` about one commit, while the fix text is shared (`src/config.js`) and names the
+ * paths. Two phrases for one situation would be a defect: the viewer gets two different commands, and one
+ * of them may go out without the names. */
 test('мимо колонок: полнота и объяснение говорят одну фразу с именами путей', () => {
   const file = configWith('outside.json', (cfg) => {
     cfg.columns = [{ label: 'code.js', paths: ['src/code.js'] }];
@@ -169,9 +165,9 @@ test('мимо колонок: полнота и объяснение говор
     'починка полноты не назвала путь:\n' + line);
 });
 
-/* Коммит без файлов (`git commit --allow-empty`) — тот же случай с другого конца: мимо
- * колонок не осталось ничего, и команда починки без имён была бы враньём о том, что
- * править. Поэтому починки тут нет вовсе, а не текст с пустым списком. */
+/* A commit with no files (`git commit --allow-empty`) is the same case from the other end: nothing was left
+ * outside the columns, and a repair command without names would be a lie about what to fix. So there is no
+ * fix at all here rather than a text with an empty list. */
 test('объяснение: коммит без файлов — починки нет, а не команда без имён', () => {
   const side = cloneFixture(path.join(tmp, 'empty'));
   gitIn(side, ['-c', 'user.name=fixture', '-c', 'user.email=fixture@local',
@@ -197,10 +193,9 @@ test('объяснение: слияние объясняется настрой
   assert.match(res.stdout, /"merges": true/, 'нет готового значения для починки');
 });
 
-/* Коммит зовут так, как его зовёт git: `HEAD`, ветка, `HEAD~1`. Пока инструмент
- * понимал только sha, вопрос «почему у этого коммита нет строки?» требовал сначала
- * узнать sha глазами, а ответ на имя ревизии был не «не понял имя», а «нет такого
- * коммита» — то есть ложь о том, чего человек искал. */
+/* A commit is called the way git calls it: `HEAD`, a branch, `HEAD~1`. The defect class: a name the tool
+ * does not understand must not be answered as "no such commit" — that would be a lie about what the person
+ * was looking for. */
 test('объяснение: коммит называется именем ревизии, и ответ тот же, что по sha', () => {
   [['HEAD', 'HEAD'], ['HEAD~1', 'HEAD~1'], ['main', 'HEAD']].forEach(([name, rev]) => {
     const sha = gitIn(dir, ['rev-parse', rev]).trim();
@@ -213,9 +208,9 @@ test('объяснение: коммит называется именем ре�
   });
 });
 
-/* Две разные причины, которые легко свести в одну: имени нет вовсе и имя есть, а
- * коммита нет в истории отчёта (другая ветка). Вторая — не «нет коммита»: коммит
- * существует, и человеку нужно услышать именно это, вместе с его sha. */
+/* Two different causes that are easy to merge into one: there is no such name at all, and the name exists
+ * while the commit is not in the report's history (another branch). The second is not "no such commit":
+ * the commit exists, and that is exactly what a person needs to hear, together with its sha. */
 test('объяснение: несуществующее имя и коммит вне истории отчёта — разные причины', () => {
   const typo = runFixture(dir, ['explain', 'maser']);
   assert.equal(typo.code, 2, 'выдуманное имя не отказ:\n' + typo.stdout + typo.stderr);
@@ -224,7 +219,7 @@ test('объяснение: несуществующее имя и коммит 
     'отказ не назвал настоящую причину:\n' + typo.stderr);
   assert.match(typo.stderr, /git log/, 'отказ не даёт готовой команды');
 
-  // Ветка мимо текущей истории: коммит существует, но строк по нему отчёт не строит.
+  // A branch aside from the current history: the commit exists, but the report builds no row for it.
   const side = cloneFixture(path.join(tmp, 'side'));
   gitIn(side, ['checkout', '-q', '-b', 'side']);
   gitIn(side, ['-c', 'user.name=fixture', '-c', 'user.email=fixture@local',
@@ -253,7 +248,7 @@ test('отказы команд: неизвестное слово, неизве
     'отказ не назвал настоящую причину:\n' + absent.stderr);
   assert.match(absent.stderr, /git log/, 'отказ не даёт готовой команды');
 
-  // Короткий префикс подходит нескольким коммитам фикстуры — здесь выбор за человеком.
+  // A short prefix matches several commits of the fixture — here the choice is a person's.
   const many = runFixture(dir, ['explain', '9']);
   assert.equal(many.code, 2);
   assert.match(many.stderr, /неоднозначен/, 'неоднозначный префикс разрешён молча:\n' + many.stderr);

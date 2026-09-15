@@ -1,12 +1,11 @@
-/* Настоящее сжатие — второй способ получить метрику `min`. Снятие балласта
- * оставлено нетронутым намеренно: под ним сняты оба замороженных эталона, и
- * проекты со своими настройками не должны получить другие числа молча. Поэтому
- * способ выбирается в настройках (`minify.engine`), и здесь проверяется, что выбор
- * действительно что-то меняет, что приближение названо приближением, а отсутствие
- * необязательной зависимости — не падение.
+/* Real compression is the second way to obtain the `min` metric. Ballast removal is left untouched on
+ * purpose: both frozen fixtures were taken under it, and projects with settings of their own must not
+ * silently get other numbers. So the way is chosen in the settings (`minify.engine`), and what is checked
+ * here is that the choice really changes something, that an approximation is named as one, and that a
+ * missing optional dependency is not a crash.
  *
- * Шов отсутствия минификатора: окружение с `SIZE_REPORT_NO_OPTIONAL` (тем же путём
- * идёт установка без необязательных зависимостей).
+ * The seam of a missing minifier: the environment with `SIZE_REPORT_NO_OPTIONAL` (the way an install
+ * without the optional dependencies goes too).
  */
 
 import { test, after } from 'node:test';
@@ -30,8 +29,8 @@ const PLAIN = sharedClone('plain', tmp);
 const goldenText = fs.readFileSync(path.join(SYNTH, 'golden.json'), 'utf8');
 const OFF = { [NO_OPTIONAL]: '1' };
 
-/* Копия эталонных настроек с другим способом минификации: история и колонки те же,
- * поэтому числа сравнимы клетка за клеткой, а не «примерно похожи». */
+/* A copy of the reference settings with another minification way: the history and the columns stay the
+ * same, so the numbers are comparable cell by cell rather than "roughly alike". */
 function configAs(name, mutate) {
   const cfg = readJson(CONFIG);
   cfg.minify = { engine: 'esbuild' };
@@ -41,9 +40,9 @@ function configAs(name, mutate) {
   return file;
 }
 
-/* Колонки, за которые отвечает минификатор (`.js`, `.mjs`, `.css`), и колонки,
- * которых он не берёт (`.json` минифицируется разбором целиком, остальные —
- * упрощение). По этому делению и проверяется, где число обязано упасть. */
+/* The columns the minifier answers for — the `.js`, `.mjs` and `.css` ones of this fixture (the whole
+ * table is `MINIFY_LOADERS` in the engine) — and the columns it does not take (`.json` is compacted by
+ * re-serialising, the rest is a simplification). This split decides where a number has to shrink. */
 const MINIFIED = ['code.js', 'modern.js', 'config.mjs', 'style.css'];
 
 test('минификатор действительно сокращает: имена и комментарии исчезают, и это воспроизводимо', () => {
@@ -94,7 +93,7 @@ test('на фикстуре настоящее сжатие меньше упр�
   assert.equal(grew, 0, 'настоящее сжатие где-то вышло больше упрощения — это не сжатие');
   assert.ok(smaller > 0, 'настоящее сжатие не изменило ни одного числа: способ не включился');
 
-  // Числа названы не «примерно»: у колонки кода падение видно по текущему размеру.
+  // The numbers are not "roughly": for the code column the drop shows in the current size.
   const last = after.rows.length - 1;
   const code = after.columns.findIndex((c) => c.label === 'code.js');
   assert.ok(after.rows[last].cells[code].min < before.rows[last].cells[code].min,
@@ -114,7 +113,7 @@ test('подпись метрики называет приближение по
   });
   assert.ok(min.method.indexOf('.json') < 0, 'точный формат записан в приближение: ' + min.method);
 
-  // Отчёт без форматов, которых минификатор не берёт, обещает точное число.
+  // A report without the formats the minifier does not take promises an exact number.
   const only = configAs('esbuild-exact', (cfg) => {
     cfg.columns = cfg.columns.filter((c) => MINIFIED.indexOf(c.label) >= 0);
   });
@@ -125,10 +124,10 @@ test('подпись метрики называет приближение по
   assert.ok(pureMin.method.indexOf('приближение') < 0,
     'в способе осталось предупреждение о приближении: ' + pureMin.method);
 
-  /* То же правило с другой стороны: точность берётся у клеток, а не у названия
-   * способа. Отчёт из одного JSON точен и под снятием балласта — разбор теряет
-   * только незначащие пробелы, короче его не сделать, — поэтому и подпись
-   * обязана сказать «точное», а не обещать приближение за название способа. */
+  /* The same rule from the other side: accuracy comes from the cells rather than from the method's name.
+   * A report made of one JSON file is exact under ballast removal too — re-serialising loses only
+   * insignificant whitespace and nobody can make it shorter — so the label has to say "exact" rather than
+   * promise an approximation because of what the method is called. */
   const onlyJson = configAs('strip-json', (cfg) => {
     cfg.minify = { engine: 'strip' };
     cfg.columns = cfg.columns.filter((c) => c.label === 'package.json');
@@ -140,10 +139,10 @@ test('подпись метрики называет приближение по
   assert.equal(jsoned.approx.min, undefined, 'точная колонка получила пометки приближения');
 });
 
-/* Точность доезжает и до самой клетки, а не только до подписи метрики: там, где
- * минификатор файл взял, число точное, а там, где формат ему незнаком, — нет.
- * Ряд пометок берётся из контракта (`--data`), а не из внутренностей движка,
- * и сверяется с теми же колонками, по которым проверено падение чисел. */
+/* Accuracy reaches the cell itself rather than stopping at the metric label: where the minifier took the
+ * file the number is exact, and where the format is foreign to it, it is not. The row of marks comes from
+ * the contract (`--data`) rather than from the engine's internals, and is compared with the very columns
+ * the drop in numbers was checked on. */
 test('с настоящим сжатием точность объявлена по клетке', () => {
   const all = runSize(PLAIN, ['--config', configAs('esbuild-cells', () => {}), '--data']);
   assert.equal(all.code, 0, 'прогон со сжатием упал: ' + all.stderr.trim());
@@ -199,12 +198,12 @@ test('без необязательной зависимости метрика 
 });
 
 test('расхождение и отступление вместе: названы оба, а вердикт — за расхождением', () => {
-  /* Отчёт собран с настоящим минификатором, а проверка идёт без него: числа честно
-   * расходятся, и настоящая причина — другой счёт, а не правка мимо отчёта. Вердикт
-   * всё равно остаётся за расхождением (код 1), а факт другого счёта называется
-   * заметкой: код 4 утверждал бы, что разница объясняется датчиком, а этого никто не
-   * проверял — расхождение может быть и настоящей правкой на диске. Порядок тот же,
-   * что у `doctor` и у покрытия: нарушение старше приближения. */
+  /* The report was assembled with the real minifier while the check runs without it: the numbers
+   * honestly differ, and the real cause is the other count rather than an edit outside the report. The
+   * verdict still goes to the discrepancy (code 1), while the fact of the other count is named as a note:
+   * code 4 would assert that the difference is explained by the sensor, and nobody checked that — the
+   * discrepancy may be a genuine edit on disk. The order is the same as in `doctor` and in coverage: a
+   * violation outranks an approximation. */
   const file = configAs('esbuild-report', () => {});
   const dir = cloneFixture(path.join(tmp, 'report-with-esbuild'));
   assert.equal(runSize(dir, ['--config', file, '--write']).code, EXIT.OK,
@@ -226,10 +225,10 @@ test('расхождение и отступление вместе: назва�
 });
 
 test('файл, который минификатор не разобрал, — отказ с настоящей причиной', () => {
-  /* Совет этого отказа — только перевод расширения под упрощение, и это проверено
-   * прогоном: смена движка на `strip` этот файл не спасает, а передаёт гарду
-   * `minify.guard` (у `.js` — его разговор), поэтому обещать её здесь значило бы
-   * обещать выход, которого нет. Прогон обеих половин — в `test/module.test.js`. */
+  /* The advice of this refusal is only moving the extension under simplification, and that is proved by a
+   * run: switching the engine to `strip` does not save this file, it hands it to the `minify.guard` check
+   * (which has its say for `.js`), so promising it here would promise an exit that does not exist. Both
+   * halves are run in `test/module.test.js`. */
   assert.throws(() => minifyWithEsbuild('<div>нет</div>\n', 'src/lie.js', 'abc1234'),
     (e) => e.code === EXIT.CONFIG && e.message.indexOf('src/lie.js') >= 0
       && e.message.indexOf('ERROR:') >= 0
@@ -237,9 +236,9 @@ test('файл, который минификатор не разобрал, —
       && e.message.indexOf('"engine": "strip"') < 0,
     'отказ не назвал ни файла, ни причины, ни выхода из тупика');
 
-  /* Тот же отказ, но через движок: расширение соврало о содержимом в истории.
-   * Проверка идёт на `.ts`: упрощение такой файл просто построчно подрезает (и
-   * молчало бы), а минификатор обязан отказаться, потому что не разобрал его. */
+  /* The same refusal, but through the engine: the extension lied about the content in the history. The
+   * check runs on `.ts`: a simplification merely trims such a file line by line (and would stay silent),
+   * while the minifier has to refuse, because it did not parse it. */
   const dir = cloneFixture(path.join(tmp, 'lie'));
   fs.writeFileSync(path.join(dir, 'src', 'lie.ts'), '<div>нет</div>\n');
   gitIn(dir, ['add', 'src/lie.ts']);
