@@ -1,24 +1,24 @@
 import { cliCommand, advicePath, refuseCause } from './refusal.js';
 
-/* Грамматика командной строки: что человек назвал и законно ли это сочетание.
+/* Command-line grammar: what the user named, and whether that combination is legal.
  *
- * Один разбор на входе, до чтения проекта. Он решает всё сразу — какой режим
- * запрошен, совместим ли он с командой и с остальными ключами, все ли ключи
- * получили значение, нет ли лишних слов, — и отвечает либо планом, либо отказом.
- * Поэтому порядок ветвлений в `main` ничего не решает: правило «так нельзя» — это
- * значение, а не место в коде, и наружу оно выходит одним способом — отказом с
- * названным виновником и готовой командой.
+ * One parse, at the entry, before the project is read. It settles everything at once —
+ * which mode was asked for, whether it fits the command and the other flags, whether every
+ * flag got a value, whether there are extra words — and answers with either a plan or a
+ * refusal. That is why the order of branches in `main` decides nothing: "you cannot do
+ * that" is a value, not a place in the code, and it surfaces in one way only — as a refusal
+ * naming the culprit and the command that fixes it.
  *
- * Ключи трёх родов: режимы (взаимоисключающие — они задают, что делать), ключи со
- * значением (забирают следующий аргумент) и переключатели. Команда — первое слово
- * вне ключей: её чтение не зависит от места в строке, поэтому и `size check
- * --config x`, и `size --config x check` — одно и то же.
+ * Flags come in three kinds: modes (mutually exclusive — they say what to do), value flags
+ * (they take the next argument) and switches. A command is the first word outside the
+ * flags, so its position in the line does not matter: `size check --config x` and
+ * `size --config x check` are the same.
  *
- * Файл отдельный от `cli.js`, потому что вопросы у них разные: здесь — «что
- * запрошено и можно ли так», там — «что по запросу делать». Отсюда и цена ошибки
- * в каждом: неверное правило здесь ломает все режимы сразу, поэтому проверки
- * разложены по группам (режим, слово, форма ответа), а каталог отказов считает их
- * места и требует проверки на каждое.
+ * The file is separate from `cli.js` because the questions differ: here "what was asked and
+ * may it be so", there "what to do about it". Hence the price of a wrong rule here — it
+ * breaks every mode at once — and hence the checks split by subject, with the refusal
+ * catalogue (`tools/refusals.js`) counting their sites in the sources and demanding a test
+ * for each.
  */
 
 const MODES = ['--init', '--write', '--data'];
@@ -28,9 +28,9 @@ const COMMANDS = ['check', 'explain', 'doctor', 'install-hook', 'uninstall-hook'
 const ANSWER_COMMANDS = ['check', 'explain', 'doctor'];
 export const HOOK_COMMANDS = ['install-hook', 'uninstall-hook', 'hook-run'];
 
-/* Ключ со значением: забирает следующий аргумент и возвращает, сколько съел. У
- * `--init` и `--write` пустое значение — законное «по умолчанию», а у `--config`
- * это молчаливый пропуск: настройки были бы взяты не те, что назвал человек. */
+/* A value flag takes the next argument and reports how many it consumed. An empty value is
+ * a legitimate "default" for `--init` and `--write`, but for `--config` it would be a
+ * silent skip: the settings read would not be the ones the user named. */
 function takeValue(flag, args, i, values) {
   const next = args[i + 1];
   const none = next === undefined || next[0] === '-';
@@ -42,9 +42,9 @@ function takeValue(flag, args, i, values) {
   return none ? 0 : 1;
 }
 
-/* Один проход по строке: слова, режимы и значения ключей. Отказы здесь — только
- * про сам ключ (незнакомый, повторённый, без значения): сочетания разбирает
- * `checkArgs`, потому что они про названное вместе, а не про отдельный аргумент. */
+/* One pass over the line: words, modes, flag values. Refusals here are about a single flag
+ * only (unknown, repeated, missing a value); combinations belong to `checkArgs`, because
+ * they are about what was named together rather than about one argument. */
 function scan(args) {
   const seen = new Set();
   const modes = [];
@@ -66,17 +66,17 @@ function scan(args) {
   return { seen: seen, modes: modes, values: values, words: words };
 }
 
-/* Совет повторяет настройки, которые человек назвал: без `--config` команда ищет
- * файл под умолчательным именем, в проекте с другим именем не находит его и уводит
- * человека во второй отказ — про файл настроек, которого у него нет. */
+/* The advice repeats the settings the user named: without it a command looks for the
+ * default file name, does not find it in a project that named the file otherwise, and sends
+ * the user into a second refusal — about a settings file they do not have. */
 function advisor(values) {
   const given = typeof values['--config'] === 'string'
     ? '--config ' + advicePath(values['--config']) + ' ' : '';
   return (rest) => cliCommand(given + rest);
 }
 
-/* Режим против ключей: сами режимы взаимоисключающие, а `--force` и `--config`
- * работают не с каждым из них. */
+/* A mode against the flags: the modes exclude each other, and `--force` and `--config` do
+ * not go with every one of them. */
 function checkModes(plan) {
   const { modes, seen, mode, advice } = plan;
   if (modes.length > 1) {
@@ -93,11 +93,11 @@ function checkModes(plan) {
   }
 }
 
-/* Слово, которого команда не знает. Отдельным вопросом, потому что виновников
- * тут двое: опечатка в команде — и лишнее значение режима, который своё значение
- * уже забрал (у `--init` и `--write` оно одно). Оба случая обязаны назвать своего
- * виновника: у `--config` остаток — именно команда, и зов её разбирается как
- * команда, а не как лишнее слово. */
+/* A word the command does not know. Its own question, because there are two possible
+ * culprits: a typo in the command, or an extra value for a mode that already took one
+ * (`--init` and `--write` take a single value). Either way the culprit has to be named: a
+ * leftover after `--config` is the command itself, and its call is parsed as a command
+ * rather than as an extra word. */
 function checkUnknownWord(plan) {
   const { verb, values, advice } = plan;
   if (verb === null || COMMANDS.indexOf(verb) >= 0) return;
@@ -109,8 +109,8 @@ function checkUnknownWord(plan) {
   refuseCause('неизвестная команда', 'неизвестная команда «' + verb + '»\n  починка: ' + cliCommand('--help'));
 }
 
-/* Слово и режим вместе: команда задаёт, что ответить, режим — что записать, и
- * одновременно они не работают. */
+/* A word and a mode together: the command says what to answer, the mode what to write, and
+ * the two do not work at once. */
 function checkWordAgainstMode(plan) {
   const { verb, mode, advice } = plan;
   if (verb === null || mode === null) return;
@@ -118,9 +118,9 @@ function checkWordAgainstMode(plan) {
     + '\n  починка: ' + advice(verb));
 }
 
-/* Сколько слов принято: у `explain` коммит один и он обязателен, у остальных
- * команд аргументов нет вовсе. Коммит либо не назван, либо назван не один раз —
- * тупика два, а починка одна и та же. */
+/* How many words are accepted: `explain` takes exactly one commit and requires it, the
+ * other commands take no argument at all. A missing commit and several commits are two
+ * dead ends with one and the same fix. */
 function checkWordCount(plan) {
   const { verb, arg, advice } = plan;
   if (verb === 'explain' && arg.length === 0) {
@@ -138,11 +138,11 @@ function checkWordCount(plan) {
   }
 }
 
-/* Форма ответа против всего остального. `--json` — не режим, а форма, и правило у
- * него одно: ответ бывает ровно у трёх команд и у запуска без команды (прежняя
- * форма данных — она заморожена эталоном паритета, убрать её нельзя). У команды
- * без ответа просить нечего, а у режима ответ уже один — запись; оба случая —
- * отказ, и каждый называет своего виновника. */
+/* The shape of the answer against everything else. `--json` is a shape, not a mode, and it
+ * has one rule: exactly three commands and a bare run have an answer — the bare run is the
+ * older data form, frozen by the parity fixture and therefore not removable. A command
+ * without an answer has nothing to ask for, and a mode already has one answer, the write;
+ * both are refusals, and each names its culprit. */
 function checkAnswer(plan) {
   const { verb, mode, seen, advice } = plan;
   if (seen.has('--json') && verb !== null && ANSWER_COMMANDS.indexOf(verb) < 0) {
@@ -155,9 +155,9 @@ function checkAnswer(plan) {
   }
 }
 
-/* Проверки сочетаний — тремя группами и одним планом на всех: план это то, что
- * разбор уже знает (слово, аргумент, режим, названные ключи и совет), а группы
- * отвечают каждая за своё. Возврат — готовый план запуска. */
+/* Combination checks, in groups over one plan: the plan holds what the parse already knows
+ * (the word, the argument, the mode, the named flags and the advice), each group answers for
+ * its own subject, and what comes back is a ready plan to run. */
 function checkArgs(scanned) {
   const { words, seen, values, modes } = scanned;
   const plan = {
@@ -184,7 +184,7 @@ function checkArgs(scanned) {
 }
 
 export function parseArgs(args) {
-  // Справка отвечает всегда и первой: она и есть выход из любой опечатки.
+  // Help always answers, and answers first: it is the way out of any typo.
   if (args.indexOf('--help') >= 0 || args.indexOf('-h') >= 0) return { help: true };
   const scanned = scan(args);
   return Object.assign({ help: false, values: scanned.values }, checkArgs(scanned));

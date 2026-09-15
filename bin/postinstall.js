@@ -1,28 +1,27 @@
 #!/usr/bin/env node
-/* Постановка хука после установки пакета: чтобы отчёт обновлялся с первого же
- * коммита, не требуя ни запуска инструмента, ни файла настроек.
+/* Hook installation after the package is installed: the report is rebuilt from the very
+ * first commit, with neither the tool run nor a settings file.
  *
- * Здесь только поиск проекта-потребителя: сам хук ставит `autoInstall`
- * (`src/hook.js`) — то же место, что и при первом запуске, иначе «поставлено при
- * установке» и «поставлено при запуске» могли бы разойтись содержимым файла.
+ * Only the consumer project is located here: the hook itself is installed by
+ * `autoInstall` (`src/hook.js`) — the same place as on the first run, so that "installed
+ * by the installer" and "installed by the first run" cannot diverge in the file content.
  *
- * Код выхода всегда 0: установка зависимостей не должна падать из-за того, что
- * услугу не удалось оказать (нет git, нет прав, чужой хук, CI). Причина не
- * печатается: у фоновой работы нет читателя, а точная причина есть у команды
- * `install-hook`.
+ * The exit code is always 0: installing dependencies must not fail because a service
+ * could not be rendered (no git, no permissions, a foreign hook, CI), and the reason is
+ * not printed — background work has no reader, while `install-hook` has the exact one.
  *
- * Отдельная тонкость: платформы, где скрипты зависимостей по умолчанию не
- * исполняются (pnpm 10, yarn berry), зовут этот файл не всегда — тогда хук
- * ставится при первом запуске инструмента в проекте. Оба пути ведут в одно место. */
+ * One subtlety: platforms that skip dependency scripts by default (pnpm 10, yarn berry)
+ * do not always call this file; there the hook is installed by the first run of the tool
+ * in the project. Both paths lead to the same place. */
 
 import fs from 'fs';
 import path from 'path';
 import { autoInstall } from '../src/hook.js';
 
-/* Каталог проекта-потребителя ищется в порядке убывания точности: `INIT_CWD`
- * (его ставят npm и pnpm, запуская скрипт пакета), `npm_config_local_prefix`,
- * затем подъём от текущего каталога вверх до ближайшего `.git`. Подъём нужен,
- * потому что сам скрипт исполняется из `node_modules`, где репозитория нет. */
+/* The consumer project directory, most precise candidate first: `INIT_CWD` (set by npm
+ * and pnpm when they run a package script), `npm_config_local_prefix`, and finally a walk
+ * up from the current directory to the nearest `.git` — the script itself runs from
+ * `node_modules`, where there is no repository. */
 function projectRoot() {
   const candidates = [process.env.INIT_CWD, process.env.npm_config_local_prefix, process.cwd()];
   for (const start of candidates) {

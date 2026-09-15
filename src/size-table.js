@@ -1,81 +1,46 @@
-/* Таблица объёма файлов по коммитам — переносимый генератор.
+/* Size of files by commit — the portable generator.
  *
- * Зачем. Объём проекта обсуждается числами регулярно (здесь — WORKLOG §19–§21),
- * и каждый раз это был ручной замер двух ревизий. Генератор делает замер
- * непрерывным: строка — коммит, колонка — файл, в клетке — изменение к
- * предыдущему коммиту по каждой метрике (`raw` — файл как он есть,
- * `min` — форма без комментариев и отступов), а абсолютные размеры стоят один
- * раз, в верхней строке «сейчас» (иначе крупное число повторялось бы в каждой
- * строке, и колонки расползались бы на экраны вширь).
+ * A row is a commit, a column is a file, a cell is the change against the previous commit
+ * for one metric; absolute sizes appear once, in the top "now" row, or a large number
+ * would repeat in every row and the columns would run off the screen.
  *
- * Источник правды — сам git: размеры берутся из блобов коммитов, а не из
- * рабочего дерева. Поэтому таблица не зависит от того, что открыто в редакторе,
- * и собирается заново по всей истории, а не дописывается инкрементально
- * (инкрементальный файл пришлось бы чинить после любой правки старых чисел).
+ * The source of truth is git itself: sizes come from the blobs of the commits, not from
+ * the working tree, so the table does not depend on what is open in an editor, and it is
+ * rebuilt from the whole history rather than appended to — an incremental file would have
+ * to be repaired after any change to an old number.
  *
- * **Проектное — в конфиге, механика — в пакете.** Движок не знает ни имён файлов
- * проекта, ни имени журнала, ни языка подписей: колонки, метрики, журнал,
- * локаль, куда писать — всё в `size-table.config.json` рядом с корнем
- * репозитория (`--config` — другой путь). Поэтому пакет подключается к новому
- * проекту как зависимость, а `size --init` подбирает там черновик конфига
- * (какие расширения в проекте, где журнал, куда писать), который дальше
- * правится глазами.
+ * **Project matters in the config, mechanics in the package.** The engine knows neither
+ * the file names of the project nor the name of its journal nor the language of the
+ * labels: columns, metrics, journal, locale and output path all live in
+ * `size-table.config.json` next to the repository root (`--config` names another path).
+ * That is why the package can be attached to a new project as a dependency, and why
+ * `size --init` can draft a config there (which extensions the project has, where its
+ * journal is, where to write), to be edited by eye afterwards.
  *
- * Строку получает коммит, сдвинувший хотя бы одно число, включая merge: у
- * слияния берётся дифф к первому родителю, поэтому его правки видны и в строке,
- * и в переносе состояния. Не получают строку коммиты, тронувшие лишь сам файл
- * таблицы (и всё, что перечислено в `skip`) — строка про коммит не может лежать
- * внутри самого коммита (sha на момент сборки ещё неизвестен), поэтому
- * обновление таблицы — отдельный коммит, — и коммиты, у которых все клетки
- * вышли нулевыми (слияние, разрешённое ровно в то, что уже дала ветка): строка
- * без единого числа читается как поломка. Отсюда же
- * требование к конфигу: колонки обязаны покрывать всё, что коммит может
- * изменить. Коммит мимо колонок дал бы строку без единого числа, а пустая
- * клетка в таблице означает «файла в этой ревизии ещё нет» — читается как
- * поломка (это стережёт тест).
- * Если в конфиге выключить sha в строках (`rows.sha: false`), тот же инвариант
- * начинает работать и для стратегии «пересобрать и дописать в тот же коммит»:
- * без sha артефакт становится неподвижной точкой сборки.
+ * A commit gets a row when it moved at least one number, merges included: a merge is
+ * diffed against its first parent, so its edits show both in the row and in the carried
+ * state. No row goes to a commit that touched only the report itself (or anything else
+ * listed in `skip`) — a row about a commit cannot live inside that commit, whose sha is
+ * unknown while it is being built, and that is why a rebuilt report is a commit of its
+ * own — nor to a commit whose cells all came out zero (a merge resolved into exactly what
+ * the branch already gave): a row without a single number reads as a breakdown. Hence the
+ * requirement on the config: the columns must cover everything a commit can change,
+ * because a commit outside the columns would give such a row, while an empty cell already
+ * means "the file is not in that revision yet". With `rows.sha: false` the same invariant
+ * serves the other strategy — rebuild and amend into the same commit — because without
+ * the sha the artifact becomes a fixed point.
  *
- * Отчёт один: самодостаточная страница (`size-report.html`), в которой лежат и
- * данные, и оформление, и программа. Второй формы того же отчёта нет намеренно: два
- * вывода одной истории разошлись бы молча, а выбрать, какой верный, было бы нечем.
+ * One report: a single self-contained page holding the data, the styling and the program.
+ * A second form of the same report does not exist on purpose — two outputs of one history
+ * would diverge silently, with nothing to tell which one is right.
  *
- * Запуск (из любого места репозитория; `size` — когда пакет установлен, иначе
- * `node bin/size.js`):
- *   size                    проверка: отчёт совпадает с историей (CI)
- *   size --write [файл]     перегенерировать отчёт
- *   size --json             строки как JSON в stdout
- *   size --data             данные для отчёта и агента в stdout
- *   size --init [файл]      закрепить настройки файлом (без него они выводятся из проекта)
- *   size --config <путь>    другой файл настроек
- *   size --help             справка и коды выхода
- *
- * Требуется полная история: на обрезанном клоне (shallow) скрипт отказывается
- * работать, а не пишет молча короткую таблицу. В CI — `fetch-depth: 0`.
+ * The full history is required: on a shallow clone it refuses instead of silently writing
+ * a short table (`fetch-depth: 0` in CI). Modes and exit codes: `size --help`.
  */
 
-/* Точка входа пакета — и только она: здесь нет ни одного расчёта, только
- * реэкспорт. Механика разложена по швам, которые видно по зависимостям:
- *
- *   refusal, locales, journal, tool, css, derived        — ни на чём не стоят;
- *   parse → parse-worker                               — разбор модуля вне процесса;
- *   strip → refusal, parse                             — снятие балласта и гард;
- *   metrics → strip                                    — реестр метрик;
- *   git → refusal                                      — всё, что читается у git;
- *   project → git, refusal                            — что проект говорит о себе сам;
- *   config → project, git, refusal, locales, metrics, data — настройки проекта;
- *   history → git, metrics, journal, refusal           — сборка по истории;
- *   data → locales, metrics, journal, history, project, tool — контракт со страницей;
- *   page/build → locales, css                          — отчёт одним файлом;
- *   artifact → data, page/build                        — запись отчёта;
- *   modes → почти все                                  — что делать по запросу;
- *   init → config, project, refusal, artifact          — закрепление настроек файлом;
- *   cli → args, modes, init, config, refusal           — вход: разбор и доставка.
- *
- * Публичный API — то, чем пользуются `bin/size.js` и `test/`: список ниже не
- * сокращается при разбиении (это проверяет `test/api.test.js`).
- */
+/* The entry point of the package, and nothing else: no computation here, only re-exports.
+ * The mechanics are laid out along the seams visible in the imports. The public API is a
+ * frozen list — `test/api.test.js` does not let it shrink. */
 export { main } from './cli.js';
 export { initMode } from './init.js';
 export { sniffColumns } from './project.js';

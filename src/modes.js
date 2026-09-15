@@ -13,26 +13,22 @@ import { artifact, rebuild } from './artifact.js';
 import { sensorGaps } from './metrics.js';
 import { totalsOf } from './derived.js';
 
-/* Режимы: что инструмент делает по запросу. Разбор аргументов — в `src/args.js`, а
- * сюда приходит готовый план: какой режим, какой ключ, что печатать. Здесь же их
- * общие мелочи (знак «!» о другом счёте, вердикт, размер словами) — один владелец
- * на все режимы, потому что один и тот же счёт и один и тот же знак не должны
- * разойтись между `--write`, `--data`, `--page` и `size check`.
- *
- * Что где: сборка и сверка отчёта (`--write`, проверка), данные контракта
- * (`--data`), полнота покрытия (`size check`), диагностика (`doctor`), хук и
- * объяснение пропущенной строки. Файл знает про все остальные модули сразу — это
- * его работа: связать их в одну команду.
+/* Modes: what the tool does on request. The arguments are parsed in `src/args.js`, and a
+ * ready plan arrives here — which mode, which flag, what to print. Their shared bits live
+ * here too (the "!" note about a different count, the verdict, a size in words), one owner
+ * for all modes, so that one count and one mark cannot diverge between `--write`, `--data`,
+ * `check` and the rest. Knowing every other module at once is this file's job: it ties them
+ * into one command.
  */
 
 function kmb(bytes) {
   return Math.round(bytes / 1024) + ' КБ';
 }
 
-/* Деградация — не ошибка, а факт отчёта: числа получены другим счётом (упрощение
- * вместо сжатия, оценка вместо точного счёта), потому что необязательной
- * зависимости нет. Факт печатается один раз на датчик и становится кодом 4 — иначе
- * приближение уезжало бы в CI как успех. */
+/* Degradation is a fact of the report, not an error: the numbers came from a different
+ * method (stripping instead of minification, an estimate instead of an exact count) because
+ * an optional dependency is missing. The fact is printed once per sensor and becomes code
+ * 4 — otherwise an approximation would travel into CI as success. */
 function note(gaps) {
   gaps.forEach((gap) => console.error('! ' + gap.why + '\n  починка: ' + gap.fix));
   return gaps.length === 0 ? EXIT.OK : EXIT.SENSOR;
@@ -42,12 +38,12 @@ function sensorNote(cfg) {
   return note(sensorGaps(cfg));
 }
 
-/* Вердикт режима вместе с заметками о датчиках: заметка печатается всегда — молчание
- * о другом счёте читается как точное число, и расхождение остаётся без причины, — а
- * код остаётся первым по важности. Нарушение старше приближения (тот же порядок, что
- * у `size check` и у `doctor`): код 4 говорит «числа честные, но другим счётом», а
- * когда таблица расходится, этого никто не проверял — расхождение может быть и
- * настоящей правкой мимо отчёта. */
+/* The mode's verdict together with the sensor notes: the note is printed always — silence
+ * about a different count reads as an exact number, and a disagreement would be left without
+ * a cause — while the code stays the more important one. A violation outranks an
+ * approximation (the same order as in `check` and `doctor`): code 4 claims the numbers are
+ * honest but counted differently, and when the table disagrees nobody checked that — the
+ * disagreement may be a real edit that went past the report. */
 function verdict(code, gaps) {
   const sensors = note(gaps);
   return code === EXIT.OK ? sensors : code;
@@ -79,9 +75,9 @@ export function check(cfg, want, root) {
   return 1;
 }
 
-/* Путь, названный ключом (`--write <файл>`), — это настройка `output` этого
- * запуска: отчёт обязан называть себя тем путём, по которому лежит, иначе подпись в
- * нём указывала бы на чужое место. */
+/* A path named on the command line (`--write <file>`) is this run's `output` setting: the
+ * report has to name itself by the path it lies at, or the note inside it would point
+ * somewhere else. */
 function withOutput(cfg, root, file) {
   if (typeof file !== 'string') return cfg;
   return Object.assign({}, cfg, { output: path.relative(root, path.resolve(file)) });
@@ -108,39 +104,39 @@ export function checkMode(cfg, root) {
   return verdict(code, sensorGaps(cfg));
 }
 
-/* Ответ команды: `--json` — машинная форма того же ответа, а не второй ответ.
- * Одна на три команды, чтобы «кто печатает и в каком виде» не разошёлся между
- * ними: разойтись он может только здесь, а байты ответа — то, чем пользуется
- * агент. Текст берётся функцией: в машинной форме он не нужен вовсе. */
+/* A command's answer: `--json` is the machine form of the same answer, not a second one.
+ * Shared by three commands so that "who prints and in which shape" cannot diverge between
+ * them — that can only diverge here, and the bytes of the answer are what an agent consumes.
+ * The text comes as a function: the machine form does not need it at all. */
 function answer(rep, asJson, text) {
   if (asJson) process.stdout.write(JSON.stringify(rep, null, 2) + '\n');
   else console.log(text(rep));
   return rep;
 }
 
-/* Полнота покрытия (`size check`): настройки, история, пути, датчики. Не путать с
- * `checkMode` выше — тот про таблицу и историю («файл совпадает с тем, что
- * сосчитано»), а этот про то, что сосчитано **всё**: ни один путь истории не
- * прошёл мимо колонок. Разные вопросы, поэтому и разные команды: держать отчёт в
- * git не обязательно, а вот полноту терять нельзя — она той же проверкой и
- * заменяется. */
+/* Coverage (`size check`): settings, history, paths, sensors. Not to be confused with
+ * `checkMode` above, which asks whether the file matches what was computed; this one asks
+ * whether **everything** was computed — no path of the history went past the columns.
+ * Different questions, hence different commands: keeping the report in git is optional,
+ * losing completeness is not — and this command is what replaces that check. */
 export function coverageMode(cfg, root, configFile, asJson) {
   const rep = answer(coverage(cfg, root, configFile), asJson, coverageText);
   return verdict(rep.ok ? EXIT.OK : EXIT.VIOLATION, rep.sensors);
 }
 
-/* Диагностика одним ответом (`size doctor`): окружение, зависимости, настройки и
- * покрытие — сборкой из тех же кусков, что и остальные режимы. Код выхода — не
- * «что-то не так», а первый по важности (настройки → история → покрытие →
- * приближение): по нему агент ветвится, а текст читает человек. */
+/* Diagnostics in one answer (`size doctor`): environment, dependencies, settings and
+ * coverage, assembled from the same pieces as the other modes. The exit code is not
+ * "something is wrong" but the first by importance (settings → history → coverage →
+ * approximation): an agent branches on it, a human reads the text. */
 export function doctorMode(root, configFile, asJson) {
   return answer(doctor(root, configFile), asJson, doctorText).exit;
 }
 
-/* Хук: установка, снятие и то, что он зовёт сам. Ставится и снимается только
- * явной командой; `hook-run` зовётся хуком и всегда отвечает кодом 0 — коммит уже
- * сделан, и валить его нечем (устройство и причины — `src/hook.js`). Строка о
- * сделанном идёт в stderr: она часть вывода git, а не данных инструмента. */
+/* The hook: installing, removing, and the call the hook itself makes. Installing and
+ * removing happen by explicit command only; `hook-run` is called by the hook and always
+ * answers 0 — the commit is already made and there is nothing to fail it for (design and
+ * reasons: `src/hook.js`). What it did goes to stderr: it is part of git's output, not tool
+ * data. */
 export function hookMode(verb, root, configFile) {
   if (verb === 'hook-run') {
     const rep = hookRun(root, configFile);
@@ -152,17 +148,18 @@ export function hookMode(verb, root, configFile) {
   return rep.code;
 }
 
-/* Объяснение пропущенной строки (`size explain <коммит>`): ответ есть у любого
- * коммита, поэтому код выхода 0 и у «строка есть», и у «строки нет»; 2 — только
- * когда названного коммита в истории нет или префикс подходит нескольким. */
+/* Explaining a skipped row (`size explain <commit>`): any resolvable commit has an answer,
+ * so the exit code is 0 both when the row is there and when it is not; 2 belongs to a commit
+ * that cannot be resolved — an unknown name, an ambiguous prefix, or one outside the
+ * history. */
 export function explainMode(cfg, root, target, asJson) {
   answer(explainCommit(cfg, root, target), asJson, explainText);
   return EXIT.OK;
 }
 
-/* Данные контракта в stdout — для страницы и для агента: та же правда, что в
- * артефакте, но без вёрстки и без производных величин. Прежняя форма `--json`
- * остаётся нетронутой: она заморожена эталоном паритета (fixtures/parity). */
+/* Contract data on stdout — for the page and for an agent: the same truth as in the
+ * artifact, without markup and without derived numbers. The older `--json` form stays
+ * untouched: the parity fixture freezes it (`fixtures/parity`). */
 export function dataMode(cfg, root) {
   process.stdout.write(JSON.stringify(reportData(cfg, root), null, 2) + '\n');
   return sensorNote(cfg);

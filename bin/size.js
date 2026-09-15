@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-/* Точка входа команды `size`. Разбор аргументов и режимы живут в движке: держать
- * их здесь значило бы, что движок нельзя импортировать, не исполнив команду. */
+/* The `size` entry point. Arguments and modes live in the engine: keeping them here
+ * would mean the engine could not be imported without running the command. */
 import { main } from '../src/size-table.js';
 
 process.exitCode = main();

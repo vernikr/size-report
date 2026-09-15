@@ -9,22 +9,19 @@ import {
   checkMode, coverageMode, dataMode, doctorMode, explainMode, hookMode, jsonMode, writeMode
 } from './modes.js';
 
-/* Вход инструмента: разбор строки, чтение проекта и доставка запроса режиму.
+/* The tool's entry point: parse the line, read the project, hand the request to a mode.
  *
- * Здесь не осталось ни грамматики (`src/args.js`), ни самих режимов
- * (`src/modes.js`), ни закрепления настроек (`src/init.js`) — только то, без чего
- * вход не вход: откуда берётся корень проекта, каким ключом назван файл настроек и
- * как отказ превращается в код выхода. Здесь же сказано вслух, когда настроек нет
- * и работа идёт на выведенных из проекта: это общее для всех режимов, а не их дело. Разделение не косметическое: цепочка
- * ветвлений «что запрошено» росла с каждым режимом и держала сложность входа, а
- * правила грамматики и тексты отказов проверяются своим каталогом
- * (`tools/refusals.js`), который считает их места в исходниках.
+ * Neither the grammar (`src/args.js`) nor the modes (`src/modes.js`) nor pinning the
+ * settings (`src/init.js`) is left here — only what makes this an entry point at all:
+ * where the project root comes from, how the settings file is named, and how a refusal
+ * turns into an exit code. Saying out loud that there is no settings file and the settings
+ * were derived from the project belongs here as well: that holds for every mode, not for
+ * one of them.
  */
 
-/* Исполнитель запроса: ключ — то, чем запрос назван (команда или режим), а «просто
- * запуск» — пустая строка. Разбор уже проверил сочетания, поэтому здесь остаётся
- * выбор из готового списка, а не решение: у каждого названного есть свой
- * исполнитель, и вызывается он без пробежек по `if`. */
+/* Request runners: the key is what the request is called (a command or a mode), and "a
+ * bare run" is the empty string. The parser has already checked the combinations, so this
+ * is a lookup with a runner for every name, not a decision. */
 const RUNNERS = {
   check: (c, x) => coverageMode(x.cfg, x.root, x.configFile, c.json),
   explain: (c, x) => explainMode(x.cfg, x.root, c.arg[0], c.json),
@@ -35,10 +32,10 @@ const RUNNERS = {
 
 const asked = (cmd) => (cmd.verb === null ? (cmd.mode === null ? '' : cmd.mode) : cmd.verb);
 
-/* Постановка хука без спроса — здесь, а не в `doctor` и не в `hook-run`: первый
- * только докладывает, а второй зовётся уже из поставленного хука. Ставится один раз
- * в клоне и называется вслух, дальше молчит: отчёт обновляется после каждого
- * коммита без ручного шага (устройство и границы — `src/hook.js`). */
+/* Installing the hook without being asked belongs here, not in `doctor` (which only
+ * reports) and not in `hook-run` (which is called from an already installed hook). It
+ * installs once per clone, says so, and is silent afterwards: the report is rebuilt after
+ * every commit with no manual step (design and limits: `src/hook.js`). */
 function ensureHook(root, cfg) {
   const files = autoInstall(root, cfg);
   if (files === null) return;
@@ -46,15 +43,15 @@ function ensureHook(root, cfg) {
     + ' коммита (снять: ' + cliCommand('uninstall-hook') + ')');
 }
 
-/* Доставка. Диагностика и хук отвечают до чтения настроек: им нужен не весь
- * проект, а окружение, и отказывать им из-за настроек было бы неверно — про
- * настройки они как раз и докладывают. */
+/* Delivery. Diagnostics and the hook answer before the settings are read: they need the
+ * environment rather than the whole project, and refusing them over settings would be
+ * wrong — the settings are exactly what they report about. */
 function deliver(cmd, base) {
   if (cmd.verb === 'doctor') return doctorMode(base.root, base.configFile, cmd.json);
   if (HOOK_COMMANDS.indexOf(cmd.verb) >= 0) return hookMode(cmd.verb, base.root, base.configFile);
   const ctx = { root: base.root, configFile: base.configFile, cfg: loadConfig(base.configFile, base.root) };
-  // Примечание идёт в stderr: у `--json` и `--data` в stdout лежат данные, и
-  // подмешивать в них рассказ о настройках значило бы ломать разбор.
+  // The note goes to stderr: `--json` and `--data` own stdout, and mixing a story about
+  // the settings into data would break parsing.
   if (ctx.cfg.derived) derivedLines(ctx.cfg).forEach((line) => console.error(line));
   ensureHook(base.root, ctx.cfg);
   return RUNNERS[asked(cmd)](cmd, ctx);
@@ -77,9 +74,9 @@ export function main() {
       console.error('✗ ' + e.message);
       return e.code;
     }
-    // Непредвиденное — дефект инструмента, а не тупик пользователя: так это и
-    // сказано в тексте (иначе человек ищет ошибку у себя), а стек нужен целиком,
-    // иначе такой отказ нечем разбирать.
+    // Unexpected failures are a defect of the tool, not a dead end for the user, and the
+    // text says so — otherwise the user looks for the mistake on their side. The stack is
+    // printed whole: nothing else can diagnose such a refusal.
     console.error('✗ внутренняя ошибка (это дефект инструмента, а не проекта —'
       + ' пришлите, пожалуйста, этот текст целиком):\n' + e.stack);
     return EXIT.INTERNAL;

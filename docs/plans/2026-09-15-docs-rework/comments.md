@@ -49,8 +49,8 @@ Therefore, in the rewrite:
 Line counts are the file totals, not the comment totals; a module fits one commit while its
 comment diff stays under the commit budget, otherwise it is split by file groups.
 
-- [ ] **M1 entry** — `bin/size.js`, `bin/postinstall.js`, `src/size-table.js`, `src/cli.js`,
-  `src/args.js`, `src/modes.js` (610 lines).
+- [x] **M1 entry** — `bin/size.js`, `bin/postinstall.js`, `src/size-table.js`, `src/cli.js`,
+  `src/args.js`, `src/modes.js` (610 → 568 lines; journal entry `worklog/0071`, 2026-09-15).
 - [ ] **M2 texts** — `src/refusal.js`, `src/locales.js` (271). Comments only: the
   dictionaries themselves are data.
 - [ ] **M3 measures** — `src/metrics.js`, `src/minify.js`, `src/tokens.js`, `src/optional.js`,
