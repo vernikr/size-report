@@ -109,6 +109,9 @@ export function spans(text) {
  * адреса (`file://…`) — не пути. */
 export function looksLikePath(tok) {
   if (tok.indexOf('/') < 0 || tok.indexOf('://') >= 0 || tok.indexOf('//') >= 0) return false;
+  /* Пакет с версией (`@vernikr/size-report@1.1.2-draft.0`) — не путь: последний кусок
+   * выглядит как имя с расширением только из-за номера версии. */
+  if (tok[0] === '@' && /@[^/]+$/.test(tok)) return false;
   if (/[{<*…«»\\}]/.test(tok) || tok.indexOf(' ') >= 0) return false;
   const parts = tok.split('/');
   if (parts.some((p) => p === '')) return false;
