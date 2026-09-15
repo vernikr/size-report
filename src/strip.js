@@ -2,16 +2,13 @@ import path from 'path';
 import { stripJs } from './strip/js.js';
 import { compactJson, stripCss, stripHtml, stripLines } from './strip/forms.js';
 
-/* Снятие балласта: правило, какая форма текста к какому файлу применяется.
- * Только преобразование текста — ни истории, ни настроек этот модуль не знает.
+/* Stripping ballast: which form of text applies to which file. Only text transformation —
+ * the module knows no history and reads no settings, only the strategy it is handed. What
+ * binds the forms to a file lives here: the extension, the strategy, and which strategies
+ * count as exact.
  *
- * Разбор форм лежит рядом и по предметам: проход по JS (`strip/js.js`), формы
- * разметки, стилей, строк и JSON (`strip/forms.js`) и гард компиляции
- * (`strip/guard.js`). Здесь остаётся то, что связывает их с файлом: расширение,
- * стратегия и что считать точным числом.
- *
- * Имена форм наружу отдаются отсюда же: точка входа пакета берёт их по одному
- * адресу, и переезд разбора не должен быть виден тому, кто на них опирался. */
+ * The forms are re-exported from here, so that the package entry point has one address for
+ * them and a move inside the parsing stays invisible to whoever relied on them. */
 
 export { stripJs, stripCss, stripHtml, stripLines, compactJson };
 export { assertCompilable } from './strip/guard.js';
@@ -20,10 +17,10 @@ export function byteLen(text) {
   return Buffer.byteLength(text, 'utf8');
 }
 
-/* Стратегия по расширению. Незнакомое расширение получает снятие отступов и
- * пустых строк — безопасный минимум: снимать комментарии «на глаз» в синтаксисе,
- * которого генератор не знает (например, `#` в YAML или отступы в Python),
- * значило бы мерить уже другой файл. */
+/* The strategy for an extension. An unknown extension gets indentation and blank lines
+ * removed — the safe minimum: stripping comments by eye in a syntax the generator was never
+ * taught (`#` in YAML, indentation in Python) would measure a different file than the one on
+ * disk. */
 const MINIFY_BY_EXT = {
   '.js': 'strip-js', '.mjs': 'strip-js', '.cjs': 'strip-js',
   '.html': 'strip-html', '.htm': 'strip-html',
@@ -32,11 +29,11 @@ const MINIFY_BY_EXT = {
 };
 export const STRATEGIES = ['strip-js', 'strip-html', 'strip-css', 'json', 'strip-lines', 'none'];
 
-/* Стратегии, которые и есть минификация: JSON теряет только незначащие пробелы
- * (числа приводятся к кратчайшей записи), и короче его не сделает никто. Остальные
- * — упрощение: они снимают балласт, но не переименовывают и не перестраивают код,
- * и обещать за них точное число нельзя. Список ведёт тот модуль, который владеет
- * стратегиями; метрика по нему решает, точное у неё число или приближённое. */
+/* The strategies that are minification itself: JSON loses only insignificant whitespace
+ * (numbers take their shortest form) and nobody can make it shorter. The rest are a
+ * simplification — they drop ballast but neither rename nor restructure code, so no exact
+ * number can be promised for them. The list is owned here, next to the strategies, and the
+ * metric reads it to decide whether its number is exact or approximate. */
 export const EXACT_STRATEGIES = ['json'];
 
 export function strategyFor(file, cfg) {
@@ -44,8 +41,8 @@ export function strategyFor(file, cfg) {
   return (cfg.minify.ext && cfg.minify.ext[ext]) || MINIFY_BY_EXT[ext] || 'strip-lines';
 }
 
-/* Что делает стратегия — разбор формы принадлежит ей, а не списку здесь:
- * диспетчер только выбирает, кого позвать, и повторяет словарь стратегий. */
+/* What a strategy does belongs to the strategy rather than to this list: the dispatcher only
+ * picks whom to call, and repeats the strategy names because the parsing lives elsewhere. */
 export function minifyForm(text, file, cfg) {
   const how = strategyFor(file, cfg);
   if (how === 'none') return text;

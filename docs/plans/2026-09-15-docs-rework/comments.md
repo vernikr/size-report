@@ -53,9 +53,11 @@ comment diff stays under the commit budget, otherwise it is split by file groups
   `src/args.js`, `src/modes.js` (610 → 568 lines; journal entry `worklog/0071`, 2026-09-15).
 - [x] **M2 texts** — `src/refusal.js`, `src/locales.js` (271 → 270; journal entry `worklog/0072`,
   2026-09-15). Comments only: the dictionaries themselves are data.
-- [ ] **M3 measures** — `src/metrics.js`, `src/minify.js`, `src/tokens.js`, `src/optional.js`,
-  `src/strip.js`, `src/strip/js.js`, `src/strip/forms.js`, `src/strip/guard.js`,
-  `src/parse.js`, `src/parse-worker.js` (891).
+- [x] **M3a stripping and parsing** — `src/strip.js`, `src/strip/js.js`, `src/strip/forms.js`,
+  `src/strip/guard.js`, `src/parse.js`, `src/parse-worker.js` (449 → 442; journal entry
+  `worklog/0073`, 2026-09-15).
+- [ ] **M3b metrics and tokens** — `src/metrics.js`, `src/minify.js`, `src/tokens.js`,
+  `src/optional.js` (442).
 - [ ] **M4 history** — `src/git.js`, `src/history.js`, `src/journal.js` (525).
 - [ ] **M5 project** — `src/project.js`, `src/config.js`, `src/init.js`, `src/doctor.js`,
   `src/check.js`, `src/explain.js` (1165; two commits).

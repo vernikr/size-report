@@ -1,18 +1,18 @@
 import vm from 'vm';
 import { workerData } from 'worker_threads';
 
-/* Рабочий поток разбора: компилирует текст и отвечает причиной (или её
- * отсутствием). Исполнения нет — `SourceTextModule` только разбирает текст,
- * поэтому ни `import`, ни код модуля не выполняются: файл проекта остаётся
- * чужим кодом, который никто не запускает.
+/* The parsing worker: it compiles the text and answers with a reason (or with the absence of
+ * one). Nothing is executed — `SourceTextModule` only parses the text, so neither `import`
+ * nor the code of the module runs: the file of the project stays foreign code that nobody
+ * launches.
  *
- * Флаги приходят от главного потока (`--experimental-vm-modules` — без него
- * `vm.SourceTextModule` не существует, `--no-warnings` — иначе предупреждение об
- * эксперименте ушло бы в вывод команды). Модуля может не быть: тогда ответ несёт
- * `available: false`, и главный поток возвращается к запуску `node --check`.
+ * The flags arrive from the main thread (`--experimental-vm-modules`, without which
+ * `vm.SourceTextModule` does not exist, and `--no-warnings` lest the experimental warning end
+ * up in the command's output). The module may be absent: then the answer carries
+ * `available: false`, and the main thread falls back to launching `node --check`.
  *
- * Готовность ответа отмечается в общей памяти: главный поток ждёт её синхронно
- * (`Atomics.wait`), потому что измерение истории синхронное.
+ * Readiness is marked in shared memory: the main thread waits for it synchronously
+ * (`Atomics.wait`), because measuring the history is synchronous.
  */
 const { port, sig } = workerData;
 const available = typeof vm.SourceTextModule === 'function';

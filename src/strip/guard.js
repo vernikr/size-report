@@ -3,34 +3,32 @@ import vm from 'vm';
 import { refuseCause } from '../refusal.js';
 import { moduleError } from '../parse.js';
 
-/* Гард стриппера: он не имеет права выбросить что-то кроме комментариев и
- * отступов, поэтому результат обязан компилироваться. Проверяем только те
- * расширения, где содержимое — валидный JavaScript (список в конфиге,
- * `minify.guard`): TypeScript или JSX хостом не проверяются, и делать вид, что
- * проверили, было бы хуже, чем не проверять.
+/* The stripper's guard: it may throw away nothing but comments and indentation, so its result
+ * has to compile. Only the extensions whose content is valid JavaScript are checked (the list
+ * is `minify.guard` in the settings): TypeScript or JSX are not checked by the host, and
+ * pretending they were would be worse than not checking at all.
  *
- * Модуль или скрипт решает текст, а не расширение: проект с бандлером пишет
- * `import`/`export` прямо в `.js` (и с `type: module` в манифесте, и без него), а
- * `vm.Script` разбирает такой файл как скрипт и падает на самом `export`. Гард
- * обязан понимать оба формата, поэтому пробует тот, на который файл похож, и
- * принимает результат, если он разбирается хотя бы одним из двух способов.
- * От этого он не слабеет: настоящая поломка не разберётся ни скриптом, ни
- * модулем, и тогда наружу идёт причина того разбора, которым файл был.
+ * The text, not the extension, decides between a module and a script: a project with a
+ * bundler writes `import`/`export` straight into `.js` (with `type: module` in its manifest
+ * and without it), while `vm.Script` parses such a file as a script and fails on the very
+ * `export`. So the guard tries the shape the file looks like and accepts the result when
+ * either of the two parses it. That does not weaken it: a real breakage parses neither way,
+ * and then the reason reported is the one from the shape the file had.
  *
- * Модуль разбирает отдельный рабочий поток (`parse.js`): без него разбор модуля
- * стоил бы запуска Node на каждую клетку. Иначе конфиг вида `eslint.config.mjs`
- * остался бы без гарда, а без гарда его правка могла бы испортить «объём» молча.
+ * A module is parsed by a separate worker (`parse.js`), or the guard would cost a Node run per
+ * cell: without it a config like `eslint.config.mjs` would stay unguarded, and an edit of it
+ * could silently spoil the "volume" number.
  *
- * Когда не разбирается даже исходный текст, стриппер тут ни при чём: в этой
- * графе измеряется не JavaScript (TypeScript, JSX), и это отказ с командой
- * починки — правкой настроек. */
+ * When even the original text does not parse, the stripper is not to blame: the cell holds
+ * something other than JavaScript (TypeScript, JSX), and that is a refusal with a fix —
+ * changing the settings. */
 
 const MODULE_MARK = /^[ \t]*(?:import|export)\b/m;
 const MODULE_EXT = ['.mjs'];
 
 export function assertCompilable(min, rev, p, src) {
-  // Скрипт пробуется первым не ради формы, а ради цены: этот разбор идёт
-  // в процессе, а модуль — в рабочем потоке.
+  // The script is tried first for its price rather than its shape: it parses in this
+  // process, while a module goes to the worker.
   const asScript = scriptError(min, p);
   if (asScript === null) return;
   const asModule = moduleError(min);
@@ -43,12 +41,13 @@ export function assertCompilable(min, rev, p, src) {
       + '  починка: уберите это расширение из minify.guard или задайте для него '
       + 'minify.ext — например { "' + path.extname(p).toLowerCase() + '": "strip-lines" }');
   }
-  // Причина — того разбора, которым файл был: обвинять в чужой форме незачем.
+  // The reason comes from the parse the file actually was: blaming the other shape would
+  // explain nothing.
   throw new Error('стриппер испортил ' + p + ' на ' + rev.slice(0, 7) + ': '
     + (shape ? asModule : asScript));
 }
 
-// Разбор как скрипт — в процессе: дешевле и без временных файлов.
+// Parsing as a script happens in this process: cheaper, and without temporary files.
 function scriptError(text, p) {
   try {
     new vm.Script(text, { filename: p });

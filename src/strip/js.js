@@ -1,20 +1,20 @@
-/* Снятие комментариев и отступов — метрика «объём без балласта», а не
- * минификация: пробелы внутри строк и порядок токенов не трогаются (это позволит
- * сравнивать числа между языками и не зависит от чужого инструмента, которого в
- * проекте нет). Строки и шаблоны проходят насквозь, блочный комментарий
- * заменяется пробелом, чтобы `a` и `b` из `a` + блочный комментарий + `b` не
- * склеились в одно имя, перевод строки после `//` сохраняется — он разделяет
- * токены.
+/* Comments and indentation stripped — "volume without ballast" rather than minification:
+ * spaces inside strings and the order of tokens stay untouched, which keeps numbers
+ * comparable across languages and keeps this path free of any foreign tool (the real
+ * minifier is an optional dependency, and this is what remains without it). Strings and
+ * templates pass through whole, a block comment becomes a space — so that `a` and `b` around
+ * one do not merge into a single name — and the newline after `//` survives, because it
+ * separates tokens.
  *
- * Проход разложен по случаям: комментарий, регексп, строка и обычный символ.
- * Случай говорит, сколько он съел (`false` — не его), и все они делят одно
- * состояние прохода; состояния «по копии на случай» здесь не заводится, потому
- * что решение о регекспе зависит от всего, что уже выведено.
+ * The pass is split by case: comment, regex, string, ordinary character. A case reports how
+ * much it consumed (`false` — not its turn), and all of them share one pass state; a state
+ * per case is not kept because the decision about a regex depends on everything printed so
+ * far.
  */
 
-/* Состояние прохода: текст, место в нём и то, чем отличают регексп от деления, —
- * последний значимый символ вывода и хвост последнего слова (после `return` идёт
- * выражение, а не деление). */
+/* Pass state: the text, the position in it, and what tells a regex from a division — the last
+ * significant character printed and the tail of the last word (`return` is followed by an
+ * expression rather than by a division). */
 function scanOf(src) {
   return { src: src, out: '', i: 0, last: '', word: '' };
 }
@@ -22,15 +22,15 @@ function scanOf(src) {
 export function stripJs(src) {
   const s = scanOf(src);
   while (s.i < src.length) {
-    /* Комментарные пары проверяются до регекси: ни `/`, ни `*` не могут быть
-     * первым символом литерала регекспа, а вот `/*` в начале файла — обычное дело. */
+    /* Comment pairs are checked before regexes: neither `/` nor `*` can start a regex
+     * literal, while `/*` is an ordinary thing to meet. */
     if (skipLineComment(s) || skipBlockComment(s) || takeRegex(s) || takeString(s)) continue;
     putChar(s);
   }
   return s.out;
 }
 
-// Строчный комментарий: `//` съедается до перевода строки, сам перевод остаётся.
+// A line comment: `//` is eaten up to the newline, the newline itself stays.
 function skipLineComment(s) {
   if (s.src[s.i] !== '/' || s.src[s.i + 1] !== '/') return false;
   const nl = s.src.indexOf('\n', s.i);
@@ -38,7 +38,7 @@ function skipLineComment(s) {
   return true;
 }
 
-// Блочный комментарий — на пробел: он разделяет имена, но не занимает объём.
+// A block comment becomes a space: it separates names without taking up volume.
 function skipBlockComment(s) {
   if (s.src[s.i] !== '/' || s.src[s.i + 1] !== '*') return false;
   const end = s.src.indexOf('*/', s.i + 2);
@@ -47,10 +47,10 @@ function skipBlockComment(s) {
   return true;
 }
 
-/* Регексп начинается там, где ожидается операнд: после оператора, открывающей
- * скобки или ключевого слова. Признак грубый, но его хватает: без него
- * `replace(/\//g, …)` читалось бы как начало строчного комментария и резало
- * строку (проверено гардом компиляции). */
+/* A regex starts where an operand is expected: after an operator, an opening bracket or a
+ * keyword. The sign is crude, and it can afford to be: a regex this pass mistakes for code,
+ * or code it mistakes for a comment, does not compile — and that is exactly what the guard
+ * checks (`strip/guard.js`). */
 const REGEX_KEYWORDS = ['return', 'typeof', 'instanceof', 'in', 'of', 'new', 'delete', 'void', 'case', 'do', 'else', 'yield', 'await'];
 
 function regexAllowed(last, word) {
@@ -75,7 +75,7 @@ function endOfRegex(src, start) {
   while (i < src.length) {
     const ch = src[i];
     if (ch === '\\') { i += 2; continue; }
-    if (ch === '\n') return start + 1; // наткнулись на строку — значит, это был не регексп
+    if (ch === '\n') return start + 1; // a newline means this was not a regex after all
     if (ch === '[') inClass = true;
     else if (ch === ']') inClass = false;
     else if (ch === '/' && !inClass) return i + 1;
@@ -84,7 +84,7 @@ function endOfRegex(src, start) {
   return start + 1;
 }
 
-// Строка или шаблон — целиком, вместе со своим содержимым.
+// A string or a template passes through whole, its content included.
 function takeString(s) {
   const quote = s.src[s.i];
   if (quote !== '"' && quote !== "'" && quote !== '`') return false;
@@ -102,7 +102,7 @@ function endOfString(src, start, quote) {
     const ch = src[i];
     if (ch === '\\') { i += 2; continue; }
     if (ch === quote) return i + 1;
-    // В шаблоне `${…}` живёт выражение, а в нём — свои строки.
+    // A template holds an expression in `${…}`, and that expression has strings of its own.
     if (quote === '`' && ch === '$' && src[i + 1] === '{') { i = endOfTemplateExpr(src, i + 2); continue; }
     i++;
   }
@@ -123,8 +123,8 @@ function endOfTemplateExpr(src, start) {
   return src.length;
 }
 
-/* Обычный символ: он попадает в вывод, а состояние прохода запоминает по нему,
- * где может стоять регексп. */
+/* An ordinary character: it goes into the output, and the pass state remembers by it where a
+ * regex may stand. */
 function putChar(s) {
   const ch = s.src[s.i];
   s.out += ch;

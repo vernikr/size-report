@@ -1,15 +1,15 @@
 import { stripJs } from './js.js';
 
-/* Формы текста, у которых снятие балласта своё: разметка, стили, строки файла и
- * JSON. Разные формы — разные правила, и одно правило на все было бы либо
- * трусостью (не снимать ничего), либо порчей чужого синтаксиса. */
+/* Text forms with a stripping rule of their own: markup, styles, the lines of a file and
+ * JSON. One rule for all of them would either strip nothing at all or corrupt a syntax it was
+ * never taught. */
 
 export function stripCss(src) {
   return src.replace(/\/\*[\s\S]*?\*\//g, ' ');
 }
 
-/* HTML: комментарии разметки (включая маркеры вклеек `<!--icon …-->` и
- * `<!--/icon-->`), комментарии внутри <script> как JS и внутри <style> как CSS. */
+/* HTML: markup comments, and the comments inside <script> as JS and inside <style> as CSS —
+ * each part stripped by the rule of its own form rather than by the markup one. */
 export function stripHtml(src) {
   return src
     .replace(/<!--[\s\S]*?-->/g, '')
