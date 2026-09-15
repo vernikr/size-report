@@ -1,12 +1,12 @@
-/* Отказы командной строки: каждый тупик обязан называть команду, которой из него
- * выходят, и код выхода — по таблице `PLAN.md` §4.1 (агент ветвится по коду,
- * человек читает команду). Стек наружу не идёт: он не подсказывает починку и
- * выдаёт пути машины.
+/* Refusals of the command line: every dead end has to name the command that leads out of it, and
+ * the exit code comes from the engine's table (`EXIT` in `src/size-table.js` — an agent branches on
+ * the code, a person reads the command). No stack goes outwards: it suggests no fix while leaking
+ * the machine's paths.
  *
- * Здесь справка, настройки и коды выхода; где инструмент пишет и что проверяет —
- * в соседнем наборе (`cli-paths.test.js`). Наборы разделены не по смыслу
- * проверок, а по времени: внутри файла проверки идут последовательно, а работа
- * здесь — запуск процессов, поэтому раскладка по файлам отдаёт проверкам ядра.
+ * Here are the help, the settings and the exit codes; what the tool writes and what it checks are in
+ * the neighbouring suite (`cli-paths.test.js`). The suites are split by cost rather than by subject:
+ * checks inside a file run in sequence, and the work here is spawning processes, so a file of its
+ * own keeps this cost out of the fast run.
  */
 
 import { test, after } from 'node:test';
@@ -21,7 +21,7 @@ import {
 const tmp = tempDir('cli');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-/* ---------- справка ---------- */
+/* ---------- the help ---------- */
 
 test('--help отвечает справкой, кодом 0 и без настроек вовсе', () => {
   const res = runSize(tmp, ['--help']);
@@ -33,12 +33,12 @@ test('--help отвечает справкой, кодом 0 и без наст�
   assert.match(res.stdout, /Коды выхода/, 'справка не называет коды выхода');
 });
 
-/* ---------- настроек нет ---------- */
+/* ---------- no settings ---------- */
 
-/* Без файла настроек инструмент больше не отказывает: он выводит их из самого
- * проекта и говорит об этом — заводить файл ради первого запуска незачем. Отказом
- * остаётся **названный** файл: `--config` — это запрос про конкретный файл, и его
- * отсутствие (опечатка в пути, чужой проект) молча покрывать догадкой нельзя. */
+/* With no settings file the tool no longer refuses: it derives them from the project itself and
+ * says so — a file is not worth creating for a first run. A **named** file still is a refusal:
+ * `--config` asks about one particular file, and its absence (a typo in the path, someone else's
+ * project) must not be covered silently by a guess. */
 test('без настроек инструмент работает на выведенных и говорит, чем их закрепить', () => {
   const dir = cloneFixture(path.join(tmp, 'no-config'));
   const res = runSize(dir, []);
@@ -50,8 +50,8 @@ test('без настроек инструмент работает на выв�
   assert.equal(cmd.flag, '--init', 'совет ведёт не к закреплению настроек: ' + cmd.flag);
   assert.ok(fs.existsSync(cmd.file), 'совет указывает на несуществующий файл: ' + cmd.file);
 
-  // Названный файл настроек всё ещё обязан быть — иначе опечатка в пути дала бы
-  // молча другие числа.
+  // A named settings file still has to exist — or a typo in the path would give silently different
+  // numbers.
   refusal(runSize(dir, ['--config', 'нет-такого.json']), 2, 'названный файл настроек');
 
   const wrote = runSize(dir, ['--write']);
@@ -69,8 +69,8 @@ test('без настроек инструмент работает на выв�
   assert.equal(/настройки выведены из проекта/.test(again.stderr), false,
     'после закрепления настроек про них всё ещё говорится как о выведенных: ' + firstLine(again.stderr));
 
-  // Совет закрыт только тогда, когда по нему действительно работают: закреплённое
-  // обязано проходить ту же проверку, которой его встретит следующий запуск.
+  // An advice is closed only when it is really followed: what was pinned has to pass the very check
+  // the next run meets it with.
   const second = runSize(dir, ['--write']);
   assert.equal(second.code, 0, 'после закрепления инструмент не работает: ' + firstLine(second.stderr));
 
@@ -79,11 +79,11 @@ test('без настроек инструмент работает на выв�
   assert.match(third.stderr, /--force/, 'отказ не говорит, как перезаписать настройки');
 });
 
-/* Выведенное обязано работать **сейчас**: команду починки цитируют подпись отчёта
- * и отказы, поэтому зов проекта берётся, только если скрипт объявлен, а иначе
- * называется установленный пакет внутри проекта. Ссылка на коммит выводится из
- * адреса origin и только у тех хозяев, чей вид ссылки известен: у чужого — пусто,
- * потому что ссылка не туда хуже отсутствия ссылки. */
+/* What is derived has to work **right now**: the repair command is quoted by the report's caption
+ * and by refusals, so a project's own call is taken only when the script is declared — otherwise the
+ * installed package inside the project is named. The commit link is derived from the origin address
+ * and only for hosts whose link shape is known: for a foreign one it stays empty, since a link to
+ * the wrong place is worse than no link. */
 test('команда починки и ссылка на коммит выводятся из проекта', () => {
   const dir = path.join(tmp, 'derived-profile');
   fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
@@ -97,8 +97,8 @@ test('команда починки и ссылка на коммит вывод
   gitIn(dir, ['commit', '-qm', 'начало']);
   gitIn(dir, ['remote', 'add', 'origin', 'git@github.com:owner/repo.git']);
 
-  // Закрепление — то, чем проект работает без файла, поэтому читается оно же:
-  // файл и есть выведенный профиль.
+  // The pinning is what the project works by without a file, so the pinning itself is read: the
+  // file is the derived profile.
   const derived = () => {
     const init = runSize(dir, ['--init', '--force']);
     assert.equal(init.code, 0, '--init не закрепил настройки: ' + firstLine(init.stderr));
@@ -111,21 +111,21 @@ test('команда починки и ссылка на коммит вывод
   assert.equal(first.links.commitUrl, 'https://github.com/owner/repo/commit/{sha}',
     'ссылка на коммит не выведена из адреса origin: ' + first.links.commitUrl);
 
-  // Объявленный скрипт берётся: подпись отчёта ведёт к тому, чем проект собирается сам.
+  // A declared script is taken: the report's caption leads to what the project builds itself with.
   const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
   pkg.scripts = { sizes: 'size --write' };
   fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify(pkg, null, 2) + '\n');
   assert.equal(derived().fixCommand, 'npm run sizes', 'объявленный скрипт проекта не взят');
 
-  // Чужой хозяин — не повод угадывать вид ссылки.
+  // A foreign host is no reason to guess the shape of a link.
   gitIn(dir, ['remote', 'set-url', 'origin', 'git@bitbucket.org:owner/repo.git']);
   assert.equal(derived().links.commitUrl, '',
     'ссылка выведена у хозяина, чей вид ссылки неизвестен');
 });
 
-/* Таблица, лежащая в истории (то есть в проекте, который уже подключил
- * инструмент), не может быть колонкой — иначе черновик делает ровно то, что
- * запрещает его же проверка, и следующий запуск отказывается работать. */
+/* A report lying in the history (that is, in a project that has already connected the tool) cannot
+ * be a column — or the draft would do exactly what its own check forbids, and the next run would
+ * refuse to work. */
 test('черновик настроек не делает колонкой саму таблицу', () => {
   const dir = cloneFixture(path.join(tmp, 'init-columns'));
   const init = runSize(dir, ['--init']);
@@ -140,7 +140,7 @@ test('черновик настроек не делает колонкой са�
   assert.equal(res.code, 0, 'по черновику инструмент не работает: ' + firstLine(res.stderr));
 });
 
-/* ---------- настройки не разобраны ---------- */
+/* ---------- settings that do not parse ---------- */
 
 test('сломанные настройки: код 2, назван файл и что править', () => {
   const dir = cloneFixture(path.join(tmp, 'bad-json'));
@@ -158,13 +158,13 @@ test('сломанные настройки: код 2, назван файл и 
   assert.match(wrong.stderr, /nonexistent/, 'отказ не называет виновника:\n' + wrong.stderr);
 });
 
-/* ---------- слова и ключи, которых инструмент не знает ---------- */
+/* ---------- words and flags the tool does not know ---------- */
 
 test('незнакомый ключ, ключ без значения и лишнее слово — отказ, а не тишина', () => {
   const dir = cloneFixture(path.join(tmp, 'args'));
 
-  // Опечатка в ключе не имеет права выглядеть исправным прогоном: прежде такое
-  // слово просто не читалось, и инструмент отвечал нулём, ничего не сделав.
+  // A typo in a flag must not look like a healthy run: a word nobody reads means answering zero
+  // while doing nothing.
   ['--wite', '--dta', '--forse'].forEach((typo) => {
     const res = runSize(dir, [typo]);
     refusal(res, 2, 'опечатка в ключе ' + typo);
@@ -172,8 +172,8 @@ test('незнакомый ключ, ключ без значения и лиш�
     assert.ok(commandIn(res.stderr) !== null, 'в отказе нет команды починки:\n' + res.stderr);
   });
 
-  // Ключ со значением без значения — тоже молчаливый пропуск: настройки были бы
-  // взяты по умолчанию, а не те, что назвал человек.
+  // A flag that takes a value but was given none is a silent pass-through too: the settings would
+  // fall back to their defaults instead of the ones the person named.
   const noValue = runSize(dir, ['--config']);
   refusal(noValue, 2, 'ключ --config без значения');
   assert.match(noValue.stderr, /«--config»/, 'отказ не называет ключ:\n' + noValue.stderr);
@@ -182,8 +182,8 @@ test('незнакомый ключ, ключ без значения и лиш�
   refusal(force, 2, 'ключ --force без --init');
   assert.match(force.stderr, /--force/, 'отказ не называет ключ:\n' + force.stderr);
 
-  // Слово после ключа со значением — лишнее, и обвинять его как «неизвестную
-  // команду» значит назвать не ту причину.
+  // A word after a flag that takes a value is superfluous, and blaming it as an "unknown command"
+  // would name the wrong reason.
   const extra = runSize(dir, ['--write', 'a.html', 'b.html']);
   refusal(extra, 2, 'лишнее слово после ключа со значением');
   assert.match(extra.stderr, /лишнее слово «b\.html»/, 'отказ назвал не то слово:\n' + extra.stderr);
@@ -192,15 +192,15 @@ test('незнакомый ключ, ключ без значения и лиш�
   refusal(stray, 2, 'лишнее слово у команды');
   assert.match(stray.stderr, /«extra» лишний/, 'отказ назвал не причину:\n' + stray.stderr);
 
-  // Одинокие дефисы ключами не являются и мимо разбора тоже не проходят.
+  // Lone dashes are no flags and do not slip past the parsing either.
   ['-', '--'].forEach((lonely) => {
     const res = runSize(dir, [lonely]);
     refusal(res, 2, 'одинокий ' + lonely);
     assert.ok(res.stderr.indexOf('«' + lonely + '»') >= 0, 'отказ не называет ' + lonely + ':\n' + res.stderr);
   });
 
-  // Обратная сторона: законные зовы остаются законными — значение ключа не
-  // путается с лишним словом, а команда и ключи читаются в любом порядке.
+  // The other side: lawful calls stay lawful — a flag's value is not confused with a superfluous
+  // word, and a command and flags read in any order.
   const legal = [
     ['--init', 'draft.json', '--force'],
     ['--write', 'out.html', '--config', CONFIG],
@@ -216,11 +216,10 @@ test('незнакомый ключ, ключ без значения и лиш�
   assert.ok(fs.existsSync(path.join(dir, 'out.html')), 'значение «--write» не дошло до записи');
 });
 
-/* Второй род молчаливого пропуска — не слово, а режим: `--write --data` отвечал
- * нулём, записав таблицу и не отдав данные, и от исправного запуска это так же
- * неотличимо. Правило «режим один» живёт в разборе аргументов, поэтому проверка
- * идёт перебором, а не примерами: все сочетания режимов, ключи, которые друг с
- * другом не работают, и ключ, названный дважды. */
+/* A second kind of silent pass-through is a mode rather than a word: `--write --data` answered zero
+ * while writing the report and handing over no data — as indistinguishable from a healthy run as a
+ * typo. The rule "one mode" lives in the argument parsing, so the check enumerates rather than
+ * giving examples: every pair of modes, flags that do not work together, and a flag named twice. */
 test('два режима сразу и несовместимые ключи — отказ, а не тишина', () => {
   const dir = cloneFixture(path.join(tmp, 'mode-clash'));
   const modes = ['--init', '--write', '--data'];
@@ -234,14 +233,14 @@ test('два режима сразу и несовместимые ключи �
     }
   }
 
-  // Данные и запись — разное, и `--json` тут не ответ команды, а прежняя форма
-  // данных: рядом с режимом он теряется так же молча.
+  // Data and writing are different things, and `--json` here is the former shape of the data rather
+  // than a command's answer: beside a mode it gets lost just as quietly.
   const dataAndWrite = runSize(dir, ['--json', '--write']);
   refusal(dataAndWrite, 2, '--json рядом с режимом');
   assert.ok(dataAndWrite.stderr.indexOf('«--json»') >= 0 && dataAndWrite.stderr.indexOf('«--write»') >= 0,
     'отказ не называет оба ключа:\n' + dataAndWrite.stderr);
 
-  // Команда и режим, чужой ответ в JSON, файл черновика дважды описанным способом.
+  // A command beside a mode, an answer that is no JSON, a draft file named in two ways.
   const cases = [
     [['check', '--data'], /«check»/],
     [['install-hook', '--json'], /нет ответа в JSON/],
@@ -255,27 +254,26 @@ test('два режима сразу и несовместимые ключи �
     assert.match(res.stderr, probe, 'отказ объясняет не то:\n' + res.stderr);
   });
 
-  // Ни одна ветка этих отказов не должна была тронуть проект: разбор идёт до
-  // чтения дерева, и лишний файл здесь означал бы, что порядок ветвлений всё ещё
-  // решает.
+  // No branch of these refusals may touch the project: parsing happens before the tree is read, so a
+  // stray file here would mean the order of the branches still decides.
   assert.equal(fs.existsSync(path.join(dir, 'draft.json')), false,
     'отвергнутый зов всё-таки записал файл');
 });
 
-/* `--json` — форма ответа, а не режим, и правило у него одно: ответ бывает ровно у
- * четырёх вызовов. Проверка идёт перебором, потому что правило именно про все:
- * у каждой команды и у каждого режима `--json` либо отвечает данными, либо
- * отвергнут с названным виновником. Второе и есть обещание — просить JSON там, где
- * его не бывает, не должно выглядеть исправным прогоном. */
+/* `--json` is a shape of an answer rather than a mode, and it follows one rule: exactly four calls
+ * have an answer. The check enumerates because the rule is about all of them: with every command and
+ * every mode `--json` either answers with data or is refused with the culprit named. The latter is
+ * the promise — asking for JSON where it never comes must not look like a healthy run. */
 test('--json отвечает ровно там, где у вызова есть ответ', () => {
   const dir = cloneFixture(path.join(tmp, 'json-rule'));
-  // Настройки кладутся в проект, а не отдаются ключом: `--config` рядом с `--init`
-  // — сам по себе отказ, и проверка правила подменилась бы проверкой этого отказа.
+  // The settings are put into the project rather than handed over by a flag: `--config` beside
+  // `--init` is a refusal of its own, and the rule's check would be replaced by a check of that
+  // refusal.
   fs.copyFileSync(CONFIG, path.join(dir, 'size-table.config.json'));
   const sha = gitIn(dir, ['rev-parse', 'HEAD']).trim();
 
-  // Четыре вызова с ответом: без команды и режима — прежняя форма данных
-  // (заморожена эталоном паритета), и три команды со своим ответом.
+  // The four calls that have an answer: with no command and no mode the former shape of the data
+  // (frozen by the parity golden), and three commands with answers of their own.
   [[], ['check'], ['doctor'], ['explain', sha]].forEach((args) => {
     const res = runSize(dir, args.concat('--json'));
     assert.equal(hasStack(res.stderr), false,
@@ -284,7 +282,7 @@ test('--json отвечает ровно там, где у вызова есть
     assert.equal(typeof rep, 'object', 'зов «' + args.join(' ') + ' --json» не ответил данными');
   });
 
-  // Режимы: у них ответ уже один — запись или черновик, и JSON к ней не просится.
+  // The modes: their answer is already one thing — a write or a draft — and JSON is not asked of it.
   ['--init', '--write', '--data'].forEach((mode) => {
     const res = runSize(dir, [mode, '--json']);
     refusal(res, 2, '--json рядом с режимом ' + mode);
@@ -292,20 +290,20 @@ test('--json отвечает ровно там, где у вызова есть
       'отказ не называет оба виновника:\n' + res.stderr);
   });
 
-  // Команды: у этих трёх ответа нет вовсе.
+  // The commands: these three have no answer at all.
   ['install-hook', 'uninstall-hook', 'hook-run'].forEach((verb) => {
     const res = runSize(dir, [verb, '--json']);
     refusal(res, 2, '--json у команды ' + verb);
     assert.match(res.stderr, /нет ответа в JSON/, 'отказ объясняет не то:\n' + res.stderr);
   });
 
-  // И ни один отвергнутый зов не тронул проект: разбор идёт до чтения дерева.
+  // And no refused call touched the project: parsing happens before the tree is read.
   const page = path.join(dir, 'refused-page.html');
   refusal(runSize(dir, ['--write', page, '--json']), 2, '--json рядом с --write');
   assert.equal(fs.existsSync(page), false, 'отвергнутый зов всё-таки записал отчёт');
 });
 
-/* ---------- таблица кодов ---------- */
+/* ---------- the table of exit codes ---------- */
 
 test('коды выхода совпадают с таблицей плана', async () => {
   const { EXIT } = await import('../src/size-table.js');

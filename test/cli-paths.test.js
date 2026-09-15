@@ -1,11 +1,11 @@
-/* Вторая половина проверок командной строки: где инструмент пишет (каталога
- * может не быть — это обычный запуск, а не ошибка пользователя), что он делает с
- * неполной историей и с расхождением рабочего дерева, и что бывает при запуске
- * вне репозитория. Отказы здесь те же: код выхода и готовая команда, без стека.
+/* The second half of the command line's checks: where the tool writes (the directory may be absent —
+ * that is an ordinary run rather than a user's mistake), what it does with an incomplete history and
+ * with a disagreement with the working tree, and what happens when it is run outside a repository.
+ * The refusals here are the same shape: an exit code and a ready command, no stack.
  *
- * Справка, настройки и коды выхода — в соседнем наборе (`cli.test.js`); разделены
- * они по времени: внутри файла проверки идут последовательно, а работа здесь —
- * запуск процессов, поэтому раскладка по файлам отдаёт проверкам ядра.
+ * The help, the settings and the exit codes are in the neighbouring suite (`cli.test.js`), split by
+ * cost: checks inside a file run in sequence, and the work here is spawning processes, so a file of
+ * its own keeps this cost out of the fast run.
  */
 
 import { test, after } from 'node:test';
@@ -20,7 +20,7 @@ import {
 const tmp = tempDir('cli-paths');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-/* ---------- обрезанная история ---------- */
+/* ---------- a shallow history ---------- */
 
 test('обрезанная история: код 3 и команда докачки', () => {
   const base = cloneFixture(path.join(tmp, 'shallow-source'));
@@ -35,12 +35,12 @@ test('обрезанная история: код 3 и команда докач
   assert.match(res.stderr, /--unshallow/, 'отказ не называет команду докачки:\n' + res.stderr);
 });
 
-/* ---------- вывод в каталог, которого нет ---------- */
+/* ---------- output into a directory that does not exist ---------- */
 
-/* Проект без настроек и без каталога `docs` — тот случай, ради которого пакет и
- * ставят: отчёт обязан появиться в `docs/` (каталог создаётся сам), а не в корне.
- * Проверка появилась по замеру: первая редакция вывода выбирала корень, если
- * каталога нет, и в свежем проекте отчёт оказывался там, где его никто не ищет. */
+/* A project with no settings and no `docs` directory — the case the package is installed for: the
+ * report has to appear in `docs/` (the directory is created by itself) rather than in the root. The
+ * check exists by measurement: the first version of the derived profile chose the root when the
+ * directory was absent, so in a fresh project the report landed where nobody looks for it. */
 test('в свежем проекте отчёт ложится в docs, который создаётся сам', () => {
   const dir = initRepo(path.join(tmp, 'fresh'));
   fs.writeFileSync(path.join(dir, 'README.md'), '# свежий проект\n');
@@ -79,7 +79,7 @@ test('--write создаёт недостающий каталог, назван
   assert.ok(fs.existsSync(path.join(dir, cfg.output)), 'таблицы нет по указанному пути');
 });
 
-/* ---------- расхождение с рабочим деревом ---------- */
+/* ---------- a disagreement with the working tree ---------- */
 
 test('правка только на диске: код 1 и что с ней делать', () => {
   const dir = cloneFixture(path.join(tmp, 'disk-edit'));
@@ -94,12 +94,12 @@ test('правка только на диске: код 1 и что с ней д
   assert.match(res.stderr, /починка/, 'отказ не говорит, что делать:\n' + res.stderr);
 });
 
-/* ---------- запуск вне репозитория ---------- */
+/* ---------- a run outside a repository ---------- */
 
 test('вне git-репозитория отказ объясняется, а не падает стеком', () => {
   const res = runSize(tmp, ['--data']);
   refusal(res, 2, 'запуск вне репозитория');
-  // Совет обязан быть командой: отказ без починки читателю не поможет.
+  // The advice has to be a command: a refusal without a fix helps no reader.
   assert.match(res.stderr, /^\s*починка: .*git init$/m,
     'отказ не назвал команду починки:\n' + res.stderr);
 });

@@ -1,25 +1,25 @@
-/* Каталог отказов: у каждого места отказа есть свой пункт, а у каждого пункта —
- * сторож. Прогонов здесь нет вовсе: проверяются сами объявления, поэтому файл
- * дешёвый и идёт в быстром прогоне. Живое исполнение отказов — в
- * `test/refusals.test.js` (там прогон на каждый случай, и это дорого).
+/* The catalogue of refusals: every refusal site has a line of its own, and every line has a guard.
+ * No runs happen here at all: the declarations themselves are checked, which makes the file cheap
+ * and puts it in the fast run. Live execution of refusals is in `test/refusals.test.js` (a run per
+ * case, and that is expensive).
  *
- * Что стережётся. Карты `SITES` (отказы, бросающие исключение) и `PRINTED`
- * (отказы со знаком «✗» и кодом) держат числа мест в исходниках: новое место отказа
- * меняет число, и без пункта в каталоге прогон красный. Отсюда и главное обещание —
- * **отказ не может появиться без проверки**: прежде ложную причину в тексте находил
- * случайный живой прогон (B1, B3, R-4.13, `explain HEAD` — четыре раза подряд).
+ * What is guarded. The maps `SITES` (refusals thrown as exceptions) and `PRINTED` (refusals marked
+ * "✗" and carried by a code) hold the counts of the sites in the sources: a new site changes a count,
+ * and without a line in the catalogue the run is red. Hence the main promise: **a refusal cannot
+ * appear without a check** — a false reason in a text used to be found by an accidental live run,
+ * four times in a row.
  *
- * Второе: отказы, которые каталог отдаёт другой проверке (`coveredBy`), названы не
- * «где-то проверяется», а файлом и фразами, которые тот файл утверждает. Пропавшая
- * проверка или переписанная фраза видны здесь как расхождение.
+ * The second: refusals the catalogue hands to another check (`coveredBy`) are named not as "checked
+ * somewhere" but by the file and the phrases that file asserts. A check that disappeared or a phrase
+ * that was rewritten shows here as a discrepancy.
  *
- * Чего проверка не берёт — сказано в шапке каталога: формулировки вне фраз, смысл и
- * `--json`. Одно исключение названо явно и закрытым списком: отказ, который нельзя
- * вызвать прогоном, обязан объяснить, почему (сейчас такой ровно один).
+ * What the check does not take is said in the catalogue's header: wording outside the phrases, the
+ * sense, and `--json`. One exception is named explicitly and as a closed list: a refusal no run can
+ * bring about has to explain why (there is exactly one today).
  *
- * Разделение на три прогона — по предметам: счёт мест в исходниках, наличие случая у
- * места, исполнение совета. Каждый читает дерево сам, поэтому порядок между ними не
- * важен, а красный прогон называет свой предмет, а не «каталог вообще».
+ * The three runs are split by subject: counting the sites in the sources, the presence of a case for
+ * a site, the execution of an advice. Each reads the tree itself, so the order between them does not
+ * matter, while a red run names its own subject rather than "the catalogue in general".
  */
 
 import { test } from 'node:test';
@@ -43,13 +43,12 @@ test('отказы, стерегомые другой проверкой, наз
   });
 });
 
-/* Места отказа в исходниках: причина из реестра и код из таблицы — два способа
- * отказать, считаются оба. `src/refusal.js` не считается: он и есть механизм
- * отказа, а не место, где инструмент отказывается. Обход — рекурсивный и по дереву
- * git: место отказа может жить и в подкаталоге (`src/strip/guard.js`, `src/page/*`),
- * а пропущенное место — это ровно то, чего проверка обязана не пропускать. Список
- * берётся у git, как у соседней проверки причин (`docs-commands`): второй список
- * разошёлся бы с первым тихо. */
+/* The refusal sites in the sources: a cause from the registry and a code from the table are two ways
+ * to refuse, and both are counted. `src/refusal.js` is not counted: it is the mechanism of refusal
+ * rather than a place where the tool refuses. The walk goes over the git tree, so a site in a
+ * subdirectory (`src/strip/guard.js`, `src/page/*`) is found as well, and a missed site is exactly
+ * what the check must not miss. The list comes from git, as in the neighbouring check of causes
+ * (`docs-commands`): a second list would diverge from the first in silence. */
 function refusalSites() {
   const found = new Map();
   const bump = (key) => found.set(key, (found.get(key) || 0) + 1);
@@ -79,29 +78,28 @@ test('у каждого места отказа в исходниках есть
   assert.deepEqual(diff, [], 'число мест отказа разошлось с каталогом: ' + diff.join('; ')
     + ' — у нового места обязан быть свой пункт и своя строка проверки');
 
-  // Отказы со знаком «✗» и кодом: их механизм другой (знак и код, а не исключение),
-  // и держатся они тем же счётом. В карте есть и неотказы (`src/hook.js` пишет в
-  // журнал хука, `src/doctor.js` ставит метки в отчёте) — затем, чтобы новое «✗»
-  // в этих файлах не проскочило молча.
+  // Refusals marked "✗" with a code: their mechanism is another one (a mark and a code rather than an
+  // exception), and the same counting holds them. The map holds non-refusals too (`src/hook.js`
+  // writes to the hook's log, `src/doctor.js` marks the report) so that a new "✗" in those files does
+  // not slip through in silence.
   assert.deepEqual(printed, PRINTED, 'число отказов со знаком «✗» разошлось с картой PRINTED'
     + ' (tools/refusals.js) — у нового места обязан быть свой пункт');
 });
 
 test('у каждого места отказа есть случай в каталоге', () => {
   const declared = new Map(Object.entries(SITES));
-  // Место без строки в каталоге, без ссылки на другую проверку и без названной
-  // причины, почему его не поймать, не стережёт никто. Счёт мест этого не ловит:
-  // место и пункт карты сходятся, а проверки у места нет.
+  // A site with no line in the catalogue, no reference to another check and no named reason why no
+  // run can catch it is guarded by nobody. Counting the sites does not catch this: the site and the
+  // map's line agree while the site has no check.
   const named = new Set(CASES.map((c) => (c.id === undefined ? c.key : c.id)));
   const noCase = [...declared.keys()].filter((k) => !named.has(k));
   assert.deepEqual(noCase, [], 'у места отказа нет ни случая в каталоге, ни названной'
     + ' причины, почему его не поймать: ' + noCase.join(', '));
 
-  /* Совет — вторая половина отказа: мало назвать причину, надо дать выход. У каждого
-   * случая сказано, что он советует (`advice`), — и для случаев, которые целиком
-   * стережёт другая проверка, это единственное место, где видно, чем именно совет
-   * проверен: файлом и строкой в нём. Живое исполнение объявленных советов — в
-   * `test/refusals.test.js`. */
+  /* An advice is the second half of a refusal: naming the cause is not enough, an exit has to be
+   * given. Every case says what it advises (`advice`), and for the cases another check guards
+   * entirely this is the only place where it is visible what the advice is checked with: a file and
+   * a line in it. Live execution of the declared advices is in `test/refusals.test.js`. */
   const silent = CASES.filter((c) => !Array.isArray(c.advice));
   assert.deepEqual(silent.map((c) => (c.id === undefined ? c.key : c.id)), [],
     'у случая не сказано, что отказ советует (advice: [] — если совета нет)');
@@ -110,7 +108,7 @@ test('у каждого места отказа есть случай в кат�
       + ' не может ничего советовать — его вывод никто не читает');
   });
 
-  // Закрытый список того, что нельзя проверить прогоном: причина сказана словами.
+  // The closed list of what no run can check: the reason is said in words.
   const loose = CASES.filter((c) => c.uncatchable !== undefined);
   assert.deepEqual(loose.map((c) => c.id), ['внутренняя ошибка'],
     'список непроверяемых отказов изменился — это решение, а не мелочь, и его надо назвать');

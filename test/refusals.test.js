@@ -1,25 +1,23 @@
-/* Отказы инструмента: каждый говорит правду и помогает выйти из тупика.
+/* The tool's refusals: each tells the truth and helps out of the dead end.
  *
- * Предмет проверки — каталог `tools/refusals.js`: в нём по строке на каждый отказ,
- * с фразами, которых в выводе не хватает, если текст стал врать или перестал
- * помогать. Здесь эти строки исполняются: отказ вызывается прогоном, сверяется код
- * выхода и фразы. Вторую половину обещания — что у каждого места отказа в исходниках
- * есть свой пункт каталога, то есть отказ не может появиться молча, — держит
- * `test/refusals-catalog.test.js`: он читает исходники и ничего не запускает.
+ * The subject is the catalogue `tools/refusals.js`: one line per refusal, carrying the phrases whose
+ * absence in the output means the text has started lying or stopped helping. Here those lines are
+ * executed: a refusal is brought about by a run, and its exit code and phrases are compared. The
+ * other half of the promise — that every refusal site in the sources has a line of its own, so a
+ * refusal cannot appear in silence — is held by `test/refusals-catalog.test.js`, which reads the
+ * sources and runs nothing.
  *
- * Зачем это отдельной проверкой. Ложную причину в тексте отказа находил живой
- * прогон, и находил четыре раза подряд: закавыченный путь (B1), сравнение байтов
- * вместо содержимого (B3), молчаливое лишнее слово (R-4.13) и `explain HEAD`, где
- * коммит назвали несуществующим. Каждый раз это была случайность. Класс закрывается
- * не пятым исправлением, а тем, что новый отказ не может появиться без строки в
- * каталоге: карты `SITES` (броски исключения) и `PRINTED` (отказы со знаком «✗» и
- * кодом) держат числа мест, и любое новое место видно как расхождение.
+ * Why this is a check of its own. A false reason in a refusal's text was found by a live run four
+ * times in a row (a quoted path, bytes compared instead of content, a silently swallowed extra word,
+ * `explain HEAD` calling the commit nonexistent), and each time by accident. The class is closed not
+ * by a fifth fix but by the catalogue: the maps `SITES` (thrown) and `PRINTED` (marked "✗" with a
+ * code) hold the counts of the sites, and any new site shows up as a discrepancy.
  *
- * Чего проверка не берёт, и это сказано, а не спрятано: формулировки вне `must`
- * (смысл, тон, порядок строк), полноту объяснения и то, что видит человек в
- * `--json`. Смысл каждого отказа записан в каталоге полем `truth` — оно не
- * проверяется машиной намеренно: подстрока не отличит верное объяснение от
- * правдоподобного, а притворяться, что отличит, хуже, чем сказать вслух.
+ * What the check does not take, said out loud rather than hidden: wording outside `must` (sense,
+ * tone, the order of lines), the completeness of an explanation, and what a person sees in `--json`.
+ * Each refusal's sense is recorded in the catalogue's `truth` field, which is deliberately not
+ * checked by a machine: a substring cannot tell a true explanation from a plausible one, and
+ * pretending otherwise would be worse than saying so.
  */
 
 import { test, after } from 'node:test';
@@ -38,21 +36,21 @@ import {
 const tmp = tempDir('refusals');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-/* Клон фикстуры — общий на набор и только на чтение: отказы командной строки
- * наступают до того, как инструмент что-либо запишет. */
+/* The fixture clone is shared by the suite and read-only: command-line refusals happen before the
+ * tool writes anything. */
 const FIXTURE = sharedClone('plain', tmp);
 
-// Настройки, которых требует тот или иной отказ. Пишутся заранее: отказ обязан
-// наступить на них, а не на отсутствии файла.
+// The settings a refusal requires. Written beforehand: the refusal has to be caused by them rather
+// than by a missing file.
 const base = readJson(CONFIG);
 function writeConfig(name, edit) {
   const file = path.join(tmp, name + '.json');
   fs.writeFileSync(file, typeof edit === 'string' ? edit : JSON.stringify(edit, null, 2) + '\n');
   return file;
 }
-/* Команды, которые тест называет сам: они цитируются из настроек проекта
- * (`fixCommand`), и каталог ссылается на них подстановкой. Так адрес команды
- * остаётся там, где её собирают, а каталог — договором о том, что она делает. */
+/* The commands the test names itself: they are quoted from the project's settings (`fixCommand`),
+ * and the catalogue refers to them by substitution. So the command's address stays where it is
+ * assembled, and the catalogue stays an agreement about what it does. */
 const FIXES = {
   [PLACEHOLDER + 'fixNotable']: 'node ' + PACKAGE_BIN + ' --config ' + path.join(tmp, 'notable.json') + ' --write',
   [PLACEHOLDER + 'fixDrift']: 'node ' + PACKAGE_BIN + ' --config ' + path.join(tmp, 'drift.json') + ' --write'
@@ -65,14 +63,14 @@ const PLACES = {};
   [PLACEHOLDER + 'draft', path.join(tmp, 'draft.json')],
   [PLACEHOLDER + 'broken', writeConfig('broken', '{ "columns": [ oops')],
   [PLACEHOLDER + 'empty', writeConfig('empty', { columns: [] })],
-  // Путь колонки числом: колонка, которая ни с чем не совпадёт, — это отказ, а не
-  // отчёт с нулём строк за успех.
+  // A column's path given as a number: a column matching nothing is a refusal rather than a report
+  // with zero rows for a success.
   [PLACEHOLDER + 'badtype', writeConfig('badtype', { columns: [{ label: 'a', paths: [123] }], metrics: ['raw'] })],
   [PLACEHOLDER + 'few', writeConfig('few', {
     columns: [{ label: 'code.js', paths: ['src/code.js'] }], metrics: ['raw'], output: 'docs/size-table.html'
   })],
-  // У этих двух настроек `fixCommand` называет настоящую команду: отказ цитирует
-  // его как совет, и проверять чужую строку значило бы проверять фикстуру.
+  // In these two settings `fixCommand` names a real command: the refusal quotes it as its advice,
+  // and checking someone else's line would mean checking the fixture.
   [PLACEHOLDER + 'notable', writeConfig('notable', {
     columns: [{ label: 'code.js', paths: ['src/code.js'] }], metrics: ['raw'],
     output: 'docs/nope.html', fixCommand: FIXES[PLACEHOLDER + 'fixNotable']
@@ -84,8 +82,8 @@ const PLACES = {};
     columns: base.columns, metrics: ['raw', 'min', 'tok'], output: 'docs/nope.html',
     minify: { engine: 'esbuild' }, tokens: { family: 'openai', encoding: 'o200k_base' }
   })],
-  // Две половины совета про приближение: без словаря — но с настоящим сжатием, и без
-  // токенов — но с настоящим сжатием: так видно, что убирает именно названное.
+  // The two halves of the advice about approximation: with no dictionary but real minification, and
+  // with no tokens but real minification — so that what removes what is visible.
   [PLACEHOLDER + 'strip', writeConfig('strip', {
     columns: base.columns, metrics: ['raw', 'min'], output: 'docs/nope.html', minify: { engine: 'strip' }
   })],
@@ -98,14 +96,14 @@ function args(caseArgs) {
   return caseArgs.map((a) => (PLACES[a] === undefined ? a : PLACES[a]));
 }
 
-// Подстановки каталога: `@config` — путь из теста, `@fixDrift` — команда из настроек.
+// The catalogue's substitutions: `@config` is a path from the test, `@fixDrift` a command from the
+// settings.
 function fill(text) {
   return text.replace(/@[A-Za-z]+/g, (m) => (PLACES[m] !== undefined ? PLACES[m] : (FIXES[m] !== undefined ? FIXES[m] : m)));
 }
 
-/* Сценарии: то, что не выражается одними аргументами, — свой клон, чужой хук,
- * обрезанная история. Строятся по требованию: платит за них только тот случай,
- * которому они нужны. */
+/* Scenarios: what arguments alone cannot express — a clone of its own, a foreign hook, a shallow
+ * history. Built on demand: only the cases that need them pay for them. */
 const built = {};
 function once(name, build) {
   if (built[name] === undefined) built[name] = build();
@@ -124,8 +122,8 @@ function hookClone(kind) {
   });
 }
 
-/* Копия движка без `bin/` рядом: так выглядит установка, в которой хук звать
- * нечем. Точка входа — снаружи копии, иначе она бы нашлась сама. */
+/* A copy of the engine with no `bin/` beside it: how an installation looks when there is nothing to
+ * call the hook with. The entry point stays outside the copy, or it would find itself. */
 function toolWithoutBin() {
   return once('src-copy', () => {
     const home = path.join(tmp, 'tool');
@@ -146,9 +144,9 @@ const SCENARIOS = {
     fs.writeFileSync(path.join(dir, 'заметка.txt'), 'не репозиторий\n');
     return { dir: dir };
   }),
-  // Каталог тот же, но git в PATH нет: окружение и есть предмет случая.
+  // The same directory, but no git in PATH: the environment is what the case is about.
   'no-git': () => SCENARIOS.barren(),
-  // Первый зов создаёт файл, второй — отказ; проверяется второй.
+  // The first call creates the file, the second is a refusal; the second one is checked.
   'draft-twice': (caseArgs) => ({ dir: FIXTURE, pre: [args(caseArgs)] }),
   'foreign-hook': () => hookClone('foreign-hook'),
   'hooks-path': () => hookClone('hooks-path'),
@@ -184,9 +182,9 @@ function run(c) {
   return runTool(tool, scenario.dir, toolArgs, c.env);
 }
 
-/* Куда идёт выполнение совета: своя копия фикстуры — если совет пишет в проект,
- * пустой репозиторий — если совет про черновик настроек («в пустом каталоге»
- * сказано в самом совете), иначе — то же место, откуда пришёл отказ. */
+/* Where the advice is carried out: a clone of its own if the advice writes into the project, an
+ * empty repository if the advice is about a settings draft (the advice itself says "in an empty
+ * directory"), and otherwise the very place the refusal came from. */
 function adviceDir(a, fallback) {
   if (a.inClone === true) {
     return once('advice-clone', () => cloneFixture(path.join(tmp, 'advice-clone')));
@@ -202,9 +200,9 @@ function adviceDir(a, fallback) {
   return fallback;
 }
 
-/* Готовая к выполнению команда совета. Форма та же, что печатает инструмент: зов —
- * абсолютный путь к точке входа, потому что из каталога проекта относительный путь
- * в репозиторий пакета не ведёт. */
+/* The advice as a command ready to be run. The shape is the one the tool prints: the call is an
+ * absolute path to the entry point, because a relative path from the project's directory does not
+ * lead into the package's repository. */
 function adviceCommand(a) {
   return a.args === undefined
     ? fill(a.text)
@@ -219,7 +217,7 @@ function runAdvice(cmd, dir, env) {
   return { code: res.status, stdout: res.stdout || '', stderr: res.stderr || '' };
 }
 
-/* Каждый прогон совета: код, который он обещает. */
+/* Every run of an advice: the code it promises. */
 function checkRun(a, where, dir) {
   const cmd = adviceCommand(a);
   const res = runAdvice(cmd, dir, a.env);
@@ -230,8 +228,8 @@ function checkRun(a, where, dir) {
   return res;
 }
 
-/* Совет починяет состояние — и это видно по отказу, а не по слову: тот же зов,
- * который до совета отказывал, после него обязан сказать что-то другое. */
+/* An advice repairs the state, and that shows in the refusal rather than in a word: the very call
+ * that refused before the advice has to say something else after it. */
 function checkFix(c, where, dir) {
   const again = runTool(PACKAGE, dir, args(c.args), c.env);
   const out = again.stdout + again.stderr;
@@ -240,9 +238,9 @@ function checkFix(c, where, dir) {
     + still.join(', ') + ':\n' + out);
 }
 
-/* Проверка совета: объявленный сверяется с тем, что напечатано, и делается с ним
- * то, что объявлено (`run`, `template`, `manual`). `coveredBy` здесь не проверяется —
- * это делает файл, который каталог назвал вместе с исполняемой строкой. */
+/* Checking an advice: what is declared is compared with what is printed, and with it is done what
+ * is declared (`run`, `template`, `manual`). `coveredBy` is not checked here — that is done by the
+ * file the catalogue named together with the line to be executed. */
 function verifyAdvice(c, where, out, fallback) {
   const lines = adviceOf(out);
   assert.ok(Array.isArray(c.advice),
@@ -288,15 +286,15 @@ function verifyAdvice(c, where, out, fallback) {
   });
 }
 
-/* Сценарий случая строится один раз и переиспользуется: `verify` берёт из него место
- * для запуска совета, а `run` — уже готовый вывод самого отказа. */
+/* A case's scenario is built once and reused: `verify` takes from it the place to run the advice
+ * in, and `run` takes the refusal's output as it is. */
 function scenarioOf(c) {
   return SCENARIOS[c.scenario](c.args);
 }
 
 function verify(c, group) {
-  // Стерегомые другой проверкой и непроверяемые прогоном здесь не запускаются:
-  // первые сверяются ниже по файлу, второй назван словами в каталоге.
+  // The ones another check holds and the ones no run can bring about are not run here: the first
+  // are compared further down the file, the latter is named in words in the catalogue.
   if (c.coveredBy !== undefined || c.uncatchable !== undefined) return;
   const res = run(c);
   const out = res.stdout + res.stderr;
@@ -310,20 +308,22 @@ function verify(c, group) {
   verifyAdvice(c, where, out, scenarioOf(c).dir);
 }
 
-/* Группа — та же, что у `CONFIG_CAUSES`, чтобы список причин не заводился второй
- * раз; сломанный отказ видно по имени группы и по названной причине в тексте. */
+/* The group is the one `CONFIG_CAUSES` has, so that the list of causes is not started a second
+ * time; a broken refusal shows in the group's name and in the cause named in the text. */
 function groupOf(c) {
-  // Коды из таблицы (сверка с деревом, обрезанная история) живут не среди причин
-  // кодом 2: у них свой разговор с человеком, поэтому и своя группа.
+  // The codes of the table (the comparison with the tree, a shallow history) do not live among the
+  // causes with code 2: they have a conversation of their own with a person, hence a group of their
+  // own.
   if (c.id !== undefined || c.key.indexOf('EXIT.') === 0) return 'коды выхода';
   const g = CONFIG_CAUSES.find((gr) => gr[1].indexOf(c.key) >= 0);
   assert.ok(g !== undefined, 'в каталоге отказ с причиной, которой нет в CONFIG_CAUSES: ' + c.key);
   return g[0];
 }
 
-/* Одна проверка на весь каталог, внутри — по группам причин: объявление в цикле
- * сделало бы число проверок выводом из данных, а оно читается по файлам
- * (`test/docs-numbers.test.js`, там же и запрет на объявление не в начале строки). */
+/* One check for the whole catalogue, inside it by groups of causes: declaring in a loop would make
+ * the number of checks a conclusion from the data, while it is read off the files
+ * (`test/docs-numbers.test.js`, which also forbids a declaration that is not at the start of a
+ * line). */
 test('отказы: каждый вызван и сказал обещанное', () => {
   const groups = [];
   CASES.forEach((c) => {

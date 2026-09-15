@@ -130,8 +130,15 @@ comment diff stays under the commit budget, otherwise it is split by file groups
     (measured by cloning the bundle — the number belonged to this repository), and the styling
     comment spoke of "two outputs" while the report is one page carrying both sheets, the shared
     one frozen by the artifact's bytes.
-  - [ ] **M10b the entry, the refusal and the CLI** — `cli` (65), `refusals` (63),
-    `refusals-catalog` (37), `cli-paths` (16).
+  - [x] **M10b the entry, the refusal and the CLI** — `cli` 314 → 312, `cli-paths` 105 → 105,
+    `refusals` 338 → 338, `refusals-catalog` 136 → 134; 181 comment lines → 360 changed lines in
+    4 files (journal entry `worklog/0092`, 2026-09-15), exactly the size the split predicted. The
+    catalogue re-proved the data: 27 registry sites (32 sites) and 11 "✗" marks in 5 files match it
+    to the count, so no refusal site moved through any pass. Deletions: the plan-section address in
+    `cli.test.js` (the codes are now named by their home, `EXIT` in the engine), the BLOCKERS and
+    REFACTOR addresses in `refusals.test.js` (the four accidental finds stay as the defect class),
+    and the "was X, now Y" narration in two places (what a check forbids matters, not when it was
+    added).
   - [ ] **M10c the disk, the module and the hook** — `hook` (73), `module` (68), `disk` (61).
   - [ ] **M10d the measures** — `doctor` (45), `minify` (36), `check` (35), `guard` (19),
     `tokens` (18).
