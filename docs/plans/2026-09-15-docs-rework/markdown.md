@@ -136,15 +136,33 @@ files). The parts below are the order to work in; each is one commit.
   (`test/page-view.test.js`, `test/parity.test.js`), and the rule behind "the last commit's columns
   first" — the last commit that touched at least one column, so that the mark does not depend on the
   report's own commit (`src/history.js`). `pnpm run verify` green (8 steps, 59,7 s).
-- [ ] **M4b README, the metrics and the commands** — `min`, `tok`, wave 0, `check`/`explain`, the
-  hook (about 90 Russian lines as measured on 2026-09-16). Its numbers are of another kind and **can
-  be re-measured**: the fixture ones on a clone of `fixtures/synthetic` with and without
-  `"minify": {"engine": "esbuild"}` and with both token encodings, the timings on the live bundle
-  (`pnpm run parity:live` does the same clone). The suite-cost figures in that text (**«7,3–7,9 → 10,4
-  с при 66 → 73 проверках»**) have already drifted — the suite counts 177 checks today — and are to be
-  replaced by a rule, as in M4a. Open question for the user: whether re-measured seconds belong
-  anywhere in README at all, or whether (as the run section already says) the document promises no
-  seconds.
+- [x] **M4b README, the metrics and the commands** — 92 Russian lines, 181 changed lines in one file
+  (`worklog/0103`). **The fixture numbers were re-measured and all of them held.** Four runs on a clone
+  of `fixtures/synthetic` (`strip`, `esbuild`, tokens `o200k_base` and `cl100k_base`): real minification
+  is smaller in **44 cells and never larger** (58 equal); `src/code.js` **276 → 185 B**, `src/style.css`
+  **55 → 43 B**, and over the fixture's history (102 cells) **−1 372 B**; `src/code.js` is **168** tokens
+  in `o200k_base` and **196** in `cl100k_base`; the same cell is **735 B** raw, **276 B** stripped,
+  **185 B** minified, **168** tokens; bytes per token run from **2.56** (`package.json`) to **6.30**
+  (`crlf.txt`). What makes them worth keeping is that they are taken from a **frozen** fixture rather
+  than from a machine, so they do not age in silence. **The seconds are gone**, and that is a decision:
+  no profile has a time target, and the run section already says the document promises no seconds, so
+  what stays is the rule (the dictionary reads its tables once per process while the counting is per
+  file and per row, hence the price grows with the history; `check` costs a pass over the history).
+  Both fallbacks were measured, not retold: with `SIZE_REPORT_NO_OPTIONAL` the run answers **code 4**,
+  the `min` numbers are **byte for byte** those of stripping, and `raw`/`min` are unchanged by a `tok`
+  metric whose dictionary is missing (checked cell by cell). Verified in code: `pointExact` as the one
+  rule of accuracy (`src/metrics.js`), the derived profile on minification and tokens with the report
+  kept out of the columns (`src/project.js`, `src/config.js`), the minifier's refusal naming its own
+  cause and its way out (`src/minify.js`) — the earlier "two ready ways out" turned out to be inexact,
+  since the second belongs to the other refusal, about a file that is not JavaScript — completeness as
+  code 1 over the **union of the changed paths of commits** rather than over the tree (`src/check.js`,
+  `EXIT.VIOLATION`), all four verdicts of `explain` (`src/explain.js`) and the hook's two files with a
+  `commit-tree` commit whose cause `size doctor` shows (`src/hook.js`). The «Волна 0» paragraph is
+  dropped as history: its fixes are either said where they belong (the refusal catalogue, the settings
+  check) or of no use to the reader, and one sentence was kept from it — `--help` answers and `--write`
+  creates the missing directory (`src/artifact.js`). Addresses into the plan (step numbers, `§4.2`,
+  `§4.8.4`, "the budget below") are gone. `pnpm run verify` green (8 steps, 61,1 s). The status section
+  is now wholly English (M4a + M4b); the next Russian line is 414, «Что в репозитории».
 - [ ] **M5 README 554–686** — 129 Russian: «Что в репозитории». Its heading is read by
   `test/docs-paths.test.js` (the table of paths), so that reader changes in the same commit. To check
   there: the paragraph on the frozen copy (around line 590) claims "проверено тремя прогонами … и

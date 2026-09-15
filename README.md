@@ -326,103 +326,90 @@ not reload the document when the anchor changes, so the page reads the address i
 only work in a new tab. The page makes no request to the network at all, and that is an assertion of a
 check rather than a promise (`test/page-view.test.js`, `test/parity.test.js`).
 
-**Метрика `min` умеет считать по-настоящему** (шаг 3 плана, срез 1). Способ
-выбирается в настройках: `"minify": {"engine": "esbuild"}` — настоящее сжатие
-(JS/TS/CSS) необязательной зависимостью, `"engine": "strip"` — прежнее снятие
-комментариев и отступов; умолчание не менялось, потому что под ним сняты оба
-замороженных эталона. На фикстуре сжатие меньше упрощения в **44 клетках и ни разу
-не больше**: `src/code.js` **276 → 185 Б**, `src/style.css` **55 → 43 Б**, по фикстуре
-**−1 372 Б**. Цена сжатия названа, а не спрятана: на живой истории (95 строк ×
-27 колонок) прогон стал **1,48 → 1,71 с** — это запуск минификатора и разбор тех
-файлов, которые он берёт. JSON минифицируется разбором и потому
-остаётся точным, а форматы, которых минификатор не берёт, честно названы в подписи
-метрики вместе с теми, которые он берёт. Точность объявлена дважды, и это не два
-ответа на один вопрос: подпись метрики говорит про **худшее в колонке** (один
-формат без минификатора делает метрику приближённой целиком, а не прячется за
-«точное» соседа), а каждая клетка — про своё число, и приближённая помечена
-пунктиром с подписью способа. Худшее берётся у клеток, а не у названия способа:
-отчёт из одного JSON точен и под снятием балласта — разбор теряет только
-незначащие пробелы, короче его не сделает никто, — и подпись так и говорит.
-Оба ответа считаются одним правилом (`pointExact` в
-`src/metrics.js`), поэтому разойтись не могут. Минификатора нет (установка без необязательных
-зависимостей, платформа без него) — метрика отступает к упрощению, способ говорит
-об этом словами, а прогон отдаёт **код 4**, а не молчание: числа при этом те же, что
-у прежнего способа, — побайтово со эталоном. Выведенный профиль ведёт новые проекты
-сразу на сжатие (и `--init` закрепляет то же самое); цена названа прямо в его подсказке. Файл, который минификатор не
-разобрал (разметка в `.js`, чужой синтаксис), — отказ кодом 2 с причиной от него
-самого и двумя готовыми выходами.
+**The `min` metric can count for real.** The way of counting is chosen in the settings:
+`"minify": {"engine": "esbuild"}` minifies JS/TS/CSS for real through an optional dependency, while
+`"engine": "strip"` is the earlier removal of comments and indentation. The default did not change,
+because both frozen references were taken under it. Measured on the fixture: real minification is
+smaller than stripping in **44 cells and never larger**; `src/code.js` **276 → 185 B**, `src/style.css`
+**55 → 43 B**, and over the fixture's history **−1 372 B**. JSON is minified by parsing and so stays
+exact, while the formats the minifier does not take are named in the metric's caption together with the
+ones it does take. Accuracy is declared twice, and that is not two answers to one question: the caption
+speaks of **the worst in the column** — one format without minification makes the metric approximate as
+a whole rather than hiding behind an exact neighbour — while each cell speaks of its own number, and an
+approximate one is marked with a dashed line and the method in its tooltip. The worst is taken from the
+cells rather than from the engine's name: a report of one JSON is exact even under stripping — parsing
+loses only insignificant whitespace, and nobody would make it shorter — and the caption says so. Both
+answers come from one rule (`pointExact` in `src/metrics.js`), so they cannot diverge. With no minifier
+(an installation without optional dependencies, a platform without it) the metric falls back to
+stripping, the method says so in words and the run answers **code 4** rather than staying silent, while
+the numbers are the same as the earlier way of counting — byte for byte with the reference. The derived
+profile leads new projects straight to minification (`--init` pins the same), its hint names that price,
+and the report itself stays out of the columns there: a column that is the table is refused by the
+settings check. A file the minifier could not parse (markup in `.js`, syntax it does not know) is a
+refusal with code 2 whose text names the file, the minifier and its own cause, and whose advice gives a
+ready way out — assign simplification to that extension.
 
-**Метрика `tok` считает токены настоящим словарём** (шаг 4 плана, срез 1). Токены —
-третье измерение отчёта: вес файла для языковой модели. Словарь выбирается в
-настройках (`"tokens": {"family": "openai", "encoding": "o200k_base"}`), и
-кодировка — часть числа, а не подробность: на фикстуре `src/code.js` это **168
-токенов** в `o200k_base` и **196** в `cl100k_base`, поэтому кодировка называется
-рядом с семейством, а способ метрики цитирует ровно ту, что посчитана. Токены —
-не байты и не сжатие, и расхождение видно, а не заглажено: та же клетка — **735 Б**
-`raw`, **276 Б** упрощением, **185 Б** настоящим сжатием и **168** токенов; байт на
-токен отличается по файлам в **2,5 раза** (от 2,56 у `package.json` до 6,30 у
-`crlf.txt`), то есть считается текст, а не отношение. Семейство в этой версии одно —
-`openai`: у остальных нет словаря, который можно было бы назвать их собственным, а
-считать чужим и называть это семейством значило бы обещать то, чего нет.
-Переключателя словаря на странице нет намеренно: страница получает готовые числа и
-сама не считает ничего, а посчитать токены другим словарём ей нечем. Сосчитать все
-семейства на каждый прогон — это платить временем за числа, о которых читатель,
-может быть, и не спросит, поэтому выбор семейства и кодировки живёт там, где стоит
-времени (в настройках запуска), а страница его **называет**: способ каждой метрики
-виден под переключателями текстом, а не только во всплывающей строке (решение
-плана §4.8.4 отменено осознанно — `PLAN.md`, шаг 4).
-Форматы без текста (картинка, шрифт, архив) названы в подписи метрики вместе с
-причиной: у них число идёт по байтам, и по тому же правилу помечена клетка такого
-файла, а подпись метрики берёт худшее в колонке — двум ответам разойтись нечем.
-Словаря нет (установка без необязательных зависимостей, платформа без него) — счёт
-идёт оценкой по длине с названным коэффициентом, а прогон отдаёт **код 4**; числа
-при этом те же, что у прежнего отчёта без токенов, а сам шов проверяется
-окружением `SIZE_REPORT_NO_OPTIONAL`. Прогон этим платит временем, и это честная
-цена словаря, а не разбор: таблицы словаря читаются **0,3 с на процесс**, а на
-живой истории (95 строк × 27 колонок, 1,23 МБ текста) тот же отчёт идёт
-**1,55 → 6,35 с** — умножается именно сбор истории, а не таблица: токенов в
-«сейчас» — **303 705**, то есть 4,05 Б на токен. Отсюда и цена набора проверок:
-**7,3–7,9 → 10,4 с** при 66 → 73 проверках (запас и новый бюджет — ниже). Выведенный
-профиль ведёт новые проекты сразу на токены.
+**The `tok` metric counts tokens with a real dictionary.** Tokens are the report's third measure: what a
+file weighs for a language model. The dictionary is chosen in the settings
+(`"tokens": {"family": "openai", "encoding": "o200k_base"}`), and the encoding is part of the number
+rather than a detail: on the fixture `src/code.js` is **168 tokens** under `o200k_base` and **196** under
+`cl100k_base`, which is why the encoding is named next to the family and the metric's method quotes
+exactly the one that produced the number. Tokens are neither bytes nor minification, and the difference
+is shown rather than smoothed over: the same cell is **735 B** `raw`, **276 B** stripped, **185 B** really
+minified and **168** tokens, while bytes per token differ between files by **2.5 times** (from 2.56 in
+`package.json` to 6.30 in `crlf.txt`) — that is, the text is counted rather than a ratio. The family is
+single in this version, `openai`: the others have no dictionary that could be called their own, and
+counting with someone else's while calling that a family would promise what does not exist. There is no
+dictionary switch on the page, and on purpose: the page gets ready numbers and counts nothing itself,
+and it has nothing to count tokens with. Counting every family on every run would pay time for numbers
+the reader may never ask about, so the choice of family and encoding lives where it costs time — in the
+run's settings — while the page **names** it: the method of each metric stands under the switches as
+text rather than only in a tooltip. Formats without text (a picture, a font, an archive) are named in
+the metric's caption together with the reason: their number goes by bytes, the cell of such a file is
+marked by the same rule, and the caption takes the worst in the column — two answers have nothing to
+diverge with. With no dictionary (an installation without optional dependencies, a platform without it)
+the count is an estimate by length with the coefficient named in the method, and the run answers **code
+4**; the other metrics stay what they were in a report without tokens, and that seam is checked in an
+environment with no optional dependencies at all (`SIZE_REPORT_NO_OPTIONAL`). Counting tokens costs a
+run time, and that is the honest price of the dictionary rather than of parsing: its tables are read
+once per process while the counting is per file and per row, so the price grows with the history and not
+with the dictionary. The derived profile leads new projects straight to tokens.
 
-**Волна 0 чистки пройдена** (`REFACTOR.md`): у отказов командной строки появились
-коды выхода и справка вместо стека, `--help` отвечает, `--write`
-создаёт недостающий каталог, подсказка в отказе ведёт к работающей команде, а
-вывод настроек больше не предлагает колонкой саму таблицу — иначе первая же
-проверка настроек его отвергала.
+**Two conveniences of the command line are guarantees rather than accidents:** `--help` answers
+wherever it is asked, and `--write` creates the report's directory when it is missing.
 
-**Появились две команды: полнота и объяснение** (шаг 5 плана). `size check`
-отвечает, всё ли в истории попало в отчёт: каждый путь, тронутый коммитами,
-обязан быть колонкой или объявленным исключением, а непонятый путь — это код 1,
-путь, коммит, который его завёл, и готовая починка. Тем же ответом идут сводка по
-выпавшим коммитам (сколько и почему) и списки их sha — то есть «какая часть
-истории покрыта». `size explain <коммит>` отвечает про один коммит — назвать его
-можно и именем ревизии (`HEAD`, ветка, тег, `HEAD~1`), и sha, и началом sha:
-строка есть (и которая) либо причина, почему её нет, — тронут только отчёт, числа не сдвинулись
-при тронутых файлах колонок, коммит мимо колонок, слияние скрыто `rows.merges`.
-Обе берут причину у того же прохода, что и отчёты, а улики — из списка изменённых
-путей коммита: чего в истории нет, о том молчание вместо догадки. Полнота — из требований (§4.2: «ни одно изменение не
-просочилось мимо отчёта»), и она же заменяет контроль
-«артефакт ↔ история»: отчёт можно не хранить в git. Смысл `skip` в настройках от
-этого не изменился, но **значение расширилось**: это не только «пути, которые
-колонками быть не могут», но и объявленные исключения полноты — тот же список, и
-чеканить второй инструмент не стал. Цена названа: `check` — это проход по истории,
-как и любой отчёт (**1,5 с** на живой истории), а набор проверок подорожал на
-тринадцать запусков инструмента (бюджет — ниже). К ним добавился `size doctor` —
-диагностика одним ответом (ниже, в разделе про проверки).
+**Two commands answer about the history: completeness and explanation.** `size check` answers whether
+everything in the history got into the report: every path the history touched has to be a column or a
+declared exception, and a path that is neither is a violation — code 1, the path, the commit that
+introduced it and a ready fix. The same answer carries the summary of dropped commits — how many and
+why — and their shas, that is, how much of the history is covered. Coverage is counted over the facts of
+the history — the union of the changed paths of every commit — rather than over the file list in the
+tree: a file created and deleted before HEAD is invisible there while the history remembers it, and its
+edits went into no number at all. What the tool does not claim is said in the same place: not that the
+project picked the "right" columns, only that nothing went past them, and what exactly did not fit.
+`size explain <commit>` answers about one commit — named by a revision (`HEAD`, a branch, a tag,
+`HEAD~1`), by a sha or by its beginning — saying whether there is a row (and which) or why there is
+none: only the report itself was touched, the numbers did not move although column files were touched,
+no file of the commit is tracked as a column, or the commit is a merge and merges are hidden by
+`rows.merges`. Both take the reason from the same run the reports come from, and the evidence from the
+commit's list of changed paths: what the history does not hold, the answer is silent about instead of
+guessing. Completeness comes from the requirements, and it also replaces the "artifact ↔ history"
+control: the report need not be kept in git. The meaning of `skip` has not changed, but its **reach has
+widened**: it is not only "paths that cannot be columns" but also the declared exceptions of
+completeness — one and the same list, and forging a second tool for it was not necessary. The price is
+named: `check` costs a pass over the history, like any report. Next to them stands `size doctor`, the
+diagnostics in one answer.
 
-**Отчёт обновляется сам** (последний пункт шага 5 плана). `size install-hook`
-ставит два хука — `post-commit` и `post-merge` (`post-commit` при `git merge` не
-выполняется вовсе, поэтому одного файла мало), — и после каждого коммита и слияния
-отчёт пересобирается, а лежащий в git — ложится **отдельным коммитом**: ручного шага
-«код, потом таблица» больше нет. Коммит отчёта собирается плумбингом git
-(`commit-tree`): в него физически не могут попасть ни индекс, ни чужая
-незакоммиченная работа, и зацикливание невозможно по устройству, а не по флагу в
-окружении. Отказ инструмента коммит не роняет — причина печатается строкой и
-видна в `size doctor`.
+**The report updates itself.** `size install-hook` installs two hooks, `post-commit` and `post-merge`
+(`post-commit` does not run for a merge at all, which is why one file is not enough), and after every
+commit and merge the report is rebuilt, while the copy lying in git lands as **a commit of its own**:
+the manual step "code, then the table" is gone. The report's commit is assembled with git's plumbing
+(`commit-tree`), so neither the index nor someone else's uncommitted work can get into it, and a loop is
+impossible by construction rather than through an environment flag. A refusal of the tool does not bring
+the commit down: the cause is printed as one line and remembered — `size doctor` shows it.
 
-Перенос, доработка и оформление в пакет расписаны в `PLAN.md` по шагам, с
-приёмкой каждого.
+The move, the refinement and the packaging are laid out step by step in `PLAN.md`, with acceptance for
+each.
 
 ## Что в репозитории
 
