@@ -4,18 +4,18 @@ import { EXACT_STRATEGIES, assertCompilable, byteLen, minifyForm, strategyFor } 
 import { MINIFY_LOADERS, minifier, minifyWithEsbuild } from './minify.js';
 import { CHARS_PER_TOKEN, isBinary, tokenCount, tokenizer } from './tokens.js';
 
-/* Реестр метрик: что измеряется, нужен ли метрике текст и насколько честна цифра.
- * Отдельно от способов снятия балласта: метрика — это обещание про число, а не
- * способ его получить.
+/* The registry of metrics: what is measured, whether a metric needs the text, and how honest
+ * its number is. Separate from the ways of stripping ballast: a metric is a promise about a
+ * number rather than a way to obtain one.
  *
- * Описание метрики для читателя берётся не из полей реестра, а из `metricView`:
- * у одной и той же метрики оно зависит от настроек (`min` — это настоящее сжатие
- * или упрощение, `tok` — точный словарь или оценка), и разойтись двум ответам на
- * один вопрос негде. */
+ * The description a reader sees comes from `metricView` rather than from the registry fields:
+ * for one and the same metric it depends on the settings (`min` is either real compression or
+ * a simplification, `tok` either an exact dictionary or an estimate), and two answers to one
+ * question have nowhere to drift apart. */
 
-/* Способы получить метрику `min`: снятие балласта и настоящее сжатие. Механизм у
- * них разный, и обещание тоже, поэтому у каждого свой способ, своя честность и своё
- * примечание — и никто из них не выдаётся за другого. */
+/* The ways to obtain the `min` metric: stripping ballast and real compression. Their mechanism
+ * differs, and so does their promise, so each has its own method, its own honesty and its own
+ * note — and neither is passed off as the other. */
 export const MINIFY_ENGINES = ['strip', 'esbuild'];
 
 const STYLES = {
@@ -82,10 +82,10 @@ export const METRICS = {
       if (esbuildLoader(file, cfg) !== null) return byteLen(minifyWithEsbuild(text, file, rev));
       const min = minifyForm(text, file, cfg);
       const ext = path.extname(file).toLowerCase();
-      /* Гард стриппера стережёт упрощение, а не минификатор: минификатор разбирает
-       * файл сам и о своей неудаче говорит отказом (`src/minify.js`), а этот гард
-       * отвечает на вопрос, не выбросило ли наше снятие балласта чего-нибудь, кроме
-       * комментариев и отступов. */
+      /* The stripper's guard watches the simplification rather than the minifier: the minifier
+       * parses the file itself and reports its failure as a refusal (`src/minify.js`), while
+       * this guard answers whether our stripping threw away anything but comments and
+       * indentation. */
       if (strategyFor(file, cfg) === 'strip-js' && cfg.minify.guard.indexOf(ext) >= 0) {
         assertCompilable(min, rev, file, text);
       }
@@ -108,8 +108,8 @@ export const METRICS = {
   }
 };
 
-/* Описание метрики для читателя: `note` — что означает число, `method` — чем оно
- * получено, `accuracy` — точное оно или приближённое. */
+/* The description of a metric for a reader: `note` is what the number means, `method` how it
+ * was obtained, `accuracy` whether it is exact or approximate. */
 export function metricView(name, cfg) {
   const metric = METRICS[name];
   if (metric.view !== undefined) return metric.view(cfg);
@@ -121,12 +121,12 @@ export function metricView(name, cfg) {
   };
 }
 
-/* Подпись метрики `min`. Соглашение о честности: `accuracy` говорит про худшее в
- * колонке, а способ называет, где именно приближение, — поэтому один формат без
- * минификатора делает метрику приближённой целиком, а не прячется за «exact»
- * соседнего файла. Худшее берётся по тому же правилу, что и пометки клеток
- * (`pointExact`), а не по названию способа: отчёт, где нет ни одного
- * приближённого формата, точен и со снятым балластом. */
+/* The label of the `min` metric. The honesty convention: `accuracy` speaks about the worst in
+ * the column, while the method says where exactly the approximation is — so one format without
+ * a minifier makes the whole metric approximate instead of hiding behind the "exact" of a
+ * neighbouring file. The worst is taken by the same rule as the cell marks (`pointExact`)
+ * rather than by the name of the method: a report with no approximate format at all is exact
+ * even with the ballast stripped. */
 function minView(cfg) {
   const loc = cfg.locale;
   const rough = approximateFormats('min', cfg);
@@ -149,11 +149,11 @@ function minView(cfg) {
   };
 }
 
-/* Подпись метрики `tok`. Соглашение о честности то же, что у `min`: способ говорит,
- * каким словарём снято число (семейство и кодировка — часть счёта, а не подробность),
- * а `accuracy` — точное оно или приближённое. Приближённым оно становится в двух
- * случаях, и оба названы словами: форматы, для которых токены не считаются (у них
- * число идёт по байтам), и отсутствие словаря (тогда счёт идёт оценкой по длине). */
+/* The label of the `tok` metric. The honesty convention is the same as for `min`: the method
+ * says which dictionary produced the number (family and encoding are part of the count rather
+ * than a detail), and `accuracy` says whether it is exact or approximate. It turns approximate
+ * in two cases, both spelled out: formats for which tokens are not counted (their number runs
+ * by bytes) and a missing dictionary (then the count is an estimate by length). */
 function tokView(cfg) {
   const loc = cfg.locale;
   const settings = cfg.tokens;
@@ -179,24 +179,23 @@ function tokView(cfg) {
   };
 }
 
-/* Точное ли число у конкретной клетки — одно правило и для подписи метрики, и для
- * пометки клетки. Поэтому подпись не может разойтись с клетками, а список
- * приближённых форматов считается здесь же, по тому же правилу.
+/* Whether a particular cell holds an exact number — one rule for both the metric label and the
+ * cell mark. That is why the label cannot drift from the cells, and why the list of
+ * approximate formats is computed here, by the same rule.
  *
- * `min` точен там, где файл действительно минифицируется: минификатором или
- * разбором формата, который короче уже не станет (JSON теряет только незначащие
- * пробелы — список точных стратегий ведёт `strip.js`, потому что стратегии живут
- * там). `tok` точен там, где есть словарь и формат текстовый: «токены» картинки
- * или шрифта — это её байты. `raw` и `gzip` точны всегда: это однозначные
- * величины. */
+ * `min` is exact where the file really is minified: by the minifier, or by parsing a format
+ * that cannot get any shorter (JSON loses only insignificant whitespace — the list of exact
+ * strategies is owned by `strip.js`, where the strategies live). `tok` is exact where a
+ * dictionary exists and the format is text: the "tokens" of a picture or a font are its bytes.
+ * `raw` and `gzip` are always exact: they are unambiguous quantities. */
 export function pointExact(name, file, cfg) {
   if (name === 'min') return minifiedForm(file, cfg);
   if (name === 'tok') return tokenizer(cfg.tokens).tool !== null && !isBinary(file);
   return true;
 }
 
-/* Форматы этого отчёта, которые будут измерены приближённо. Список выводится из
- * настроек и правила точности, а не пишется руками. */
+/* The formats of this report that will be measured approximately. The list is derived from the
+ * settings and the rule of exactness rather than written by hand. */
 function approximateFormats(name, cfg) {
   const exts = [];
   cfg.columns.forEach((col) => {
@@ -213,9 +212,10 @@ function minifiedForm(file, cfg) {
   return esbuildLoader(file, cfg) !== null || EXACT_STRATEGIES.indexOf(strategyFor(file, cfg)) >= 0;
 }
 
-/* Идёт ли файл в минификатор: сжатие запрошено, доступно и не отменено явным
- * выбором проекта — `minify.ext` старше движка и служит выходом, если расширение
- * соврало о содержимом. Ответ один на два вопроса: как считать и что обещать. */
+/* Whether the file goes to the minifier: compression is requested, available and not overridden
+ * by an explicit choice of the project — `minify.ext` outranks the engine and serves as the way
+ * out when an extension lied about its content. One answer serves two questions: how to count
+ * and what to promise. */
 function esbuildLoader(file, cfg) {
   if (minEngine(cfg) !== 'esbuild') return null;
   const ext = path.extname(file).toLowerCase();
@@ -223,18 +223,18 @@ function esbuildLoader(file, cfg) {
   return MINIFY_LOADERS[ext] === undefined ? null : MINIFY_LOADERS[ext];
 }
 
-/* Действующий способ: запрошенный может быть недоступен — тогда метрика отступает
- * к другому счёту, а отступление объявляется наружу (`sensorGaps`), иначе
- * приближение ушло бы как точное число. */
+/* The engine actually in force: the requested one may be unavailable, in which case the metric
+ * falls back to another count — and the fallback is announced (`sensorGaps`), or an
+ * approximation would travel as an exact number. */
 export function minEngine(cfg) {
   if (cfg.minify.engine !== 'esbuild') return 'strip';
   return minifier().tool === null ? 'strip' : 'esbuild';
 }
 
-/* Чего не хватает для того, что просили: причина и починка для человека, по одной
- * на датчик. Причина загрузчика уходит только сюда — в подписи метрики она была бы
- * машинной строкой (путём чужого `node_modules`), от которой вывод перестал бы
- * быть одинаковым на разных машинах, а в подписи отчёта — понятным. */
+/* What is missing for what was asked: a cause and a fix for a human, one per sensor. The
+ * loader's cause goes here and nowhere else — inside the metric label it would be a machine
+ * string (a path into someone else's `node_modules`) that would make the output differ between
+ * machines, while the label in the report has to stay readable. */
 export function sensorGaps(cfg) {
   const gaps = [];
   const minify = minifier();
@@ -256,8 +256,8 @@ export function sensorGaps(cfg) {
   return gaps;
 }
 
-/* Одно место, где решается, читать метрику из размера объекта или из текста:
- * метрика без текста на недогруженном блобе — ошибка, а не молчаливый ноль. */
+/* The one place that decides whether a metric is read from the object size or from the text:
+ * a text-based metric on an unloaded blob is an error rather than a silent zero. */
 export function measureBlob(name, blob, file, cfg, rev) {
   const metric = METRICS[name];
   if (metric.fromSize) return blob.size;

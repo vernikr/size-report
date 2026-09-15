@@ -2,18 +2,19 @@ import path from 'path';
 import { loadOptional } from './optional.js';
 import { refuseCause } from './refusal.js';
 
-/* Настоящий минификатор — необязательная зависимость (её устройство — в
- * `src/optional.js`), а здесь только то, что знает сам минификатор: какие форматы
- * он берёт и как считается отказ.
+/* The real minifier is an optional dependency (how that works: `src/optional.js`); what lives
+ * here is what only the minifier knows — which formats it takes and how a refusal is counted.
  *
- * Отказ минификатора (файл не разобрался) исключением быть обязан: расширение
- * соврало о содержимом, и упрощение вместо сжатия подменило бы число молча. */
+ * A minifier refusal (the file did not parse) has to be an exception: the extension lied about
+ * the content, and falling back to a simplification would silently substitute another
+ * number. */
 
-/* Расширения, за которые отвечает минификатор. Таблица — единственный источник
- * правды и для замера, и для подписи метрики («остальные форматы — приближение»),
- * поэтому разойтись им нечем. JSX и TSX сюда не входят: выход зависит от настройки
- * `jsx` проекта (`React.createElement` против `react/jsx-runtime`), и мерить чужое
- * решение о рантайме — не наше дело; такие файлы честно считаются упрощением. */
+/* The extensions the minifier answers for. This table is the single source of truth both for
+ * the measurement and for the metric label ("the other formats are an approximation"), so the
+ * two cannot drift apart. JSX and TSX are not here: the output depends on the project's `jsx`
+ * setting (`React.createElement` versus `react/jsx-runtime`), and measuring someone else's
+ * decision about a runtime is not this tool's business — such files are honestly counted as a
+ * simplification. */
 export const MINIFY_LOADERS = {
   '.js': 'js', '.mjs': 'js', '.cjs': 'js',
   '.ts': 'ts', '.mts': 'ts', '.cts': 'ts',
@@ -22,18 +23,18 @@ export const MINIFY_LOADERS = {
 
 let probed = null;
 
-/* Ответ разбора — один на процесс: пробовать загрузку на каждом файле значило бы
- * платить за неё тысячи раз, а от файла решение не зависит. */
+/* The probe answer is kept for the process: probing on every file would mean paying for it
+ * thousands of times, while the answer does not depend on the file. */
 export function minifier() {
   if (probed === null) probed = loadOptional('esbuild');
   return probed;
 }
 
-/* Сжатие одного текста. Настройки выхода закреплены, а не взяты по умолчанию:
- * `charset: utf8` — потому что измеряется файл проекта в UTF-8 (умолчание
- * экранировало бы не-ASCII и число вышло бы больше настоящего), `legalComments:
- * none` — потому что комментарии снимают и все прочие стратегии, и число должно
- * означать одну вещь, а не две. `sourcefile` нужен ради причины в отказе. */
+/* Compressing one text. The output settings are pinned rather than left at their defaults:
+ * `charset: utf8` because what is measured is a UTF-8 file of the project (the default would
+ * escape non-ASCII and the number would come out larger than the real one), `legalComments:
+ * none` because every other strategy drops comments too and the number has to mean one thing
+ * rather than two, and `sourcefile` for the reason inside a refusal. */
 export function minifyWithEsbuild(text, file, rev) {
   const { tool, why } = minifier();
   if (tool === null) throw new Error('минификатор недоступен: ' + why);
@@ -47,9 +48,9 @@ export function minifyWithEsbuild(text, file, rev) {
       sourcefile: file
     }).code;
   } catch (e) {
-    // Совет называет один выход — тот, который этой причине и отвечает: смена
-    // минификатора на `strip` уберёт причину, но передаст тот же файл гарду
-    // `minify.guard`, у которого разговор тот же («это не JavaScript»).
+    // The advice names the one way out that answers this very cause: switching the minifier to
+    // `strip` removes the cause but hands the same file to the `minify.guard` check, whose
+    // verdict would be the same ("this is not JavaScript").
     refuseCause('минификатор не разобрал', 'esbuild не разобрал ' + file + ' на '
       + rev.slice(0, 7) + ': ' + cause(e.message)
       + '\n  починка: расширение соврало о содержимом или минификатор старше синтаксиса;'
@@ -57,9 +58,9 @@ export function minifyWithEsbuild(text, file, rev) {
   }
 }
 
-/* Причина у esbuild многострочная, и первая строка — «Transform failed with N
- * errors:»; сама причина стоит там, где начинается ошибка. Без неё отказ говорил
- * бы, что что-то не так, но не что именно. */
+/* The reason from esbuild spans several lines and its first line is "Transform failed with N
+ * errors:"; the cause itself stands where the error starts. Without it a refusal would say
+ * that something is wrong without saying what. */
 function cause(text) {
   const lines = String(text).split('\n');
   const at = lines.findIndex((line) => line.indexOf('ERROR:') >= 0);
