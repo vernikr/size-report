@@ -63,10 +63,10 @@
  *   strip → refusal, parse                             — снятие балласта и гард;
  *   metrics → strip                                    — реестр метрик;
  *   git → refusal                                      — всё, что читается у git;
- *   project → git, refusal, data                       — что проект говорит о себе сам;
+ *   project → git, refusal                            — что проект говорит о себе сам;
  *   config → project, git, refusal, locales, metrics, data — настройки проекта;
  *   history → git, metrics, journal, refusal           — сборка по истории;
- *   data → locales, metrics, journal, history, tool    — контракт со страницей;
+ *   data → locales, metrics, journal, history, project, tool — контракт со страницей;
  *   page/build → locales, css                          — отчёт одним файлом;
  *   artifact → data, page/build                        — запись отчёта;
  *   modes → почти все                                  — что делать по запросу;

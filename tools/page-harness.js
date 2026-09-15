@@ -1,8 +1,8 @@
 /* Обвязка проверок контракта и страницы: данные контракта, собранная страница и
- * чтение её в настоящем DOM. Одна на четыре набора (`contract-data`,
- * `contract-derived`, `page-view`, `page-choice`) — по той же причине, по которой
- * общая обвязка одна на пакет (`tools/harness.js`): копия настройки в двух файлах
- * расходится молча, и датчик дублей ловит это раньше человека.
+ * чтение её в настоящем DOM. Одна на пять наборов (`contract-data`,
+ * `contract-derived`, `page-view`, `page-tree`, `page-choice`) — по той же причине,
+ * по которой общая обвязка одна на пакет (`tools/harness.js`): копия настройки в
+ * двух файлах расходится молча, и датчик дублей ловит это раньше человека.
  *
  * Лежит в `tools/`, а не в `test/`: раннер Node считает набором любую `.js` в
  * каталоге `test/` и исполнил бы помощник как пустой набор. jsdom грузится здесь
@@ -12,9 +12,11 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { after } from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
-import { CONFIG, SYNTH, cloneFixture, runFixture } from './harness.js';
+import { stripModules } from '../src/size-table.js';
+import { CONFIG, ROOT, SYNTH, cloneFixture, runFixture, tempDir } from './harness.js';
 
 /* Данные контракта и замороженный эталон: свежий клон фикстуры плюс один прогон
  * `--data`. Контракт одинаков у всех, кто его читает, — это проверяет отдельно
@@ -36,6 +38,27 @@ export function reportSetup(tmp, name) {
   const { data, golden } = contractData(tmp, name);
   return { data: data, golden: golden, pageText: pageHtml(tmp, name) };
 }
+
+/* То же самое для набора, который читает страницу в DOM: свой каталог под клоны
+ * (убирается на выходе), данные, собранный текст и открытие страницы. Здесь и
+ * потому, что подготовка у наборов страницы одна: её копия в двух файлах
+ * расходится молча, а лишний клон — это лишняя секунда прогона. */
+export function pageReady(name) {
+  const tmp = tempDir('page-' + name);
+  after(() => fs.rmSync(tmp, { recursive: true, force: true }));
+  const { data, golden, pageText } = reportSetup(tmp, name);
+  return {
+    data: data, golden: golden, pageText: pageText,
+    openPage: (seed, hash) => openPage(pageText, seed, hash)
+  };
+}
+
+/* Вычислительная часть страницы: исходник на диске и его функция. Наборы страницы
+ * считают ожидаемые итоги тем же кодом, что вклеен в страницу, а не переписанным
+ * в проверке правилом; текст отдаётся отдельно — им сверяется сама вклейка. */
+export const derivedSrc = fs.readFileSync(path.join(ROOT, 'src', 'derived.js'), 'utf8');
+export const pageMath = new Function(stripModules(derivedSrc)
+  + '\nreturn { rowModel: rowModel, totalsOf: totalsOf };')();
 
 /* Собранный отчёт: свой клон и ключ `--write` — тем же способом, каким его
  * собирает читатель. Путь берётся из настроек фикстуры, а не угадывается: он там

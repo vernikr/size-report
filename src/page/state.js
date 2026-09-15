@@ -35,6 +35,13 @@ appData.files.forEach(() => { appView.files.push(true); });
 export const appMetric = {};
 appData.metrics.forEach((m) => { appMetric[m.key] = m; });
 
+/* Колонка по пути файла: дерево страницы — дерево проекта (все пути каталога), а
+ * числа есть только у колонок, поэтому лист дерева по этому указателю и решает,
+ * галочка он или подпись. Имя берётся тем же правилом, что у записи выбора
+ * (`appFileAt`), — дерево и память читателя разойтись не могут. */
+export const appMeasured = {};
+appData.files.forEach((_f, i) => { appMeasured[appFileAt(i)] = i; });
+
 /* Ссылка — это тот же выбор в адресе, под своим именем: чужой якорь страницы
  * ссылкой не считается, и спорить с ним нечем. */
 const APP_LINK = '#size-report=';

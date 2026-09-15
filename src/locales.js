@@ -19,6 +19,13 @@ export const LOCALES = {
       metrics: 'Метрики',
       files: 'Файлы',
       dir: 'все файлы папки {name} ({n})',
+      dirNone: 'ни один файл папки {name} в отчёт не попал (в папке {n})',
+      /* Причина — у листа: в дереве он подписью, а не галочкой, и без этих слов
+       * читатель решил бы, что файл потерялся. */
+      notMeasuredRule: 'не измеряется: такой файл колонкой быть не может'
+        + ' (собранный, замок зависимостей, сам отчёт или слишком крупный)',
+      notMeasuredChoice: 'не измеряется: в набор колонок отчёта не попал'
+        + ' — набор задают настройки (columns)',
       all: 'все',
       sub: '{tool} {version} · {artifact}',
       /* Слова точности: подпись метрики говорит про худшее в колонке, а клетки —
@@ -70,6 +77,11 @@ export const LOCALES = {
       metrics: 'Metrics',
       files: 'Files',
       dir: 'all files in “{name}” ({n})',
+      dirNone: 'no file of “{name}” made it into the report ({n} in it)',
+      notMeasuredRule: 'not measured: such a file cannot be a column'
+        + ' (built, a dependency lock, the report itself, or too large)',
+      notMeasuredChoice: 'not measured: it is not in the report’s set of columns'
+        + ' — that set comes from the settings (columns)',
       all: 'all',
       sub: '{tool} {version} · {artifact}',
       exact: 'an exact number',

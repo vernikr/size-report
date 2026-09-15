@@ -21,7 +21,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { CATEGORY_ORDER } from '../src/size-table.js';
-import { cloneFixture, runFixture, tempDir } from '../tools/harness.js';
+import { cloneFixture, gitIn, runFixture, tempDir } from '../tools/harness.js';
 import { contractData } from '../tools/page-harness.js';
 import { TOOL_PKG } from '../src/tool.js';
 
@@ -30,7 +30,7 @@ after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 /* Контракт снимается один раз на весь набор: он зависит только от фикстуры и
  * настроек, а их одинаковость у разных клонов отдельно проверяет воспроизводимость. */
-const { text, data, golden } = contractData(tmp, 'numbers');
+const { dir, text, data, golden } = contractData(tmp, 'numbers');
 
 test('контракт воспроизводим: два прогона дают те же байты', () => {
   const second = cloneFixture(path.join(tmp, 'fixture-repro'));
@@ -76,6 +76,32 @@ test('в контракте нет ни одной производной вел
   });
   assert.equal(Object.prototype.hasOwnProperty.call(data, 'totals'), false,
     'движок посчитал итоги — это дело страницы: она одна знает, что включено');
+});
+
+/* Каталог — дерево проекта для страницы: все пути, которые видит git, а не только
+ * колонки. Знак причины читается однозначно: пусто — файл измеряется (и тогда он
+ * есть среди колонок), `rule` — колонкой быть не может (правило пакета), `choice` —
+ * мог бы, но в набор не выбран. Проверка идёт по дереву git, а не по описанию. */
+test('каталог называет все файлы проекта, а причину — только у тех, что вне отчёта', () => {
+  const tracked = gitIn(dir, ['ls-files']).split('\n').filter((l) => l !== '').sort();
+  /* Сам отчёт назван всегда, и это часть правила, а не исключение: его
+   * отслеживаемость — свойство момента, и зависеть от неё отчёт не должен. */
+  const artifactPath = data.report.artifact;
+  const expected = tracked.indexOf(artifactPath) >= 0 ? tracked : tracked.concat([artifactPath]).sort();
+  assert.deepEqual(data.catalog.map((e) => e.path).sort(), expected,
+    'каталог разошёлся с деревом git: дерево страницы — дерево проекта');
+  const measured = data.files.map((f) => (f.path === null ? f.paths[0] : f.path));
+  const named = data.catalog.filter((e) => e.why === null).map((e) => e.path);
+  assert.deepEqual(named.sort(), measured.filter((p) => tracked.indexOf(p) >= 0).sort(),
+    'знак «измеряется» стоит не у тех файлов');
+  data.catalog.filter((e) => e.why !== null).forEach((e) => {
+    assert.ok(['rule', 'choice'].indexOf(e.why) >= 0,
+      'файл ' + e.path + ': причина не названа (' + JSON.stringify(e.why) + ')');
+  });
+  assert.equal(data.catalog.find((e) => e.path === artifactPath).why, 'rule',
+    'сам отчёт назван колонкой, которой быть не может');
+  assert.ok(data.catalog.some((e) => e.why === 'choice'),
+    'в каталоге нет ни одного файла с причиной «не выбран в колонки»');
 });
 
 test('метрика, которая не минификация, помечена приближением', () => {

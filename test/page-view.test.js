@@ -7,19 +7,18 @@
  *      модульного синтаксиса, и оболочка не завела своих функций расчёта;
  *   2. страница самодостаточна (нет внешних ссылок и обращений к сети) и несёт
  *      данные контракта;
- *   3. выключение метрики, файла или папки пересчитывает таблицу и итог, дерево
- *      файлов повторяет пути данных, а у папки три состояния;
+ *   3. выключение метрики или файла пересчитывает таблицу и итог;
  *   4. приближённые клетки помечены, и знак итога — худшее из включённых;
  *   5. оформление таблицы одно на оба вывода, а состояния пустоты объясняются
  *      словами;
  *   6. переключатели панели — одна цель нажатия, и пересборка не отбирает фокус.
  *
- * Память выбора и обмен ссылкой — соседний набор (`page-choice`): файл разделён
- * по предмету, а не по размеру. Сам контракт и производные — `contract-data` и
- * `contract-derived`.
+ * Соседние наборы: дерево файлов и пересборка панели — `page-tree`, память выбора
+ * и обмен ссылкой — `page-choice`, сам контракт и производные — `contract-data` и
+ * `contract-derived`. Файлы разделены по предмету, а не по размеру.
  */
 
-import { test, after } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -27,28 +26,21 @@ import { JSDOM } from 'jsdom';
 import { pageScript, stripModules, valueParts } from '../src/size-table.js';
 import { PAGE_PARTS, pagePayload } from '../src/page/build.js';
 import { PAGE_CSS, TABLE_CSS } from '../src/css.js';
-import { ROOT, tempDir } from '../tools/harness.js';
+import { ROOT } from '../tools/harness.js';
 import {
-  allCells, fileBox, metricBox, nowCells, nowTotal, openPage as openReport, panelInputs,
-  reportSetup, toggleBox
+  allCells, derivedSrc, fileBox, metricBox, nowCells, nowTotal, pageMath, pageReady, panelInputs,
+  toggleBox
 } from '../tools/page-harness.js';
 
-const tmp = tempDir('page-view');
-after(() => fs.rmSync(tmp, { recursive: true, force: true }));
+const { data, pageText, openPage } = pageReady('view');
 
-const { data, pageText } = reportSetup(tmp, 'report');
-const openPage = () => openReport(pageText);
-
-/* Программа страницы собирается из исходников на диске: общий расчёт
- * (`src/derived.js`) и главы оболочки (`src/page/*.js`, список — от самой сборки).
- * Проверки ниже читают те же файлы, чтобы сверять вклеенное в страницу с тем, что
- * лежит в репозитории, а не с тем, что движок сказал про себя. */
-const derivedSrc = fs.readFileSync(path.join(ROOT, 'src', 'derived.js'), 'utf8');
+/* Программа страницы собирается из исходников на диске: главы оболочки
+ * (`src/page/*.js`, список — от самой сборки). Проверки ниже читают те же файлы,
+ * чтобы сверять вклеенное в страницу с тем, что лежит в репозитории, а не с тем,
+ * что движок сказал про себя. */
 const appSrc = PAGE_PARTS
   .map((part) => fs.readFileSync(path.join(ROOT, 'src', 'page', part.slice(2)), 'utf8'))
   .join('');
-const pageMath = new Function(stripModules(derivedSrc)
-  + '\nreturn { rowModel: rowModel, totalsOf: totalsOf };')();
 
 const allOn = () => data.files.map(() => true);
 
@@ -74,12 +66,13 @@ test('вычислительная часть страницы — код дви
    * второе лучше не делать вовсе. Главы читаются в том же виде, в каком они
    * попадают в страницу, — со снятым модульным синтаксисом. */
   assert.deepEqual(defined('\n' + stripModules(appSrc)).sort(), [
-    'appAll', 'appApply', 'appApprox', 'appBody', 'appBox', 'appCell', 'appCellClass', 'appCommit', 'appEl',
-    'appFileAt', 'appFileBox',
-    'appHash', 'appHead', 'appIndexes', 'appLinkRead', 'appLinkUse', 'appNotice', 'appPanel',
+    'appAll', 'appApply', 'appApprox', 'appBody', 'appBox', 'appCell', 'appCellClass', 'appCommit', 'appCount',
+    'appDirHead', 'appEl', 'appFileAt', 'appFileBox',
+    'appHash', 'appHead', 'appIndexes', 'appLeafAt', 'appLeaves', 'appLinkRead', 'appLinkUse', 'appNode',
+    'appNotice', 'appPanel',
     'appPassport', 'appRead', 'appRecord', 'appRecordOk', 'appRender', 'appRow',
     'appScrollBack', 'appScrollTop', 'appState', 'appSubHead',
-    'appTable', 'appTree', 'appTreeList', 'appUnknown', 'appValueCell', 'appWrite'
+    'appTable', 'appTree', 'appTreeList', 'appUnknown', 'appUnmeasuredBox', 'appValueCell', 'appWrite'
   ], 'оболочка страницы завела свою функцию: расчёт должен жить в вычислительной части');
   assert.equal(/\breduce\(|Math\.abs/.test(appSrc), false,
     'оболочка страницы считает итоги или знак дельты сама');
@@ -223,83 +216,6 @@ test('приближённые клетки помечены, а итог бер
     'с точными слагаемыми остались помеченные клетки');
 });
 
-const where = (f) => (f.path === null ? f.paths[0] : f.path);
-const dirs = (doc) => [...doc.querySelectorAll('#panel .box.dir')];
-const dirBox = (doc, prefix) => dirs(doc).find((b) => b.textContent.indexOf(prefix) === 0);
-const dirInput = (doc, prefix) => dirBox(doc, prefix).querySelector('input');
-const leaves = (doc) => [...doc.querySelectorAll('#panel .tree .box:not(.dir)')];
-
-// Папки дерева — ровно те, что есть в путях файлов, и в дереве лежат все файлы.
-function foldersMatchPaths(doc) {
-  const expected = [...new Set(data.files.map((f) => where(f).split('/').slice(0, -1).join('/')))]
-    .filter((d) => d !== '').sort();
-  assert.deepEqual(dirs(doc).map((b) => b.textContent.replace(/\/\d+$/, '')).sort(), expected,
-    'папки дерева разошлись с путями файлов');
-  assert.equal(leaves(doc).length, data.files.length, 'в дереве не все файлы');
-  data.files.forEach((f) => assert.ok(leaves(doc)
-    .some((b) => b.querySelector('input').title.indexOf(where(f)) === 0),
-  'в дереве нет файла ' + where(f)));
-}
-
-/* Три состояния папки: все её файлы включены — отметка; часть — третье
- * состояние; ни одного — папка просто не отмечена, но не выглядит частичной. */
-function folderStates(doc) {
-  const leafOf = (prefix) => dirBox(doc, prefix).closest('li').querySelector('.box:not(.dir) input');
-  assert.equal(dirInput(doc, 'src/').checked, true, 'папка не отмечена вместе со своими файлами');
-  toggleBox(doc, leafOf('src/'), false);
-  assert.equal(dirInput(doc, 'src/').indeterminate, true,
-    'папка с частью выключенных файлов не показала третье состояние');
-  assert.equal(dirInput(doc, 'src/').checked, false, 'частично выключенная папка отмечена как целая');
-  toggleBox(doc, dirInput(doc, 'src/'), true);
-  assert.equal(dirInput(doc, 'src/').indeterminate, false, 'третье состояние осталось после включения всех файлов');
-
-  assert.equal(dirInput(doc, 'notes/').checked, true, 'папка с единственным файлом не отмечена вместе с ним');
-  toggleBox(doc, leafOf('notes/'), false);
-  assert.equal(dirInput(doc, 'notes/').indeterminate, false,
-    'папка без включённых файлов показана как частичная');
-  assert.equal(dirInput(doc, 'notes/').checked, false, 'папка без включённых файлов осталась отмеченной');
-  toggleBox(doc, dirInput(doc, 'notes/'), true);
-  assert.equal(dirInput(doc, 'notes/').checked, true, 'включение папки не включило её файл');
-}
-
-/* Переключатель папки ведёт за собой всё поддерево: из таблицы и из итога
- * уходят ровно её файлы и их колонки. Быстрые кнопки категорий и дерево — одно
- * состояние: выключение категории видно на папке, где лежат её файлы, и не
- * трогает чужие. */
-function subtreeAndCategories(doc) {
-  const inSrc = [];
-  data.files.forEach((f, i) => { if (where(f).indexOf('src/') === 0) inSrc.push(i); });
-  assert.ok(inSrc.length > 1, 'в фикстуре нет папки с несколькими файлами');
-
-  const all = allOn();
-  const rawOf = (on) => pageMath.totalsOf(data.now, ['raw'], on).raw;
-  assert.equal(dirBox(doc, 'src/').querySelector('.n').textContent, String(inSrc.length),
-    'счётчик файлов у папки не тот');
-  assert.equal(nowTotal(doc), valueParts(rawOf(all)).text, 'итог до выключения папки не тот');
-  toggleBox(doc, dirInput(doc, 'src/'), false);
-  const off = all.map((_on, i) => inSrc.indexOf(i) < 0);
-  assert.equal(nowTotal(doc), valueParts(rawOf(off)).text, 'выключение папки не убрало её файлы из итога');
-  assert.equal(nowCells(doc), (off.filter(Boolean).length + 1) * data.metrics.length,
-    'выключение папки не убрало её колонки');
-
-  const chore = [...doc.querySelectorAll('#panel .row .box.all')]
-    .find((b) => b.textContent === data.categories.find((c) => c.key === 'chore').label);
-  assert.notEqual(chore, undefined, 'в панели нет быстрой кнопки категории');
-  toggleBox(doc, chore.querySelector('input'), false);
-  assert.equal(dirInput(doc, 'data/').checked, false,
-    'выключение категории не отразилось на папке с её файлами');
-  assert.equal(dirInput(doc, 'docs/').checked, true, 'выключение категории выключило чужие файлы');
-  toggleBox(doc, chore.querySelector('input'), true);
-  assert.equal(dirInput(doc, 'data/').checked, true, 'включение категории не вернуло её файлы');
-}
-
-test('дерево файлов: папки по путям, три состояния и всё поддерево', () => {
-  const doc = openPage().window.document;
-  foldersMatchPaths(doc);
-  folderStates(doc);
-  subtreeAndCategories(doc);
-});
-
 /* Оформление: общая часть таблицы у двух выводов одна, и цвет дельт задан один раз.
  * Проверяется по файлам и по собранной странице, а не на слово: второй набор стилей
  * или второй цвет дельт — это ровно то, из-за чего два отчёта одной истории
@@ -365,40 +281,6 @@ test('состояния пустоты: без метрик — слова вм
   assert.equal(onlyTotal[0].querySelectorAll('td').length, data.metrics.length,
     'с выключенными файлами в строке остались чужие колонки');
   assert.equal(doc.querySelectorAll('[colspan="0"]').length, 0, 'в разметке остался colspan="0"');
-});
-
-/* jsdom не раскладывает страницу, поэтому прокрутка у её элементов всегда ноль, а
- * запись в `scrollTop` ничего не значит. Чтобы проверить, что пересборка панели
- * прокрутку не теряет, окну даётся память о ней: тот же `scrollTop`, только
- * запоминаемый. Это подмена раскладки, а не поведения — страница читает и пишет то
- * же свойство, что и в браузере. */
-function scrollMemory(dom) {
-  Object.defineProperty(dom.window.Element.prototype, 'scrollTop', {
-    configurable: true,
-    get() { return this.appTop === undefined ? 0 : this.appTop; },
-    set(top) { this.appTop = top; }
-  });
-}
-
-/* Клик по галочке перерисовывает панель целиком, и прокрутка списка — это то, что
- * читатель в ней настроил (до какого файла дошёл): пересборка обязана её вернуть, а
- * поле под клавиатурой — не тянуть список к себе. Прокрутка панели и списка
- * проверяются обе: в широком окне прокручивается панель, в узком — список. */
-test('прокрутка панели и списка файлов переживает пересборку', () => {
-  const dom = openPage();
-  const doc = dom.window.document;
-  scrollMemory(dom);
-  const panel = doc.getElementById('panel');
-  const list = () => doc.querySelector('#panel .files');
-  panel.scrollTop = 137;
-  list().scrollTop = 48;
-
-  toggleBox(doc, fileBox(doc, 'src/code.js'), false);
-
-  assert.equal(panel.scrollTop, 137,
-    'пересборка панели вернула её прокрутку к началу: нижние метрики снова искать заново');
-  assert.equal(list().scrollTop, 48,
-    'пересборка вернула список файлов к началу: до нижних файлов дерева не добраться');
 });
 
 /* Переключатели панели глазами клавиатуры: поле ввода лежит внутри метки (одна цель

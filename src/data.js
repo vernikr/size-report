@@ -3,6 +3,7 @@ import { LOCALES } from './locales.js';
 import { metricView } from './metrics.js';
 import { rowHref } from './journal.js';
 import { build, skipLine } from './history.js';
+import { projectTree } from './project.js';
 import { TOOL_PKG } from './tool.js';
 
 /* Категории файлов и контракт со страницей: абсолютные значения и устройство
@@ -66,6 +67,10 @@ export function reportData(cfg, root) {
     categories: CATEGORY_ORDER.filter((key) => files.some((f) => f.category === key))
       .map((key) => ({ key: key, label: loc.categories[key] })),
     files: files,
+    /* Дерево страницы — дерево проекта: все пути, а не только колонки. Числа есть
+     * лишь у колонок, поэтому у каждой записи каталога сказано, чего ей не
+     * досталось: `why` пусто — файл измеряется, иначе названа причина. */
+    catalog: projectTree(root, cfg.output, files.map((f) => (f.path === null ? f.paths[0] : f.path))),
     rows: rows.map((r) => Object.assign(rowShape(r),
       { href: rowHref(r.section, r.sha, cfg), values: r.cells })),
     now: state.map((s) => (s === null ? null : s.cells)),

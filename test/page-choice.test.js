@@ -19,22 +19,16 @@
  * предмету, а не по размеру.
  */
 
-import { test, after } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import { totalsOf, valueParts } from '../src/size-table.js';
-import { tempDir } from '../tools/harness.js';
 import {
-  allCells as cellsOf, fileBox, linkTo, metricBox, nowCells, nowTotal, openPage as openReport,
-  reportSetup, stored, toggleBox as toggleCheck
+  allCells as cellsOf, fileBox, linkTo, metricBox, nowCells, nowTotal, pageReady,
+  stored, toggleBox as toggleCheck
 } from '../tools/page-harness.js';
 
-const tmp = tempDir('page-choice');
-after(() => fs.rmSync(tmp, { recursive: true, force: true }));
+const { data, openPage } = pageReady('choice');
 
-const { data, pageText } = reportSetup(tmp, 'report');
-
-const openPage = (seed, hash) => openReport(pageText, seed, hash);
 const allCells = () => cellsOf(data);
 const nowTotalCell = nowTotal;
 const topRaw = (off) => totalsOf(data.now, ['raw'], off).raw;

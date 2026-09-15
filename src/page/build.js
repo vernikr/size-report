@@ -62,6 +62,7 @@ function uiText(page, loc) {
     metrics: page.metrics,
     files: page.files,
     dir: page.dir,
+    dirNone: page.dirNone,
     all: page.all,
     linkForeign: page.linkForeign,
     linkBroken: page.linkBroken,
@@ -71,6 +72,10 @@ function uiText(page, loc) {
     exact: page.exact,
     approximate: page.approximate,
     approxCell: page.approximateCell,
+    /* Почему файла нет в отчёте — словами: причину называет движок знаком (`why`),
+     * а страница одевает знак в текст, как и всё остальное в панели. */
+    notMeasuredRule: page.notMeasuredRule,
+    notMeasuredChoice: page.notMeasuredChoice,
     methodLabel: page.panelMethod,
     empty: page.emptyMetrics,
     noFiles: page.noFiles,
