@@ -9,7 +9,8 @@
  * Поэтому проверка идёт с распакованного тарболла, а не из рабочего дерева.
  *
  * Что сверяется: все исходники доехали; `--json` из пакета равен выводу движка из
- * репозитория; собранные артефакт и страница — побайтово равны.
+ * репозитория; собранный отчёт — побайтово равен (путь берётся из настроек, а не
+ * угадывается: у потребителя он свой).
  *
  * Работает на клонах фикстуры: ни репозиторий, ни `docs/` проекта не трогаются.
  *
@@ -132,18 +133,13 @@ try {
   if (jsonRepo !== jsonPack) bad('--json из пакета не совпал с выводом репозитория');
   else ok('--json из пакета совпадает побайтово');
 
-  [repoBin, packBin].forEach((bin, i) => {
-    const dir = i === 0 ? repoClone : packClone;
-    run(bin, dir, ['--write']);
-    run(bin, dir, ['--page']);
-  });
+  [repoBin, packBin].forEach((bin, i) => run(bin, i === 0 ? repoClone : packClone, ['--write']));
 
-  [['docs/size-table.html', 'артефакт'], ['docs/size-report.html', 'страница']].forEach(([rel, what]) => {
-    const a = fs.readFileSync(path.join(repoClone, rel));
-    const b = fs.readFileSync(path.join(packClone, rel));
-    if (!a.equals(b)) bad(what + ' из пакета не совпал(а) с репозиторием');
-    else ok(what + ' из пакета совпадает побайтово', b.length + ' Б');
-  });
+  const rel = JSON.parse(fs.readFileSync(CONFIG, 'utf8')).output;
+  const a = fs.readFileSync(path.join(repoClone, rel));
+  const b = fs.readFileSync(path.join(packClone, rel));
+  if (!a.equals(b)) bad('отчёт из пакета не совпал с репозиторием');
+  else ok('отчёт из пакета совпадает побайтово', b.length + ' Б');
 } catch (e) {
   bad('проверка не прошла', e.message);
 } finally {

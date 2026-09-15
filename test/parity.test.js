@@ -6,7 +6,7 @@
  *
  * Прогоны на чтение идут на общем клоне фикстуры и кэшируются (`readRun`): одна
  * и та же команда в одном окружении не должна запускаться дважды ради двух
- * проверок. Собирающие прогоны (`--write` и контроль на своём артефакте) берут
+ * проверок. Собирающие прогоны (`--write` и контроль на своём отчёте) берут
  * свой клон — они пишут файл, и общий клон был бы уже не тем, на котором стоят
  * числа.
  */
@@ -16,8 +16,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  PACKAGE, SYNTH, cloneFixture, firstDiff, readRun, requireTarget, runFixtureWith, sha256,
-  shaFileLine, sharedClone, tempDir
+  CONFIG, PACKAGE, SYNTH, cloneFixture, firstDiff, readRun, requireTarget, runFixtureWith,
+  sharedClone, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('parity');
@@ -37,16 +37,22 @@ test('движок пакета: --json побайтово равен этало
     'вывод --json разошёлся с эталоном: ' + firstDiff(res.stdout, goldenText));
 });
 
-test('движок пакета: --write собирает тот же артефакт и проходит контроль', () => {
+test('движок пакета: --write собирает отчёт и проходит свой контроль', () => {
   requireTarget(PACKAGE);
   const dir = cloneFixture(path.join(tmp, 'write'));
   const wrote = runFixtureWith(PACKAGE, dir, ['--write']);
-  assert.equal(wrote.code, 0, 'инструмент не собрал артефакт: ' + wrote.stderr.trim());
+  assert.equal(wrote.code, 0, 'инструмент не собрал отчёт: ' + wrote.stderr.trim());
 
-  const artifact = fs.readFileSync(path.join(dir, 'docs', 'size-table.html'));
-  assert.equal(sha256(artifact), shaFileLine(path.join(SYNTH, 'artifact.sha256')),
-    'артефакт разошёлся с эталонным побайтово (эталон ' + goldenJson.rows.length + ' строк × '
-      + goldenJson.columns.length + ' колонок)');
+  /* Собранный отчёт обязан быть самодостаточным: данные, оформление и программа —
+   * в нём самом, и ни одной внешней ссылки. Побайтовой сверки с замороженной
+   * копией здесь нет намеренно: та копия писала статическую таблицу, и сверять
+   * форму не с чем — числа уже сверены выше (`--json` побайтово равен эталону). */
+  const cfg = JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
+  const report = fs.readFileSync(path.join(dir, cfg.output), 'utf8');
+  ['src="', '<link '].forEach((mark) => assert.equal(report.indexOf(mark), -1,
+    'в отчёте есть внешняя ссылка (' + mark + '): открыть его без сети было бы нечем'));
+  assert.ok(report.indexOf('id="data"') > 0, 'в отчёте нет данных контракта');
+  assert.ok(report.indexOf('<style>') > 0, 'в отчёте нет оформления');
 
   const checked = runFixtureWith(PACKAGE, dir, []);
   assert.equal(checked.code, 0,

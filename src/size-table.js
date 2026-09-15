@@ -37,13 +37,16 @@
  * начинает работать и для стратегии «пересобрать и дописать в тот же коммит»:
  * без sha артефакт становится неподвижной точкой сборки.
  *
+ * Отчёт один: самодостаточная страница (`size-report.html`), в которой лежат и
+ * данные, и оформление, и программа. Второй формы того же отчёта нет намеренно: два
+ * вывода одной истории разошлись бы молча, а выбрать, какой верный, было бы нечем.
+ *
  * Запуск (из любого места репозитория; `size` — когда пакет установлен, иначе
  * `node bin/size.js`):
- *   size                    проверка: таблица совпадает с историей (CI)
- *   size --write            перегенерировать таблицу
+ *   size                    проверка: отчёт совпадает с историей (CI)
+ *   size --write [файл]     перегенерировать отчёт
  *   size --json             строки как JSON в stdout
- *   size --data             данные для страницы и агента в stdout
- *   size --page [файл]      собрать страницу отчёта
+ *   size --data             данные для отчёта и агента в stdout
  *   size --init [файл]      закрепить настройки файлом (без него они выводятся из проекта)
  *   size --config <путь>    другой файл настроек
  *   size --help             справка и коды выхода
@@ -64,8 +67,8 @@
  *   config → project, git, refusal, locales, metrics, data — настройки проекта;
  *   history → git, metrics, journal, refusal           — сборка по истории;
  *   data → locales, metrics, journal, history, tool    — контракт со страницей;
- *   render → locales, metrics, journal, derived        — статический артефакт;
- *   page/build → locales, render                       — страница отчёта;
+ *   page/build → locales, css                          — отчёт одним файлом;
+ *   artifact → data, page/build                        — запись отчёта;
  *   modes → почти все                                  — что делать по запросу;
  *   init → config, project, refusal, artifact          — закрепление настроек файлом;
  *   cli → args, modes, init, config, refusal           — вход: разбор и доставка.
@@ -76,11 +79,10 @@
 export { main } from './cli.js';
 export { initMode } from './init.js';
 export { sniffColumns } from './project.js';
-export { check, dataMode, pageMode } from './modes.js';
+export { check, dataMode, writeMode } from './modes.js';
 export { reportData, categoryOf, CATEGORY_EXTS, CATEGORY_ORDER } from './data.js';
 export { measureHistory } from './history.js';
-export { render, noteText, cellHtml, valueHtml } from './render.js';
-export { pageHtml, pageScript, pageSource, stripModules } from './page/build.js';
+export { pageHtml, pageScript, pageSource, stripModules, esc } from './page/build.js';
 export { measureBlob, METRICS } from './metrics.js';
 export { minifyForm, strategyFor, stripCss, stripHtml, stripJs, stripLines, compactJson,
   STRATEGIES } from './strip.js';

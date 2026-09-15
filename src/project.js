@@ -97,8 +97,11 @@ function exists(root, p) {
   return fs.existsSync(path.join(root, p));
 }
 
+/* Имя отчёта — одно на пакет и на проект: файл это и есть страница отчёта, и
+ * называться иначе она не может. Каталог решает только, где ей лежать: рядом с
+ * доками, если они в проекте есть, иначе в корне. */
 function outputOf(root) {
-  return (exists(root, 'docs') ? 'docs/' : '') + 'size-table.html';
+  return (exists(root, 'docs') ? 'docs/' : '') + 'size-report.html';
 }
 
 /* Менеджер пакетов — по lock-файлу, а не догадкой: команда обязана существовать

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* Сверяет движок пакета с эталоном, снятым с живого проекта: числа (`--json`) и
- * собранный артефакт (sha256) на том же коммите — в двух окружениях сразу.
+ * собранный отчёт на том же коммите — в двух окружениях сразу.
  *
  * Зачем отдельно от теста. Фикстура доказывает перенос на маленькой истории, где
  * все ловушки под контролем. Живой проект доказывает то, чего фикстура не может:
@@ -31,7 +31,6 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { collectOutput, gitIn } from './harness.js';
@@ -62,8 +61,14 @@ function parseArgs(args) {
   return out;
 }
 
-function sha256(buf) {
-  return crypto.createHash('sha256').update(buf).digest('hex');
+/* Отсутствие файла — тоже ответ («отчёта нет»), и он должен быть строкой сверки, а
+ * не исключением на середине прогона. */
+function readIfExists(file) {
+  try {
+    return fs.readFileSync(file, 'utf8');
+  } catch (_e) {
+    return null;
+  }
 }
 
 function firstDiff(a, b) {
@@ -178,7 +183,7 @@ function contractLines(lines, contract) {
 
 /* Одно окружение целиком: свой клон, свои прогоны, свой список строк вывода. */
 async function checkProfile(profile, expected, tmp) {
-  const { bin, repo, head, data, frozen, artifactSha, artifactRel } = expected;
+  const { bin, repo, head, data, frozen, artifactRel } = expected;
   const lines = ['— ' + profile.label];
   let bad = 0;
 
@@ -191,13 +196,21 @@ async function checkProfile(profile, expected, tmp) {
   bad += verdict(lines, json.stdout === data, 'числа совпали с эталоном побайтово',
     'числа разошлись с эталоном: ' + firstDiff(json.stdout, data));
 
+  /* Отчёт — самодостаточная страница, а эталон снят с прежней статической таблицы:
+   * побайтовой сверки здесь больше нет, и это не потеря, а другой предмет. Верным
+   * обязано оставаться другое: файл появился по тому пути, который назвал сам
+   * потребитель, и ничего не тянет со стороны (внешняя ссылка сделала бы его
+   * неоткрываемым без сети — а он за тем и собирается, чтобы открываться с диска). */
   const wrote = await runCli(bin, dir, ['--write'], profile.env);
-  if (wrote.code !== 0) return broken(lines, bad, 'движок не собрал артефакт: ' + wrote.stderr.trim());
-  const artifact = fs.readFileSync(path.join(dir, artifactRel));
-  bad += verdict(lines, sha256(artifact) === artifactSha,
-    'артефакт совпал побайтово: ' + artifact.length + ' Б, sha256 ' + artifactSha.slice(0, 12),
-    'артефакт разошёлся: sha256 ' + sha256(artifact).slice(0, 12)
-      + ' против эталонного ' + artifactSha.slice(0, 12));
+  if (wrote.code !== 0) return broken(lines, bad, 'движок не собрал отчёт: ' + wrote.stderr.trim());
+  const artifact = readIfExists(path.join(dir, artifactRel));
+  const external = artifact === null ? [] : ['src="', '<link '].filter((m) => artifact.indexOf(m) >= 0);
+  const selfMade = artifact !== null && external.length === 0 && artifact.indexOf('id="data"') >= 0;
+  bad += verdict(lines, selfMade,
+    'отчёт самодостаточен: ' + artifactRel + ', ' + artifact.length + ' Б, без внешних ссылок',
+    artifact === null ? 'отчёта нет по пути из настроек: ' + artifactRel
+      : 'отчёт не самодостаточен: ' + (external.length > 0 ? 'внешние ссылки ' + external.join(', ')
+        : 'в нём нет данных'));
 
   const checked = await runCli(bin, dir, [], profile.env);
   bad += verdict(lines, checked.code === 0, 'контрольный режим на своём артефакте зелёный',
@@ -228,11 +241,10 @@ async function main() {
   const head = manifest.project.head;
   const data = fs.readFileSync(path.join(PARITY, 'data.json')).toString('utf8');
   const frozen = JSON.parse(data);
-  const artifactSha = fs.readFileSync(path.join(PARITY, 'artifact.sha256'), 'utf8').split(/\s+/)[0];
   const rows = frozen.rows.length;
   const expected = {
     bin: bin, repo: repo, head: head, data: data, frozen: frozen,
-    artifactSha: artifactSha, artifactRel: manifest.artifact.path
+    artifactRel: manifest.artifact.path
   };
 
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'size-report-live-'));

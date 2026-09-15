@@ -12,14 +12,15 @@ export const LOCALES = {
     total: 'Общий объём',
     now: 'сейчас',
     categories: { code: 'Код', docs: 'Документация', chore: 'Служебные', assets: 'Ресурсы' },
-    /* Тексты страницы отчёта: в артефакт они не попадают, поэтому меняются
-     * независимо от его заморожённых байтов. */
+    /* Тексты страницы отчёта. Они лежат в самом файле отчёта (отдельным словарём,
+     * рядом с данными), поэтому меняются вместе с ним — и правка слова стоит
+     * пересборки отчёта, иначе файл разойдётся с историей. */
     page: {
       metrics: 'Метрики',
       files: 'Файлы',
       dir: 'все файлы папки {name} ({n})',
       all: 'все',
-      sub: '{tool} {version} · рядом со страницей — статическая таблица: {artifact}',
+      sub: '{tool} {version} · {artifact}',
       legendUp: 'рост',
       legendDown: 'спад',
       legendSame: 'пустая клетка — не менялось',
@@ -75,7 +76,7 @@ export const LOCALES = {
       files: 'Files',
       dir: 'all files in “{name}” ({n})',
       all: 'all',
-      sub: '{tool} {version} · a static table sits next to this page: {artifact}',
+      sub: '{tool} {version} · {artifact}',
       legendUp: 'growth',
       legendDown: 'fall',
       legendSame: 'an empty cell — no change',

@@ -11,13 +11,13 @@ import * as api from '../src/size-table.js';
 const API = [
   'CATEGORY_EXTS', 'CATEGORY_ORDER', 'CONFIG_NAME', 'DEFAULT_CONFIG', 'EXIT', 'LOCALES',
   'METRICS', 'Refusal', 'STRATEGIES', 'USAGE', 'anchor', 'argValue', 'assertFullHistory',
-  'blobAt', 'categoryOf', 'cellHtml', 'cellParts', 'check', 'cliCommand', 'commitParts',
-  'compactJson', 'dataMode', 'deltaOf', 'gitRoot', 'group', 'initMode', 'loadConfig',
-  'main', 'measureBlob', 'measureHistory', 'minifyForm', 'noteText', 'nowModel', 'pageHtml',
-  'pageMode', 'pageScript', 'pageSource', 'parseSections', 'readBlobs', 'readHistory',
-  'refuse', 'render', 'reportData', 'rowHref', 'rowModel', 'sectionLink', 'sniffColumns',
+  'blobAt', 'categoryOf', 'cellParts', 'check', 'cliCommand', 'commitParts',
+  'compactJson', 'dataMode', 'deltaOf', 'esc', 'gitRoot', 'group', 'initMode', 'loadConfig',
+  'main', 'measureBlob', 'measureHistory', 'minifyForm', 'nowModel', 'pageHtml',
+  'pageScript', 'pageSource', 'parseSections', 'readBlobs', 'readHistory',
+  'refuse', 'reportData', 'rowHref', 'rowModel', 'sectionLink', 'sniffColumns',
   'strategyFor', 'stripCss', 'stripHtml', 'stripJs', 'stripLines', 'stripModules',
-  'touchedSection', 'totalsOf', 'validateConfig', 'valueHtml', 'valueParts'
+  'touchedSection', 'totalsOf', 'validateConfig', 'valueParts', 'writeMode'
 ];
 
 test('публичный API не изменился', () => {

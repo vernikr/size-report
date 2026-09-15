@@ -1,11 +1,12 @@
 import path from 'path';
-import { EXIT, Refusal, USAGE } from './refusal.js';
+import { EXIT, Refusal, USAGE, cliCommand } from './refusal.js';
 import { CONFIG_NAME, gitRoot, loadConfig } from './config.js';
 import { HOOK_COMMANDS, parseArgs } from './args.js';
 import { initMode } from './init.js';
 import { derivedLines } from './project.js';
+import { autoInstall } from './hook.js';
 import {
-  checkMode, coverageMode, dataMode, doctorMode, explainMode, hookMode, jsonMode, pageMode, writeMode
+  checkMode, coverageMode, dataMode, doctorMode, explainMode, hookMode, jsonMode, writeMode
 } from './modes.js';
 
 /* Вход инструмента: разбор строки, чтение проекта и доставка запроса режиму.
@@ -28,12 +29,22 @@ const RUNNERS = {
   check: (c, x) => coverageMode(x.cfg, x.root, x.configFile, c.json),
   explain: (c, x) => explainMode(x.cfg, x.root, c.arg[0], c.json),
   '--data': (c, x) => dataMode(x.cfg, x.root),
-  '--page': (c, x) => pageMode(x.cfg, x.root, c.values['--page']),
-  '--write': (c, x) => writeMode(x.cfg, x.root),
+  '--write': (c, x) => writeMode(x.cfg, x.root, c.values['--write']),
   '': (c, x) => (c.json ? jsonMode(x.cfg, x.root) : checkMode(x.cfg, x.root))
 };
 
 const asked = (cmd) => (cmd.verb === null ? (cmd.mode === null ? '' : cmd.mode) : cmd.verb);
+
+/* Постановка хука без спроса — здесь, а не в `doctor` и не в `hook-run`: первый
+ * только докладывает, а второй зовётся уже из поставленного хука. Ставится один раз
+ * в клоне и называется вслух, дальше молчит: отчёт обновляется после каждого
+ * коммита без ручного шага (устройство и границы — `src/hook.js`). */
+function ensureHook(root, cfg) {
+  const files = autoInstall(root, cfg);
+  if (files === null) return;
+  console.error('· хук поставлен: ' + files.join(', ') + ' — отчёт обновляется после каждого'
+    + ' коммита (снять: ' + cliCommand('uninstall-hook') + ')');
+}
 
 /* Доставка. Диагностика и хук отвечают до чтения настроек: им нужен не весь
  * проект, а окружение, и отказывать им из-за настроек было бы неверно — про
@@ -45,6 +56,7 @@ function deliver(cmd, base) {
   // Примечание идёт в stderr: у `--json` и `--data` в stdout лежат данные, и
   // подмешивать в них рассказ о настройках значило бы ломать разбор.
   if (ctx.cfg.derived) derivedLines(ctx.cfg).forEach((line) => console.error(line));
+  ensureHook(base.root, ctx.cfg);
   return RUNNERS[asked(cmd)](cmd, ctx);
 }
 

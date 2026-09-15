@@ -25,8 +25,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { JSDOM } from 'jsdom';
 import { pageScript, stripModules, valueParts } from '../src/size-table.js';
-import { PAGE_PARTS } from '../src/page/build.js';
-import { ARTIFACT_CSS, PAGE_CSS, TABLE_CSS } from '../src/css.js';
+import { PAGE_PARTS, pagePayload } from '../src/page/build.js';
+import { PAGE_CSS, TABLE_CSS } from '../src/css.js';
 import { ROOT, tempDir } from '../tools/harness.js';
 import {
   allCells, fileBox, metricBox, nowCells, nowTotal, openPage as openReport, panelInputs,
@@ -112,7 +112,15 @@ test('страница самодостаточна и несёт данные �
 
   const dom = new JSDOM(pageText);
   const embedded = JSON.parse(dom.window.document.getElementById('data').textContent);
-  assert.deepEqual(embedded, data, 'в странице лежат не те данные, что отдаёт --data');
+  assert.deepEqual(embedded, pagePayload(data), 'в странице лежат не те данные, что отдаёт --data');
+
+  /* Чего в файле нет — сказано кодом, а не комментарием. Список пропущенных
+   * коммитов меняется от коммита самого отчёта, поэтому в файле его быть не может:
+   * отчёт перестал бы быть неподвижной точкой, а хук коммитил бы его бесконечно
+   * (проверка хука — `test/hook.test.js`). Наружу этот список по-прежнему идёт:
+   * `--data` и `--json`. */
+  assert.deepEqual(Object.keys(data).filter((key) => !(key in embedded)), ['skipped'],
+    'из страницы пропало что-то, кроме объявленного в сборке (NOT_IN_FILE)');
 });
 
 test('страница считает то же, что артефакт, и пересчитывается по выбору', () => {
@@ -316,8 +324,8 @@ test('оформление таблицы одно на оба вывода, и 
   const hex = (text) => [...text.matchAll(/#[0-9a-f]{6}\b/gi)].map((m) => m[0].toLowerCase());
   assert.deepEqual([...new Set(hex(TABLE_CSS))].sort(), ['#1e8449', '#c0392b'],
     'соглашение о цвете дельт изменилось — его надо записать заново (src/css.js)');
-  assert.deepEqual(hex(ARTIFACT_CSS + PAGE_CSS), [],
-    'оформление артефакта или страницы завело свой цвет: цвет дельт должен быть один на пакет');
+  assert.deepEqual(hex(PAGE_CSS), [],
+    'оформление страницы завело свой цвет: цвет дельт должен быть один на пакет');
   hex(TABLE_CSS).forEach((color) => assert.equal(pageText.split(color).length - 1, 1,
     'цвет ' + color + ' встречается в странице не один раз: он уехал из общей части'));
 });

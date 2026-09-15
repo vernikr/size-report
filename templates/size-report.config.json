@@ -1,5 +1,5 @@
 {
-  "output": "docs/size-table.html",
+  "output": "docs/size-report.html",
   "locale": "ru",
   "title": "Объём файлов по коммитам",
   "heading": "Объём файлов по коммитам",

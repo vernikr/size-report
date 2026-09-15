@@ -21,15 +21,15 @@ import { cliCommand, advicePath, refuseCause } from './refusal.js';
  * места и требует проверки на каждое.
  */
 
-const MODES = ['--init', '--write', '--data', '--page'];
-const VALUE_FLAGS = ['--config', '--init', '--page'];
+const MODES = ['--init', '--write', '--data'];
+const VALUE_FLAGS = ['--config', '--init', '--write'];
 const FLAGS = ['--help', '-h'].concat(MODES, VALUE_FLAGS, ['--json', '--force']);
 const COMMANDS = ['check', 'explain', 'doctor', 'install-hook', 'uninstall-hook', 'hook-run'];
 const ANSWER_COMMANDS = ['check', 'explain', 'doctor'];
 export const HOOK_COMMANDS = ['install-hook', 'uninstall-hook', 'hook-run'];
 
 /* Ключ со значением: забирает следующий аргумент и возвращает, сколько съел. У
- * `--init` и `--page` пустое значение — законное «по умолчанию», а у `--config`
+ * `--init` и `--write` пустое значение — законное «по умолчанию», а у `--config`
  * это молчаливый пропуск: настройки были бы взяты не те, что назвал человек. */
 function takeValue(flag, args, i, values) {
   const next = args[i + 1];
@@ -95,7 +95,7 @@ function checkModes(plan) {
 
 /* Слово, которого команда не знает. Отдельным вопросом, потому что виновников
  * тут двое: опечатка в команде — и лишнее значение режима, который своё значение
- * уже забрал (у `--init` и `--page` оно одно). Оба случая обязаны назвать своего
+ * уже забрал (у `--init` и `--write` оно одно). Оба случая обязаны назвать своего
  * виновника: у `--config` остаток — именно команда, и зов её разбирается как
  * команда, а не как лишнее слово. */
 function checkUnknownWord(plan) {

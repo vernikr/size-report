@@ -27,7 +27,7 @@ test('--help отвечает справкой, кодом 0 и без наст�
   const res = runSize(tmp, ['--help']);
   assert.equal(res.code, 0, 'справка не ответила успехом: ' + firstLine(res.stderr));
   assert.equal(hasStack(res.stdout + res.stderr), false, 'в справке стек:\n' + res.stdout);
-  ['--init', '--write', '--data', '--page', '--json', '--config'].forEach((flag) => {
+  ['--init', '--write', '--data', '--json', '--config'].forEach((flag) => {
     assert.ok(res.stdout.indexOf(flag) >= 0, 'в справке нет режима ' + flag);
   });
   assert.match(res.stdout, /Коды выхода/, 'справка не называет коды выхода');
@@ -184,7 +184,7 @@ test('незнакомый ключ, ключ без значения и лиш�
 
   // Слово после ключа со значением — лишнее, и обвинять его как «неизвестную
   // команду» значит назвать не ту причину.
-  const extra = runSize(dir, ['--page', 'a.html', 'b.html']);
+  const extra = runSize(dir, ['--write', 'a.html', 'b.html']);
   refusal(extra, 2, 'лишнее слово после ключа со значением');
   assert.match(extra.stderr, /лишнее слово «b\.html»/, 'отказ назвал не то слово:\n' + extra.stderr);
 
@@ -203,7 +203,7 @@ test('незнакомый ключ, ключ без значения и лиш�
   // путается с лишним словом, а команда и ключи читаются в любом порядке.
   const legal = [
     ['--init', 'draft.json', '--force'],
-    ['--page', 'out.html', '--config', CONFIG],
+    ['--write', 'out.html', '--config', CONFIG],
     ['explain', gitIn(dir, ['rev-parse', 'HEAD']).trim(), '--config', CONFIG],
     ['--json', '--config', CONFIG],
     ['--data', '--config', CONFIG],
@@ -213,7 +213,7 @@ test('незнакомый ключ, ключ без значения и лиш�
     const res = runSize(dir, args);
     assert.equal(res.code, 0, 'законный зов «' + args.join(' ') + '» отвергнут: ' + firstLine(res.stderr));
   });
-  assert.ok(fs.existsSync(path.join(dir, 'out.html')), 'значение «--page» не дошло до записи');
+  assert.ok(fs.existsSync(path.join(dir, 'out.html')), 'значение «--write» не дошло до записи');
 });
 
 /* Второй род молчаливого пропуска — не слово, а режим: `--write --data` отвечал
@@ -223,7 +223,7 @@ test('незнакомый ключ, ключ без значения и лиш�
  * другом не работают, и ключ, названный дважды. */
 test('два режима сразу и несовместимые ключи — отказ, а не тишина', () => {
   const dir = cloneFixture(path.join(tmp, 'mode-clash'));
-  const modes = ['--init', '--write', '--data', '--page'];
+  const modes = ['--init', '--write', '--data'];
   for (let i = 0; i < modes.length; i++) {
     for (let j = i + 1; j < modes.length; j++) {
       const res = runSize(dir, [modes[i], modes[j]]);
@@ -285,7 +285,7 @@ test('--json отвечает ровно там, где у вызова есть
   });
 
   // Режимы: у них ответ уже один — запись или черновик, и JSON к ней не просится.
-  ['--init', '--write', '--data', '--page'].forEach((mode) => {
+  ['--init', '--write', '--data'].forEach((mode) => {
     const res = runSize(dir, [mode, '--json']);
     refusal(res, 2, '--json рядом с режимом ' + mode);
     assert.ok(res.stderr.indexOf('«--json»') >= 0 && res.stderr.indexOf('«' + mode + '»') >= 0,
@@ -301,8 +301,8 @@ test('--json отвечает ровно там, где у вызова есть
 
   // И ни один отвергнутый зов не тронул проект: разбор идёт до чтения дерева.
   const page = path.join(dir, 'refused-page.html');
-  refusal(runSize(dir, ['--page', page, '--json']), 2, '--json рядом с --page');
-  assert.equal(fs.existsSync(page), false, 'отвергнутый зов всё-таки записал страницу');
+  refusal(runSize(dir, ['--write', page, '--json']), 2, '--json рядом с --write');
+  assert.equal(fs.existsSync(page), false, 'отвергнутый зов всё-таки записал отчёт');
 });
 
 /* ---------- таблица кодов ---------- */

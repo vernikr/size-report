@@ -36,13 +36,13 @@ test('обрезанная история: код 3 и команда докач
 
 /* ---------- вывод в каталог, которого нет ---------- */
 
-test('--page создаёт недостающий каталог', () => {
+test('--write создаёт недостающий каталог, названный ключом', () => {
   const dir = cloneFixture(path.join(tmp, 'page-dir'));
   const target = path.join('.size-report', 'report.html');
-  const res = runFixture(dir, ['--page', target]);
-  assert.equal(res.code, 0, '--page отказался работать: ' + firstLine(res.stderr));
-  assert.equal(hasStack(res.stderr), false, '--page упал стеком:\n' + res.stderr);
-  assert.ok(fs.existsSync(path.join(dir, target)), 'страницы нет по указанному пути: ' + target);
+  const res = runFixture(dir, ['--write', target]);
+  assert.equal(res.code, 0, '--write отказался работать: ' + firstLine(res.stderr));
+  assert.equal(hasStack(res.stderr), false, '--write упал стеком:\n' + res.stderr);
+  assert.ok(fs.existsSync(path.join(dir, target)), 'отчёта нет по указанному пути: ' + target);
 });
 
 test('--write создаёт недостающий каталог, названный в настройках', () => {

@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
-import { SYNTH, cloneFixture, runFixture } from './harness.js';
+import { CONFIG, SYNTH, cloneFixture, runFixture } from './harness.js';
 
 /* Данные контракта и замороженный эталон: свежий клон фикстуры плюс один прогон
  * `--data`. Контракт одинаков у всех, кто его читает, — это проверяет отдельно
@@ -37,14 +37,16 @@ export function reportSetup(tmp, name) {
   return { data: data, golden: golden, pageText: pageHtml(tmp, name) };
 }
 
-/* Собранная страница: свой клон и ключ `--page` — тем же способом, каким её
- * собирает читатель. */
+/* Собранный отчёт: свой клон и ключ `--write` — тем же способом, каким его
+ * собирает читатель. Путь берётся из настроек фикстуры, а не угадывается: он там
+ * назван человеком, и проверять надо именно то место. */
 export function pageHtml(tmp, name) {
   const dir = cloneFixture(path.join(tmp, 'page-' + name));
-  const run = runFixture(dir, ['--page']);
-  assert.equal(run.code, 0, 'инструмент не собрал страницу: ' + run.stderr.trim());
-  const file = path.join(dir, 'docs', 'size-report.html');
-  assert.ok(fs.existsSync(file), 'страница не появилась рядом с таблицей');
+  const run = runFixture(dir, ['--write']);
+  assert.equal(run.code, 0, 'инструмент не собрал отчёт: ' + run.stderr.trim());
+  const cfg = JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
+  const file = path.join(dir, cfg.output);
+  assert.ok(fs.existsSync(file), 'отчёт не появился по пути из настроек: ' + cfg.output);
   return fs.readFileSync(file, 'utf8');
 }
 

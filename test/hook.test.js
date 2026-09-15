@@ -12,8 +12,10 @@
  *
  * Что здесь считается доказательством:
  *
- * - установка — только явной командой, и до неё репозиторий не меняется ничем
- *   (хук лежит в `.git/hooks`, `git status` его не видит);
+ * - установка — **сама** при первом запуске в проекте (и после постановки пакета),
+ *   иначе первого обновления отчёта человек не увидел бы вовсе; явная команда нужна
+ *   там, где поставить нельзя, и она называет причину. Хук лежит в `.git/hooks`,
+ *   поэтому `git status` его не видит, а в свежем клоне его нет до первого запуска;
  * - правка кода даёт **отдельный** коммит с одним лишь отчётом — это и есть ответ
  *   на ловушку «правка кода и таблицы в одном коммите»;
  * - повторный запуск (и хук, запущенный собственным коммитом отчёта) не порождает
@@ -119,32 +121,62 @@ function commit(dir, subject, files) {
 
 /* ---------- установка ---------- */
 
-test('хук ставится только явной командой и до неё проект не меняется', () => {
+test('хук ставится сам при первом запуске, а ставится ли — решает проект', () => {
   const dir = clone('install');
+  const file = hookFileOf(dir);
 
-  // Обычные режимы хук не ставят: автоматика — решение проекта, а не побочный
-  // эффект запуска. Отчёт при этом остаётся тем же файлом (иначе первая же правка
-  // хука переписывала бы чужие байты).
-  assert.equal(runSize(dir, ['--config', CONFIG, '--write']).code, 0);
-  assert.equal(runSize(dir, ['--config', CONFIG, 'doctor', '--json']).code, 0,
-    'диагностика здорового проекта не зелёная');
-  assert.equal(fs.existsSync(hookFileOf(dir)), false, 'хук появился до явной установки');
-  assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '', 'проект грязный до установки');
+  // В свежем клоне хука нет: `.git/hooks` не клонируется, а поставить его до первого
+  // запуска некому — ручного шага от человека нет намеренно.
+  assert.equal(fs.existsSync(file), false, 'хук появился в клоне до первого запуска');
 
-  const res = install(dir);
-  assert.ok(fs.existsSync(hookFileOf(dir)), 'файла хука нет: ' + hookFileOf(dir));
-  assert.ok((fs.statSync(hookFileOf(dir)).mode & 0o111) !== 0, 'хук не исполняемый: git его не позовёт');
-  assert.ok(fs.readFileSync(hookFileOf(dir), 'utf8').indexOf('size-report') >= 0, 'в хуке нет метки инструмента');
+  // Первого обычного запуска достаточно.
+  assert.equal(runSize(dir, ['--config', CONFIG, '--write']).code, 0, 'отчёт не собрался');
+  assert.ok(fs.existsSync(file), 'первый запуск не поставил хук: ' + file);
+  assert.ok((fs.statSync(file).mode & 0o111) !== 0, 'хук не исполняемый: git его не позовёт');
+  assert.ok(fs.readFileSync(file, 'utf8').indexOf('size-report') >= 0, 'в хуке нет метки инструмента');
   assert.ok(fs.existsSync(path.join(dir, '.git', 'hooks', 'post-merge')),
     'нет хука пост-слияния: git не зовёт post-commit на слияние, отчёт остался бы stale');
   assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '',
-    'установка что-то изменила в проекте: хук обязан жить только в `.git`');
-  assert.match(res.stdout, /hooks.*enabled/, 'установка не сказала, чем выключается автоматика');
+    'постановка что-то изменила в проекте: хук обязан жить только в `.git`');
 
-  // Повторная установка — «уже стоит», а не второй файл.
+  // Диагностика ничего не переставляет: она докладывает, а не правит.
+  const before = fs.readFileSync(file, 'utf8');
+  assert.equal(runSize(dir, ['--config', CONFIG, 'doctor', '--json']).code, 0,
+    'диагностика здорового проекта не зелёная');
+  assert.equal(fs.readFileSync(file, 'utf8'), before, 'диагностика переписала хук');
+
+  // Явная установка на месте говорит то, что нужно человеку: уже стоит, чем
+  // выключается, как снимается.
   const again = install(dir);
-  assert.match(again.stdout, /установлен/, 'повторная установка не сказала, что уже стоит');
+  assert.match(again.stdout, /установлен/, 'установка не сказала, что хук уже стоит');
+  assert.match(again.stdout, /hooks.*enabled/, 'установка не сказала, чем выключается автоматика');
   assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '', 'повторная установка оставила грязь');
+});
+
+/* Автоматика — фоновая услуга, а не побочный эффект: там, где проект её не хочет или
+ * поставить её некуда, она не появляется и не мешает. Проверяется запуском (первым в
+ * клоне), а не чтением условия в коде. */
+test('там, где автоматику выключили или поставить нельзя, хук не появляется', () => {
+  const off = clone('install-off');
+  const offCfg = JSON.parse(fs.readFileSync(path.join(off, CONFIG), 'utf8'));
+  offCfg.hooks = { enabled: false };
+  fs.writeFileSync(path.join(off, CONFIG), JSON.stringify(offCfg, null, 2) + '\n');
+  assert.equal(runSize(off, ['--config', CONFIG, '--write']).code, 0, 'запись с выключателем не прошла');
+  assert.equal(fs.existsSync(hookFileOf(off)), false, 'хук поставлен вопреки hooks.enabled: false');
+
+  const foreignDir = clone('install-foreign');
+  const foreignFile = hookFileOf(foreignDir);
+  fs.mkdirSync(path.dirname(foreignFile), { recursive: true });
+  fs.writeFileSync(foreignFile, '#!/bin/sh\necho чужой хук\n');
+  fs.chmodSync(foreignFile, 0o755);
+  assert.equal(runSize(foreignDir, ['--config', CONFIG, '--write']).code, 0);
+  assert.match(fs.readFileSync(foreignFile, 'utf8'), /чужой хук/, 'чужой хук переписан постановкой');
+
+  const customDir = clone('install-custom');
+  gitIn(customDir, ['config', 'core.hooksPath', '.githooks']);
+  assert.equal(runSize(customDir, ['--config', CONFIG, '--write']).code, 0);
+  assert.equal(fs.existsSync(path.join(customDir, '.githooks')), false,
+    'постановка создала каталог чужого core.hooksPath');
 });
 
 /* ---------- обновление ---------- */

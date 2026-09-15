@@ -16,7 +16,7 @@ import { projectConfig } from './project.js';
 export const CONFIG_NAME = 'size-table.config.json';
 
 export const DEFAULT_CONFIG = {
-  output: 'size-table.html',
+  output: 'size-report.html',
   locale: 'ru',
   title: '',          // по умолчанию — заголовок из локали
   heading: '',
@@ -30,9 +30,10 @@ export const DEFAULT_CONFIG = {
   minify: { engine: 'strip', ext: {}, guard: ['.js', '.mjs', '.cjs'] },
   // Токены: каким словарём считать. Семейство — про модели, кодировка — про число.
   tokens: Object.assign({}, TOKEN_DEFAULTS),
-  // Автоматика хука: хук ставится только явной командой (`install-hook`), а этот
-  // ключ — её выключатель (`.size-report/…` не нужен: снятие хука возвращает
-  // проект к прежнему поведению).
+  // Автоматика хука: хук обновляет отчёт после каждого коммита и ставится сам —
+  // после установки пакета (`bin/postinstall.js`) и при первом запуске в проекте
+  // (`src/hook.js`); этот ключ — её выключатель (`.size-report/…` не нужен: снятие
+  // хука возвращает проект к прежнему поведению).
   hooks: { enabled: true },
   journal: null,
   links: { commitUrl: '' },

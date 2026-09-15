@@ -9,11 +9,9 @@ import { coverage, coverageText } from './check.js';
 import { explainCommit, explainText } from './explain.js';
 import { doctor, doctorText } from './doctor.js';
 import { hookRun, installHook, uninstallHook } from './hook.js';
-import { rebuild, writeFileEnsured } from './artifact.js';
+import { artifact, rebuild } from './artifact.js';
 import { sensorGaps } from './metrics.js';
-import { render } from './render.js';
 import { totalsOf } from './derived.js';
-import { pageHtml } from './page/build.js';
 
 /* Режимы: что инструмент делает по запросу. Разбор аргументов — в `src/args.js`, а
  * сюда приходит готовый план: какой режим, какой ключ, что печатать. Здесь же их
@@ -21,10 +19,10 @@ import { pageHtml } from './page/build.js';
  * на все режимы, потому что один и тот же счёт и один и тот же знак не должны
  * разойтись между `--write`, `--data`, `--page` и `size check`.
  *
- * Что где: сборка и сверка таблицы (`--write`, проверка), данные и страница
- * (`--data`, `--page`), полнота покрытия (`size check`), диагностика (`doctor`),
- * хук и объяснение пропущенной строки. Файл знает про все остальные модули сразу —
- * это его работа: связать их в одну команду.
+ * Что где: сборка и сверка отчёта (`--write`, проверка), данные контракта
+ * (`--data`), полнота покрытия (`size check`), диагностика (`doctor`), хук и
+ * объяснение пропущенной строки. Файл знает про все остальные модули сразу — это
+ * его работа: связать их в одну команду.
  */
 
 function kmb(bytes) {
@@ -81,23 +79,31 @@ export function check(cfg, want, root) {
   return 1;
 }
 
-export function writeMode(cfg, root) {
-  const { rows, dropped, state, html } = rebuild(cfg, root);
-  console.log('✓ ' + cfg.output + ': ' + rows.length + ' строк × ' + cfg.columns.length + ' файлов, '
-    + kmb(byteLen(html)) + ' (пропущено без строки: ' + dropped.length + ' — '
-    + dropped.map(skipLine).join(', ') + ')');
-  console.log('  состояние на HEAD: ' + cfg.columns.map((c, i) => c.label + ' '
-    + (state[i] === null ? '—' : cfg.metrics.map((m) => state[i].cells[m]).join('/'))).join(', '));
+/* Путь, названный ключом (`--write <файл>`), — это настройка `output` этого
+ * запуска: отчёт обязан называть себя тем путём, по которому лежит, иначе подпись в
+ * нём указывала бы на чужое место. */
+function withOutput(cfg, root, file) {
+  if (typeof file !== 'string') return cfg;
+  return Object.assign({}, cfg, { output: path.relative(root, path.resolve(file)) });
+}
+
+export function writeMode(cfg, root, file) {
+  const out = rebuild(withOutput(cfg, root, file), root);
+  const { rows, files, now, skipped } = out.data;
+  console.log('✓ ' + path.relative(root, out.file) + ': ' + rows.length + ' строк × ' + files.length + ' файлов, '
+    + kmb(byteLen(out.html)) + ' (пропущено без строки: ' + skipped.length + ' — '
+    + skipped.join(', ') + ')');
+  console.log('  состояние на HEAD: ' + files.map((f, i) => f.label + ' '
+    + (now[i] === null ? '—' : cfg.metrics.map((m) => now[i][m]).join('/'))).join(', '));
   return sensorNote(cfg);
 }
 
 export function checkMode(cfg, root) {
-  const { rows } = build(cfg, root);
-  const html = render(rows, cfg);
-  const code = check(cfg, html, root);
+  const out = artifact(cfg, root);
+  const code = check(cfg, out.html, root);
   if (code === 0) {
-    console.log('✓ таблица размеров: ' + rows.length + ' коммитов × ' + cfg.columns.length + ' файлов '
-      + 'совпадает с историей (' + cfg.output + ', ' + kmb(byteLen(html)) + ')');
+    console.log('✓ отчёт: ' + out.data.rows.length + ' коммитов × ' + out.data.files.length + ' файлов '
+      + 'совпадает с историей (' + cfg.output + ', ' + kmb(byteLen(out.html)) + ')');
   }
   return verdict(code, sensorGaps(cfg));
 }
@@ -159,21 +165,6 @@ export function explainMode(cfg, root, target, asJson) {
  * остаётся нетронутой: она заморожена эталоном паритета (fixtures/parity). */
 export function dataMode(cfg, root) {
   process.stdout.write(JSON.stringify(reportData(cfg, root), null, 2) + '\n');
-  return sensorNote(cfg);
-}
-
-/* Страница отчёта: собирается тем же проходом по истории, что и артефакт — иначе
- * два отчёта могли бы показывать разные числа. Файл кладётся рядом с таблицей,
- * потому что он из неё и растёт. */
-const PAGE_NAME = 'size-report.html';
-
-export function pageMode(cfg, root, file) {
-  const data = reportData(cfg, root);
-  const target = file ? path.resolve(file) : path.join(root, path.dirname(cfg.output), PAGE_NAME);
-  const html = pageHtml(data, cfg);
-  writeFileEnsured(target, html);
-  console.log('✓ ' + path.relative(root, target) + ': ' + data.rows.length + ' строк × '
-    + data.files.length + ' файлов, ' + kmb(byteLen(html)));
   return sensorNote(cfg);
 }
 

@@ -1,7 +1,12 @@
 import fs from 'fs';
 import { fill, LOCALES } from '../locales.js';
-import { esc } from '../render.js';
 import { PAGE_CSS, TABLE_CSS } from '../css.js';
+
+/* Экранирование текста в разметке — здесь, потому что единственный, кто собирает
+ * разметку из данных, — эта сборка: остальное рисует страница узлами. */
+export function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
 /* Сборка страницы отчёта: данные и программа в одном файле, внешних ссылок нет.
  * Оформление — тоже обычные файлы: общая часть таблицы (`table.css`) и своё
@@ -37,8 +42,8 @@ export function pageScript() {
   return pageSource('../derived.js') + '\n' + PAGE_PARTS.map((part) => pageSource(part)).join('');
 }
 
-/* Подпись под заголовком: чем собрана страница и что у неё рядом. Путь к таблице
- * текстом, а не ссылкой: страница открывается с диска и ни от чего не зависит. */
+/* Подпись под заголовком: чем собран отчёт и где он лежит. Путь — текстом, а не
+ * ссылкой: страница открывается с диска и ни от чего не зависит. */
 function subText(data, page) {
   return fill(page.sub, {
     tool: data.tool.name,
@@ -81,6 +86,20 @@ function uiText(page, loc) {
   };
 }
 
+/* Что в файл не идёт. Первое — список пропущенных коммитов: он меняется от
+ * коммита самого отчёта (тот, кому нечего сказать, попадает в список), и файл
+ * перестал бы быть **неподвижной точкой** — пересборка после его же коммита давала
+ * бы другие байты, а хук коммитил бы отчёт бесконечно. Странице этот список не
+ * нужен вовсе: она его не показывает. Читателю он по-прежнему доступен — `--data`,
+ * `--json` и `explain` отвечают этим же проходом. */
+const NOT_IN_FILE = ['skipped'];
+
+export function pagePayload(data) {
+  const out = Object.assign({}, data);
+  NOT_IN_FILE.forEach((key) => delete out[key]);
+  return out;
+}
+
 /* Страница отчёта — один файл: данные лежат в нём же, скрипт вклеен, внешних
  * ссылок нет. Поэтому она открывается двойным щелчком и работает без сети.
  * `<` в данных экранируется: иначе подпись коммита или путь закрыли бы тег
@@ -98,7 +117,7 @@ export function pageHtml(data, cfg) {
     + '<div id="shell" class="shell"><table id="grid"></table></div>\n'
     + '<p id="state" class="state" hidden></p>\n'
     + '<p id="note" class="note"></p>\n'
-    + '<script type="application/json" id="data">' + jsonInHtml(data) + '</script>\n'
+    + '<script type="application/json" id="data">' + jsonInHtml(pagePayload(data)) + '</script>\n'
     + '<script type="application/json" id="ui">' + jsonInHtml(uiText(loc.page, loc)) + '</script>\n'
     + '<script>\n' + pageScript() + '</script>\n</body>\n</html>\n';
 }

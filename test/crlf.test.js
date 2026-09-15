@@ -2,9 +2,9 @@
  * `core.autocrlf=true` (значение по умолчанию в установке Git для Windows) git
  * выкладывает на диск CRLF, а в объектах держит LF; инструмент обязан видеть это
  * как обычную выкладку, а не как расхождение с историей и не отказываться
- * работать. Проверка сравнивает такую выкладку и с обычной, и с эталоном, а
- * собранный артефакт — по хешу: сверка с рабочим деревом не должна превратиться в
- * пустышку.
+ * работать. Проверка сравнивает числа такой выкладки с обычной и с эталоном, а
+ * собранный отчёт — с отчётом, собранным в обычной выкладке: сверка с рабочим
+ * деревом не должна превратиться в пустышку.
  */
 
 import { test, after } from 'node:test';
@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  PACKAGE, SYNTH, firstDiff, gitIn, readRun, runFixtureWith, sha256, shaFileLine, sharedClone, tempDir
+  CONFIG, PACKAGE, SYNTH, cloneFixture, firstDiff, gitIn, readRun, runFixtureWith, sha256, sharedClone, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('crlf');
@@ -34,9 +34,13 @@ test('выкладка с переводами строк в CRLF не меша�
   assert.equal(crlf.stdout, plain.stdout, 'выкладка CRLF изменила числа: ' + firstDiff(crlf.stdout, plain.stdout));
   assert.equal(crlf.stdout, goldenText, 'выкладка CRLF разошлась с эталоном: ' + firstDiff(crlf.stdout, goldenText));
 
+  const cfg = JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
+  const plainDir = cloneFixture(path.join(tmp, 'crlf-plain'));
   const wrote = runFixtureWith(PACKAGE, dir, ['--write']);
   assert.equal(wrote.code, 0, 'сборка в выкладке CRLF не прошла: ' + wrote.stderr.trim().split('\n')[0]);
-  assert.equal(sha256(fs.readFileSync(path.join(dir, 'docs', 'size-table.html'))),
-    shaFileLine(path.join(SYNTH, 'artifact.sha256')),
-    'артефакт в выкладке CRLF разошёлся с эталонным побайтово');
+  assert.equal(runFixtureWith(PACKAGE, plainDir, ['--write']).code, 0,
+    'сборка в обычной выкладке не прошла');
+  assert.equal(sha256(fs.readFileSync(path.join(dir, cfg.output))),
+    sha256(fs.readFileSync(path.join(plainDir, cfg.output))),
+    'отчёт в выкладке CRLF разошёлся с собранным в обычной выкладке побайтово');
 });

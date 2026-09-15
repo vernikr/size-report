@@ -1,8 +1,0 @@
-:root { color-scheme: light dark; }
-/* Фон и цвет текста заданы явно и одной парой (Canvas/CanvasText): без этого
- * страница берёт цвет текста из схемы, а фон — нет, и в тёмной схеме числа
- * оказывались белыми на белом. */
-body { margin: 0; padding: 20px; background: Canvas; color: CanvasText; font: 12.5px/1.4 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
-h1 { margin: 0 0 6px; font-size: 16px; }
-.note { margin: 0 0 14px; max-width: 80em; opacity: .75; font-size: 12px; }
-.note code { background: rgba(127, 127, 127, .15); padding: 0 3px; border-radius: 3px; }

@@ -1,12 +1,12 @@
 {
   "name": "@vernikr/size-report",
-  "version": "1.3.1",
+  "version": "2.0.0",
   "author": "vernikr",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vernikr/size-report.git"
   },
-  "description": "Учёт роста объёма кода и документов по истории git: raw / min / токены, интерактивный отчёт вне git",
+  "description": "Учёт роста объёма кода и документов по истории git: raw / min / токены; отчёт — один самодостаточный файл, обновляется хуком сам",
   "type": "module",
   "license": "MIT",
   "packageManager": "pnpm@10.6.1",
@@ -32,6 +32,7 @@
   ],
   "sideEffects": false,
   "scripts": {
+    "postinstall": "node bin/postinstall.js",
     "test": "node tools/run-tests.js fast",
     "test:all": "node tools/run-tests.js full",
     "suites:measure": "node tools/run-tests.js measure",
