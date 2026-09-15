@@ -1,0 +1,86 @@
+name: Release
+
+# Выпуск — это тег, и больше ничего: `git push origin v1.2.3` собирает пакет,
+# прогоняет проверки и отправляет его в реестр. Ни секрета, ни кода из
+# аутентификатора: публикация идёт через trusted publishing (OIDC) — npm принимает
+# её по удостоверению GitHub Actions, выписанному для этого job'а, а не по токену.
+# Поэтому в настройках репозитория заводить нечего: в шагах ниже нет ни одного
+# `secrets.`, и это же стережёт `test/release.test.js`.
+#
+# Одного шага CI сделать не может — он ваш, и делается один раз на npmjs.com:
+#   пакет → Settings → Trusted Publisher → GitHub Actions, издатель:
+#   владелец `vernikr`, репозиторий `size-report`, рабочий процесс `release.yml`,
+#   окружение — пустое (эта работа окружения не объявляет).
+# После этого выпуск — это тег; проверить, что вход настроен, можно черновым
+# прогоном (Actions → Release → Run workflow, «dry run» включён по умолчанию):
+# он собирает пакет и печатает, что уехало бы в реестр, но не публикует.
+#
+# Что job НЕ делает: не поднимает версию (её называет человек в манифесте и
+# `CHANGELOG.md` — и они сверяются с тегом, а не выдумываются здесь), не
+# публикует prerelease в `latest` и не трогает потребителей пакета.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Ничего не публиковать: собрать и показать, что уехало бы'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write # этим и живёт trusted publishing: без него npm нечего предъявить
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing требует npm 11.5.1 и новее, а с Node 22 приходит npm 10.
+      - name: npm поновее (для trusted publishing)
+        run: npm install -g npm@latest
+
+      - name: Установка
+        run: pnpm install --frozen-lockfile
+
+      # Выпуск выкладывает, а не правит: тот же полный набор, что и в CI.
+      - name: Проверки перед выпуском
+        run: |
+          pnpm run lint:strict
+          pnpm test:all
+
+      - name: Работа из собранного пакета
+        run: pnpm run pack:check
+
+      # Тег и версия в манифесте — одно и то же число: иначе реестр получил бы
+      # версию, которой нет в истории, и по тегу поставилось бы не то.
+      - name: Тег называет ту же версию, что манифест
+        if: github.event_name == 'push'
+        run: |
+          want="v$(node -p "require('./package.json').version")"
+          test "$GITHUB_REF_NAME" = "$want" || {
+            echo "тег $GITHUB_REF_NAME, а в манифесте $want"
+            exit 1
+          }
+
+      # Prerelease уходит в `next`, а не в `latest`: установка по умолчанию не
+      # должна подхватывать черновик.
+      - name: Публикация
+        if: github.event_name == 'push' || inputs.dry_run == false
+        run: npm publish --tag "$(node -p "require('./package.json').version.includes('-') ? 'next' : 'latest'")"
+
+      - name: Черновой прогон — в реестр ничего не ушло
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run
+        run: npm publish --dry-run

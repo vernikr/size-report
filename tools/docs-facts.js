@@ -163,20 +163,19 @@ export function commandsAt(rev) {
   return [...section.split("'Режимы:'")[0].matchAll(/^\s*'\s+([a-z][a-z-]*)/gm)].map((m) => m[1]);
 }
 
-/* Прогоны набора, как их называет README: команда, сколько проверок она берёт и
- * какова цель. Читается таблицей, потому что это утверждение о числах, а не проза
- * (и потому что одно и то же число в двух формулировках стареет дважды). Сверяют
- * его два сторожа: документации — что документ не врёт, и разделения — что
- * объявленные прогоны совпадают с этими числами. */
+/* Прогоны набора, как их называет README: команда и сколько проверок она берёт.
+ * Читается таблицей, потому что это утверждение о числах, а не проза (и потому что
+ * одно и то же число в двух формулировках стареет дважды). Сверяет его сторож
+ * документации — что документ не врёт о числе проверок; секунд в таблице нет,
+ * потому что прогон за время не держится (`tools/suites.js`), и обещать их
+ * документу нечем. */
 export function publishedRuns() {
   const text = read('README.md');
-  const quick = text.match(/^\|\s*Быстрый[^|]*\|\s*`pnpm test`\s*\|\s*\*\*(\d+) из (\d+)\*\*\s*\|\s*\*\*≤ (\d+) с\*\*/m);
-  const long = text.match(/^\|\s*Полный[^|]*\|\s*`pnpm test:all`\s*\|\s*\*\*(\d+)\*\*\s*\|\s*\*\*≤ (\d+) с\*\*/m);
+  const quick = text.match(/^\|\s*Быстрый[^|]*\|\s*`pnpm test`\s*\|\s*\*\*(\d+) из (\d+)\*\*\s*\|/m);
+  const long = text.match(/^\|\s*Полный[^|]*\|\s*`pnpm test:all`\s*\|\s*\*\*(\d+)\*\*\s*\|/m);
   return {
-    fast: quick === null ? null : {
-      checks: Number(quick[1]), total: Number(quick[2]), budget: Number(quick[3])
-    },
-    full: long === null ? null : { checks: Number(long[1]), budget: Number(long[2]) }
+    fast: quick === null ? null : { checks: Number(quick[1]), total: Number(quick[2]) },
+    full: long === null ? null : { checks: Number(long[1]) }
   };
 }
 
