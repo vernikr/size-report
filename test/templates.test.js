@@ -17,6 +17,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_CONFIG, USAGE, loadConfig } from '../src/size-table.js';
 import { ROOT, cloneFixture, readJson, runSize, tempDir } from '../tools/harness.js';
+import { PKG } from '../tools/docs-facts.js';
+
+/* Имя пакета — из манифеста: шаблон обязан называть то же имя, что и подсказки
+ * инструмента (`node_modules/<имя>/bin/size.js`), и переименование пакета должно
+ * ломать эти проверки, а не делать их пустыми. */
+const PKG_RE = PKG.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const INSTALL_RE = new RegExp('^node node_modules/' + PKG_RE + '/bin/size\\.js\\s');
+const BY_NAME_RE = new RegExp('(^|\\s)(?:npx|npm exec|yarn)\\s+' + PKG_RE + '(\\s|$)');
 
 const tmp = tempDir('templates');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
@@ -137,12 +145,12 @@ test('черновик настроек проходит проверку инс
   });
 
   /* Форма самого зова: путь внутри проекта, а не имя из реестра. Имя в команде
-   * (`npx size-report`) в проекте без установленного пакета уходит в реестр и
-   * запускает чужой пакет с тем же именем — совет, который должен выручать,
-   * приводил бы к чужому коду (REFACTOR.md R-4.21). */
-  assert.match(cfg.fixCommand, /^node node_modules\/size-report\/bin\/size\.js\s/,
+   * (`npx <имя>`) в проекте без установленного пакета уходит в реестр и тянет
+   * пакет по сети — совет, который должен выручать, зависел бы от реестра
+   * (REFACTOR.md R-4.21). */
+  assert.match(cfg.fixCommand, INSTALL_RE,
     'черновик советует не путь внутри проекта: ' + cfg.fixCommand);
-  assert.equal(/(^|\s)(?:npx|npm exec|yarn)\s+size-report/.test(cfg.fixCommand), false,
+  assert.equal(BY_NAME_RE.test(cfg.fixCommand), false,
     'черновик советует зов по имени пакета: ' + cfg.fixCommand);
 
   /* Записка о шаблонах — то, чем проект и пользуется: файл, о котором она молчит
@@ -176,13 +184,14 @@ test('описание проверки в CI разбирается и запу
     'история клонируется обрезанной: таблица строится по коммитам и обрежется вместе с ней');
 
   const runs = job.steps.filter((s) => typeof s.run === 'string');
-  const tool = runs.filter((s) => /(^|\s)(pnpm exec size|node node_modules\/size-report\/bin\/size\.js)(\s|$)/.test(s.run));
+  const tool = runs.filter((s) => new RegExp('(^|\\s)(pnpm exec size|node node_modules/'
+    + PKG_RE + '/bin/size\\.js)(\\s|$)').test(s.run));
   assert.ok(tool.length >= 2, 'проверка не зовёт команду инструмента хотя бы дважды');
 
   /* Шаг с пакетом ставит его до проверки, но зов по имени пакета всё равно не
    * годится: та же строка, скопированная в проект без установленного пакета,
-   * уходит в реестр и запускает чужой пакет под тем же именем (REFACTOR.md R-4.21). */
-  const byName = runs.filter((s) => /(^|\s)(?:npx|npm exec|yarn)\s+size-report(\s|$)/.test(s.run));
+   * уходит в реестр и тянет пакет по сети (REFACTOR.md R-4.21). */
+  const byName = runs.filter((s) => BY_NAME_RE.test(s.run));
   assert.deepEqual(byName.map((s) => s.run), [],
     'шаг проверки зовёт инструмент по имени пакета, а не локальным бинарём');
 

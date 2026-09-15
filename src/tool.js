@@ -7,7 +7,7 @@ import fs from 'fs';
 /* Имя и версия пакета — из его же манифеста, чтобы не держать вторую копию; без
  * файла (чужaя сборка) остаётся заглушка: версия нужна только в данных, и
  * отсутствие манифеста не повод не собирать таблицу. */
-export let TOOL_PKG = { name: 'size-report', version: '0.0.0' };
+export let TOOL_PKG = { name: '@vernikr/size-report', version: '0.0.0' };
 try {
   TOOL_PKG = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 } catch (_e) {}

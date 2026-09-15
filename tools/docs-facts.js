@@ -23,6 +23,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT, gitIn } from './harness.js';
 import { USAGE } from '../src/size-table.js';
+import { TOOL_PKG } from '../src/tool.js';
+
+/* Имя пакета — из манифеста, а не литералом. Сторож обязан называть то же имя,
+ * которым зовёт инструмент: иначе переименование пакета молча ослабляет проверку
+ * (старый шаблон перестаёт совпадать, и «плохих зовов» становится ноль). */
+export const PKG = TOOL_PKG.name;
+const ESC = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const CALL = ESC('node node_modules/' + PKG + '/bin/size.js');
 
 /* Документы, которые описывают **сегодняшнее** состояние репозитория. */
 export const DOCS = ['README.md', 'PLAN.md', 'REFACTOR.md', 'BLOCKERS.md', 'templates/README.md', 'CHANGELOG.md'];
@@ -33,7 +41,7 @@ export const DOCS = ['README.md', 'PLAN.md', 'REFACTOR.md', 'BLOCKERS.md', 'temp
 export const FOREIGN = [
   // проект-потребитель: его файлы, настройки и скрипты
   'size-table.config.json', 'docs/size-table.html', 'docs/size-report.html',
-  '.github/workflows/size-report.yml', 'node_modules/size-report/templates/ci.yml',
+  '.github/workflows/size-report.yml', 'node_modules/' + PKG + '/templates/ci.yml',
   'tools/size-table.js', 'tests/size-table.js',
   '../figma/safe-resets/docs/ROADMAP.md', '../figma/safe-resets/docs/TESTING.md', '../figma/safe-resets/AGENTS.md',
   // прошлое: путь, под которым лежали байты замороженной копии реализации, — она
@@ -116,8 +124,9 @@ export const usageFlags = [...USAGE.matchAll(/--[a-z][a-z-]*/g)].map((m) => m[0]
 
 /* Зов инструмента: либо код-спан, либо строка блока кода (там, где его запускают,
  * а не упоминают в прозе). Хвост после `#` — комментарий примера, не аргументы. */
+const CALL_START = new RegExp('^\\s*(?:size|pnpm exec size|npm exec size|' + CALL + '|node bin/size\\.js|npx ' + ESC(PKG) + ')\\s');
 export function invocations(text) {
-  const lines = text.split('\n').filter((l) => /^\s*(?:size|pnpm exec size|npm exec size|node node_modules\/size-report\/bin\/size\.js|node bin\/size\.js|npx size-report)\s/.test(l))
+  const lines = text.split('\n').filter((l) => CALL_START.test(l))
     .map((l) => l.split('#')[0].trim());
   return spans(text).concat(lines);
 }
@@ -125,8 +134,8 @@ export function invocations(text) {
 /* Слова зова без имени инструмента: `pnpm exec size check --json` → ['check', …]. */
 export function callWords(call) {
   return call.replace(/^pnpm exec /, '').replace(/^npm exec /, '')
-    .replace(/^npx size-report/, 'size')
-    .replace(/^node (?:node_modules\/size-report\/bin|bin)\/size\.js/, 'size')
+    .replace(new RegExp('^npx ' + ESC(PKG)), 'size')
+    .replace(new RegExp('^node (?:node_modules/' + ESC(PKG) + '/bin|bin)/size\\.js'), 'size')
     .trim().split(/\s+/).slice(1);
 }
 

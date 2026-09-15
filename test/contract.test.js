@@ -27,6 +27,7 @@ import { JSDOM } from 'jsdom';
 import { CATEGORY_ORDER, pageScript, rowModel, stripModules, totalsOf, valueParts } from '../src/size-table.js';
 import { ARTIFACT_CSS, PAGE_CSS, TABLE_CSS } from '../src/css.js';
 import { ROOT, SYNTH, cloneFixture, runFixture, tempDir } from '../tools/harness.js';
+import { TOOL_PKG } from '../src/tool.js';
 
 const goldenText = fs.readFileSync(path.join(SYNTH, 'golden.json'), 'utf8');
 const golden = JSON.parse(goldenText);
@@ -77,7 +78,7 @@ test('контракт воспроизводим: два прогона даю�
 
 test('контракт несёт ту же правду, что замороженный эталон', () => {
   assert.equal(data.schema, 1, 'схема данных не объявлена');
-  assert.equal(data.tool.name, 'size-report');
+  assert.equal(data.tool.name, TOOL_PKG.name, 'имя инструмента в данных разошлось с манифестом');
   assert.deepEqual(data.metrics.map((m) => m.key), golden.metrics,
     'состав метрик разошёлся с эталоном');
   assert.equal(data.files.length, golden.columns.length, 'число файлов разошлось с эталоном');

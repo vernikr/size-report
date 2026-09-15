@@ -29,7 +29,7 @@ import { TOOL_PKG } from '../src/tool.js';
  * а `WORKLOG.md` и `CHANGELOG.md` — прошедшее время: прежние зовы там уместны. */
 const INSTRUCTIONS = ['README.md', 'templates/README.md'];
 import {
-  DOCS, NOT_TODAY, TARGETS, callWords, facts, invocations, read, sectionsOf,
+  DOCS, NOT_TODAY, PKG, TARGETS, callWords, facts, invocations, read, sectionsOf,
   usageCommands, usageFlags
 } from '../tools/docs-facts.js';
 
@@ -75,6 +75,8 @@ function emittedCauses() {
   return out;
 }
 
+const escapedName = PKG.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 test('документация зовёт только существующие команды и ключи', () => {
   // Проверяются инструкции — README пакета и записка в шаблонах: их читает тот,
   // кто собирается что-то запустить. `PLAN.md` и `REFACTOR.md` называют целевую
@@ -83,7 +85,8 @@ test('документация зовёт только существующие 
   const bad = [];
   INSTRUCTIONS.forEach((doc) => {
     invocations(facts(doc, NOT_TODAY[doc])).forEach((call) => {
-      if (!/^(?:size|pnpm exec size|npm exec size|node node_modules\/size-report\/bin\/size\.js|node bin\/size\.js|npx size-report)(\s|$)/.test(call)) return;
+      if (!new RegExp('^(?:size|pnpm exec size|npm exec size|node node_modules/'
+        + escapedName + '/bin/size\\.js|node bin/size\\.js|npx ' + escapedName + ')(\\s|$)').test(call)) return;
       const words = callWords(call);
       if (words.length === 0) return;
       const known = usageCommands.indexOf(words[0]) >= 0;

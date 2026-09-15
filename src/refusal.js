@@ -91,7 +91,7 @@ export function advicePath(p) {
 }
 
 export const USAGE = [
-  'size-report — таблица объёма файлов по коммитам.',
+  '@vernikr/size-report — таблица объёма файлов по коммитам.',
   '',
   'Запуск: ' + invocation() + ' [команда] [режим] [ключи]',
   '',

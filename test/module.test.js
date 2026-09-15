@@ -15,8 +15,8 @@
  * И третье, из того же места: совет инструмента (подсказка, справка, умолчание
  * команды починки) обязан работать в обоих состояниях проекта — там, где пакет
  * лежит рядом, и там, где его нет. Поэтому он называет путь внутри проекта, а не
- * имя пакета: у имени два хозяина, и в проекте без установленного пакета оно ведёт
- * в реестр к чужому пакету с тем же именем.
+ * имя пакета: `npx <имя>` в проекте без установленного пакета идёт в реестр и
+ * тянет пакет по сети, а совет обязан отказывать на месте.
  */
 
 import { test, after } from 'node:test';
@@ -25,6 +25,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { ROOT, firstLine, gitIn, hasStack, runSize, runTool, tempDir } from '../tools/harness.js';
+import { PKG } from '../tools/docs-facts.js';
+
+/* Куда установка кладёт пакет: `node_modules/<имя>`, а у области — ещё одним
+ * уровнем (`node_modules/@scope/name`). Путь собирается из имени в манифесте, а не
+ * литералом: иначе переименование пакета сделало бы эти проверки пустыми. */
+const INSTALL_DIR = path.join('node_modules', ...PKG.split('/'));
+const INSTALL_BIN = path.join(INSTALL_DIR, 'bin', 'size.js').split(path.sep).join('/');
+const INSTALL_RE = INSTALL_BIN.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const BY_NAME_RE = new RegExp('(^|\\s)(?:npx|npm exec|yarn)\\s+'
+  + PKG.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 
 const tmp = tempDir('module');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
@@ -223,7 +233,7 @@ test('не JavaScript в графе — отказ с командой почи�
  * в проекте без него. Проверяется тем же движком, но положенным на место установки. */
 test('совет называет путь внутри проекта, а не имя из реестра', () => {
   const dir = path.join(tmp, 'installed');
-  const pkg = path.join(dir, 'node_modules', 'size-report');
+  const pkg = path.join(dir, INSTALL_DIR);
   for (const part of ['bin', 'src']) {
     fs.cpSync(path.join(ROOT, part), path.join(pkg, part), { recursive: true });
   }
@@ -241,9 +251,9 @@ test('совет называет путь внутри проекта, а не 
 
   const hint = (res.stderr.match(/создайте его: (.+)$/m) || [])[1];
   assert.ok(hint, 'подсказка не называет команду починки:\n' + res.stderr);
-  assert.match(hint, /^node node_modules\/size-report\/bin\/size\.js --init$/,
+  assert.match(hint, new RegExp('^node ' + INSTALL_RE + ' --init$'),
     'совет ведёт не путём внутри проекта: ' + hint);
-  assert.equal(/(^|\s)(?:npx|npm exec|yarn)\s+size-report/.test(res.stderr),
+  assert.equal(BY_NAME_RE.test(res.stderr),
     false, 'совет называет имя пакета: в проекте без него этот зов уйдёт в реестр:\n' + res.stderr);
 
   /* Умолчание команды починки — та же форма: его цитирует подпись отчёта, то есть
@@ -253,10 +263,10 @@ test('совет называет путь внутри проекта, а не 
   fs.cpSync(dir, cfgless, { recursive: true });
   fs.writeFileSync(path.join(cfgless, 'size-table.config.json'),
     JSON.stringify({ output: 'size-table.html', columns: [{ label: 'lib.js', paths: ['lib.js'] }] }, null, 2) + '\n');
-  const data = runTool({ name: installed.name, file: path.join(cfgless, 'node_modules', 'size-report', 'bin', 'size.js'), env: null }, cfgless, ['--data']);
+  const data = runTool({ name: installed.name, file: path.join(cfgless, INSTALL_BIN), env: null }, cfgless, ['--data']);
   assert.equal(data.code, 0, 'контракт не отдался: ' + firstLine(data.stderr));
   const fix = JSON.parse(data.stdout).report.fixCommand;
-  assert.match(fix, /^node node_modules\/size-report\/bin\/size\.js --write$/,
+  assert.match(fix, new RegExp('^node ' + INSTALL_RE + ' --write$'),
     'умолчание команды починки — не путь внутри проекта: ' + fix);
 
   // Совет выполним: та же строка в том же проекте делает обещанное.
@@ -277,13 +287,13 @@ test('совет называет путь внутри проекта, а не 
     })
   });
   assert.notEqual(lost.status, 0, 'зов сработал там, где пакета нет:\n' + lost.stdout);
-  assert.match(lost.stderr || '', /node_modules\/size-report\/bin\/size\.js/,
+  assert.match(lost.stderr || '', new RegExp(INSTALL_RE),
     'отказ не называет, чего не хватает:\n' + lost.stderr);
   assert.equal(/registry|ERR_PNPM|npm error/.test(lost.stderr || ''), false,
     'зов ушёл в реестр, а не отказал на месте:\n' + lost.stderr);
 
   const help = runTool(installed, dir, ['--help']);
   assert.equal(help.code, 0, 'справка не ответила: ' + firstLine(help.stderr));
-  assert.match(help.stdout, /Запуск: node node_modules\/size-report\/bin\/size\.js/,
+  assert.match(help.stdout, new RegExp('Запуск: node ' + INSTALL_RE),
     'справка не называет путь: ' + help.stdout.split('\n')[2]);
 });
