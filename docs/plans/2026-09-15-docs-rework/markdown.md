@@ -96,12 +96,34 @@ files). The parts below are the order to work in; each is one commit.
   environment, no repeated read-only run, a clone of its own for a check that edits files, a pool over
   the cores (`tools/run-tests.js`), and the counts adding up against the `test(` declarations.
   `pnpm run verify` green (8 steps, 59,5 s); no gate file in the commit, so no trailer.
-- [ ] **M3 README, the rest** — the opening prose is done with M2 (above). What is left: the run
-  table and the check counts in prose, so `tools/docs-facts.js` `publishedRuns` — which matches rows
-  by their first words «Быстрый» / «Полный» — is edited in the same commit, plus the paragraphs on CI
-  and the release up to the start of M4 (the report page).
+- [x] **M3 README, the rest** — 1060 → 1050 lines, 771 → 711 Russian: the run table, the check
+  counts in prose and the paragraphs on CI and the release up to the start of M4. 60 Russian lines
+  gave 137 changed lines in three files (`README.md` 54/64, `AGENTS.md` 4/4, `tools/docs-facts.js`
+  6/5) — inside the budget with room to spare (`worklog/0101`). **Two false premises were found in
+  the code, and both are about the gates themselves:** (1) "CI calls the full run twice, the second
+  time with no machine git settings" is wrong — `ci.yml` has one job and one step, `pnpm run verify`,
+  while the hermetic suite lives in the *slow* profile (`tools/gates/run.js`: `FULL` is the eight
+  steps `lint:strict`, `metrics`, `dup`, `deps`, `test:all`, `parity:live`, `check:standards`,
+  `pack:check`; `test:all` with `GIT_CONFIG_GLOBAL=/dev/null` and `cover` are added by `slow` only),
+  and the same falsehood was translated into `AGENTS.md` in M1 — both files are fixed; (2) the
+  release text promised the whole full profile, while `release.yml` runs the strict linter, the whole
+  suite, the tarball check and the tag/manifest comparison, and it claimed "the explicit registry
+  address lives in `publishConfig`" — `publishConfig` holds `access: public` only. The same
+  `publishConfig` claim stands as a comment in `release.yml` itself: that file is a gate file and is
+  outside this subplan (markdown), so it is recorded here as work for the comment passes over YAML.
+  **The guard that reads the table now matches by the command cell** (`pnpm test` against
+  `pnpm test:all`) rather than by the label's first words, so translating the label no longer breaks
+  it. Snapshots that age ("`v1.2.0` → 44 s", "`1.2.0` → `1.2.1-draft.0`") became rules; the two
+  paragraphs of CI defect history became one paragraph of two rules, verified in
+  `tools/run-tests.js` and `tools/check-standards.js`, with the root `WORKLOG.md` addresses dropped.
+  `pnpm run verify` green (8 steps, 59,5 s); no gate file in the commit, so no trailer.
 - [ ] **M4 README 351–553** — 190 Russian: the rest of «Статус» (the report page, its memory
-  and folding, performance).
+  and folding, performance). **Needs measurement rather than reading**: the paragraphs carry real
+  Chrome numbers (`0,6 мс` in the handler against `107 + 380 мс` of a redraw, `1060 × 735`, `148
+  подписей`, `39 576 клеток`), so each is either re-measured with `tools/page-harness.js` or
+  replaced by a rule where the number decides nothing. Left over for M5, to check there: the
+  paragraph on the frozen copy claims "проверено тремя прогонами … и прогон без настроек машины —
+  тоже" — a measurement claim no gate repeats today.
 - [ ] **M5 README 554–686** — 129 Russian: «Что в репозитории». Its heading is read by
   `test/docs-paths.test.js` (the table of paths), so that reader changes in the same commit.
 - [ ] **M6 README 687–705 + 1045–1139** — 94 Russian: «Чего ещё нет», «Гейт против

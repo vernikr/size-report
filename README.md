@@ -147,16 +147,16 @@ numbers on a shared fixture), and the full one adds what runs the tool many time
 commits and installs hooks; the reason for each expensive file is named line by line in
 `tools/suites.js`.
 
-| Прогон | Команда | Проверок |
+| Run | Command | Checks |
 |---|---|---|
-| Быстрый — каждая правка | `pnpm test` | **72 из 177** |
-| Полный — выкладка и CI | `pnpm test:all` | **177** |
+| Fast — every edit | `pnpm test` | **72 of 177** |
+| Full — release and CI | `pnpm test:all` | **177** |
 
-Ни одна проверка не потеряна и не ослаблена: полный прогон запускает все 177 теми же
-файлами, а быстрый берёт их часть. Умолчание — полный: файл становится быстрым только
-явно и с причиной, поэтому новое дорогое не может тихо уехать в быстрый. Стерегут это
-объявление `test/suites.test.js` (полнота классификации и причина у каждого файла) и
-сторож документации `test/docs-numbers.test.js` (числа в таблице выше).
+No check is lost or weakened: the full run starts all 177 with the same files, the fast one takes part
+of them. The default is the full run — a file becomes fast only explicitly and with a reason — so new
+expensive work cannot quietly move into the fast one. Two declarations guard that:
+`test/suites.test.js` (every file classified, and a reason for each) and the documentation guard
+`test/docs-numbers.test.js` (the numbers in the table above).
 
 **The runs have no time targets, and that is a decision rather than an omission.** Seconds depend on
 the window — the machine is under very different load at different times — so neither the suite nor CI
@@ -176,62 +176,52 @@ of the tool or on the machine's git settings. Two texts that promised the same w
 `--init` hint (it said the checks travel with the package, while the suite is not part of it) and the
 default `fixCommand` (it named a package that does not exist, `npx size-table --write`).
 
-**Проверки идут сами (шаг 6 плана, `.github/workflows/ci.yml`).** На каждый пуш и
-на каждый запрос правки один job `verify` зовёт **одну команду** — `pnpm run verify`;
-список шагов живёт в одном месте (`tools/gates/run.js`) и совпадает с локальным,
-поэтому проверки, которой нет в профиле, в CI быть не может (это стережёт
-`test/gates-verify.test.js`). В профиле: строгий линтер, датчики раздувания,
-набор проверок, тот же набор в среде, где настроек машины нет вовсе
-(`GIT_CONFIG_GLOBAL=/dev/null`), работу из собранного тарболла, сверку с историей
-проекта-потребителя и воспроизводимость обоих эталонов. Покрытие под c8 дороже
-(полный набор под ним) и живёт в slow-профиле — `pnpm run verify:slow`,
-`.github/workflows/verify-slow.yml` по расписанию.
-Секретов job не требует: история потребителя лежит в репозитории бандлом на той
-же ревизии, что записана в эталоне (`fixtures/live/`), а пересъём идёт во временный
-каталог и сверяется с закоммиченным — рабочее дерево остаётся чистым. Матрицы по
-версиям Node нет намеренно: этот проход про контроль.
+**The checks run themselves** (`.github/workflows/ci.yml`). On every push and every pull request one
+job `verify` calls **one command** — `pnpm run verify`; the list of steps lives in one place
+(`tools/gates/run.js`) and matches the local one, so a check that is not in a profile cannot be in CI
+(`test/gates-verify.test.js` watches that). The profile, in order: the strict linter, the bloat
+sensors, the whole suite, parity with the history of the consumer project, reproducibility of both
+references and the work from the assembled tarball. Two steps are dearer and live in the slow profile
+instead — the same suite in an environment with none of the machine's git settings
+(`GIT_CONFIG_GLOBAL=/dev/null`) and coverage under c8: `pnpm run verify:slow`,
+`.github/workflows/verify-slow.yml` on a schedule. The job needs no secrets: the consumer's history
+lies in the repository as a bundle at the revision recorded in the reference (`fixtures/live/`), and a
+re-take goes into a temporary directory and is compared with what is committed, so the working tree
+stays clean. The job pins Node 22 and the actions by commit SHA, and there is deliberately no matrix
+over Node versions: this pass is about control.
 
-**Выпуск — это тег (`.github/workflows/release.yml`).** `git push origin v1.2.3`
-прогоняет тот же полный набор, сверяет версию манифеста с тегом, проверяет работу
-из собранного пакета и отправляет его в реестр — без секрета и без кода из
-аутентификатора: публикация идёт по удостоверению GitHub Actions (trusted
-publishing), которое npm принимает вместо токена. Издатель заведён один раз и живёт
-на стороне npmjs.com, а не в репозитории: `npm trust github @vernikr/size-report
---file release.yml --repo vernikr/size-report --allow-publish` (то же самое — кнопка
-Trusted Publisher в настройках пакета), права **publish** и stage publish; проверить,
-что связь есть, — `npm trust list @vernikr/size-report`. Выпуск `1.2.0` прошёл именно
-так: `v1.2.0` → 44 с, `+ @vernikr/size-report@1.2.0`, удостоверение подписано и
-записано в журнал прозрачности.
+**A release is a tag** (`.github/workflows/release.yml`). Pushing `v<version>` runs the strict linter
+and the whole suite, checks the work from the assembled package, compares the manifest version with the
+tag and sends the package to the registry — no secret and no code from an authenticator: publishing
+goes by the attestation GitHub Actions issues for that job (trusted publishing), which npm accepts
+instead of a token. A prerelease goes to `next` rather than `latest`, so a draft is not what a default
+install picks up. The publisher is set up once and lives on npmjs.com, not in the repository:
+`npm trust github @vernikr/size-report --file release.yml --repo vernikr/size-report
+--allow-publish` (the same is the Trusted Publisher button in the package's settings), and
+`npm trust list @vernikr/size-report` shows whether the link is there. The job raises no version: a
+person names it in the manifest and `CHANGELOG.md`, and both are compared with the tag rather than
+derived from it.
 
-Одна ловушка раннера стоила отдельной правки, и она не про этот пакет, а про
-`setup-node`: с `registry-url` действие пишет в `.npmrc` строку
-`_authToken=${NODE_AUTH_TOKEN}`, npm считает учётные данные заданными и за
-удостоверением OIDC **не идёт** — публикация падает 404 при верно заведённом
-издателе. Поэтому `registry-url` здесь не указан (реестр и так по умолчанию тот же, а
-явный адрес живёт в `publishConfig`), и это стережёт `test/release.test.js`. Черновой
-прогон из Actions («Run workflow»: по умолчанию он ничего не публикует) проходит весь
-список до самого пути публикации: гоняет полный набор, проверяет работу из тарболла и
-собирает пакет на черновой версии (`1.2.0` → `1.2.1-draft.0`, чтобы реестр не отказал
-в уже выпущенном номере). Настроен ли издатель, черновой прогон не показывает:
-`--dry-run` не обменивается удостоверением и проходит вообще без учётных данных
-(проверено в пустом каталоге: код 0 без токена) — правду об этом даёт только настоящий
-тег, и он её дал.
+One trap cost an edit of its own, and it is about `setup-node` rather than this package: with
+`registry-url` the action writes `_authToken=${NODE_AUTH_TOKEN}` into `.npmrc`, npm then considers
+credentials given and does **not** go for the OIDC attestation — publishing fails 404 with a correctly
+set-up publisher. So `registry-url` is not given here: npmjs.org is the default registry anyway, and
+`publishConfig` in the manifest carries `access: public` only. A draft run from Actions ("Run
+workflow": nothing is published by default) goes the whole list up to the publishing step itself — the
+strict linter and the whole suite, the work from the tarball, and a package built on a draft version
+above the manifest's own, so that the registry does not refuse an already released number. Whether the
+publisher is set up a draft run does not show: `--dry-run` exchanges no attestation and passes without
+any credentials at all — only a real tag tells the truth about that.
 
-Первым же прогоном CI окупился: шаг живого паритета упал не на расхождении чисел,
-а на самой проверке — вывод процессов собирался как строка, и многобайтовый символ,
-разорванный между кусками чтения, превращался в два символа-заменителя (местные
-прогоны этого не показывали: границы кусков зависят от того, как ядро вернуло
-чтение). Дефект починен, сторож — `test/runner.test.js` (`WORKLOG.md` §21).
-
-Второй прогон нашёл ещё два дефекта, и оба — про git по обе стороны границы
-вызова. Шаг воспроизводимости эталонов сверял бандл истории **побайтово**, а
-упаковку пишет git: её байты зависят от версии, и проверка была зелёной на одной
-машине и красной на другой (фикстура это и в README утверждает). Теперь у бандла
-сверяется содержимое — ветки, верхушка и число коммитов, — а побайтово только то,
-что пишем мы сами. Второй: бандл живой истории лежал **без `HEAD`**, и клон сам
-решает, какую ветку выложить, — разные версии git решают по-разному (`hint: Using
-'master' …`). Бандл пересобран с `HEAD`, `check:standards` это требует, а отказ
-инструмента печатается целиком, а не первой строкой (`WORKLOG.md` §22).
+**Two rules came out of the first live runs of CI, and both are about the border of a call.** Process
+output is collected by the harness rather than glued into a string: a multi-byte character torn at a
+chunk border would turn into two replacement characters, and where those chunks fall is the kernel's
+business — a local run does not show it (`test/runner.test.js`). And of the references only what this
+repository writes by itself is compared byte for byte: a history bundle is packed by git, whose bytes
+depend on its version, so the bundle is compared by content — the branches, the tip and the number of
+commits, that is, what makes it a replacement for the consumer project. The bundle also has to carry
+`HEAD` and the branch `main` at the reference revision, or a clone decides on its own which branch to
+lay out (`tools/check-standards.js`).
 
 **Страница отчёта выглядит и ведёт себя как инструмент** (`REFACTOR.md` R-2.2):
 один набор стилей таблицы на оба вывода (`src/table.css`) — странице достались

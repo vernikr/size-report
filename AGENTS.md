@@ -7,10 +7,10 @@ must not be touched. The gate itself is described in `README.md`.
 
 - `pnpm run verify:fast` — before every edit and in the `pre-commit` hook: the strict linter,
   the bloat sensors (size and complexity, duplication, dependencies) and the fast set of checks.
-- `pnpm run verify` — before pushing an edit and in CI: the same plus the full set, the same
-  set in an environment without the machine's git settings, parity with the live project,
-  reproducibility of the standards, and work from the built tarball.
-- `pnpm run verify:slow` — on a schedule: the same plus coverage under c8.
+- `pnpm run verify` — before pushing an edit and in CI: the same plus the full set, parity with
+  the live project, reproducibility of the standards, and work from the built tarball.
+- `pnpm run verify:slow` — on a schedule: the same plus the full set in an environment without
+  the machine's git settings (`GIT_CONFIG_GLOBAL=/dev/null`) and coverage under c8.
 - One sensor at a time: `pnpm run metrics`, `pnpm run dup`, `pnpm run deps`, `pnpm run cover`.
   The list of profile steps lives in one place (`tools/gates/run.js`), and CI runs the same
   commands: a check that is not in the profile cannot be in CI

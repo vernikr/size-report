@@ -172,13 +172,14 @@ export function commandsAt(rev) {
 
 /* The suite runs as README names them: the command and how many checks it takes. Read as a table
  * because this is a claim about numbers rather than prose (and because one number in two wordings
- * ages twice). The documentation guard checks it — that the document does not lie about the
- * count. The table has no seconds: a run does not hold to a time (`tools/suites.js`), so there is
- * nothing to promise. */
+ * ages twice). The row is matched by its command cell — `pnpm test` against `pnpm test:all` — while
+ * the words of the label are the document's business. The documentation guard checks it — that the
+ * document does not lie about the count. The table has no seconds: a run does not hold to a time
+ * (`tools/suites.js`), so there is nothing to promise. */
 export function publishedRuns() {
   const text = read('README.md');
-  const quick = text.match(/^\|\s*Быстрый[^|]*\|\s*`pnpm test`\s*\|\s*\*\*(\d+) из (\d+)\*\*\s*\|/m);
-  const long = text.match(/^\|\s*Полный[^|]*\|\s*`pnpm test:all`\s*\|\s*\*\*(\d+)\*\*\s*\|/m);
+  const quick = text.match(/^\|\s*Fast[^|]*\|\s*`pnpm test`\s*\|\s*\*\*(\d+) of (\d+)\*\*\s*\|/m);
+  const long = text.match(/^\|\s*Full[^|]*\|\s*`pnpm test:all`\s*\|\s*\*\*(\d+)\*\*\s*\|/m);
   return {
     fast: quick === null ? null : { checks: Number(quick[1]), total: Number(quick[2]) },
     full: long === null ? null : { checks: Number(long[1]) }
