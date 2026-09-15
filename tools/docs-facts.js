@@ -13,7 +13,7 @@
  * совпадение счёта объявлений с числом проверок в выводе раннера — оно держится
  * тем, что проверок нет нигде, кроме начала строки (это сторож тоже проверяет).
  *
- * Вне проверки два документа, и по делу: `WORKLOG.md` — журнал прошлого (числа и
+ * Вне проверки два документа, и по делу: `worklog/archive/WORKLOG.md` — журнал прошлого (числа и
  * пути там снимок на момент записи, и они обязаны стареть), `docs/module-design.md`
  * — проект выноса, то есть описание цели, а не сегодняшнего дерева. Ссылки на их
  * разделы при этом проверяются: они цель, а не источник утверждений.
@@ -66,7 +66,7 @@ export const FOREIGN = [
  * источник утверждений. Имя берётся по basename: в тексте пишут и `PLAN.md`, и
  * `docs/requirements.md`. */
 export const TARGETS = [
-  'README.md', 'PLAN.md', 'REFACTOR.md', 'BLOCKERS.md', 'WORKLOG.md',
+  'README.md', 'PLAN.md', 'REFACTOR.md', 'BLOCKERS.md', 'worklog/archive/WORKLOG.md',
   'docs/requirements.md', 'docs/module-design.md'
 ];
 
