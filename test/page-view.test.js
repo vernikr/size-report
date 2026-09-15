@@ -59,6 +59,12 @@ test('вычислительная часть страницы — код дви
     'программа страницы начинается не с общего расчёта');
   assert.equal(/^\s*(import|export)\s/m.test(script), false,
     'в вклеенной программе остался модульный синтаксис: страница с диска его не разрешит');
+  /* Модульный синтаксис снимается построчно, поэтому многострочный `import`
+   * оставил бы в странице хвост `} from '…'` — строку, которая ни на что не похожа,
+   * и страница ломалась бы молча и целиком. Поэтому имя модуля ищется, а не начало
+   * строки: второго вида этой же поломки быть не должно. */
+  assert.equal(/from\s+['"]/.test(script), false,
+    'в вклеенной программе остался хвост импорта: импорт должен быть одной строкой');
   assert.ok(pageText.indexOf(script) > 0, 'страница собрана не из общей программы');
 
   /* Список функций оболочки закрыт: любая новая функция в ней — это либо
@@ -67,7 +73,7 @@ test('вычислительная часть страницы — код дви
    * попадают в страницу, — со снятым модульным синтаксисом. */
   assert.deepEqual(defined('\n' + stripModules(appSrc)).sort(), [
     'appAll', 'appApply', 'appApprox', 'appBody', 'appBox', 'appCell', 'appCellClass', 'appCommit', 'appCount',
-    'appDirHead', 'appEl', 'appFileAt', 'appFileBox',
+    'appDirHead', 'appEl', 'appFileAt', 'appFileBox', 'appFoldBox', 'appFoldRead', 'appFoldSet',
     'appHash', 'appHead', 'appIndexes', 'appLeafAt', 'appLeaves', 'appLinkRead', 'appLinkUse', 'appNode',
     'appNotice', 'appPanel',
     'appPassport', 'appRead', 'appRecord', 'appRecordOk', 'appRender', 'appRow',

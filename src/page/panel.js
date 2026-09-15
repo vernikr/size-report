@@ -1,5 +1,5 @@
 import { appEl, appBox } from './dom.js';
-import { appData, appUi, appView, appFileAt, appMeasured } from './state.js';
+import { appData, appUi, appView, appFileAt, appFoldSet, appMeasured } from './state.js';
 
 /* Галочку файла ставит только файл: и категория, и папка в дереве — способы
  * переставить те же галочки сразу группой, а своего состояния у них нет. Иначе
@@ -71,6 +71,20 @@ function appDirHead(name, sub) {
   return head;
 }
 
+/* Знак папки — своя цель нажатия, отдельная от галочки: галочка отвечает за числа
+ * (включает файлы поддерева), а знак — за то, сколько дерева видно. Одна цель на
+ * два разных действия означала бы, что сложить папку можно только вместе с
+ * включением её файлов. Знак нарисован спаном, а не кнопкой, потому что в строке
+ * папки рядом уже стоит метка-галочка, а вложенная в метку кнопка поднимала бы её
+ * же нажатие. */
+function appFoldBox(name, path) {
+  const folded = appView.folded[path] === true;
+  const box = appEl('span', 'fold', folded ? '▸' : '▾');
+  box.title = (folded ? appUi.foldOpen : appUi.foldClose).replace('{name}', name);
+  box.addEventListener('click', () => { appFoldSet(path, !folded); appRender(); });
+  return box;
+}
+
 /* Листья уровня: измеряемые файлы и файлы вне отчёта — вперемешку и по алфавиту
  * имени, как в дереве файлов, а не отдельными списками. */
 function appLeaves(node) {
@@ -82,14 +96,18 @@ function appLeaves(node) {
 }
 
 /* Узлы одного уровня: сперва папки по алфавиту, затем листья (их порядок — из
- * `appLeaves`). */
-function appTreeList(node) {
+ * `appLeaves`). Сложенная папка — это та, у которой нет самого списка: прятать
+ * поддерево оформлением значило бы держать в разметке то, чего не видно, и
+ * пересобирать её на каждый клик по знаку. */
+function appTreeList(node, prefix) {
   const list = appEl('ul', 'tree');
   [...node.dirs.keys()].sort().forEach((name) => {
     const sub = node.dirs.get(name);
+    const here = prefix === '' ? name : prefix + '/' + name;
     const li = appEl('li');
+    li.appendChild(appFoldBox(name, here));
     li.appendChild(appDirHead(name, sub));
-    li.appendChild(appTreeList(sub));
+    if (appView.folded[here] !== true) li.appendChild(appTreeList(sub, here));
     list.appendChild(li);
   });
   appLeaves(node).forEach((leaf) => {
@@ -123,7 +141,7 @@ function appTree() {
   appData.catalog.forEach((entry) => {
     if (appMeasured[entry.path] === undefined) appLeafAt(root, entry.path, null, entry);
   });
-  return appTreeList(root);
+  return appTreeList(root, '');
 }
 
 export function appPanel() {

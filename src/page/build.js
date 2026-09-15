@@ -63,6 +63,8 @@ function uiText(page, loc) {
     files: page.files,
     dir: page.dir,
     dirNone: page.dirNone,
+    foldClose: page.foldClose,
+    foldOpen: page.foldOpen,
     all: page.all,
     linkForeign: page.linkForeign,
     linkBroken: page.linkBroken,

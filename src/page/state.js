@@ -25,7 +25,7 @@
 
 export const appData = JSON.parse(document.getElementById('data').textContent);
 export const appUi = JSON.parse(document.getElementById('ui').textContent);
-export const appView = { metrics: {}, files: [] };
+export const appView = { metrics: {}, files: [], folded: {} };
 appData.metrics.forEach((m) => { appView.metrics[m.key] = true; });
 appData.files.forEach(() => { appView.files.push(true); });
 
@@ -230,4 +230,45 @@ export function appApply(rec) {
   const files = rec.files || {};
   appData.metrics.forEach((m) => { if (metrics[m.key] === false) appView.metrics[m.key] = false; });
   appData.files.forEach((_f, i) => { if (files[appFileAt(i)] === false) appView.files[i] = false; });
+}
+
+/* -------- сложенное дерево -------- */
+
+/* Сложенные папки — память того же рода, что выбор, но своей записи: она про то,
+ * сколько дерева видно, а не про то, какие числа читают. Поэтому в адрес она не
+ * идёт: ссылку отправляют ради чисел, а разложенное дерево — дело смотрящего. Как и
+ * у выбора, здесь помнится только сложенное (`true`), а имя папки — это путь
+ * («src/page»), поэтому исчезнувшее имя просто ничего не значит. */
+const appFoldKey = appKey + ':tree';
+
+export function appFoldRead() {
+  let text = null;
+  try {
+    text = window.localStorage.getItem(appFoldKey);
+  } catch (_e) {
+    return;
+  }
+  if (text === null) return;
+  let rec = null;
+  try {
+    rec = JSON.parse(text);
+  } catch (_e) {
+    return;
+  }
+  if (!appRecordOk(rec)) return;
+  const folded = rec.folded || {};
+  Object.keys(folded).forEach((p) => { if (folded[p] === true) appView.folded[p] = true; });
+}
+
+export function appFoldSet(path, folded) {
+  if (folded) appView.folded[path] = true;
+  else delete appView.folded[path];
+  const rec = { v: 1, passport: appPassport(), folded: Object.assign({}, appView.folded) };
+  try {
+    if (Object.keys(rec.folded).length === 0) window.localStorage.removeItem(appFoldKey);
+    else window.localStorage.setItem(appFoldKey, JSON.stringify(rec));
+  } catch (_e) {
+    /* Памяти нет: сложенное не переживёт закрытия страницы, а вид от этого не
+     * зависит — дерево сложено ровно так, как его сложил читатель сейчас. */
+  }
 }

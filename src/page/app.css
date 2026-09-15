@@ -71,11 +71,26 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
  * кто и вправду ограничен окном. Шрифт файлов — тот же, что у чисел таблицы:
  * подписей в списке много и они короткие, а рядом с ними стоит таблица. */
 .panel .files { max-height: min(30vh, 320px); overflow: auto; font-size: 12.5px; }
-.panel .tree { margin: 0; padding: 0; list-style: none; }
+.panel .tree { margin: 0; padding: 0 0 0 14px; list-style: none; }
 .panel .tree .tree { margin-left: 14px; padding-left: 9px; border-left: 1px solid var(--line); }
 .panel .tree .box { padding: 1px 7px 1px 5px; }
 .box.dir { font-weight: 600; }
 .box .n { margin-left: 1px; color: var(--muted); font-size: 11px; }
+
+/* Знак сложенной папки: место под него есть у каждой строки (отступ строки), а сам
+ * он только у папок — так листья и папки выстроены в один столбец. Он не часть
+ * галочки: галочка отвечает за числа, знак — за то, сколько дерева видно. */
+.panel .tree li { position: relative; }
+.panel .tree li > .fold {
+  position: absolute;
+  left: -13px;
+  width: 14px;
+  text-align: center;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+.panel .tree li > .fold:hover { color: var(--ink); }
 
 /* Переключатель — метка вокруг поля ввода: и подпись, и цель нажатия одна, поэтому
  * по нему попадает и мышь, и клавиатура (Space на поле ввода), и вспомогательные

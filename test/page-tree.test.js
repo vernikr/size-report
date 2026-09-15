@@ -13,7 +13,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { valueParts } from '../src/size-table.js';
 import {
-  fileBox, nowCells, nowTotal, pageMath, pageReady, toggleBox
+  fileBox, nowCells, nowTotal, pageMath, pageReady, stored, toggleBox
 } from '../tools/page-harness.js';
 
 /* Ожидаемые итоги считает та же вычислительная часть, что вклеена в страницу
@@ -148,6 +148,41 @@ test('дерево показывает все файлы проекта, а в�
   toggleBox(doc, dirInput(doc, 'docs/'), false);
   assert.equal(nowCells(doc), (data.files.length - measuredDocs + 1) * data.metrics.length,
     'галочка папки увела из таблицы не только её измеряемые файлы');
+});
+
+/* Складывание — это то, сколько дерева видно, и оно не должно трогать числа:
+ * галочка отвечает за то, что считается, а знак папки — за то, что видно. Поэтому
+ * складывание и память о нём проверяются там, где видно, что таблица не сдвинулась,
+ * а на следующем заходе дерево осталось сложенным: у 148 путей проекта это
+ * единственный способ добраться до его середины. */
+test('папку дерева можно сложить, и сложенное помнится на следующем заходе', () => {
+  const dom = openPage();
+  const doc = dom.window.document;
+  const fold = (d, prefix) => dirBox(d, prefix).closest('li').querySelector(':scope > .fold');
+  const under = (d, prefix) => dirBox(d, prefix).closest('li').querySelectorAll('.box').length;
+  const before = nowCells(doc);
+  assert.ok(under(doc, 'src/') > 1, 'в фикстуре у папки нет поддерева — складывать нечего');
+
+  fold(doc, 'src/').dispatchEvent(new dom.window.Event('click'));
+  assert.equal(under(doc, 'src/'), 1, 'сложенная папка всё ещё показывает своё поддерево');
+  assert.equal(dirInput(doc, 'src/').checked, true,
+    'складывание папки поменяло её выбор: знак отвечает за вид, а галочка — за числа');
+  assert.equal(nowCells(doc), before, 'складывание папки убрало числа из таблицы');
+  assert.equal(fold(doc, 'src/').textContent, '▸', 'знак сложенной папки не сказал, что она сложена');
+
+  /* Память: следующий заход открывается с тем же сложенным деревом и с полным
+   * выбором. Ключ у складывания свой — иначе оно уехало бы в ссылку, а ссылку
+   * отправляют ради чисел, а не ради того, как у кого разложено дерево. */
+  const seed = stored(dom);
+  const next = openPage(seed).window.document;
+  assert.equal(fold(next, 'src/').textContent, '▸',
+    'сложенная папка разложилась на следующем заходе');
+  assert.equal(fold(next, 'data/').textContent, '▾', 'чужая папка сложилась вместе с этой');
+  assert.deepEqual([...next.querySelectorAll('#panel input')].filter((b) => !b.checked), [],
+    'память сложенного унесла с собой выключенные файлы');
+  assert.deepEqual(Object.keys(seed).length, 1, 'запись о дереве легла не туда: ' + JSON.stringify(seed));
+  assert.ok(Object.keys(seed)[0].indexOf(':tree') > 0,
+    'складывание легло в запись выбора: ' + Object.keys(seed)[0]);
 });
 
 /* jsdom не раскладывает страницу, поэтому прокрутка у её элементов всегда ноль, а

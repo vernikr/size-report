@@ -20,6 +20,10 @@ export const LOCALES = {
       files: 'Файлы',
       dir: 'все файлы папки {name} ({n})',
       dirNone: 'ни один файл папки {name} в отчёт не попал (в папке {n})',
+      /* Знак сложенной папки — своя цель нажатия: галочка отвечает за числа,
+       * знак — за то, сколько дерева видно. */
+      foldClose: 'свернуть папку {name}',
+      foldOpen: 'развернуть папку {name}',
       /* Причина — у листа: в дереве он подписью, а не галочкой, и без этих слов
        * читатель решил бы, что файл потерялся. */
       notMeasuredRule: 'не измеряется: такой файл колонкой быть не может'
@@ -78,6 +82,8 @@ export const LOCALES = {
       files: 'Files',
       dir: 'all files in “{name}” ({n})',
       dirNone: 'no file of “{name}” made it into the report ({n} in it)',
+      foldClose: 'collapse “{name}”',
+      foldOpen: 'expand “{name}”',
       notMeasuredRule: 'not measured: such a file cannot be a column'
         + ' (built, a dependency lock, the report itself, or too large)',
       notMeasuredChoice: 'not measured: it is not in the report’s set of columns'

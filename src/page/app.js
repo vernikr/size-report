@@ -1,4 +1,4 @@
-import { appData, appUi, appView, appWrite, appNotice, appLinkUse, appRead, appApply } from './state.js';
+import { appData, appUi, appView, appWrite, appNotice, appLinkUse, appRead, appApply, appFoldRead } from './state.js';
 import { appBody, appHead, appState } from './table.js';
 import { appPanel } from './panel.js';
 
@@ -76,6 +76,10 @@ if (appStart !== 'ours') {
   const appSaved = appRead();
   if (appSaved !== null) appApply(appSaved);
 }
+/* Сложенное дерево — память смотрящего, а не выбор читателя: она возвращается и
+ * тогда, когда открыта чужая ссылка (иначе присланная ссылка разложила бы дерево
+ * заново на каждом заходе). */
+appFoldRead();
 appRender(true);
 appStartup = false;
 appForeign = false;
