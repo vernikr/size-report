@@ -39,6 +39,17 @@ function sensorNote(cfg) {
   return note(sensorGaps(cfg));
 }
 
+/* Вердикт режима вместе с заметками о датчиках: заметка печатается всегда — молчание
+ * о другом счёте читается как точное число, и расхождение остаётся без причины, — а
+ * код остаётся первым по важности. Нарушение старше приближения (тот же порядок, что
+ * у `size check` и у `doctor`): код 4 говорит «числа честные, но другим счётом», а
+ * когда таблица расходится, этого никто не проверял — расхождение может быть и
+ * настоящей правкой мимо отчёта. */
+function verdict(code, gaps) {
+  const sensors = note(gaps);
+  return code === EXIT.OK ? sensors : code;
+}
+
 export function check(cfg, want, root) {
   const out = path.join(root, cfg.output);
   if (!fs.existsSync(out)) {
@@ -89,9 +100,8 @@ function checkMode(cfg, root) {
   if (code === 0) {
     console.log('✓ таблица размеров: ' + rows.length + ' коммитов × ' + cfg.columns.length + ' файлов '
       + 'совпадает с историей (' + cfg.output + ', ' + kmb(byteLen(html)) + ')');
-    return sensorNote(cfg);
   }
-  return code;
+  return verdict(code, sensorGaps(cfg));
 }
 
 /* Полнота покрытия (`size check`): настройки, история, пути, датчики. Не путать с
@@ -104,8 +114,7 @@ function coverageMode(cfg, root, configFile, asJson) {
   const rep = coverage(cfg, root, configFile);
   if (asJson) process.stdout.write(JSON.stringify(rep, null, 2) + '\n');
   else console.log(coverageText(rep));
-  if (!rep.ok) return EXIT.VIOLATION;
-  return note(rep.sensors);
+  return verdict(rep.ok ? EXIT.OK : EXIT.VIOLATION, rep.sensors);
 }
 
 /* Диагностика одним ответом (`size doctor`): окружение, зависимости, настройки и
