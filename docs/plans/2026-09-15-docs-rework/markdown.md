@@ -163,11 +163,30 @@ files). The parts below are the order to work in; each is one commit.
   creates the missing directory (`src/artifact.js`). Addresses into the plan (step numbers, `§4.2`,
   `§4.8.4`, "the budget below") are gone. `pnpm run verify` green (8 steps, 61,1 s). The status section
   is now wholly English (M4a + M4b); the next Russian line is 414, «Что в репозитории».
-- [ ] **M5 README 554–686** — 129 Russian: «Что в репозитории». Its heading is read by
-  `test/docs-paths.test.js` (the table of paths), so that reader changes in the same commit. To check
-  there: the paragraph on the frozen copy (around line 590) claims "проверено тремя прогонами … и
-  прогон без настроек машины — тоже" — a measurement claim that no gate repeats today, so it is
-  either re-measured or turned into a rule.
+- [x] **M5 README, the file table** — 129 Russian lines, **267 changed lines in two files**
+  (`worklog/0104`). The heading became `## What is in the repository` and the header cell `Файл` became
+  `File`: **both** are read by `test/docs-paths.test.js`, and without the second edit the word `File`
+  would have joined the list of paths and reddened the guard. The path cells are untouched, so the
+  two-way comparison with the tree stayed what it was (the guard was run on its own). **Three claims
+  were wrong, each checked in code or by measurement:** (1) the gate-file guard was said to be red in
+  CI over a range — it is not a profile step at all, the range check is the `pre-push` hook's, and CI
+  reads no trailers (the same falsehood was fixed in `AGENTS.md` and in `pre-push` on earlier passes);
+  (2) the page harness was "one for four suites" — five suites import it (`contract-data`,
+  `contract-derived`, `page-view`, `page-tree`, `page-choice`); (3) `release.yml` was said to run "the
+  same full profile" — it runs the strict linter, the whole suite and the tarball check, the same
+  inexactitude found in prose during M3. A snapshot was dropped rather than renewed: the manifest row
+  named version `1.2.0` (today `2.4.0`), so the row now names no version. Three numbers were measured
+  and held: the parity reference is 95 rows × 27 columns (`fixtures/parity/data.json`), the fixture
+  bundle holds 16 commits (`fixtures/synthetic/manifest.json`), and the public API has 55 names
+  (`test/api.test.js`). Addresses into `REFACTOR.md` and `BLOCKERS.md` are gone, and the paragraph on
+  the frozen copy no longer claims a hand measurement ("checked by three runs"): it names what guards
+  that today — the git border's witness, hermeticity of the output, and the slow profile. `pnpm run
+  verify` green (8 steps, 64,0 s).
+- [ ] **M6 README, the tail sections** — «Чего ещё нет», «Гейт против раздувания», «Для ИИ-агента»,
+  «Ловушки…» (about 94 Russian lines). Two of those headings are known to `tools/docs-facts.js`
+  (`NOT_TODAY`, `OWN_PROJECT`), so that reader changes in the same commit. To check there: the list of
+  what is still missing against what has since been done, the bloat sensor's thresholds against
+  `eslint.metrics.config.js`, and the description of the `--data` contract against `src/data.js`.
 - [ ] **M6 README 687–705 + 1045–1139** — 94 Russian: «Чего ещё нет», «Гейт против
   раздувания», «Для ИИ-агента», «Ловушки…». Two of those headings are named by
   `tools/docs-facts.js` `NOT_TODAY` / `OWN_PROJECT` — same commit.

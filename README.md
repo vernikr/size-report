@@ -411,138 +411,139 @@ the commit down: the cause is printed as one line and remembered — `size docto
 The move, the refinement and the packaging are laid out step by step in `PLAN.md`, with acceptance for
 each.
 
-## Что в репозитории
+## What is in the repository
 
-| Файл | Роль |
+| File | Role |
 |---|---|
-| `PLAN.md` | **Главный документ:** инвентаризация, границы, инварианты, архитектура, семь шагов переноса, приёмка, риски, открытые вопросы |
-| `docs/requirements.md` | Требования заказчика: что и зачем |
-| `docs/module-design.md` | Архитектурный проект выноса: как устроен модуль |
-| `docs/size-report.html` | Отчёт об объёме этого самого проекта: один самодостаточный файл, который обновляет хук после каждого коммита (отдельным коммитом) |
-| `worklog/` | Журнал запросов и сделанного: запись на каждую порцию работы, имя — `NNNN-слаг.md`; `worklog/archive/WORKLOG.md` — прежний журнал одним файлом |
-| `docs/plans/` | Планы работ: папка `yyyy-mm-dd-имя` на работу, в ней главный план и подпланы |
-| `BLOCKERS.md` | Открытые блокеры и известные пробелы (обход обязан держаться проверкой) |
-| `REFACTOR.md` | Поканальный план чистки: объём кода, потом скорость; границы и чем доказывается, что поведение не изменилось |
-| `CHANGELOG.md` | История выпусков и, у каждого выпуска, раздел «Что изменится в числах»: у кого числа поедут и почему |
-| `tools/parity-freeze.js` | Снимает эталон паритета (`pnpm run parity`): замороженной копией, на ревизии проекта из манифеста — `--json`, конфиг, хеш артефакта, хеш инструмента |
-| `tools/make-fixture.js` | Собирает синтетическую фикстуру (`pnpm run fixture`): детерминированную историю с ловушками плюс эталонные числа |
-| `tools/synthetic/` | Сюжеты той сборки по предметам: `repo.js` — как говорим с git (закреплённые время, автор, настройки), `content.js` — что лежит в файлах, `history.js` — какие коммиты из этого получаются, `note.js` — записка к фикстуре со списком ловушек |
-| `tools/parity-live.js` | Сверяет движок с живым проектом на клоне: числа и самодостаточный отчёт по пути из настроек потребителя (`pnpm run parity:live`) |
-| `tools/pack-check.js` | Собирает тарболл и проверяет, что из него всё работает: все исходники доехали, числа и отчёт — как из репозитория (`pnpm run pack:check`) |
-| `tools/check-standards.js` | Проверяет, что оба эталона воспроизводятся: пересъём идёт в никуда и сверяется с закоммиченным (наши файлы — побайтово, бандл — по содержимому) и что бандл живой истории несёт `HEAD` (`pnpm run check:standards`) |
-| `.github/workflows/ci.yml` | CI: работа `verify` на каждый пуш и запрос правки зовёт `pnpm run verify` — тот же профиль, что локально; действия закреплены по SHA коммита |
-| `.github/workflows/verify-slow.yml` | Slow-профиль по расписанию: то же плюс покрытие под c8 — дорогое не в каждом прогоне |
-| `tools/gates/run.js` | Профили проверок — единственный список шагов: `fast` (каждая правка), `full` (перед отправкой и в CI), `slow` (+ покрытие); `--list` печатает команды |
-| `tools/gates/metrics.js` | Датчик раздувания: правила размера и сложности, вес проверок, пометки долга — с храповиком подавлений ESLint (`.eslint-suppressions.json`) |
-| `tools/gates/dup.js` | Датчик дублей: отпечатки клонов по содержимому (`dup-baseline.json`), взгляд против файла базы и против дерева `origin/main` |
-| `tools/gates/deps.js` | Датчик связей: циклы, сироты, направление слоёв и неразрешимые импорты (`dependency-cruiser`) |
-| `tools/gates/coverage.js` | Датчик покрытия: храповик по файлам против `coverage-baseline.json`, а не процент по репозиторию |
-| `tools/gates/gatefiles.js` | Защита гейт-файлов: правка порогов, баз и обвязки без трейлера `Gate-Change:` — красный (хук `commit-msg` и CI по диапазону) |
-| `tools/gates/common.js`, `tools/gate-probe.js` | Общее у датчиков (корень, разбор ключей, отчёты) и обвязка их проб: датчик зовётся командой, а не импортом |
-| `.githooks/commit-msg`, `.githooks/pre-commit`, `.githooks/pre-push` | Хуки: защита гейт-файлов, быстрый профиль на правку и перед отправкой; ставятся `pnpm run hooks:install` (свой менеджер хуков не заводится) |
-| `.githooks/post-commit` | Обновление отчёта после коммита: зов установленной копии пакета (строка вписана человеком — инструмент чужие каталоги хуков не правит) |
-| `eslint.metrics.config.js`, `.eslint-suppressions.json` | Правила датчика раздувания и его база: пороги из замеров, всё, что выше, — в базе и разбирается постепенно |
-| `.jscpd.json`, `dup-baseline.json` | Настройки и база датчика дублей: отпечаток считается по содержимому клона, поэтому база переносима |
-| `.dependency-cruiser.cjs`, `.c8rc.json`, `coverage-baseline.json` | Правила графа связей, настройки снятия покрытия и его база по файлам |
-| `AGENTS.md` | Короткая инструкция агенту репозитория: что запускать, что делать при красном, что нельзя менять |
-| `.github/workflows/release.yml` | Выпуск по тегу: тот же полный набор, сверка версии манифеста с тегом и публикация в реестр по удостоверению GitHub Actions — без секрета и без кода из аутентификатора |
-| `templates/` | То, что проект берёт как есть: `size-report.config.json` (черновик настроек), `ci.yml` (описание проверки) и `README.md` (куда что кладётся и что в них менять); едут в поставке и стерегутся `pack:check` и `test/templates.test.js` |
-| `fixtures/parity/` | Эталон с `safe-resets` на коммите `bd6ef9d`: 95 строк × 27 колонок. Копия реализации, которой он снят, в дереве не лежит — её байты живут в истории и берутся оттуда по требованию (`REFACTOR.md` R-1.5) |
-| `fixtures/synthetic/` | Бандл фикстуры на 16 коммитов, её конфиг, эталонные числа (`--json` прежней копии) и хеш её артефакта прежней формы — запись того, с чем сверялся перенос |
-| `fixtures/live/history.bundle`, `fixtures/live/README.md` | История проекта-потребителя на ревизии эталона `bd6ef9d` и записка о том, какую ревизию бандл несёт и почему он лежит в репозитории: живая сверка работает без доступа к приватному проекту |
-| `bin/size.js` | Команда `size`: то, что ставит пакет (`package.json` → `bin`); сама ничего не считает, только зовёт точку входа |
-| `LICENSE` | MIT: условия лицензии едут в поставке вместе с пакетом |
-| `.gitignore`, `pnpm-lock.yaml` | Что в репозиторий не идёт; lock-файл pnpm, а версия менеджера — в поле `packageManager` (оттуда её берёт CI) |
-| `src/size-table.js` | Точка входа пакета: только реэкспорт публичного API (55 имён), ни одного расчёта |
-| `src/derived.js` | Общий расчёт отчёта: итоги, дельты, клетка, подпись коммита — один на движок и программу страницы |
-| `src/css.js` | Чтение оформления с диска: какие наборы стилей есть и какая у них роль |
-| `src/table.css` | Таблица отчёта: геометрия клеток, липкие шапка и колонка, цвет дельт |
-| `src/page/app.css` | Оформление страницы сверх общей части: панель с деревом файлов и липкой строкой категорий (на широком экране — колонка слева, страница в окно), состояния пустоты, узкое окно |
-| `src/page/state.js` | Состояние страницы: данные отчёта, вид галочек, указатель «какой путь — какая колонка», сложенные папки, паспорт записи, память браузера и обмен ссылкой — глава программы страницы |
-| `src/page/dom.js` | Узлы страницы: мелкие помощники разметки (`appEl`, `appBox`) — одни на панель и таблицу |
-| `src/page/panel.js` | Панель выбора: галочки метрик и файлов, категории, дерево путей проекта (файлы вне отчёта — снятой галочкой с причиной, после остальных; папки — со знаком складывания, который прячет поддерево классом, а не пересборкой); перерисовку просит у главы сборки |
-| `src/page/table.js` | Таблица страницы: клетка, подпись коммита, шапка и состояния пустоты — разметка поверх общего расчёта |
-| `src/page/app.js` | Сборка и запуск страницы: таблица целиком, перерисовка по выбору читателя (с возвратом фокуса и прокрутки), первая отрисовка и смена якоря; вклеивается в собранную страницу
-| `src/page/build.js` | Сборка страницы: данные, оформление и программа в одном файле без внешних ссылок |
-| `src/git.js` | Единственная граница вызова git: закрепления настроек, блобы пачкой, история, сверка с диском |
-| `src/strip.js` | Снятие балласта: какая форма к какому файлу (расширение, стратегия) и что считать точным числом — вход разбора форм |
-| `src/strip/js.js` | Снятие комментариев и отступов в JS: проход по случаям (комментарий, регексп, строка, символ) — строки и шаблоны насквозь |
-| `src/strip/forms.js` | Формы текста со своим снятием балласта: разметка, стили, строки файла и JSON |
-| `src/strip/guard.js` | Гард стриппера: снятое обязано компилироваться — скриптом в процессе или модулем в рабочем потоке |
-| `src/parse.js` | Разбор модуля: рабочий поток на прогон и отступление к `node --check`, способ разбора последнего модуля |
-| `src/parse-worker.js` | Сам разбор внутри потока: разбирает текст без исполнения, сообщает, что модулей vm в Node нет |
-| `src/metrics.js` | Реестр метрик: что измеряется, нужен ли текст и насколько честна цифра; описание метрики для читателя — в одном месте |
-| `src/minify.js` | Настоящий минификатор: необязательная зависимость, загружается один раз и не роняет прогон, если её нет |
-| `src/tokens.js` | Токены: словарь по семейству и кодировке, оценка по длине как запасной счёт, форматы без текста |
-| `src/optional.js` | Общее устройство необязательных зависимостей (минификатор и словарь): ленивая загрузка, версия пакета, шов отсутствия |
-| `src/history.js` | Обход истории: измерение по коммитам, сдвиг чисел, сборка, сверка с деревом, знак «какой колонки коснулся последний коммит» и причина пропуска у каждого выпавшего коммита |
-| `src/check.js` | Полнота покрытия (`size check`): настройки, история, пути, датчики — что прошло мимо колонок и чем это чинится |
-| `src/explain.js` | Объяснение пропущенной строки (`size explain <коммит>`): причина, улики и готовая починка |
-| `src/doctor.js` | Диагностика одним ответом (`size doctor`): окружение, зависимости, настройки, покрытие, состояние хука — сборкой из существующих кусков |
-| `src/hook.js` | Хуки автообновления: постановка сама (`autoInstall` — из входа и `bin/postinstall.js`), снятие командой, коммит только отчёта, замок и запись о запуске |
-| `bin/postinstall.js` | Установка хука после постановки пакета: ищет проект-потребитель и молчит, если поставить негде |
-| `src/artifact.js` | Отчёт на диске: единственное место, где он превращается в файл (им пользуются и `--write`, и хук); отчёт — самодостаточная страница |
-| `src/journal.js` | Журнал и ссылки: к какому разделу относится коммит и куда ведёт описание |
-| `src/data.js` | Категории файлов и контракт со страницей (`--data`): числа, устройство таблицы и каталог путей проекта |
-| `src/config.js` | Настройки проекта-потребителя: умолчания, чтение, проверка |
-| `src/project.js` | Настройки, выведенные из самого проекта (дерево и история): колонки, журнал, исключения, каталог путей для дерева страницы. Без файла настроек он и есть настройки; `--init` закрепляет его файлом |
-| `src/locales.js`, `src/refusal.js`, `src/tool.js` | Тексты отчёта; коды выхода и справка; имя и версия пакета |
-| `src/cli.js` | Вход инструмента: разбор строки, чтение проекта и доставка запроса режиму; главный файл пакета |
-| `src/args.js` | Грамматика командной строки: режимы, ключи и команды плюс проверки их сочетаний — отказ называет виновника и готовую команду |
-| `src/modes.js` | Режимы: собрать отчёт, сверить его с историей, отдать данные, полноту покрытия и диагностику |
-| `src/init.js` | Закрепление настроек файлом (`--init`): то, что проект вывел о себе сам, ложится файлом — и проходит ту же проверку, что первый запуск |
-| `test/api.test.js` | Публичный API пакета: список имён заморожен, разбиение не имеет права его менять |
-| `eslint.config.js` | Правила оформления: те же, что у проекта-потребителя, плюс запрет склейки операторов в строке (`pnpm run lint`, `pnpm run lint:strict`) |
-| `tools/harness.js` | Обвязка проверок: пути, клоны фикстуры (в том числе общий на набор и с CRLF), запуск инструмента, разбор отказов, хеши |
-| `tools/page-harness.js` | Обвязка проверок контракта и страницы: данные контракта, собранная страница, чтение её в настоящем DOM, переключатели панели — одна на четыре набора |
-| `tools/suites.js` | Разделение набора: какие файлы идут в быстрый прогон (с причиной для каждого), почему каждый дорогой — в полном |
-| `tools/run-tests.js` | Прогон набора (`pnpm test`, `pnpm test:all`, `pnpm run suites:measure`): длительность каждого файла своим замером и сверка числа проверок |
-| `tools/docs-facts.js` | Чтение фактов из документации — один слой на четыре проверки сторожа: что документ называет (пути, зовы, адреса разделов) против того, что есть в репозитории |
-| `tools/yaml.js` | Разбор подмножества YAML — один разборщик на два сторожа описаний (`templates/ci.yml` и `.github/workflows/release.yml`): вне подмножества — ошибка, а не молча пропущенная строка, включая двоеточие с пробелом в незакавыченном значении (именно оно делало описание выпуска неразбираемым, пока проверка искала подстроки) |
-| `tools/refusals.js` | Каталог отказов: по строке на каждый — причина, код выхода, обязательные фразы вывода, **что отказ советует** (`advice`: `run` — команда, `template` — форма с подстановкой, `manual` — действие человека с причиной, `coveredBy` — отдан другой проверке), а для непроверяемого — почему; карты мест отказа (`SITES`, `PRINTED`) держат числа, чтобы новый отказ не появился молча, а маркеры совета — чтобы не появился молча новый совет |
-| `test/parity.test.js` | Паритет движка с эталоном: числа, самодостаточность отчёта, локаль |
-| `test/frozen.test.js` | Замороженная копия: та ли это ревизия, с которой снят эталон, и воспроизводит ли она его |
-| `test/environment.test.js` | Герметичность: вывод не зависит от настроек git машины и локали |
-| `test/crlf.test.js` | Выкладка с CRLF (`core.autocrlf`) не мешает сверке |
-| `test/disk.test.js` | Сверка с рабочим деревом: правка только на диске, три вида потери (правка, создание, удаление — все мутацией), файл, удалённый до HEAD, и переименование внутри псевдонимов — не потеря (`BLOCKERS.md` §B3, §N8) |
-| `test/cli.test.js`, `test/cli-paths.test.js` | Отказы командной строки: справка, настройки, коды выхода — и куда инструмент пишет |
-| `test/refusals.test.js` | Отказы исполняются: каждый вызван прогоном, сверены код выхода и обещанные фразы (свои клоны — для чужого хука, обрезанной истории и ветки мимо отчёта), и **совет выполняется** — команда даёт обещанный код, не падает стеком, а где объявлено «отказ ушёл», тот же зов после неё отвечает другим |
-| `test/refusals-catalog.test.js` | Сторож каталога отказов: у каждого места отказа в исходниках есть пункт, у каждого пункта — объявленный совет, а отказы, отданные другой проверке, ею в самом деле утверждаются (названные файл и строка проверяются) |
-| `test/contract-data.test.js` | Контракт данных: числа против эталона, состав полей против производных, пометки приближения против подписи метрики |
-| `test/contract-derived.test.js` | Производные против чисел артефакта: итоги строки, дельты клетки и дельта итога — на коде, который лежит в дереве |
-| `test/page-view.test.js` | Собранная страница: вклейка без копий расчёта, самодостаточность, состояния пустоты, оформление и переключатели |
-| `test/page-tree.test.js` | Дерево файлов панели: папки по путям проекта, три состояния, поддерево, файлы и папки вне отчёта (снятая галочка и место после остальных), складывание без пересборки и прокрутка при пересборке |
-| `test/page-choice.test.js` | Память выбора и обмен ссылкой: перезаход, чужой отчёт, чужая и битая запись, смена адреса на открытой странице |
-| `test/module.test.js` | Модуль в расширении `.js`: измеряется без правок настроек; гард стриппера жив (доказано мутацией) и не обвиняет невиновного |
-| `test/guard.test.js` | Разбор модуля: идёт потоком, оба пути дают один вердикт, отступление работает без файла потока, сотни разборов дешевле запуска |
-| `test/runner.test.js` | Чтение вывода процесса: куски склеиваются буферами, а не приклеиваются к строке — многобайтовый символ на границе кусков не превращается в два символа-заменителя |
-| `test/git-pins.test.js` | Сторож границы git: прямых вызовов git без общего списка закреплений нет, и незакреплённое чтение показывается свидетелем (путь кавычками) |
-| `test/docs-paths.test.js`, `test/docs-commands.test.js`, `test/docs-numbers.test.js`, `test/docs-pin.test.js` | Сторож документации, по файлу на обещание: пути и таблица файлов; зовы, причины отказа и адреса разделов; числа проверок; пин в примере установки |
-| `test/changelog.test.js` | Сторож выпуска: версия в `CHANGELOG.md` — версия манифеста, а таблица «что изменится в числах» — это замер на фикстуре, сверенный с живым прогоном |
-| `test/release.test.js` | Сторож выпуска из CI: он начинается тегом, версия берётся из манифеста, секрета и одноразового кода не требует, prerelease не уезжает в `latest`, перед публикацией идёт полный набор — и подсказка на npmjs.com называет этот же файл |
-| `test/suites.test.js` | Сторож разделения набора: полнота классификации (быстрый — явно, полный — с причиной), причина у каждого файла, что быстрый прогон остаётся частью набора |
-| `test/gates-metrics.test.js`, `test/gates-dup.test.js`, `test/gates-deps.test.js`, `test/gates-coverage.test.js`, `test/gates-files.test.js` | Пробы датчиков: искусственное нарушение → датчик красный, снятие → снова зелёный; прогон зовёт датчик командой, а не импортом, поэтому доказывает и код возврата |
-| `test/gates-verify.test.js` | Сторож единственного списка: команды профиля против рабочих процессов, хуков и `templates/ci.yml` — проверки, которой нет в профиле, в CI быть не может |
-| `test/check.test.js` | Полнота и объяснение на настоящих коммитах фикстуры: непокрытый путь, «только отчёт», «число не сдвинулось», «мимо колонок», слияние — и что починка настроек не двигает числа |
-| `test/doctor.test.js` | Диагностика на пяти состояниях проекта: без настроек (2), полное покрытие (0), неполное (1), обрезанная история (3), нет датчика (4) — и блок покрытия равен ответу `size check`, а не считается вторым разом |
-| `test/hook.test.js` | Хуки на свежем клоне: ставятся только командой, дают отдельный коммит отчёта (в том числе после слияния), повторный запуск молчит, чужая работа и индекс не тронуты, в CI и при отказе инструмента ничего не делают, снятие возвращает проект к прежнему |
-| `test/templates.test.js` | Шаблоны: черновик настроек проходит проверку инструмента и собирает настоящий отчёт; описание проверки разбирается и зовёт только существующие команды и ключи |
-| `test/minify.test.js`, `test/tokens.test.js` | Настоящее сжатие и токены: числа против упрощения, кодировка как часть числа, честность подписи, работа без необязательной зависимости (код 4) и шов `SIZE_REPORT_NO_OPTIONAL` |
-| `package.json` | Манифест пакета: имя `@vernikr/size-report`, версия `1.2.0`, список поставки — только существующее |
+| `PLAN.md` | **The main document:** inventory, boundaries, invariants, architecture, the seven steps of the move, acceptance, risks, open questions |
+| `docs/requirements.md` | The customer's requirements: what and why |
+| `docs/module-design.md` | The design of the extraction: how the module is put together |
+| `docs/size-report.html` | The size report of this very project: one self-contained file, refreshed by the hook after every commit (as a commit of its own) |
+| `worklog/` | The journal of requests and of what was done: an entry per portion of work, named `NNNN-slug.md`; `worklog/archive/WORKLOG.md` is the earlier journal in one file |
+| `docs/plans/` | Plans of work: a folder `yyyy-mm-dd-name` per piece of work, holding the main plan and its subplans |
+| `BLOCKERS.md` | Open blockers and known gaps (a workaround has to rest on a check) |
+| `REFACTOR.md` | The per-channel plan of the cleanup: size of the code first, speed after; the boundaries and what proves that the behaviour did not change |
+| `CHANGELOG.md` | The history of releases and, for each release, a section on what changes in the numbers: whose figures move and why |
+| `tools/parity-freeze.js` | Takes the parity reference (`pnpm run parity`): with the frozen copy, at the project revision from the manifest — `--json`, the config, the artifact's hash, the tool's hash |
+| `tools/make-fixture.js` | Assembles the synthetic fixture (`pnpm run fixture`): a deterministic history with traps plus the reference numbers |
+| `tools/synthetic/` | The subjects of that assembly, one per matter: `repo.js` — how git is spoken to (pinned time, author, settings), `content.js` — what the files hold, `history.js` — which commits come of it, `note.js` — the fixture's note with the list of traps |
+| `tools/parity-live.js` | Compares the engine with the live project on a clone: the numbers and the self-contained report at the path the consumer's settings give (`pnpm run parity:live`) |
+| `tools/pack-check.js` | Assembles the tarball and checks that everything works from it: all sources arrived, the numbers and the report as from the repository (`pnpm run pack:check`) |
+| `tools/check-standards.js` | Checks that both references reproduce: a re-take goes nowhere and is compared with what is committed (our files byte for byte, the bundle by content), and that the live-history bundle carries `HEAD` (`pnpm run check:standards`) |
+| `.github/workflows/ci.yml` | CI: the job `verify` calls `pnpm run verify` on every push and every pull request — the same profile as locally; the actions are pinned by commit SHA |
+| `.github/workflows/verify-slow.yml` | The slow profile on a schedule: the same plus the same suite with no machine git settings and coverage under c8 — the dear steps, not in every run |
+| `tools/gates/run.js` | The check profiles — the single list of steps: `fast` (every edit), `full` (before pushing and in CI), `slow` (+ the hermetic suite and coverage); `--list` prints the commands |
+| `tools/gates/metrics.js` | The bloat sensor: rules of size and complexity, the weight of checks, debt marks — with an ESLint suppression ratchet (`.eslint-suppressions.json`) |
+| `tools/gates/dup.js` | The duplication sensor: clone fingerprints by content (`dup-baseline.json`), a view against the baseline file and one against the `origin/main` tree |
+| `tools/gates/deps.js` | The dependency sensor: cycles, orphans, the direction of layers and unresolvable imports (`dependency-cruiser`) |
+| `tools/gates/coverage.js` | The coverage sensor: a per-file ratchet against `coverage-baseline.json` rather than a percentage over the repository |
+| `tools/gates/gatefiles.js` | The guard of the gate files: editing thresholds, baselines or the harness without the `Gate-Change:` trailer is red — the `commit-msg` hook at commit time and the `pre-push` hook over a range, while CI reads no trailers at all |
+| `tools/gates/common.js`, `tools/gate-probe.js` | What the sensors share (the root, argument parsing, reports) and the harness of their probes: a sensor is called as a command rather than imported |
+| `.githooks/commit-msg`, `.githooks/pre-commit`, `.githooks/pre-push` | Hooks: the guard of the gate files, the fast profile on an edit and before a push; installed by `pnpm run hooks:install` (no hook manager of our own is started) |
+| `.githooks/post-commit` | Refreshing the report after a commit: a call to the installed copy of the package (the line was written by a person — the tool does not edit someone else's hook directories) |
+| `eslint.metrics.config.js`, `.eslint-suppressions.json` | The bloat sensor's rules and its baseline: thresholds taken from measurements, and everything above them lies in the baseline to be worked off gradually |
+| `.jscpd.json`, `dup-baseline.json` | The duplication sensor's settings and baseline: a fingerprint is taken from a clone's content, which is why the baseline is portable |
+| `.dependency-cruiser.cjs`, `.c8rc.json`, `coverage-baseline.json` | The rules of the dependency graph, the settings of the coverage run and its per-file baseline |
+| `AGENTS.md` | A short instruction for an agent in this repository: what to run, what to do when a sensor is red, what must not be touched |
+| `.github/workflows/release.yml` | A release by tag: the strict linter, the whole suite and the work from the assembled package, the manifest version compared with the tag, and publishing to the registry by the GitHub Actions attestation — no secret and no code from an authenticator |
+| `templates/` | What a project takes as it is: `size-report.config.json` (a draft of settings), `ci.yml` (a description of the check) and `README.md` (what goes where and what to change in them); they ship and are guarded by `pack:check` and `test/templates.test.js` |
+| `fixtures/parity/` | The reference taken from `safe-resets` at commit `bd6ef9d`: 95 rows × 27 columns. The copy of the implementation it was taken with does not lie in the tree — its bytes live in the history and are taken from there on demand |
+| `fixtures/synthetic/` | The fixture's bundle of 16 commits, its config, the reference numbers (the earlier copy's `--json`) and the hash of its artifact in its earlier shape — a record of what the move was checked against |
+| `fixtures/live/history.bundle`, `fixtures/live/README.md` | The consumer project's history at the reference revision `bd6ef9d` and a note on which revision the bundle carries and why it lies in the repository: the live comparison works without access to the private project |
+| `bin/size.js` | The `size` command: what the package installs (`package.json` → `bin`); it counts nothing itself and only calls the entry point |
+| `LICENSE` | MIT: the licence terms travel in the package |
+| `.gitignore`, `pnpm-lock.yaml` | What does not go into the repository; the pnpm lock file, while the manager's version lives in the `packageManager` field (which is where CI takes it from) |
+| `src/size-table.js` | The package's entry point: a re-export of the public API (55 names) and no calculation of its own |
+| `src/derived.js` | The report's shared calculation: totals, deltas, a cell, a commit's caption — one for the engine and the page's program |
+| `src/css.js` | Reading the styling from disk: which sets of styles exist and what role each has |
+| `src/table.css` | The report's table: the geometry of a cell, the sticky header and commit column, the colour of deltas |
+| `src/page/app.css` | The page's styling on top of the shared part: the panel with the file tree and its sticky row of categories (a column on the left on a wide screen, the page fitting the window), the empty states, a narrow window |
+| `src/page/state.js` | The page's state: the report's data, the view of the checkboxes, the pointer "which path is which column", folded folders, the record's passport, the browser's memory and the exchange by link — a chapter of the page's program |
+| `src/page/dom.js` | The page's nodes: the small helpers of markup (`appEl`, `appBox`) — one set for the panel and the table alike |
+| `src/page/panel.js` | The panel of choices: the switches of metrics and files, the categories, the tree of the project's paths (files outside the report keep a checkbox off with a reason and stand after the rest; folders carry a folding sign that hides the subtree by a class rather than by a rebuild); a redraw is asked of the assembling chapter |
+| `src/page/table.js` | The page's table: a cell, a commit's caption, the header and the empty states — markup over the shared calculation |
+| `src/page/app.js` | Assembling and starting the page: the whole table, a redraw on the reader's choice (with the focus and the scroll put back), the first drawing and an anchor change; pasted into the assembled page |
+| `src/page/build.js` | Assembling the page: data, styling and program in one file with no external references |
+| `src/git.js` | The only border where git is called: the pinned settings, blobs by the batch, the history, the comparison with the working tree |
+| `src/strip.js` | Removing ballast: which form goes to which file (extension, strategy) and what counts as an exact number — the entry to the parsing of forms |
+| `src/strip/js.js` | Removing comments and indentation in JS: a pass over the cases (a comment, a regexp, a string, a character) — through strings and templates as well |
+| `src/strip/forms.js` | The forms of text with a removal of their own: markup, styles, the lines of a file and JSON |
+| `src/strip/guard.js` | The stripper's guard: what was stripped has to compile — as a script in the process or as a module in a worker thread |
+| `src/parse.js` | Parsing a module: one worker thread per run and a fallback to `node --check`, and the way the last module was parsed |
+| `src/parse-worker.js` | The parsing itself inside the thread: it parses the text without executing it and reports that Node has no vm modules |
+| `src/metrics.js` | The register of metrics: what is measured, whether the text is needed and how honest the number is; a metric's description for the reader lives in one place |
+| `src/minify.js` | The real minifier: an optional dependency, loaded once, and it does not bring the run down when absent |
+| `src/tokens.js` | Tokens: a dictionary by family and encoding, an estimate by length as the fallback count, the formats without text |
+| `src/optional.js` | The shared handling of optional dependencies (the minifier and the dictionary): lazy loading, the package's version, the seam of absence |
+| `src/history.js` | Walking the history: measuring commit by commit, shifting the numbers, assembling, comparing with the working tree, the mark "which column the last commit touched" and a reason for every dropped commit |
+| `src/check.js` | Coverage (`size check`): settings, history, paths, sensors — what went past the columns and how that is fixed |
+| `src/explain.js` | Explaining a missing row (`size explain <commit>`): the reason, the evidence and a ready fix |
+| `src/doctor.js` | Diagnostics in one answer (`size doctor`): the environment, the dependencies, the settings, the coverage and the hook's state — assembled from the pieces that already exist |
+| `src/hook.js` | The hooks of self-updating: they install themselves (`autoInstall` — from the entry point and `bin/postinstall.js`), come off by a command, commit the report alone, and keep a lock and a record of the run |
+| `bin/postinstall.js` | Installing the hook after the package is added: it looks for the consumer project and stays silent when there is nowhere to install |
+| `src/artifact.js` | The report on disk: the only place where it becomes a file (both `--write` and the hook use it); the report is a self-contained page |
+| `src/journal.js` | The journal and links: which section a commit belongs to and where a description leads |
+| `src/data.js` | The file categories and the contract with the page (`--data`): the numbers, the shape of the table and the catalogue of the project's paths |
+| `src/config.js` | The consumer project's settings: the defaults, reading them, checking them |
+| `src/project.js` | The settings derived from the project itself (its tree and history): columns, the journal, the exceptions, the catalogue of paths for the page's tree. Without a settings file it *is* the settings; `--init` pins it as a file |
+| `src/locales.js`, `src/refusal.js`, `src/tool.js` | The report's texts; the exit codes and the help; the package's name and version |
+| `src/cli.js` | The tool's entry: parsing the command line, reading the project and handing the request to a mode; the package's main file |
+| `src/args.js` | The grammar of the command line: modes, flags and commands plus the checks of their combinations — a refusal names the culprit and a ready command |
+| `src/modes.js` | The modes: assemble the report, compare it with the history, hand over the data, the coverage and the diagnostics |
+| `src/init.js` | Pinning the settings as a file (`--init`): what the project derived about itself is written out — and goes through the same check as the first run |
+| `test/api.test.js` | The package's public API: the list of names is frozen, and splitting the engine may not change it |
+| `eslint.config.js` | The rules of formatting: the same as the consumer project's, plus a ban on gluing operators into one line (`pnpm run lint`, `pnpm run lint:strict`) |
+| `tools/harness.js` | The harness of the checks: paths, clones of the fixture (including one shared per suite and one with CRLF), running the tool, reading refusals, hashes |
+| `tools/page-harness.js` | The harness of the contract and page checks: the contract data, the assembled page, reading it in a real DOM, the panel's switches — one for five suites |
+| `tools/suites.js` | The split of the suite: which files go into the fast run (with a reason for each) and why every dear one is in the full run |
+| `tools/run-tests.js` | Running the suite (`pnpm test`, `pnpm test:all`, `pnpm run suites:measure`): each file's duration measured on its own, and the counts of checks adding up |
+| `tools/docs-facts.js` | Reading facts out of the documentation — one layer for the four checks of the documentation guard: what a document names (paths, calls, section addresses) against what the repository holds |
+| `tools/yaml.js` | Parsing a subset of YAML — one parser for the two guards over descriptions (`templates/ci.yml` and `.github/workflows/release.yml`): anything outside the subset is an error rather than a silently skipped line, including a colon followed by a space in an unquoted value — which is what kept the release description unparsable while the check looked for substrings |
+| `tools/refusals.js` | The catalogue of refusals: one line per refusal — its cause, its exit code, the phrases its output must carry, and **what it advises** (`advice`: `run` — a command, `template` — a form with substitutions, `manual` — a person's action with its reason, `coveredBy` — handed to another check), and for one that cannot be caught at all, why. The maps of refusal sites (`SITES`, `PRINTED`) hold the counts, so that a new refusal cannot appear in silence, and the markers of advice so that a new piece of advice cannot either |
+| `test/parity.test.js` | The engine's parity with the reference: the numbers, the report's self-containedness, the locale |
+| `test/frozen.test.js` | The frozen copy: that it is the revision the reference was taken at, and that it reproduces that reference |
+| `test/environment.test.js` | Hermeticity: the output does not depend on the machine's git settings or on its locale |
+| `test/crlf.test.js` | A checkout with CRLF (`core.autocrlf`) does not hinder the comparison |
+| `test/disk.test.js` | The comparison with the working tree: an edit only on disk, three ways of losing a change (an edit, a creation, a deletion — all by mutation), a file deleted before HEAD, and a rename inside aliases is no loss |
+| `test/cli.test.js`, `test/cli-paths.test.js` | The command line's refusals: the help, the settings, the exit codes — and where the tool writes |
+| `test/refusals.test.js` | The refusals are executed: each one is called by a run, its exit code and its promised phrases are compared (with clones of their own for someone else's hook, a shallow history and a branch past the report), and **the advice runs** — the command answers with the promised code and no stack, while where "the refusal is gone" is declared the same call answers differently after it |
+| `test/refusals-catalog.test.js` | The guard of the refusal catalogue: every refusal site in the sources has an entry, every entry declares its advice, and refusals handed to another check are really accepted by it (the named file and line are checked) |
+| `test/contract-data.test.js` | The data contract: the numbers against the reference, the set of fields against the derived quantities, the marks of approximation against a metric's caption |
+| `test/contract-derived.test.js` | The derived quantities against the artifact's numbers: a row's totals, a cell's delta and the delta of a total — on the code that lies in the tree |
+| `test/page-view.test.js` | The assembled page: pasted with no copy of the calculation, self-contained, the empty states, the styling and the switches |
+| `test/page-tree.test.js` | The panel's file tree: folders by the project's paths, three states, the subtree, files and folders outside the report (a checkbox off, a place after the rest), folding without a rebuild and the scroll across a rebuild |
+| `test/page-choice.test.js` | The memory of the choice and the exchange by link: a revisit, someone else's report, a foreign and a broken record, an address change on an open page |
+| `test/module.test.js` | A module under a `.js` extension: measured without touching the settings; the stripper's guard is alive (proved by mutation) and does not accuse the innocent |
+| `test/guard.test.js` | Parsing a module: it goes through a thread, both paths give one verdict, the fallback works with the thread's file away, and hundreds of parses are cheaper than a launch |
+| `test/runner.test.js` | Reading a process's output: chunks are glued as buffers rather than appended to a string — a multi-byte character at a chunk border does not turn into two replacement characters |
+| `test/git-pins.test.js` | The guard of the git border: no direct calls to git outside the shared list of pins, and an unpinned read is shown by a witness (a quoted path) |
+| `test/docs-paths.test.js`, `test/docs-commands.test.js`, `test/docs-numbers.test.js`, `test/docs-pin.test.js` | The documentation guard, one file per promise: the paths and the file table; the calls, the causes of refusal and the section addresses; the counts of checks; the pin in the install example |
+| `test/changelog.test.js` | The release guard: the version in `CHANGELOG.md` is the manifest's version, and the table of what changes in the numbers is a measurement on the fixture compared with a live run |
+| `test/release.test.js` | The guard of the release from CI: it begins with a tag, the version comes from the manifest, no secret and no one-time code are needed, a prerelease does not go to `latest`, the whole suite runs before publishing — and the hint on npmjs.com names this same file |
+| `test/suites.test.js` | The guard of the suite's split: the classification is complete (fast only explicitly, full with a reason), every file has its reason, and the fast run stays part of the suite |
+| `test/gates-metrics.test.js`, `test/gates-dup.test.js`, `test/gates-deps.test.js`, `test/gates-coverage.test.js`, `test/gates-files.test.js` | The sensors' probes: an artificial violation → the sensor is red, taking it away → green again; the run calls a sensor as a command rather than importing it, which is why it proves the exit code too |
+| `test/gates-verify.test.js` | The guard of the single list: the profile's commands against the workflows, the hooks and `templates/ci.yml` — a check that is not in the profile cannot be in CI |
+| `test/check.test.js` | Coverage and explanation on the fixture's real commits: an uncovered path, "only the report", "the number did not move", "past the columns", a merge — and that a fix of the settings does not move the numbers |
+| `test/doctor.test.js` | Diagnostics over five states of a project: no settings (2), full coverage (0), incomplete (1), a shallow history (3), no sensor (4) — and the coverage block equals the answer of `size check` rather than being counted a second time |
+| `test/hook.test.js` | The hooks on a fresh clone: they are installed by a command only, give a commit of the report's own (after a merge as well), a repeated run stays silent, someone else's work and the index are untouched, nothing happens in CI or on a refusal of the tool, and removing them returns the project to what it was |
+| `test/templates.test.js` | The templates: the draft of settings passes the tool's check and assembles a real report; the description of the check parses and calls only commands and flags that exist |
+| `test/minify.test.js`, `test/tokens.test.js` | Real minification and tokens: the numbers against stripping, the encoding as part of the number, the honesty of a caption, work with no optional dependency (code 4) and the seam `SIZE_REPORT_NO_OPTIONAL` |
+| `package.json` | The package's manifest: the name `@vernikr/size-report`, the version, and a shipped-file list that holds only what exists |
 
-Оба каталога эталонов снимаются заново теми же инструментами: `pnpm run parity` и
-`pnpm run fixture` дают те же файлы. Побайтово сверяется наше — конфиг, эталонные
-числа, хеш артефакта, описание; у бандла истории сверяется содержимое (ветки,
-верхушка, число коммитов), потому что упаковку пишет git и её байты зависят от его
-версии. Обе стороны пары закреплены — инструмент это замороженная копия реализации,
-чьи байты лежат в истории (`fixtures/legacy/size-table.cjs`, `REFACTOR.md` R-1.5) и
-сверяются с записью о происхождении эталона, а ревизия проекта берётся из манифеста
-(`--at` сдвигает её осознанно), окружение снятия задано (`core.quotePath=false`).
-Без закрепления окружения эталон снимается другими числами: на машине с настройками
-git по умолчанию фикстура с не-английским именем файла теряет строку. Проверено
-тремя прогонами: повтор даёт те же байты и прогон без настроек машины
-(`GIT_CONFIG_GLOBAL=/dev/null`) — тоже. Сходимость записанного в манифестах с
-файлами стережёт `test/frozen.test.js`.
+**Both references are taken anew by the same tools:** `pnpm run parity` and `pnpm run fixture` give
+the same files. What is ours is compared byte for byte — the config, the reference numbers, the
+artifact's hash, the description — while the history bundle is compared by content (the branches, the
+tip, the number of commits), because git does the packing and its bytes depend on git's version. Both
+sides of the pair are pinned: the tool is a frozen copy of the implementation, whose bytes live in the
+history (`fixtures/legacy/size-table.cjs`) and are compared against the record of the reference's
+provenance, while the project's revision comes from the manifest (`--at` shifts it deliberately) and
+the environment of the capture is set (`core.quotePath=false`). Without the pinned environment the
+reference is taken with different numbers: on a machine with git's default settings the fixture loses
+a row whose file name is not English. Repetition and hermeticity are not taken on trust either:
+`test/git-pins.test.js` shows an unpinned read by a witness, `test/environment.test.js` keeps the
+output independent of the machine, and the slow profile repeats the whole suite with none of the
+machine's git settings at all. That what the manifests record agrees with the files is guarded by
+`test/frozen.test.js`.
 
 ## Чего ещё нет
 

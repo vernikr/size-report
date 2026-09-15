@@ -39,14 +39,14 @@ test('пути, названные документацией, есть в де�
 
 test('таблица файлов README совпадает с деревом в обе стороны', () => {
   const named = [];
-  const table = read('README.md').match(/## Что в репозитории[\s\S]*?(?=\n## |$)/)[0];
+  const table = read('README.md').match(/## What is in the repository[\s\S]*?(?=\n## |$)/)[0];
   table.split('\n').forEach((line) => {
     if (line.indexOf('|') !== 0) return;
     const first = line.split('|')[1];
-    if (first === undefined || first.trim() === 'Файл' || /^-+$/.test(first.trim())) return;
+    if (first === undefined || first.trim() === 'File' || /^-+$/.test(first.trim())) return;
     first.split(',').forEach((cell) => {
       const tok = cell.replace(/`/g, '').trim();
-      if (tok !== '' && tok !== 'Файл' && tok.indexOf('—') < 0) named.push(tok);
+      if (tok !== '' && tok !== 'File' && tok.indexOf('—') < 0) named.push(tok);
     });
   });
   assert.ok(named.length > 0, 'таблица файлов README не разобралась');
