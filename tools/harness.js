@@ -116,6 +116,18 @@ export function cloneCrlf(into) {
   return into;
 }
 
+/* Проект с нуля: пустой репозиторий с каталогом `src` и заданной подписью — без
+ * неё git не станет коммитить, а спросить не может. Один на все наборы, которым
+ * нужен свой проект, а не клон фикстуры (замер: три набора завели это порознь). */
+export function initRepo(dir) {
+  fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
+  gitIn(dir, ['init', '-q', '-b', 'main']);
+  ['user.name', 'user.email', 'commit.gpgsign'].forEach((key, i) => {
+    gitIn(dir, ['config', key, ['fixture', 'fixture@local', 'false'][i]]);
+  });
+  return dir;
+}
+
 /* Общий клон на среду для прогонов на чтение. Создаётся при первом обращении:
  * наборы, которым среда не нужна, за неё и не платят. */
 const shared = new Map();

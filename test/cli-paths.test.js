@@ -13,7 +13,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  CONFIG, cloneFixture, firstLine, gitIn, gitTry, hasStack, refusal, runFixture, runSize, tempDir
+  CONFIG, cloneFixture, firstLine, gitIn, gitTry, hasStack, initRepo, refusal, runFixture, runSize,
+  tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('cli-paths');
@@ -35,6 +36,27 @@ test('обрезанная история: код 3 и команда докач
 });
 
 /* ---------- вывод в каталог, которого нет ---------- */
+
+/* Проект без настроек и без каталога `docs` — тот случай, ради которого пакет и
+ * ставят: отчёт обязан появиться в `docs/` (каталог создаётся сам), а не в корне.
+ * Проверка появилась по замеру: первая редакция вывода выбирала корень, если
+ * каталога нет, и в свежем проекте отчёт оказывался там, где его никто не ищет. */
+test('в свежем проекте отчёт ложится в docs, который создаётся сам', () => {
+  const dir = initRepo(path.join(tmp, 'fresh'));
+  fs.writeFileSync(path.join(dir, 'README.md'), '# свежий проект\n');
+  fs.writeFileSync(path.join(dir, 'code.js'), 'var a = 1;\n');
+  gitIn(dir, ['add', '-A']);
+  gitIn(dir, ['commit', '-qm', 'feat: начало']);
+  assert.equal(fs.existsSync(path.join(dir, 'docs')), false, 'каталог docs уже есть: случай не тот');
+
+  const res = runSize(dir, ['--write']);
+  assert.equal(res.code, 0, 'запуск без настроек не собрал отчёт: ' + firstLine(res.stderr));
+  const report = path.join(dir, 'docs', 'size-report.html');
+  assert.ok(fs.existsSync(report), 'отчёта нет в docs/ — в выведенном профиле он ложится туда');
+  assert.equal(fs.existsSync(path.join(dir, 'size-report.html')), false,
+    'отчёт лёг и в корне тоже: место у него одно');
+  assert.equal(runSize(dir, []).code, 0, 'контрольный режим на своём отчёте красный');
+});
 
 test('--write создаёт недостающий каталог, названный ключом', () => {
   const dir = cloneFixture(path.join(tmp, 'page-dir'));

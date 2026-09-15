@@ -19,8 +19,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import {
-  CONFIG, PACKAGE, PACKAGE_BIN, ROOT, cloneCrlf, cloneFixture, gitConfig, gitIn, readJson,
-  runFixtureWith, runSize, runTool, tempDir
+  CONFIG, PACKAGE, PACKAGE_BIN, ROOT, cloneCrlf, cloneFixture, gitConfig, gitIn, initRepo,
+  readJson, runFixtureWith, runSize, runTool, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('disk');
@@ -94,17 +94,6 @@ function mutatedEngine(name, part, from, to) {
  * поэтому в состояние не попадает то, что пришло слиянием. */
 function engineWithoutMergePaths() {
   return mutatedEngine('without-merge-paths', 'git.js', "'--diff-merges=first-parent', ", '');
-}
-
-/* Подпись и настройки в своём репозитории: одинаковые во всех проверках этого
- * файла, где репозиторий собирается с нуля. */
-function initRepo(dir) {
-  fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
-  gitIn(dir, ['init', '-q', '-b', 'main']);
-  ['user.name', 'user.email', 'commit.gpgsign'].forEach((key, i) => {
-    gitIn(dir, ['config', key, ['fixture', 'fixture@local', 'false'][i]]);
-  });
-  return dir;
 }
 
 /* Проверка проверки: правка файла на диске, о которой git молчит (файл помечен

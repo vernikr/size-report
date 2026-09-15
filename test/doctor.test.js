@@ -23,7 +23,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { NO_OPTIONAL } from '../src/optional.js';
 import {
-  CONFIG, firstLine, gitIn, gitTry, hasStack, readJson, runSize, sharedClone, tempDir
+  CONFIG, firstLine, gitIn, gitTry, hasStack, initRepo, readJson, runSize, sharedClone, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('doctor');
@@ -47,12 +47,7 @@ function configAs(name, edit) {
 
 // Свежий проект: два коммита и ни одной настройки — то, что видит первый запуск.
 function freshRepo(name) {
-  const dir = path.join(tmp, name);
-  fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
-  gitIn(dir, ['init', '-q', '-b', 'main']);
-  ['user.name', 'user.email', 'commit.gpgsign'].forEach((key, i) => {
-    gitIn(dir, ['config', key, ['fixture', 'fixture@local', 'false'][i]]);
-  });
+  const dir = initRepo(path.join(tmp, name));
   fs.writeFileSync(path.join(dir, 'src', 'code.js'), '// начало\n');
   gitIn(dir, ['add', '-A']);
   gitIn(dir, ['commit', '-qm', 'начало']);
