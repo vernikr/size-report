@@ -44,7 +44,7 @@
  *   size --json             строки как JSON в stdout
  *   size --data             данные для страницы и агента в stdout
  *   size --page [файл]      собрать страницу отчёта
- *   size --init [файл]      черновик конфига для нового проекта
+ *   size --init [файл]      закрепить настройки файлом (без него они выводятся из проекта)
  *   size --config <путь>    другой файл настроек
  *   size --help             справка и коды выхода
  *
@@ -60,20 +60,22 @@
  *   strip → refusal, parse                             — снятие балласта и гард;
  *   metrics → strip                                    — реестр метрик;
  *   git → refusal                                      — всё, что читается у git;
- *   config → git, refusal, locales, metrics, data      — настройки проекта;
+ *   project → git, refusal, data                       — что проект говорит о себе сам;
+ *   config → project, git, refusal, locales, metrics, data — настройки проекта;
  *   history → git, metrics, journal, refusal           — сборка по истории;
  *   data → locales, metrics, journal, history, tool    — контракт со страницей;
  *   render → locales, metrics, journal, derived        — статический артефакт;
  *   page/build → locales, render                       — страница отчёта;
  *   modes → почти все                                  — что делать по запросу;
- *   init → config, refusal, git, artifact              — черновик настроек;
+ *   init → config, project, refusal, artifact          — закрепление настроек файлом;
  *   cli → args, modes, init, config, refusal           — вход: разбор и доставка.
  *
  * Публичный API — то, чем пользуются `bin/size.js` и `test/`: список ниже не
  * сокращается при разбиении (это проверяет `test/api.test.js`).
  */
 export { main } from './cli.js';
-export { initMode, sniffColumns } from './init.js';
+export { initMode } from './init.js';
+export { sniffColumns } from './project.js';
 export { check, dataMode, pageMode } from './modes.js';
 export { reportData, categoryOf, CATEGORY_EXTS, CATEGORY_ORDER } from './data.js';
 export { measureHistory } from './history.js';

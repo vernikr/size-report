@@ -3,6 +3,7 @@ import { EXIT, Refusal, USAGE } from './refusal.js';
 import { CONFIG_NAME, gitRoot, loadConfig } from './config.js';
 import { HOOK_COMMANDS, parseArgs } from './args.js';
 import { initMode } from './init.js';
+import { derivedLines } from './project.js';
 import {
   checkMode, coverageMode, dataMode, doctorMode, explainMode, hookMode, jsonMode, pageMode, writeMode
 } from './modes.js';
@@ -10,9 +11,10 @@ import {
 /* Вход инструмента: разбор строки, чтение проекта и доставка запроса режиму.
  *
  * Здесь не осталось ни грамматики (`src/args.js`), ни самих режимов
- * (`src/modes.js`), ни черновика настроек (`src/init.js`) — только то, без чего
+ * (`src/modes.js`), ни закрепления настроек (`src/init.js`) — только то, без чего
  * вход не вход: откуда берётся корень проекта, каким ключом назван файл настроек и
- * как отказ превращается в код выхода. Разделение не косметическое: цепочка
+ * как отказ превращается в код выхода. Здесь же сказано вслух, когда настроек нет
+ * и работа идёт на выведенных из проекта: это общее для всех режимов, а не их дело. Разделение не косметическое: цепочка
  * ветвлений «что запрошено» росла с каждым режимом и держала сложность входа, а
  * правила грамматики и тексты отказов проверяются своим каталогом
  * (`tools/refusals.js`), который считает их места в исходниках.
@@ -40,6 +42,9 @@ function deliver(cmd, base) {
   if (cmd.verb === 'doctor') return doctorMode(base.root, base.configFile, cmd.json);
   if (HOOK_COMMANDS.indexOf(cmd.verb) >= 0) return hookMode(cmd.verb, base.root, base.configFile);
   const ctx = { root: base.root, configFile: base.configFile, cfg: loadConfig(base.configFile, base.root) };
+  // Примечание идёт в stderr: у `--json` и `--data` в stdout лежат данные, и
+  // подмешивать в них рассказ о настройках значило бы ломать разбор.
+  if (ctx.cfg.derived) derivedLines(ctx.cfg).forEach((line) => console.error(line));
   return RUNNERS[asked(cmd)](cmd, ctx);
 }
 

@@ -33,39 +33,94 @@ test('--help отвечает справкой, кодом 0 и без наст�
   assert.match(res.stdout, /Коды выхода/, 'справка не называет коды выхода');
 });
 
-/* ---------- нет настроек ---------- */
+/* ---------- настроек нет ---------- */
 
-test('без настроек отказ называет команду, которой настройки создаются', () => {
+/* Без файла настроек инструмент больше не отказывает: он выводит их из самого
+ * проекта и говорит об этом — заводить файл ради первого запуска незачем. Отказом
+ * остаётся **названный** файл: `--config` — это запрос про конкретный файл, и его
+ * отсутствие (опечатка в пути, чужой проект) молча покрывать догадкой нельзя. */
+test('без настроек инструмент работает на выведенных и говорит, чем их закрепить', () => {
   const dir = cloneFixture(path.join(tmp, 'no-config'));
   const res = runSize(dir, []);
-  refusal(res, 2, 'запуск без файла настроек');
-  assert.match(res.stderr, /нет файла настроек/, 'отказ объясняет не то: ' + firstLine(res.stderr));
+  assert.match(res.stderr, /настройки выведены из проекта/,
+    'запуск без настроек не сказал, откуда они взялись: ' + firstLine(res.stderr));
 
   const cmd = commandIn(res.stderr);
-  assert.ok(cmd !== null, 'в отказе нет команды починки:\n' + res.stderr);
-  assert.equal(cmd.flag, '--init', 'команда починки ведёт не к созданию настроек: ' + cmd.flag);
-  assert.ok(fs.existsSync(cmd.file), 'команда починки указывает на несуществующий файл: ' + cmd.file);
+  assert.ok(cmd !== null, 'в выводе нет команды, которой настройки закрепляются:\n' + res.stderr);
+  assert.equal(cmd.flag, '--init', 'совет ведёт не к закреплению настроек: ' + cmd.flag);
+  assert.ok(fs.existsSync(cmd.file), 'совет указывает на несуществующий файл: ' + cmd.file);
+
+  // Названный файл настроек всё ещё обязан быть — иначе опечатка в пути дала бы
+  // молча другие числа.
+  refusal(runSize(dir, ['--config', 'нет-такого.json']), 2, 'названный файл настроек');
+
+  const wrote = runSize(dir, ['--write']);
+  assert.equal(wrote.code, 0, 'без настроек инструмент не собрался: ' + firstLine(wrote.stderr));
+  assert.ok(fs.existsSync(path.join(dir, 'docs', 'size-table.html')),
+    'без настроек таблица не собралась');
 
   const fix = spawnSync(process.execPath, [cmd.file, '--init'],
     { cwd: dir, encoding: 'utf8', maxBuffer: MAX_BUF });
-  assert.equal(fix.status, 0, 'команда из отказа не сработала: ' + firstLine(fix.stderr || fix.stdout));
+  assert.equal(fix.status, 0, 'команда из вывода не сработала: ' + firstLine(fix.stderr || fix.stdout));
   assert.ok(fs.existsSync(path.join(dir, 'size-table.config.json')),
-    'команда из отказа завершилась успехом, но настроек не создала');
+    'команда из вывода завершилась успехом, но настроек не создала');
 
   const again = runSize(dir, []);
-  assert.equal(/нет файла настроек/.test(again.stderr), false,
-    'после починки отказ повторяется: ' + firstLine(again.stderr));
+  assert.equal(/настройки выведены из проекта/.test(again.stderr), false,
+    'после закрепления настроек про них всё ещё говорится как о выведенных: ' + firstLine(again.stderr));
 
-  // Подсказка закрыта только тогда, когда по ней действительно работают: черновик
-  // обязан проходить собственную проверку настроек.
-  const wrote = runSize(dir, ['--write']);
-  assert.equal(wrote.code, 0, 'после подсказки инструмент не работает: ' + firstLine(wrote.stderr));
-  assert.ok(fs.existsSync(path.join(dir, 'docs', 'size-table.html')),
-    'после подсказки таблица не собралась');
+  // Совет закрыт только тогда, когда по нему действительно работают: закреплённое
+  // обязано проходить ту же проверку, которой его встретит следующий запуск.
+  const second = runSize(dir, ['--write']);
+  assert.equal(second.code, 0, 'после закрепления инструмент не работает: ' + firstLine(second.stderr));
 
-  const second = runSize(dir, ['--init']);
-  refusal(second, 2, 'повторный --init');
-  assert.match(second.stderr, /--force/, 'отказ не говорит, как перезаписать настройки');
+  const third = runSize(dir, ['--init']);
+  refusal(third, 2, 'повторный --init');
+  assert.match(third.stderr, /--force/, 'отказ не говорит, как перезаписать настройки');
+});
+
+/* Выведенное обязано работать **сейчас**: команду починки цитируют подпись отчёта
+ * и отказы, поэтому зов проекта берётся, только если скрипт объявлен, а иначе
+ * называется установленный пакет внутри проекта. Ссылка на коммит выводится из
+ * адреса origin и только у тех хозяев, чей вид ссылки известен: у чужого — пусто,
+ * потому что ссылка не туда хуже отсутствия ссылки. */
+test('команда починки и ссылка на коммит выводятся из проекта', () => {
+  const dir = path.join(tmp, 'derived-profile');
+  fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
+  gitIn(dir, ['init', '-q', '-b', 'main']);
+  gitIn(dir, ['config', 'user.name', 'fixture']);
+  gitIn(dir, ['config', 'user.email', 'fixture@local']);
+  gitIn(dir, ['config', 'commit.gpgsign', 'false']);
+  fs.writeFileSync(path.join(dir, 'package.json'), '{"name":"demo","version":"1.0.0"}\n');
+  fs.writeFileSync(path.join(dir, 'src', 'code.js'), '// начало\n');
+  gitIn(dir, ['add', '-A']);
+  gitIn(dir, ['commit', '-qm', 'начало']);
+  gitIn(dir, ['remote', 'add', 'origin', 'git@github.com:owner/repo.git']);
+
+  // Закрепление — то, чем проект работает без файла, поэтому читается оно же:
+  // файл и есть выведенный профиль.
+  const derived = () => {
+    const init = runSize(dir, ['--init', '--force']);
+    assert.equal(init.code, 0, '--init не закрепил настройки: ' + firstLine(init.stderr));
+    return JSON.parse(fs.readFileSync(path.join(dir, 'size-table.config.json'), 'utf8'));
+  };
+
+  const first = derived();
+  assert.match(first.fixCommand, /bin\/size\.js --write$/, 'команда починки зовёт скрипт,'
+    + ' которого в проекте нет (ответит «нет такого скрипта»): ' + first.fixCommand);
+  assert.equal(first.links.commitUrl, 'https://github.com/owner/repo/commit/{sha}',
+    'ссылка на коммит не выведена из адреса origin: ' + first.links.commitUrl);
+
+  // Объявленный скрипт берётся: подпись отчёта ведёт к тому, чем проект собирается сам.
+  const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
+  pkg.scripts = { sizes: 'size --write' };
+  fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify(pkg, null, 2) + '\n');
+  assert.equal(derived().fixCommand, 'npm run sizes', 'объявленный скрипт проекта не взят');
+
+  // Чужой хозяин — не повод угадывать вид ссылки.
+  gitIn(dir, ['remote', 'set-url', 'origin', 'git@bitbucket.org:owner/repo.git']);
+  assert.equal(derived().links.commitUrl, '',
+    'ссылка выведена у хозяина, чей вид ссылки неизвестен');
 });
 
 /* Таблица, лежащая в истории (то есть в проекте, который уже подключил

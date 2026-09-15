@@ -7,6 +7,7 @@ import { LOCALES } from './locales.js';
 import { METRICS, MINIFY_ENGINES } from './metrics.js';
 import { TOKEN_DEFAULTS, TOKEN_FAMILIES } from './tokens.js';
 import { CATEGORY_ORDER } from './data.js';
+import { projectConfig } from './project.js';
 
 /* Настройки проекта-потребителя: значения по умолчанию, чтение и проверка.
  * Настройки описывают проект, а не механику, поэтому проверка стоит здесь же и
@@ -70,6 +71,41 @@ export function gitRoot() {
   }
 }
 
+/* Настроек нет — их выводит сам проект (`src/project.js`), и работа начинается сразу:
+ * заводить файл ради первого запуска незачем, а `--init` закрепляет выведенное
+ * файлом, когда его хотят править. Так бывает только с умолчательным именем: файл,
+ * названный ключом `--config`, — это уже запрос про конкретный файл, и его
+ * отсутствие остаётся отказом (иначе опечатка в пути молча дала бы чужие настройки).
+ * `path` назван словами, а не путём: файла нет, и текст «правьте <путь>» привёл бы
+ * человека к тому, чего в проекте не лежит. */
+export function derivedConfig(root) {
+  const cfg = derivedProfile(root);
+  cfg.path = 'настройки, выведенные из проекта';
+  cfg.derived = true;
+  validateConfig(cfg);
+  return cfg;
+}
+
+/* Выведенное из проекта + умолчания — то, чем проект работает без файла, и то,
+ * что закрепляет `--init`. Одно место на две роли (иначе «файл» и «работа без
+ * файла» разошлись бы колонкой или числом), а сам вывод (`src/project.js`) о
+ * умолчаниях не знает: он говорит только то, что видит в проекте. */
+export function derivedProfile(root) {
+  return withDefaults(projectConfig(root));
+}
+
+/* Настройки поверх умолчаний — одним местом на два источника (файл и проект):
+ * вложенное досыпается по ключам, потому что `minify: {engine: …}` не значит «у
+ * `minify` больше нет других полей», а значило бы, что снятие балласта потеряло
+ * список расширений. */
+function withDefaults(raw) {
+  const cfg = Object.assign({}, DEFAULT_CONFIG, raw);
+  ['minify', 'tokens', 'hooks', 'links', 'rows'].forEach((key) => {
+    cfg[key] = Object.assign({}, DEFAULT_CONFIG[key], raw[key]);
+  });
+  return cfg;
+}
+
 /* Настройки читаются как есть и досыпаются значениями по умолчанию: у проекта,
  * который только подключил генератор, конфиг может быть в три строки. */
 export function loadConfig(file, root) {
@@ -78,8 +114,10 @@ export function loadConfig(file, root) {
     // черновик под умолчательным именем в корне проекта — то есть починил бы не то,
     // о чём спросили. Имя не называем ровно тогда, когда оно и так умолчательное.
     const dflt = root !== undefined && path.resolve(root, CONFIG_NAME) === path.resolve(file);
+    if (dflt) return derivedConfig(root);
     refuseCause('нет файла настроек', 'нет файла настроек ' + file
-      + '\n  создайте его: ' + cliCommand('--init' + (dflt ? '' : ' ' + advicePath(file))));
+      + '\n  создайте его: ' + cliCommand('--init ' + advicePath(file))
+      + '\n  смотрите: без «--config» настройки не нужны — они выводятся из проекта');
   }
   let raw;
   try {
@@ -88,12 +126,7 @@ export function loadConfig(file, root) {
     refuseCause('настройки не разобраны', 'не разобран ' + file + ': ' + e.message
       + '\n  починка: правьте ' + file + '; образец настроек даёт ' + cliCommand('--init') + ' в пустом каталоге');
   }
-  const cfg = Object.assign({}, DEFAULT_CONFIG, raw);
-  cfg.minify = Object.assign({}, DEFAULT_CONFIG.minify, raw.minify);
-  cfg.tokens = Object.assign({}, DEFAULT_CONFIG.tokens, raw.tokens);
-  cfg.hooks = Object.assign({}, DEFAULT_CONFIG.hooks, raw.hooks);
-  cfg.links = Object.assign({}, DEFAULT_CONFIG.links, raw.links);
-  cfg.rows = Object.assign({}, DEFAULT_CONFIG.rows, raw.rows);
+  const cfg = withDefaults(raw);
   cfg.path = file;
   validateConfig(cfg);
   return cfg;

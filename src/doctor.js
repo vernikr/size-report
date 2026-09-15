@@ -4,6 +4,7 @@ import { loadConfig } from './config.js';
 import { TOOL_PKG } from './tool.js';
 import { coverage, coverageText } from './check.js';
 import { hookStatus } from './hook.js';
+import { derivedSummary } from './project.js';
 import { minifier } from './minify.js';
 import { tokenizer } from './tokens.js';
 
@@ -81,14 +82,24 @@ function dependencies(cfg) {
 /* Настройки: при нечитаемых ответ честно неполон (покрытие считать нечем), а
  * причина — не отказ, а находка: диагностика затем и нужна, чтобы назвать причину
  * и починку, — их и несёт текст отказа. Вес обстоятельства шаг только **называет**
- * (`troubles`), а важнее оно или нет — не его дело: решает `verdictOf`. */
+ * (`troubles`), а важнее оно или нет — не его дело: решает `verdictOf`.
+ *
+ * Настроек, выведенных из проекта, тут не обстоятельство, а наблюдение: проект
+ * работает, но числа его отчёта зависят от того, что инструмент о нём угадал, —
+ * поэтому находка уровня `note` (код выхода она не несёт) и поле `derived` в ответе. */
 function readConfig(root, configFile) {
   try {
     const cfg = loadConfig(configFile, root);
+    const derived = cfg.derived === true;
     return {
       cfg: cfg,
-      report: { file: configFile, ok: true, columns: cfg.columns.length, metrics: cfg.metrics },
-      findings: [],
+      report: {
+        file: configFile, ok: true, derived: derived,
+        columns: cfg.columns.length, metrics: cfg.metrics
+      },
+      findings: derived
+        ? [{ level: 'note', what: derivedSummary(cfg), fix: 'закрепите их файлом: ' + cliCommand('--init') }]
+        : [],
       troubles: []
     };
   } catch (e) {
@@ -254,7 +265,8 @@ export function doctorText(rep) {
   lines.push('  git читается с закреплениями: ' + env.pins.join(', ') + '; локаль ' + env.locale
     + ' (настройки машины на числа не влияют)');
   lines.push('  настройки: ' + (rep.config.ok
-    ? rep.config.file + ' — ' + rep.config.columns + ' колонок, метрики ' + rep.config.metrics.join(' ')
+    ? (rep.config.derived ? 'выводятся из проекта (файла нет)' : rep.config.file)
+      + ' — ' + rep.config.columns + ' колонок, метрики ' + rep.config.metrics.join(' ')
     : rep.config.file + ' — нечитаемы'));
   lines.push('  зависимости: ' + rep.dependencies.map((d) => d.name
     + (d.present === null ? ' — ' + d.note : d.present ? ' ' + d.version + ' есть' : ' нет')

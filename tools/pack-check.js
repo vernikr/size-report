@@ -53,6 +53,16 @@ function clone(name) {
   return dir;
 }
 
+/* Состав каталога — по git, а не по диску: сверяется обещание поставки («все
+ * исходники доехали»), а в каталоге рядом с ними лежит чужое — служебные файлы
+ * finder'а и редакторов. На них проверка говорила «в пакет не доехали исходники»,
+ * то есть называла не ту причину, и красный профиль на ровном месте (WORKLOG §71). */
+function trackedEntries(dir) {
+  const names = gitIn(ROOT, ['ls-files', dir]).split('\n').filter((l) => l !== '')
+    .map((p) => p.slice(dir.length + 1).split('/')[0]);
+  return [...new Set(names)].sort();
+}
+
 try {
   const tarball = execFileSync('npm', ['pack', '--silent', '--pack-destination', tmp],
     { cwd: ROOT, encoding: 'utf8' }).trim();
@@ -88,7 +98,7 @@ try {
     if (!fs.existsSync(packed)) {
       throw new Error('в тарболле нет каталога ' + dir + ': проверьте список files в package.json');
     }
-    const inRepo = fs.readdirSync(path.join(ROOT, dir)).sort();
+    const inRepo = trackedEntries(dir);
     const inPack = fs.readdirSync(packed).sort();
     const missing = inRepo.filter((f) => inPack.indexOf(f) < 0);
     if (missing.length > 0) bad('в пакет не доехали ' + what, missing.join(' '));
@@ -97,7 +107,7 @@ try {
 
   /* Шаблон проект берёт как есть, поэтому он обязан доехать побайтово: правка
    * шаблона после сборки иначе разошлась бы с тем, что проект у себя видит. */
-  fs.readdirSync(path.join(ROOT, 'templates')).forEach((f) => {
+  trackedEntries('templates').forEach((f) => {
     const a = fs.readFileSync(path.join(ROOT, 'templates', f));
     const b = fs.readFileSync(path.join(pkg, 'templates', f));
     if (!a.equals(b)) bad('шаблон изменился при упаковке', f);
