@@ -14,11 +14,21 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ROOT, gitIn, gitTry } from '../tools/harness.js';
 import { calledCommands, commandsAt, read } from '../tools/docs-facts.js';
+import { installSpec } from '../src/tool.js';
 
 test('пример установки ведёт на ревизию, чья справка знает названные команды', () => {
   const pin = read('README.md').match(/github:vernikr\/size-report#([\w./-]+)/);
   assert.ok(pin, 'README не называет ревизию в примере установки — сверить нечего');
   const rev = pin[1];
+
+  /* Инструмент учит ставить пакет **той же** ссылкой: так документ и совет не могут
+   * разойтись, и выпуск, поднявший версию, обязан поднять и пин (`src/tool.js`,
+   * `installSpec`). Имени пакета в реестре в этой ссылке нет намеренно: оно занято
+   * чужим пакетом, и `add -D <имя>` поставил бы его (REFACTOR R-4.21). */
+  assert.ok(installSpec() !== null, 'у манифеста нет адреса репозитория: совету об'
+    + ' установке нечего назвать — это правится не документацией, а манифестом');
+  assert.ok(read('README.md').indexOf(installSpec()) >= 0,
+    'пример установки не совпадает с тем, чему учит инструмент (' + installSpec() + ')');
 
   // Короткий sha pnpm разрешает только через видимые рефы, а `git ls-remote` отдаёт
   // одни верхушки веток: пока ревизия — верхушка, она разрешается, а на следующем

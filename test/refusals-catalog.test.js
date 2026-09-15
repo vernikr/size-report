@@ -82,6 +82,32 @@ test('у каждого места отказа в исходниках есть
   assert.deepEqual(noCase, [], 'у места отказа нет ни случая в каталоге, ни названной'
     + ' причины, почему его не поймать: ' + noCase.join(', '));
 
+  /* Совет — вторая половина отказа: мало назвать причину, надо дать выход. У каждого
+   * случая сказано, что он советует (`advice`), — и для случаев, которые целиком
+   * стережёт другая проверка, это единственное место, где видно, чем именно совет
+   * проверен: файлом и строкой в нём. Живое исполнение объявленных советов — в
+   * `test/refusals.test.js`. */
+  const silent = CASES.filter((c) => !Array.isArray(c.advice));
+  assert.deepEqual(silent.map((c) => (c.id === undefined ? c.key : c.id)), [],
+    'у случая не сказано, что отказ советует (advice: [] — если совета нет)');
+  CASES.filter((c) => c.uncatchable !== undefined).forEach((c) => {
+    assert.deepEqual(c.advice, [], '«' + c.id + '»: отказ, который нельзя вызвать прогоном,'
+      + ' не может ничего советовать — его вывод никто не читает');
+  });
+  const unfixed = [];
+  CASES.forEach((c) => c.advice.forEach((a) => {
+    if (a.kind !== 'coveredBy') return;
+    const file = path.join(ROOT, a.file);
+    if (!fs.existsSync(file)) {
+      unfixed.push((c.id === undefined ? c.key : c.id) + ': нет файла ' + a.file);
+      return;
+    }
+    if (fs.readFileSync(file, 'utf8').indexOf(a.text) < 0) {
+      unfixed.push((c.id === undefined ? c.key : c.id) + ': в ' + a.file + ' нет строки «' + a.text + '»');
+    }
+  }));
+  assert.deepEqual(unfixed, [], 'совет отдан другой проверке, а она его не исполняет:\n  ' + unfixed.join('\n  '));
+
   // Закрытый список того, что нельзя проверить прогоном: причина сказана словами.
   const loose = CASES.filter((c) => c.uncatchable !== undefined);
   assert.deepEqual(loose.map((c) => c.id), ['внутренняя ошибка'],

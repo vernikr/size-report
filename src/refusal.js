@@ -84,6 +84,12 @@ export function cliCommand(flag) {
   return invocation() + ' ' + flag;
 }
 
+/* Путь внутри готовой команды: пробел или кавычка в нём сломали бы копирование,
+ * поэтому такой путь берётся в кавычки — так его и приняла бы оболочка. */
+export function advicePath(p) {
+  return /[\s"'$`\\]/.test(p) ? JSON.stringify(p) : p;
+}
+
 export const USAGE = [
   'size-report — таблица объёма файлов по коммитам.',
   '',

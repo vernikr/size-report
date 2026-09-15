@@ -1,7 +1,8 @@
 import fs from 'fs';
+import path from 'path';
 import { execFileSync } from 'child_process';
 import { MAX_BUF, gitArgv, gitEnv } from './git.js';
-import { cliCommand, invocation, refuseCause } from './refusal.js';
+import { advicePath, cliCommand, invocation, refuseCause } from './refusal.js';
 import { LOCALES } from './locales.js';
 import { METRICS, MINIFY_ENGINES } from './metrics.js';
 import { TOKEN_DEFAULTS, TOKEN_FAMILIES } from './tokens.js';
@@ -71,10 +72,14 @@ export function gitRoot() {
 
 /* Настройки читаются как есть и досыпаются значениями по умолчанию: у проекта,
  * который только подключил генератор, конфиг может быть в три строки. */
-export function loadConfig(file) {
+export function loadConfig(file, root) {
   if (!fs.existsSync(file)) {
+    // Совет называет тот же файл, о котором шла речь: `--init` без файла записал бы
+    // черновик под умолчательным именем в корне проекта — то есть починил бы не то,
+    // о чём спросили. Имя не называем ровно тогда, когда оно и так умолчательное.
+    const dflt = root !== undefined && path.resolve(root, CONFIG_NAME) === path.resolve(file);
     refuseCause('нет файла настроек', 'нет файла настроек ' + file
-      + '\n  создайте его: ' + cliCommand('--init'));
+      + '\n  создайте его: ' + cliCommand('--init' + (dflt ? '' : ' ' + advicePath(file))));
   }
   let raw;
   try {

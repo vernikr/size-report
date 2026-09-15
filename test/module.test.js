@@ -80,6 +80,14 @@ function plainDraft(dir) {
   fs.writeFileSync(file, JSON.stringify(cfg, null, 2) + '\n');
 }
 
+// Правка настроек, которую советует отказ: расширение переходит под упрощение.
+function withMinifyExt(dir, ext, how) {
+  const file = path.join(dir, 'size-table.config.json');
+  const cfg = JSON.parse(fs.readFileSync(file, 'utf8'));
+  cfg.minify = Object.assign({}, cfg.minify, { ext: Object.assign({}, cfg.minify.ext, { [ext]: how }) });
+  fs.writeFileSync(file, JSON.stringify(cfg, null, 2) + '\n');
+}
+
 /* Оба варианта — один и тот же модуль в `.js`: манифест лишь сообщает Node, как
  * читать `.js`, а генератор должен измерять файл в обоих случаях. Проверок две, и
  * объявлены они каждая своей строкой, а не циклом: число проверок в наборе
@@ -179,6 +187,17 @@ test('не JavaScript в графе — отказ с командой почи�
   assert.match(res.stderr, /minify\.ext/, 'отказ не называет, что править:\n' + res.stderr);
   assert.equal(hasStack(res.stderr), false, 'отказ напечатал стек:\n' + res.stderr);
 
+  /* Совет отказа — правка настроек, и проверяется она прогоном, а не словом: та же
+   * правка в копии проекта даёт сборку. Копия, а не сам проект: ниже из того же
+   * состояния берётся вторая причина, и правка её бы стёрла. */
+  assert.ok(res.stderr.indexOf('задайте этому расширению упрощение в minify.ext') >= 0,
+    'отказ не называет выход, который работает:\n' + res.stderr);
+  const fixed = path.join(tmp, 'jsx-fixed');
+  fs.cpSync(dir, fixed, { recursive: true });
+  withMinifyExt(fixed, '.js', 'strip-lines');
+  const built = runSize(fixed, ['--write']);
+  assert.equal(built.code, 0, 'совет не починил прогон: ' + firstLine(built.stderr || built.stdout));
+
   // Тем же проектом, но прежним способом: причину называет гард снятия балласта.
   plainDraft(dir);
   const guarded = runSize(dir, ['--write']);
@@ -187,6 +206,15 @@ test('не JavaScript в графе — отказ с командой почи�
   assert.match(guarded.stderr, /не JavaScript/, 'отказ не называет настоящую причину:\n' + guarded.stderr);
   assert.match(guarded.stderr, /minify\.guard/, 'отказ не называет, что править:\n' + guarded.stderr);
   assert.equal(hasStack(guarded.stderr), false, 'отказ напечатал стек:\n' + guarded.stderr);
+
+  // И тот же совет второго отказа — тоже прогоном: `minify.ext` работает и здесь.
+  assert.ok(guarded.stderr.indexOf('уберите это расширение из minify.guard') >= 0,
+    'отказ не называет выход, который работает:\n' + guarded.stderr);
+  const fixedGuard = path.join(tmp, 'jsx-fixed-guard');
+  fs.cpSync(dir, fixedGuard, { recursive: true });
+  withMinifyExt(fixedGuard, '.js', 'strip-lines');
+  const builtGuard = runSize(fixedGuard, ['--write']);
+  assert.equal(builtGuard.code, 0, 'совет не починил прогон: ' + firstLine(builtGuard.stderr || builtGuard.stdout));
 });
 
 /* Совет обязан работать в обоих состояниях проекта: там, где пакет лежит рядом, и

@@ -2,6 +2,10 @@
   "name": "size-report",
   "version": "1.1.0",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vernikr/size-report.git"
+  },
   "description": "Учёт роста объёма кода и документов по истории git: raw / min / токены, интерактивный отчёт вне git",
   "type": "module",
   "license": "MIT",

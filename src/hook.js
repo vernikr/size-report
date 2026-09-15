@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { EXIT, Refusal, cliCommand, refuseCause } from './refusal.js';
+import { installSpec } from './tool.js';
 import { git, gitTry } from './git.js';
 import { loadConfig } from './config.js';
 import { TOOL_PKG } from './tool.js';
@@ -156,9 +157,13 @@ function hookState(root) {
 export function installHook(root, cfg) {
   const entry = hookEntry(root);
   if (entry === null) {
+    // Совет называет ту установку, которой учит README: имя пакета в реестре занято
+    // чужим пакетом, и `add -D <имя>` поставил бы его (REFACTOR R-4.21).
+    const spec = installSpec();
     refuseCause('нечем звать инструмент', 'не нашлось чем звать инструмент: хук без него молчал бы'
       + ' после каждого коммита.\n'
-      + '  починка: поставьте пакет зависимостью проекта (например: pnpm add -D ' + TOOL_PKG.name + ')'
+      + '  починка: поставьте пакет зависимостью проекта'
+      + (spec === null ? '' : ' (так, как он ставится в этот проект: pnpm add -D ' + spec + ')')
       + ' и повторите установку');
   }
   const hooks = hooksDir(root);
@@ -337,7 +342,7 @@ export function hookRun(root, configFile) {
 function runLocked(root, configFile, sha) {
   let cfg;
   try {
-    cfg = loadConfig(configFile);
+    cfg = loadConfig(configFile, root);
   } catch (e) {
     if (!(e instanceof Refusal)) throw e;
     return record(root, { result: 'skipped', head: sha, why: 'настройки нечитаемы: ' + e.message });

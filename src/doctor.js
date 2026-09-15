@@ -96,7 +96,7 @@ export function doctor(root, configFile) {
   };
   let cfg = null;
   try {
-    cfg = loadConfig(configFile);
+    cfg = loadConfig(configFile, root);
     rep.config = { file: configFile, ok: true, columns: cfg.columns.length, metrics: cfg.metrics };
   } catch (e) {
     // Отказ настроек здесь не отказ, а находка: диагностика затем и нужна, чтобы

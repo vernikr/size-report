@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { execFileSync } from 'child_process';
-import { EXIT, Refusal, USAGE, cliCommand, invocation, refuseCause } from './refusal.js';
+import { EXIT, Refusal, USAGE, advicePath, cliCommand, invocation, refuseCause } from './refusal.js';
 import { CONFIG_NAME, gitRoot, loadConfig, validateConfig } from './config.js';
 import { MAX_BUF, git, gitArgv, gitEnv } from './git.js';
 import { byteLen } from './strip.js';
@@ -129,7 +129,7 @@ function hookMode(verb, root, configFile) {
     if (rep.note !== '') console.error(rep.note);
     return rep.code;
   }
-  const rep = verb === 'install-hook' ? installHook(root, loadConfig(configFile)) : uninstallHook(root);
+  const rep = verb === 'install-hook' ? installHook(root, loadConfig(configFile, root)) : uninstallHook(root);
   rep.lines.forEach((line) => console.log(line));
   return rep.code;
 }
@@ -206,9 +206,15 @@ function checkArgs(words, seen, values, modes) {
   const verb = words.length > 0 ? words[0] : null;
   const arg = words.slice(1);
   const mode = modes.length > 0 ? modes[0] : null;
+  /* Совет повторяет настройки, которые человек назвал: без `--config` команда ищет
+   * файл под умолчательным именем, в проекте с другим именем не находит его и
+   * уводит человека во второй отказ — про файл настроек, которого у него нет. */
+  const given = typeof values['--config'] === 'string'
+    ? '--config ' + advicePath(values['--config']) + ' ' : '';
+  const advice = (rest) => cliCommand(given + rest);
   if (modes.length > 1) {
     refuseCause('два режима сразу', 'два режима сразу: «' + modes[0] + '» и «' + modes[1] + '» — режим один'
-      + '\n  починка: ' + cliCommand(modes[0]));
+      + '\n  починка: ' + advice(modes[0]));
   }
   if (seen.has('--force') && mode !== '--init') {
     refuseCause('несовместимый ключ', 'ключ «--force» работает только с «--init»'
@@ -226,27 +232,27 @@ function checkArgs(words, seen, values, modes) {
     const valued = MODES.find((f) => VALUE_FLAGS.indexOf(f) >= 0 && typeof values[f] === 'string');
     if (valued !== undefined) {
       refuseCause('лишнее слово', 'лишнее слово «' + verb + '»: «' + valued + '» принимает одно значение'
-        + '\n  починка: ' + cliCommand(valued + ' [файл]'));
+        + '\n  починка: ' + advice(valued + ' ' + advicePath(values[valued])));
     }
     refuseCause('неизвестная команда', 'неизвестная команда «' + verb + '»\n  починка: ' + cliCommand('--help'));
   }
   if (verb !== null && mode !== null) {
     refuseCause('команда и режим', 'команда «' + verb + '» и режим «' + mode + '» — разное, вместе они не работают'
-      + '\n  починка: ' + cliCommand(verb));
+      + '\n  починка: ' + advice(verb));
   }
   // Коммит либо не назван, либо назван не один раз — тупика два, а починка одна.
   if (verb === 'explain' && arg.length === 0) {
     refuseCause('нет коммита', 'команде «explain» нужен коммит: имя ревизии (HEAD, ветка, тег),'
       + ' sha или его начало'
-      + '\n  починка: ' + cliCommand('explain <коммит>'));
+      + '\n  починка: ' + advice('explain <коммит>'));
   }
   if (verb === 'explain' && arg.length > 1) {
     refuseCause('лишнее слово', 'команда «explain» принимает один коммит, а не ' + arg.length
-      + ': «' + arg.slice(1).join('», «') + '» лишние\n  починка: ' + cliCommand('explain <коммит>'));
+      + ': «' + arg.slice(1).join('», «') + '» лишние\n  починка: ' + advice('explain <коммит>'));
   }
   if (verb !== null && verb !== 'explain' && arg.length > 0) {
     refuseCause('лишнее слово', 'команда «' + verb + '» аргументов не принимает: «' + arg[0] + '» лишний'
-      + '\n  починка: ' + cliCommand(verb));
+      + '\n  починка: ' + advice(verb));
   }
   // `--json` — не режим, а форма ответа, и правило у него одно: ответ бывает
   // ровно у четырёх вызовов. Без команды и режима это прежняя форма данных
@@ -255,11 +261,11 @@ function checkArgs(words, seen, values, modes) {
   // запись; оба случая — отказ, и каждый называет своего виновника.
   if (seen.has('--json') && verb !== null && ANSWER_COMMANDS.indexOf(verb) < 0) {
     refuseCause('нет ответа в JSON', 'у команды «' + verb + '» нет ответа в JSON'
-      + '\n  починка: ' + cliCommand(verb));
+      + '\n  починка: ' + advice(verb));
   }
   if (seen.has('--json') && verb === null && mode !== null) {
     refuseCause('два ответа сразу', '«--json» и режим «' + mode + '» — разное: данные или запись, но не оба'
-      + '\n  починка: ' + cliCommand(mode));
+      + '\n  починка: ' + advice(mode));
   }
   return {
     verb: verb,
@@ -360,8 +366,11 @@ export function sniffColumns(root, limit, skip) {
 export function initMode(root, file, force) {
   const target = file ? path.resolve(root, file) : path.join(root, CONFIG_NAME);
   if (fs.existsSync(target) && !force) {
+    // Совет называет тот же файл, о котором шла речь: `--init --force` без файла
+    // перезаписал бы черновиком умолчательное имя, а не тот файл, что человек звал.
+    const name = file === undefined || file === null ? CONFIG_NAME : advicePath(file);
     refuseCause('конфиг уже есть', 'конфиг уже есть: ' + target
-      + '\n  починка: правьте его или перезапишите черновиком: ' + cliCommand('--init --force'));
+      + '\n  починка: правьте его или перезапишите черновиком: ' + cliCommand('--init ' + name + ' --force'));
   }
   const journalPath = INIT_JOURNALS.find((p) => fs.existsSync(path.join(root, p))) || '';
   const outDir = fs.existsSync(path.join(root, 'docs')) ? 'docs/' : '';
@@ -443,7 +452,7 @@ export function main() {
     const configFile = named ? path.resolve(named) : path.join(root, CONFIG_NAME);
     if (cmd.verb === 'doctor') return doctorMode(root, configFile, cmd.json);
     if (HOOK_COMMANDS.indexOf(cmd.verb) >= 0) return hookMode(cmd.verb, root, configFile);
-    const cfg = loadConfig(configFile);
+    const cfg = loadConfig(configFile, root);
     if (cmd.verb === 'check') return coverageMode(cfg, root, configFile, cmd.json);
     if (cmd.verb === 'explain') return explainMode(cfg, root, cmd.arg[0], cmd.json);
     if (cmd.mode === '--data') return dataMode(cfg, root);

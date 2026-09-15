@@ -17,6 +17,7 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import {
   CONFIG, PACKAGE, PACKAGE_BIN, ROOT, cloneCrlf, cloneFixture, gitConfig, gitIn, readJson,
   runFixtureWith, runSize, runTool, tempDir
@@ -53,6 +54,24 @@ function ownConfig(name, columns) {
     columns: columns
   }, null, 2) + '\n');
   return file;
+}
+
+/* Настройки, у которых `fixCommand` — настоящая команда: отказ цитирует её в совете,
+ * и проверить совет значит выполнить её. Сам совет берётся из текста отказа, а не из
+ * этих настроек: настройки — только источник команды починки. */
+let withFix;
+function reconfig() {
+  if (withFix === undefined) {
+    const cfg = readJson(CONFIG);
+    withFix = path.join(tmp, 'merge.json');
+    cfg.fixCommand = 'node ' + PACKAGE_BIN + ' --config ' + withFix + ' --write';
+    fs.writeFileSync(withFix, JSON.stringify(cfg, null, 2) + '\n');
+  }
+  return withFix;
+}
+
+function fixCommand(file) {
+  return JSON.parse(fs.readFileSync(file, 'utf8')).fixCommand;
 }
 
 /* Мутированный движок — **копия** исходников, а не живое дерево: наборы идут по
@@ -99,6 +118,15 @@ function assertCatchesDiskEdit(dir, label) {
   assert.notEqual(res.code, 0, 'сверка пропустила правку, которой нет в истории (' + label + ')');
   assert.match(res.stderr, /правка есть только на диске/,
     'сверка отказалась по другой причине: ' + res.stderr.trim().split('\n')[0]);
+
+  /* Совет отказа — команда, и она обязана работать: `git checkout -- <путь>`
+   * возвращает файл к HEAD, и тот же зов после этого отвечает нулём. */
+  assert.match(res.stderr, /починка: закоммитьте правку или откатите её: git checkout -- /,
+    'совет не называет, как вернуть файл: ' + res.stderr.trim());
+  gitIn(dir, ['checkout', '--', 'src/code.js']);
+  const after = runFixtureWith(PACKAGE, dir, ['--json']);
+  assert.equal(after.code, 0, 'совет «git checkout -- src/code.js» не починил состояние (' + label + '): '
+    + (after.stderr || after.stdout).trim().split('\n')[0]);
 }
 
 test('правка файла только на диске ловится — и в обычной выкладке, и в CRLF', () => {
@@ -110,10 +138,29 @@ test('правка файла только на диске ловится — и
  * правки, потерянной при переносе между коммитами. Первый свидетель: правка
  * разрешения конфликта выпадает из состояния (мутация выше), а в дереве остаётся. */
 test('потерянная правка merge-коммита ловится состоянием против дерева', () => {
-  const res = runFixtureWith(engineWithoutMergePaths(), cloneFixture(path.join(tmp, 'mutated-clone')), ['--json']);
+  const dir = cloneFixture(path.join(tmp, 'mutated-clone'));
+  const tool = engineWithoutMergePaths();
+  const res = runTool(tool, dir, ['--config', reconfig(), '--json']);
   assert.notEqual(res.code, 0, 'потерянная правка merge-коммита прошла мимо сверки');
   assert.match(res.stderr, /перенос состояния между коммитами пропустил правку/,
     'сверка отказалась по другой причине: ' + res.stderr.trim().split('\n')[0]);
+
+  /* Совет этого отказа — не команда починки, и это сказано в тексте: расхождение в
+   * самом переносе состояния, и пересборка его не изменит. Проверяются обе
+   * половины: команда разбора выполняется, а пересборка отказа не убирает — иначе
+   * текст совета был бы неверен. */
+  assert.match(res.stderr, /починка: пересборкой это не лечится/,
+    'совет обещает то, чего пересборка не делает, или не назван:\n' + res.stderr.trim());
+  assert.match(res.stderr, /Разбор: git show HEAD:/,
+    'совет не называет, чем это показать:\n' + res.stderr.trim());
+  const shown = spawnSync('bash', ['-c', 'git show HEAD:src/code.js'], { cwd: dir, encoding: 'utf8' });
+  assert.equal(shown.status, 0, 'совет зовёт git show на то, что git не показывает: '
+    + (shown.stderr || '').trim().split('\n')[0]);
+  const rebuild = spawnSync('bash', ['-c', fixCommand(reconfig())], { cwd: dir, encoding: 'utf8' });
+  assert.equal(rebuild.status, 0, 'команда пересборки из настроек не работает: '
+    + (rebuild.stderr || '').trim().split('\n')[0]);
+  const after = runTool(tool, dir, ['--config', reconfig(), '--json']);
+  assert.notEqual(after.code, 0, 'пересборка убрала расхождение — тогда текст совета неверен');
 });
 
 /* Второй свидетель: файл, который появляется **только в самом слиянии** — так
