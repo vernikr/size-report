@@ -1,0 +1,7 @@
+{
+  "score": 48,
+  "grade": "D",
+  "dimensions": {"entry": 12, "trust": 9, "mass": 0, "discoverability": 7, "feedback": 20},
+  "metrics": {"auto_tokens": 2714, "readme_tokens": 53679, "root_docs_tokens": 450829, "code_tokens": 342717, "dead_refs": 155, "dead_refs_pct": 49, "runtime_refs": 13, "big_files_over_10k": 11, "unique_stems_pct": 94, "commit_p75_lines": 0},
+  "flags": ["мин-в-документах:4","мёртвые-ссылки:155","команды-вне-манифеста"]
+}
