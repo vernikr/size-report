@@ -1,25 +1,22 @@
-/* Разделение набора проверок на быстрый прогон и полный.
+/* The split of the check set into the fast run and the full one.
  *
- * **Почему делим именно так.** Цена проверки в этом наборе — не объём файла, а
- * сколько раз файл запускает инструмент и git: каждый запуск это процесс Node
- * (десятки миллисекунд), а клон фикстуры и сборка артефакта — сотни. Поэтому в
- * быстром прогоне остаются файлы, которым для доказательства хватает прочитанного:
- * исходников, дерева git, справки, эталонных чисел на общей фикстуре. В полном —
- * те, что гоняют инструмент по многу раз на своих клонах, коммитят и ставят хуки;
- * их причина названа в `SLOW` построчно, чтобы «дорого» не оставалось на слово.
+ * **Why the split goes like this.** What a check costs here is not the size of its file but how many times the file runs
+ * the tool and git: every run is a Node process (tens of milliseconds) while a clone of the fixture and building the
+ * artifact cost hundreds. Hence the fast run keeps the files that prove their point from what is read: sources, the git
+ * tree, the help, the fixture's reference numbers. The full run keeps those that drive the tool many times over in clones
+ * of their own, commit and install hooks; the reason for each stands in `SLOW`, line by line, so that "expensive" never
+ * rests on a word.
  *
- * **Умолчание — полный прогон.** Быстрым файл становится только здесь, явно, с
- * причиной. Поэтому новое дорогое не может тихо уехать в быстрый: файл, которого
- * тут нет, идёт в полный, а сторож (`test/suites.test.js`) потребует для него
- * причину — то есть объявление придётся сделать, и оно будет в диффе.
+ * **The default is the full run.** A file becomes fast only here, explicitly and with a reason. So new expensive work
+ * cannot slip into the fast run quietly: a file missing here goes to the full run, and the guard (`test/suites.test.js`)
+ * demands a reason for it — that is, the declaration has to be made and will show up in a diff.
  *
- * **Целей по времени здесь нет, и это решение.** Секунды зависят от окна — загрузка
- * машины бывает какой угодно, — поэтому ни прогон, ни CI за время не валятся, и
- * снимка стоимости, с которым надо сходиться, тоже нет: длительность печатается
- * замером (`tools/run-tests.js`) как справка о том, чему место в полном прогоне, а
- * разделение держится признаком файла — чем он занят, а не сколько идёт.
+ * **There are no time targets here, and that is a decision.** Seconds depend on the window — a machine's load is whatever
+ * it is — so neither the run nor CI fails over time, and there is no snapshot of cost to agree with either: the duration
+ * is printed by measurement (`tools/run-tests.js`) as a reference to what belongs in the full run, while the split rests
+ * on what a file is about rather than on how long it takes.
  *
- * Длительность каждого файла отдельным прогоном: `pnpm run suites:measure`.
+ * Every file's duration, one run at a time: `pnpm run suites:measure`.
  */
 
 import fs from 'node:fs';
@@ -29,7 +26,7 @@ import { fileURLToPath } from 'node:url';
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const TEST_DIR = path.join(ROOT, 'test');
 
-/* Быстрый прогон: `pnpm test`. Причина — по чему файл сюда попал. */
+/* The fast run: `pnpm test`. Every entry carries the reason it is here. */
 export const FAST = [
   { file: 'test/api.test.js', why: 'публичный API заморожен списком: любая правка движка обязана его не тронуть' },
   { file: 'test/refusals-catalog.test.js', why: 'каталог отказов против исходников: читает файлы и считает места отказа, инструмент не запускает ни разу' },
@@ -53,8 +50,8 @@ export const FAST = [
   { file: 'test/gates-verify.test.js', why: 'сторож профиля проверок: читает `run.js`, рабочие процессы и хуки — запусков инструмента нет, только три зова за списком шагов' }
 ];
 
-/* Полный прогон: `pnpm test:all`. Всё, чего нет в `FAST`, плюс причина для самых
- * дорогих — почему они здесь, а не в быстром. */
+/* The full run: `pnpm test:all`. Everything missing from `FAST`, plus a reason for the costliest ones — why they are here
+ * rather than in the fast run. */
 export const SLOW = [
   { file: 'test/cli-paths.test.js', why: 'куда инструмент пишет: на каждый случай свой клон и свой `--write` — без записи не проверить' },
   { file: 'test/crlf.test.js', why: 'выкладка с CRLF: сверка с рабочим деревом на клоне с чужой настройкой переводов строк' },
@@ -76,16 +73,15 @@ export const SLOW = [
   { file: 'test/gates-files.test.js', why: 'проба защиты гейт-файлов: свой временный репозиторий, коммиты и аменд — цена в git, а не в объёме' }
 ];
 
-/* Файлы набора: то, что лежит в `test/` и кончается на `.test.js`. Список берётся с
- * диска, а не из объявления: файл, которого в объявлении нет, обязан быть замечен. */
+/* The suite's files: what lies in `test/` and ends with `.test.js`. The list comes from disk rather than from the
+ * declaration: a file absent from the declaration has to be noticed. */
 export function testFiles() {
   return fs.readdirSync(TEST_DIR).filter((f) => /\.test\.js$/.test(f)).sort()
     .map((f) => 'test/' + f);
 }
 
-/* Проверки файла: объявление в начале строки — то же правило, по которому числа
- * проверок считает сторож документации. Объявление внутри цикла сделало бы число
- * выводом из кода, и сверять его было бы не с чем. */
+/* A file's checks: a declaration at the start of a line — the same rule the documentation guard counts checks by. A
+ * declaration inside a loop would make the number a conclusion of the code, leaving nothing to compare it with. */
 export function checksIn(file) {
   let n = 0;
   fs.readFileSync(path.join(ROOT, file), 'utf8').split('\n').forEach((line) => {
@@ -94,9 +90,8 @@ export function checksIn(file) {
   return n;
 }
 
-/* Файлы прогона: быстрый — объявленный список, полный — весь набор с диска (в том
- * числе файл, который ещё не классифицирован: непроверенный файл увидит полный
- * прогон, а не пропуск — сторож найдёт его раньше CI). */
+/* The files of a run: the fast one is the declared list, the full one is the whole set from disk (including a file not yet
+ * classified: an unclassified file sees the full run rather than a skip — the guard finds it before CI does). */
 export function filesOf(mode) {
   if (mode === 'fast') return FAST.map((e) => e.file);
   if (mode === 'full') return testFiles();

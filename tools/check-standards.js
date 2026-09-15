@@ -1,26 +1,23 @@
 #!/usr/bin/env node
-/* Оба эталона воспроизводятся: пересъём идёт во временный каталог и сверяется с
- * закоммиченным, поэтому рабочее дерево остаётся чистым.
+/* Both fixtures reproduce: a re-take goes into a temporary directory and is compared with what is committed, so the working
+ * tree stays clean.
  *
- * Зачем отдельно от `pnpm test`. Набор проверяет, что движок пакета даёт те же
- * числа, что эталон, — то есть читает эталон. Здесь проверяется обратное
- * направление: что сам эталон снимается заново теми же инструментами. Правка
- * эталона руками, сломанное снятие и зависимость снятия от настроек машины
- * видны только так, и первый из этих случаев набор не ловит вовсе.
+ * Why apart from `pnpm test`. The suite checks that the engine's package yields the same numbers as the fixture — that is,
+ * it reads the fixture. Here the other direction is checked: that the fixture itself is taken anew by the same tools. A
+ * fixture edited by hand, a broken taking and a dependence of the taking on the machine's settings are visible only this
+ * way, and the first of those the suite never catches.
  *
- * Живая история берётся из бандла (`fixtures/live/history.bundle`): проект
- * потребителя приватный, ключа у этой проверки нет, а бандл несёт ровно ту
- * ревизию, что записана в эталоне.
+ * The live history comes from a bundle (`fixtures/live/history.bundle`): the consumer's project is private, this check has
+ * no key for it, and the bundle carries exactly the revision recorded in the fixture.
  *
- * Побайтово сверяется только то, что пишем мы сами. Бандл пишет git, и упаковка
- * зависит от его версии, поэтому у бандла сверяется содержимое — ветки, верхушка
- * и число коммитов, то есть то, что делает бандл заменой проекта. Манифест по
- * той же причине сверяется по полям: в нём записан хеш бандла. Построчное
- * сравнение байтов было бы зелёным на одной версии git и красным на другой — это
- * и случилось в CI.
+ * Only what we write ourselves is compared byte by byte. The bundle is written by git, and its packaging depends on its
+ * version, so the bundle is compared by content — branches, the tip and the number of commits, that is, what makes the
+ * bundle a replacement for the project. The manifest is compared by fields for the same reason: it records the bundle's
+ * hash. A byte-by-byte comparison would have been green on one version of git and red on another — which is exactly what
+ * happened in CI.
  *
- * Запуск: `node tools/check-standards.js` или `pnpm run check:standards`.
- * Коды выхода: 0 — совпало, 1 — расхождение.
+ * Run: `node tools/check-standards.js` or `pnpm run check:standards`.
+ * Exit codes: 0 — everything matched, 1 — a difference.
  */
 
 import fs from 'node:fs';
@@ -32,11 +29,11 @@ import { MAX_BUF, PARITY, ROOT, SYNTH, firstDiff, gitIn, tempDir } from './harne
 const LIVE = path.join(ROOT, 'fixtures', 'live', 'history.bundle');
 const BUNDLE = 'history.bundle';
 
-/* Файлы, которые пишем мы: они обязаны совпасть байт в байт. */
+/* The files we write ourselves: they have to match byte for byte. */
 const FIXTURE_FILES = ['README.md', 'artifact.sha256', 'config.json', 'golden.json'];
 
-/* У описания паритета путь, откуда эталон снят, а у пересъёма из бандла путь
- * свой — расхождение там законно, поэтому само описание не сверяется. */
+/* The parity description records the path the fixture was taken from, while a re-take from the bundle has a path of its
+ * own — a difference there is legitimate, which is why the description itself is not compared. */
 const PARITY_FILES = ['data.json', 'config.json', 'artifact.sha256'];
 
 let bad = 0;
@@ -53,9 +50,8 @@ function indent(text, limit) {
   return head.join('\n');
 }
 
-/* Отказ инструмента печатается целиком, а не первой строкой: первая строка
- * бывает замечанием самого git (`hint: Using 'master' …`), и настоящая причина
- * оставалась бы невидимой. */
+/* A tool's refusal is printed in full rather than as its first line: the first line is sometimes git's own remark
+ * (`hint: Using 'master' …`), and the real cause would stay invisible. */
 function snapshot(what, args) {
   try {
     execFileSync(process.execPath, args,
@@ -67,7 +63,7 @@ function snapshot(what, args) {
   }
 }
 
-/* Расхождение называет строку: «JSON не совпал» ничего не говорит о причине. */
+/* A difference names the line: "the JSON did not match" says nothing about the cause. */
 function differ(name, made, committed) {
   const a = fs.readFileSync(path.join(made, name));
   const b = fs.readFileSync(path.join(committed, name));
@@ -87,8 +83,8 @@ function compareFiles(names, made, committed) {
   return same;
 }
 
-/* Манифест — запись, а не эталон: хеш бандла в нём от версии git и зависит.
- * Сверяются поля, кроме записи о самом бандле. */
+/* The manifest is a record rather than a fixture: the bundle's hash in it depends on the version of git. The fields are
+ * compared, except the record about the bundle itself. */
 function compareManifest(made, committed) {
   const a = JSON.parse(fs.readFileSync(path.join(made, 'manifest.json'), 'utf8'));
   const b = JSON.parse(fs.readFileSync(path.join(committed, 'manifest.json'), 'utf8'));
@@ -100,12 +96,11 @@ function compareManifest(made, committed) {
   return diff.length === 0;
 }
 
-/* Содержимое бандла: упаковка у разных версий git разная, а история — нет.
- * Оглавление читается из самого файла, а не из клона: клон ветку по HEAD
- * угадывает, и на разных версиях git угадывает по-разному — проверка, построенная
- * на догадке, была бы зелёной на одной машине и красной на другой. Клон здесь —
- * доказательство, что упаковка читается, и только: число коммитов считается по
- * всему достижимому, а не по выложенной ветке. */
+/* The bundle's content: packaging differs between versions of git while the history does not. The table of contents is read
+ * from the file itself rather than from a clone: a clone guesses the branch from HEAD, and guesses differently on different
+ * versions of git — a check built on a guess would be green on one machine and red on another. The clone here is proof that
+ * the packaging reads, and nothing more: the number of commits is counted over everything reachable rather than over the
+ * branch that was laid out. */
 function bundleFacts(file) {
   const listed = gitIn(null, ['bundle', 'list-heads', file]).trim().split('\n');
   const heads = {};
@@ -155,9 +150,9 @@ try {
       + ' файлов совпали побайтово');
   }
 
-  /* Бандл — замена проекта, и заменой он быть обязан без оговорок: у него
-   * объявлены и `HEAD`, и ветка `main`, обе на ревизии эталона. Без `HEAD` клон
-   * сам решает, какую ветку выложить, и разные версии git решают по-разному. */
+  /* The bundle is a replacement for the project, and it has to be one without reservations: it declares both `HEAD` and the
+   * branch `main`, both at the fixture's revision. Without `HEAD` a clone decides for itself which branch to lay out, and
+   * different versions of git decide differently. */
   const frozen = JSON.parse(fs.readFileSync(path.join(PARITY, 'manifest.json'), 'utf8'));
   const live = bundleFacts(LIVE);
   if (live.HEAD !== frozen.project.head || live['refs/heads/main'] !== frozen.project.head

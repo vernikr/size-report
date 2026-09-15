@@ -1,27 +1,24 @@
 #!/usr/bin/env node
-/* Прогон проверок: `node tools/run-tests.js fast` (то же, что `pnpm test`) и
- * `node tools/run-tests.js full` (то же, что `pnpm test:all`).
+/* The checks' run: `node tools/run-tests.js fast` (the same as `pnpm test`) and `node tools/run-tests.js full` (the same as
+ * `pnpm test:all`).
  *
- * Зачем свой прогон, если есть `node --test`. Две вещи, которых у него нет, и обе
- * нужны именно разделению:
+ * Why a run of its own when `node --test` exists. Two things it does not have, and both are what the split needs:
  *
- *   1. **Числа проверок складываются.** Прогон считает проверки по каждому файлу и
- *      сверяет сумму с числом объявлений `test(` в тех же файлах: файл, который не
- *      отработал, — это не «меньше проверок», а провал прогона.
- *   2. **Длительность каждого файла видна.** Файл запускается отдельным процессом, и
- *      время этого процесса печатается. Это справка, по которой файл относят к
- *      быстрому или к полному (`tools/suites.js`), а не порог — см. ниже.
+ *   1. **The numbers of checks add up.** The run counts the checks of every file and compares the sum with the number of
+ *      `test(` declarations in those same files: a file that did not run is not "fewer checks" but a failure of the run.
+ *   2. **Every file's duration is visible.** A file runs in a process of its own, and that process's time is printed. It
+ *      is a reference for putting a file into the fast run or the full one (`tools/suites.js`), not a threshold — see
+ *      below.
  *
- * **Временем прогон не меряется и за время не валится.** Загрузка машины бывает
- * какой угодно, и красный прогон за чужую нагрузку был бы ложью; поэтому здесь нет
- * ни цели, ни снимка стоимости, с которым надо сходиться. Числа секунд печатаются
- * как измерение (вместе с загрузкой окна — числа разных окон несравнимы), а
- * разделение держится признаком файла, а не секундами.
+ * **The run is not measured by time and never fails over time.** A machine's load is whatever it is, and a red run for
+ * someone else's load would be a lie; hence there is neither a target nor a snapshot of cost to agree with. The seconds are
+ * printed as a measurement (together with the window's load — numbers of different windows are not comparable), while the
+ * split rests on what a file is about rather than on how long it takes.
  *
- * `measure` печатает ту же длительность отдельным прогоном каждого файла по одному:
- * числа в пуле — про пул, а справка нужна про сам файл.
+ * `measure` prints the same duration by running every file one at a time: numbers from a pool are about the pool, while
+ * the reference is needed about the file itself.
  *
- * Дополнительные ключи после имени прогона уходят в `node --test`, например
+ * Extra flags after the run's name go to `node --test`, for example
  * `node tools/run-tests.js fast --test-name-pattern=паритет`.
  */
 
@@ -30,8 +27,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { ROOT, checksIn, filesOf, testFiles } from './suites.js';
-// Сбор вывода — тот же, что у обвязки проверок: склейка кусков строкой рвёт
-// многобайтовый символ на границе и портит числа, прочитанные из вывода.
+// Output collection is the harness's own: gluing chunks into a string tears a multi-byte character at a border and spoils
+// the numbers read from the output.
 import { collectOutput } from './harness.js';
 
 const argv = process.argv.slice(2);
@@ -40,8 +37,8 @@ const extra = argv.slice(1);
 const jobs = Number(process.env.SIZE_REPORT_TEST_JOBS || 0) || Math.max(1, os.cpus().length);
 const MODES = { fast: 'быстрый', full: 'полный' };
 
-/* Числа — по-русски: запятая в дроби и верная форма слова, иначе «1 проверок» и
- * «5 проверок» рядом читаются как сломанный счётчик. */
+/* The numbers are Russian: a comma in the fraction and the right form of the word, or "1 проверок" beside "5 проверок"
+ * reads as a broken counter. */
 function sec(n) {
   return n.toFixed(2).replace('.', ',');
 }
@@ -67,8 +64,8 @@ function load() {
   return os.loadavg()[0].toFixed(2).replace('.', ',');
 }
 
-/* Один файл — один процесс: из него берутся и длительность, и собственные счётчики
- * прогона. Файл, который не отработал, печатает свой вывод целиком. */
+/* One file, one process: both the duration and the run's own counters come from it. A file that did not run prints its
+ * output in full. */
 async function runFile(file, args) {
   const started = process.hrtime.bigint();
   const child = spawn(process.execPath, ['--test', file].concat(args), { stdio: ['ignore', 'pipe', 'pipe'] });
@@ -82,9 +79,9 @@ async function runFile(file, args) {
   return { file: file, code: res.code, out: out, seconds: seconds, tests: count('tests'), fail: count('fail') };
 }
 
-/* Пул на ядрах: файлы набора не зависят друг от друга, но их больше, чем ядер.
- * `together` — сколько запускать разом: прогон идёт пулом, а замер длительности — по
- * одному файлу, чтобы числа были про сам файл, а не про пул и соседей. */
+/* A pool over the cores: the files of a suite do not depend on one another, but there are more of them than cores.
+ * `together` says how many to start at once: the run goes in a pool while the duration is measured one file at a time, so
+ * that the numbers are about the file rather than about the pool and its neighbours. */
 async function runAll(list, args, together) {
   const done = [];
   let next = 0;
@@ -119,8 +116,8 @@ async function measure(all) {
 async function suite(name) {
   const list = filesOf(name);
   const all = testFiles();
-  // Файл, названный в объявлении и не найденный на диске, — это не пустой прогон, а
-  // ошибка объявления: считать его проверки нечем.
+  // A file named in the declaration and not found on disk is an error of the declaration rather than an empty run: there is
+  // nothing to count its checks with.
   const missing = list.filter((f) => !fs.existsSync(path.join(ROOT, f)));
   if (missing.length > 0) {
     console.error('✗ в объявлении прогона назван файл, которого нет: ' + missing.join(', ')
@@ -131,9 +128,8 @@ async function suite(name) {
   const declared = list.reduce((sum, f) => sum + checksIn(f), 0);
   const total = all.reduce((sum, f) => sum + checksIn(f), 0);
 
-  /* Загрузка названа по замеру **на входе**, а не на выходе: пул прогона сам
-   * заметная часть нагрузки, и число, снятое в конце, говорило бы больше о самом
-   * прогоне, чем об окне. */
+  /* The load is named by a measurement **on the way in** rather than on the way out: the run's pool is itself a noticeable
+   * part of the load, and a number taken at the end would say more about the run than about the window. */
   const loadBefore = load();
   console.log((name === 'fast' ? '▶ быстрый прогон' : '▶ полный прогон') + ': ' + files(list.length)
     + ', ' + checks(declared)
@@ -166,8 +162,8 @@ async function suite(name) {
       + ': файл не доехал до прогона или объявление устарело');
   }
 
-  // Длительность — измерение, а не приговор: она печатается, чтобы «дорогой в
-  // быстром» было видно глазом, но красным по ней прогон не становится.
+  // The duration is a measurement rather than a verdict: it is printed so that "expensive inside the fast run" is visible
+  // to the eye, while the run does not turn red over it.
   console.log('\n' + (bad === 0 ? '✓ ' : '✗ ') + MODES[name] + ' прогон: ' + checks(declared)
     + ', провалов ' + bad + ', ' + sec(seconds) + ' с (загрузка при старте ' + loadBefore
     + '; цель по времени не объявляется)');

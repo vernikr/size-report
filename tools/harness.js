@@ -1,28 +1,25 @@
-/* Общая часть проверок: пути, свежие клоны фикстуры, запуск инструмента так, как
- * его зовёт пользователь, и мелочи сверки (хеши, разбор JSON, первое расхождение).
- * Это не набор проверок, а помощник для них.
+/* The checks' shared part: paths, fresh clones of the fixture, running the tool the way a user calls it, and the small
+ * helpers of comparison (hashes, JSON parsing, the first difference). It is not a suite but a helper for suites.
  *
- * Лежит в `tools/`, а не в `test/`: раннер Node считает набором любой `.js` в
- * каталоге `test/` (и любой `test-*.js` где угодно), исполнил бы помощник как
- * пустой набор и уронил бы счётчики. Здесь он просто модуль, который наборы
- * импортируют.
+ * It lives in `tools/` rather than in `test/`: the Node runner counts every `.js` under a `test/` directory (and every
+ * `test-*.js` anywhere) as a suite, would execute this helper as an empty one and would break the counters. Here it is
+ * simply a module the suites import.
  *
- * Два правила, ради которых харнесс и держит клоны и кэш:
+ * Two rules are why the harness keeps clones and a cache at all:
  *
- *   1. Клон фикстуры — один на среду (`sharedClone`), а не по клону на проверку:
- *      клон стоит времени, но дороже его сам прогон инструмента.
- *   2. Одна и та же команда в одном и том же окружении не запускается дважды
- *      ради двух разных проверок (`readRun`). Кэшируются только прогоны на
- *      чтение: `--write` и контрольный режим зависят от состояния дерева, и
- *      кэш для них был бы ложью.
+ *   1. One clone of the fixture per environment (`sharedClone`) rather than one per check: a clone costs time, but a run
+ *      of the tool costs more.
+ *   2. The same command in the same environment is not run twice for two different checks (`readRun`). Only read-only
+ *      runs are cached: `--write` and the control mode depend on the state of the tree, and a cache for them would be a
+ *      lie.
  *
- * Проверки, которые правят файлы, берут свой клон (`cloneFixture`) и в общие
- * не ходят: соседняя проверка из того же файла получила бы чужую правку.
+ * Checks that edit files take a clone of their own (`cloneFixture`) and never enter the shared ones: a neighbouring
+ * check in the same file would get someone else's edit.
  *
- * Третье правило — про git: проверки и инструменты зовут его через `gitIn`
- * (или `gitTry`, где нужен код возврата), а настройки берутся из того же списка,
- * что закрепляет движок (`src/git.js`). Читать git в обход этого списка нечем,
- * и это стережёт `test/git-pins.test.js`, а не комментарий здесь.
+ * The third rule is about git: checks and tools call it with the pins of the engine (`gitIn`, or `gitTry` where the exit
+ * code is needed), and the settings come from the one list `src/git.js` pins. The one deliberately unpinned call
+ * (`gitBare`) exists to measure the environment itself, and the guard `test/git-pins.test.js` requires every direct git
+ * call to go through that list — listing the two files where a bare call is a decision rather than an oversight.
  */
 
 import fs from 'node:fs';
@@ -42,24 +39,22 @@ export const CONFIG = path.join(SYNTH, 'config.json');
 export const PACKAGE_BIN = path.join(ROOT, 'bin', 'size.js');
 export const MAX_BUF = 256 * 1024 * 1024;
 
-/* Инструмент под проверкой: движок пакета и замороженная копия, с которой снят
- * эталон. У копии своё окружение — то, в котором снимали эталон (до починки B1
- * иначе не воспроизводится). */
+/* The tools under check: the engine's package and the frozen copy both fixtures were taken with. The copy carries an
+ * environment of its own — the one the fixture was taken in, `core.quotePath=false`: the copy predates the pin the
+ * engine sets for itself, so under a machine's default settings it would reproduce with a line missing. */
 export const PACKAGE = { name: 'движок пакета', file: PACKAGE_BIN, env: null };
 
-/* Замороженная копия реализации, с которой сняты оба эталона, в дереве не лежит
- * (`REFACTOR.md` R-1.5): это редко нужное прошлое, а не рабочая копия пакета, и место
- * такого прошлого — история, откуда байты и берутся по требованию. Путь — тот, под
- * которым копия лежала: он записан в происхождении обоих эталонов и остаётся их
- * записью, а не сегодняшним деревом. */
+/* The frozen copy of the implementation, with which both fixtures were taken, does not lie in the tree: it is a rarely
+ * needed past rather than a working copy of the package, and the place for such a past is the history, from where its
+ * bytes are fetched on demand. The path is the one the copy lay under: it is recorded in the origins of both fixtures and
+ * stays their record rather than today's tree. */
 export const LEGACY_PATH = 'fixtures/legacy/size-table.cjs';
 
 let legacyFile = null;
 
-/* Байты копии берутся из того коммита, который её **добавил** (последнего, если
- * её заводили не однажды): так материал не привязан к записанному руками sha и
- * переживает любые переезды истории. Скачанное сверяется с хешем, который записало
- * происхождение эталона: иначе «та самая копия» молча перестала бы ею быть. */
+/* The copy's bytes come from the commit that **added** it (the last one, if it was introduced more than once): that way
+ * the material is not tied to a hand-written sha and survives any move of the history. What is fetched is compared with
+ * the hash the fixture's origin recorded: otherwise "the very same copy" would silently stop being it. */
 export function legacyTool() {
   if (legacyFile !== null) return legacyFile;
   const added = gitIn(ROOT, ['log', '--diff-filter=A', '--format=%H', '--', LEGACY_PATH])
@@ -89,8 +84,8 @@ export function tempDir(name) {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'size-report-' + name + '-'));
 }
 
-/* Настройки git через окружение (git ≥ 2.31): так проверка задаёт машине чужие
- * правила, не трогая ни её конфиг, ни фикстуру. */
+/* git settings through the environment (git ≥ 2.31): that way a check hands the machine rules of its own without touching
+ * either its config or the fixture. */
 export function gitConfig(pairs) {
   const env = { GIT_CONFIG_COUNT: String(Object.keys(pairs).length) };
   Object.keys(pairs).forEach((key, i) => {
@@ -100,25 +95,23 @@ export function gitConfig(pairs) {
   return env;
 }
 
-/* Клон фикстуры без общих жёстких ссылок: он же рабочее дерево для проверок,
- * которые правят файлы. */
+/* A clone of the fixture with no shared hard links: it is also the working tree for the checks that edit files. */
 export function cloneFixture(into) {
   gitIn(null, ['clone', '-q', '--no-hardlinks', BUNDLE, into]);
   return into;
 }
 
-/* Клон, выложенный с нормализацией переводов строк: так выглядит рабочее дерево
- * при `core.autocrlf=true` — значении по умолчанию в установке Git для Windows.
- * На диске CRLF, в git LF, и git считает дерево чистым. */
+/* A clone laid out with newline normalisation: that is how a working tree looks under `core.autocrlf=true`, the default of
+ * Git's installer for Windows. On disk CRLF, in git LF, and git counts the tree as clean. */
 export function cloneCrlf(into) {
   gitIn(null, ['-c', 'core.autocrlf=true', 'clone', '-q', '--no-hardlinks', BUNDLE, into]);
   gitIn(into, ['config', 'core.autocrlf', 'true']);
   return into;
 }
 
-/* Проект с нуля: пустой репозиторий с каталогом `src` и заданной подписью — без
- * неё git не станет коммитить, а спросить не может. Один на все наборы, которым
- * нужен свой проект, а не клон фикстуры (замер: три набора завели это порознь). */
+/* A project from scratch: an empty repository with an `src` directory and a given identity — without it git refuses to
+ * commit and cannot ask. One for every suite that needs a project of its own rather than a clone of the fixture
+ * (measured: three suites had grown this separately). */
 export function initRepo(dir) {
   fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
   gitIn(dir, ['init', '-q', '-b', 'main']);
@@ -128,8 +121,8 @@ export function initRepo(dir) {
   return dir;
 }
 
-/* Общий клон на среду для прогонов на чтение. Создаётся при первом обращении:
- * наборы, которым среда не нужна, за неё и не платят. */
+/* One shared clone per environment for read-only runs. It is created on first use: suites that need no environment pay
+ * nothing for it. */
 const shared = new Map();
 export function sharedClone(kind, tempRoot) {
   if (!shared.has(kind)) {
@@ -139,37 +132,36 @@ export function sharedClone(kind, tempRoot) {
   return shared.get(kind);
 }
 
-/* Единственный вход к git для проверок и инструментов: закрепления и локаль —
- * общие с движком (`src/git.js`), чтобы список настроек был один на пакет.
- * `dir === null` — команда не про каталог (клон, разбор бандла). */
+/* The pinned way into git for checks and tools: the pins and the locale are shared with the engine (`src/git.js`), so that
+ * the list of settings is one for the package. `dir === null` means the command is not about a directory (a clone,
+ * reading a bundle). */
 export function gitIn(dir, args) {
   return execFileSync('git', gitArgv((dir === null ? [] : ['-C', dir]).concat(args)),
     { encoding: 'utf8', maxBuffer: MAX_BUF, env: gitEnv() });
 }
 
-// То же, но с кодом возврата: там, где отказ — ожидаемый ответ (слияние, clone).
+// The same, but with the exit code: where a refusal is an expected answer (a merge, a clone).
 export function gitTry(dir, args) {
   const res = spawnSync('git', gitArgv((dir === null ? [] : ['-C', dir]).concat(args)),
     { encoding: 'utf8', maxBuffer: MAX_BUF, env: gitEnv() });
   return { status: res.status, stdout: res.stdout || '', stderr: res.stderr || '' };
 }
 
-/* Заведомо незакреплённый вызов — и он один на весь репозиторий: проверке, которая
- * измеряет само окружение (принимает ли git настройки из окружения и сильнее ли
- * ключ командной строки), закрепления мешают ровно так же, как помогали бы везде
- * ещё. Поэтому имя говорит, что делает, а не «так случайно вышло». */
+/* A deliberately unpinned call — and it is the only one in the package: a check that measures the environment itself
+ * (whether git takes settings from the environment and whether a command-line key outranks them) is hindered by the pins
+ * exactly as they help everywhere else. Hence a name that says what it does rather than "this happened by accident". */
 export function gitBare(args, opts) {
   return spawnSync('git', args, Object.assign({ encoding: 'utf8', maxBuffer: MAX_BUF }, opts || {}));
 }
 
-/* Инструмента может не быть на месте (сборка не собрана, замороженная копия не
- * снята) — тогда проверки должны сказать это словом, а не «код null». */
+/* A tool may be missing (a build not made, the frozen copy not taken) — then the checks have to say so in words rather
+ * than hand back "code null". */
 export function requireTarget(target) {
   assert.ok(fs.existsSync(target.file),
     'нет ' + path.relative(ROOT, target.file) + ' — проверять нечего');
 }
 
-/* Отказ обязан объясняться: код выхода по таблице, сообщение без стека и с текстом. */
+/* A refusal has to explain itself: the exit code from the table, a message with text and without a stack. */
 export function refusal(res, code, what) {
   assert.equal(res.code, code, what + ': ожидался код ' + code + ', получен ' + res.code
     + ' — ' + firstLine(res.stderr));
@@ -178,8 +170,8 @@ export function refusal(res, code, what) {
   assert.notEqual(res.stderr.trim(), '', what + ': отказ ничего не объяснил');
 }
 
-/* Запуск команды как её видит пользователь: `node <файл> …`.
- * `env` досыпается к окружению процесса — так проверяются чужие настройки git. */
+/* Running a command the way a user sees it: `node <file> …`.
+ * `env` is added on top of the process's environment — that is how someone else's git settings are checked. */
 export function runTool(target, dir, args, env) {
   const res = spawnSync(process.execPath, [target.file].concat(args),
     {
@@ -191,28 +183,26 @@ export function runTool(target, dir, args, env) {
   return { code: res.status, stdout: res.stdout || '', stderr: res.stderr || '' };
 }
 
-// Прогон движка пакета, к которому не нужно ни замороженной копии, ни эталона.
+// A run of the engine's package, which needs neither the frozen copy nor the fixture.
 export function runSize(dir, args, env) {
   return runTool({ name: 'движок пакета', file: PACKAGE_BIN, env: null }, dir, args, env);
 }
 
-// Тот же запуск, но с эталонными настройками фикстуры — их читает большинство проверок.
+// The same run, but with the fixture's settings — what most checks read.
 export function runFixture(dir, args, env) {
   return runSize(dir, ['--config', CONFIG].concat(args), env);
 }
 
-// Запуск с настройками фикстуры для любого из инструментов под проверкой.
+// The same run with the fixture's settings, for any of the tools under check.
 export function runFixtureWith(target, dir, args, env) {
   return runTool(target, dir, ['--config', CONFIG].concat(args), env);
 }
 
-/* Сбор вывода не дожидаясь конца: нужен там, где прогоны идут вперемешку и ждать
- * их по очереди нельзя (`tools/parity-live.js`). Куски копятся буферами, а не
- * приклеиваются к строке: кусок приходит с потока там, где его вернуло ядро, и
- * многобайтовый символ может попасть на границу между кусками. Строка из куска
- * расшифровала бы обе половины поодиночке и дала два символа-заменителя вместо
- * буквы — сверка падала бы на случайном месте, а не на расхождении (проверка —
- * `test/runner.test.js`, случай — `WORKLOG.md` §21). */
+/* Collecting output without waiting for the end: needed where runs are interleaved and cannot be awaited one by one
+ * (`tools/parity-live.js`). Chunks are kept as buffers rather than glued to a string: a chunk arrives from the stream
+ * wherever the kernel returned it, and a multi-byte character may fall on the border between chunks. A string built from
+ * a chunk would decode both halves apart and give two replacement characters instead of one letter — the comparison would
+ * fail at a random place rather than at a difference (guarded by `test/runner.test.js`). */
 export function collectOutput(child) {
   return new Promise((resolve) => {
     const out = [];
@@ -232,8 +222,8 @@ export function collectOutput(child) {
   });
 }
 
-/* Кэш прогонов на чтение: ключ — инструмент, каталог, ключи и окружение. Только
- * для команд, которые ничего не пишут и не зависят от того, что уже написано. */
+/* A cache of read-only runs: the key is the tool, the directory, the flags and the environment. Only for commands that
+ * write nothing and do not depend on what has already been written. */
 const cache = new Map();
 export function readRun(target, dir, args, env) {
   const key = [target.file, dir, args.join(' '), JSON.stringify(env || {})].join('\u0000');
@@ -245,7 +235,7 @@ export function sha256(buf) {
   return crypto.createHash('sha256').update(buf).digest('hex');
 }
 
-// Хеш, записанный в формате `sha256sum`: «<хеш>  <файл>».
+// A hash recorded in the `sha256sum` format: "<hash>  <file>".
 export function shaFileLine(file) {
   return fs.readFileSync(file, 'utf8').split(/\s+/)[0];
 }
@@ -258,8 +248,8 @@ export function firstLine(text) {
   return text.trim().split('\n')[0];
 }
 
-/* Расхождение должно объяснять себя: номер первой разошедшейся строки и обе
- * строки целиком — иначе «JSON не совпал» ничего не говорит о причине. */
+/* A difference has to explain itself: the number of the first diverging line and both lines in full — otherwise "the JSON
+ * did not match" says nothing about the cause. */
 export function firstDiff(a, b) {
   const la = a.split('\n');
   const lb = b.split('\n');
@@ -272,13 +262,13 @@ export function firstDiff(a, b) {
   return 'различие в байтах при одинаковых строках (переводы строк или кодировка)';
 }
 
-/* Стек наружу не отдаётся: в нём нет подсказки починки, зато есть пути машины.
- * Кадры V8 начинаются с отступа и `at `. */
+/* A stack is never handed out: it holds no hint of a fix while it does hold the machine's paths. V8 frames start with an
+ * indent and `at `. */
 export function hasStack(text) {
   return /^\s+at /.test(text);
 }
 
-// Команда починки из сообщения: `node <путь> --init`.
+// The fix command taken out of a message: `node <path> --init`.
 export function commandIn(text) {
   const m = /node\s+(\S+)\s+(--\S+)/.exec(text);
   return m === null ? null : { file: m[1], flag: m[2] };

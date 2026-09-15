@@ -81,8 +81,22 @@ comment diff stays under the commit budget, otherwise it is split by file groups
   the name goes to the registry and runs a revision the project never pinned, while a path inside the
   project refuses on the spot, and the release link names the revision the documentation describes
   (comments only; journal entry `worklog/0082`, 2026-09-15).
-- [ ] **M9 tools** — `tools/**` (3520; three or four commits, `tools/gates/**` and
-  `tools/synthetic/**` last).
+- [x] **M9a tools: the shared part of the run** — `tools/harness.js`, `tools/run-tests.js`,
+  `tools/suites.js`, `tools/check-standards.js` (752 → 728; journal entry `worklog/0083`,
+  2026-09-15).
+- [ ] **M9b tools: facts, probes, refusals** — `tools/docs-facts.js`, `tools/gate-probe.js`,
+  `tools/page-harness.js`, `tools/refusals.js` (742).
+- [ ] **M9c tools: frozen and live copies** — `tools/make-fixture.js`, `tools/parity-freeze.js`,
+  `tools/yaml.js` (611).
+- [ ] **M9d tools: live parity and the tarball** — `tools/parity-live.js`, `tools/pack-check.js`
+  (419).
+- [ ] **M9e tools: the gates** — `tools/gates/**` (769, 7 files).
+- [ ] **M9f tools: the synthetic project** — `tools/synthetic/**` (405).
+
+  The module was estimated at "three or four commits" before it was measured. A comment pass
+  rewrites 60–80 % of a file's lines, and the commit budget is hard (≤ 600 changed lines, ≤ 10
+  files), so the parts above are the measured split: six passes. M9e and M9f stay last, as the
+  plan says.
 - [ ] **M10 tests** — `test/*.test.js` (6221; four or five commits).
 - [ ] **M11 shell and configs** — `.githooks/*`, `eslint.config.js`,
   `eslint.metrics.config.js`, `.dependency-cruiser.cjs` (~500).
