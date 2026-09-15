@@ -1,22 +1,20 @@
-/* Сторож разделения набора на быстрый и полный прогон (`tools/suites.js`).
+/* The guard of the split into a fast and a full run (`tools/suites.js`).
  *
- * Класс дефекта тут свой: разделение стареет молча. Файл, которого нет в
- * объявлении, попадает в полный прогон — и это правильно, но «почему он в полном»
- * остаётся догадкой; быстрым файл может стать «заодно», и никто не заметит, что
- * быстрый прогон перестал быть быстрым; число проверок в прогоне и в документе
- * расходятся так же тихо, как расходились числа проверок в `README.md` до сторожа
- * документации.
+ * The defect class is its own: a split ages in silence. A file missing from the declaration goes to the
+ * full run — which is right, but "why it is in the full one" stays a guess; a file can become fast "by the
+ * way", and nobody notices the fast run stopped being fast; the check count in a run and in the document
+ * drift apart as quietly as the counts in `README.md` did before the documentation guard.
  *
- * Что стережёт проверка: у каждого файла набора — своё место (быстрый явно, полный с
- * названной причиной), у причины — содержательная длина, и быстрый прогон остаётся
- * частью набора, а не вторым набором. Числа прогонов в документации — дело сторожа
- * документации (`test/docs-numbers.test.js`): одно обещание живёт в одном доме,
- * иначе два сторожа начнут спорить, кто прав.
+ * What the check guards: every file of the suite has a place of its own (fast explicitly, full with a
+ * cause named), a cause has a substantial length, and the fast run stays part of the suite rather than a
+ * second suite. The run counts in the documentation are the documentation guard's business
+ * (`test/docs-numbers.test.js`): one promise lives in one home, or two guards would argue about who is
+ * right.
  *
- * **Чего проверка не берёт, и это сказано, а не спрятано:** время. Секунды зависят
- * от окна — загрузка машины бывает какой угодно, — поэтому целью они не объявлены и
- * ничем не стерегутся: прогон печатает длительность каждого файла справкой, а
- * деление держится признаком файла, чем он занят, а не числом секунд.
+ * **What the check does not take, said rather than hidden:** time. Seconds depend on the window — a
+ * machine's load is whatever it is — so they are not declared as a target and nothing guards them: the run
+ * prints each file's duration for reference, while the split rests on what a file is busy with rather
+ * than on a number of seconds.
  */
 
 import { test } from 'node:test';
@@ -46,9 +44,9 @@ test('каждый файл набора классифицирован: быс�
   assert.deepEqual(slow.filter((f) => files.indexOf(f) < 0), [],
     'причина названа для файла, которого в наборе нет');
 
-  // Файл, которого нет в быстром списке, идёт в полный — это умолчание, и оно
-  // хорошее: новое не может тихо уехать в быстрый. Но тогда причина обязана быть у
-  // каждого такого файла: иначе «почему он в полном» никто не назвал.
+  // A file missing from the fast list goes to the full one — a good default, since new work cannot
+  // quietly ride into the fast run. But then every such file needs a cause: otherwise nobody named why it
+  // is in the full one.
   assert.deepEqual(files.filter((f) => fast.indexOf(f) < 0 && slow.indexOf(f) < 0).map(written), [],
     'в полном прогоне файл без названной причины — допишите её в SLOW (`tools/suites.js`)'
       + ' или переведите файл в быстрый с причиной');
@@ -71,9 +69,9 @@ test('быстрый прогон — часть набора, а объявле
   assert.ok(inFast > 0, 'быстрый прогон пуст: тогда его незачем звать');
   assert.ok(inFast < total, 'быстрый прогон равен полному (' + inFast + ' из ' + total
     + ') — разделения нет');
-  // Каждый файл набора учтён в подсчёте ровно один раз: полнота классификации выше
-  // уже проверена, а здесь важно, что быстрый прогон не перечислил один файл дважды
-  // и не потерял проверки при подсчёте.
+  // Every file of the suite is counted exactly once: completeness of the classification is checked
+  // above, while what matters here is that the fast run lists no file twice and loses no checks in the
+  // count.
   assert.equal(inFast, FAST.reduce((sum, entry) => sum + checksIn(entry.file), 0),
     'счёт проверок быстрого прогона не сходится с его файлами');
 });

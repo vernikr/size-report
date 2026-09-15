@@ -1,14 +1,14 @@
-/* Проба датчика связей (`pnpm run deps`): кольцо, сирота и неразрешимый импорт обязаны
- * красить прогон, а простая связка — быть зелёной. Искусственные деревья собираются во
- * временном каталоге: правила датчика проверяются на маленьком графе, где находка
- * видна целиком, а не в графе пакета из восьми десятков модулей.
+/* A probe of the dependencies sensor (`pnpm run deps`): a cycle, an orphan and an unresolvable import
+ * have to colour the run, while a plain link has to stay green. Artificial trees are built in a temporary
+ * directory: the sensor's rules are checked on a small graph where a find is visible whole rather than in
+ * the package's graph of well over a hundred modules.
  *
- * Проба берёт **настоящий путь** временного каталога (`tempDir` в
- * `tools/gate-probe.js`): на macOS `/tmp` — ссылка, и разборщик связей считает один
- * файл под двумя путями двумя модулями — тогда «сирота» появляется там, где её нет.
+ * The probe takes the temporary directory by its **real path** (`tempDir` in `tools/gate-probe.js`): on
+ * macOS `/tmp` is a link, and the dependency resolver takes one file under two paths for two modules —
+ * then an "orphan" shows up where there is none.
  *
- * Каждый случай — файлы, ожидаемый код и (для красных) ожидаемое правило: общая часть
- * проб вынесена в `verdictOf`, иначе четыре пробы были бы почти одной и той же.
+ * Each case is files, an expected code and (for the red ones) an expected rule: the shared part of the
+ * probes lives in `verdictOf`, or four probes would be nearly the same one.
  */
 
 import { test, after } from 'node:test';
@@ -26,7 +26,7 @@ const CYCLE = "import { a } from './a.js';\nexport const b = a + 1;\n";
 const GONE = "import { gone } from './gone.js';\nexport const a = gone;\n";
 const LONELY = 'export const lonely = 1;\n';
 
-/* Граф из нескольких файлов своего каталога за один вызов. */
+/* A graph of several files of one's own directory in a single call. */
 function verdictOf(name, files) {
   const dir = path.join(tmp, name);
   Object.keys(files).forEach((f) => write(path.join(dir, f), files[f]));

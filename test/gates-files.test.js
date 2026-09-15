@@ -1,16 +1,15 @@
-/* Проба защиты гейт-файлов (`tools/gates/gatefiles.js`): правка порогов, баз и
- * обвязки проверок без трейлера `Gate-Change:` обязана красить проверку — и в хуке
- * (по индексу), и в CI (по каждому коммиту диапазона).
+/* A probe of the gate-file protection (`tools/gates/gatefiles.js`): editing thresholds, baselines or the
+ * check harness without the `Gate-Change:` trailer has to colour the check — both in the hook (by the
+ * index) and in CI (commit by commit across a range).
  *
- * Проба идёт на **своём временном репозитории** с копией скриптов датчиков и той
- * части продукта, на которую они опираются (`src/git.js` — граница вызова git с
- * закреплёнными настройками): в рабочем дереве проба оставляла бы коммиты, а гейт,
- * который коммитит за проверяемого, — плохая идея. Скрипт видит репозиторий по своему
- * расположению, поэтому копия воспроизводит раскладку.
+ * The probe runs in **a temporary repository of its own** holding a copy of the sensor scripts and of the
+ * part of the product they lean on (`src/git.js` — the git boundary with its pinned settings): in the
+ * working tree the probe would leave commits behind, and a gate that commits on behalf of the one it
+ * checks is a bad idea. The script finds the repository by its own location, so the copy reproduces the
+ * layout.
  *
- * Проверяются обе половины обещания: **без трейлера — красный**, **с трейлером —
- * зелёный**, и то, что правка обычного файла трейлера не требует (иначе гейт требовал
- * бы обоснования на каждую правку).
+ * Both halves of the promise are checked: **no trailer — red**, **trailer — green**, and that an edit of
+ * an ordinary file needs no trailer (otherwise the gate would demand a justification for every edit).
  */
 
 import { test, after } from 'node:test';
@@ -31,8 +30,8 @@ function gitIn(argv) {
   return res.out;
 }
 
-/* Сообщение — файлом (`git commit -F`): трейлер живёт в теле сообщения, а `-m` в
- * одну строку его бы и не проверил. */
+/* The message goes in as a file (`git commit -F`): the trailer lives in the message body, and a
+ * one-line `-m` would leave it unchecked. */
 function commit(message) {
   const file = path.join(tmp, 'message.txt');
   write(file, message + '\n');
@@ -43,9 +42,9 @@ function gate(argv) {
   return exec(process.execPath, [path.join(GATE, 'gatefiles.js')].concat(argv), { cwd: repo });
 }
 
-/* Раскладка временного репозитория: копия обвязки датчика (и той части продукта, на
- * которую она опирается), обычный файл и два гейт-файла. Возвращает первый коммит —
- * он и служит базой для проверки диапазона. */
+/* The layout of the temporary repository: a copy of the sensor's harness (and of the part of the product
+ * it leans on), an ordinary file and two gate files. Returns the first commit — the base for the range
+ * check. */
 function prepare() {
   fs.mkdirSync(GATE, { recursive: true });
   ['common.js', 'gatefiles.js'].forEach((f) => {
@@ -67,14 +66,14 @@ function prepare() {
 test('гейт-файл без трейлера красный, с трейлером — зелёный', () => {
   const base = prepare();
 
-  // Правка гейт-файла в индексе — вердикт хука.
+  // A gate-file edit in the index — the hook's verdict.
   gitIn(['add', 'package.json']);
   const staged = path.join(tmp, 'staged-msg.txt');
   write(staged, 'chore: правка порога\n');
   const hook = gate(['--commit-msg', staged]);
   assert.equal(hook.code, 1, 'правка гейт-файла прошла хук без трейлера:\n' + hook.out);
-  // Красный обязан быть вердиктом, а не отказом самого скрипта (сломанный импорт —
-  // тоже ненулевой код, и без этой сверки проба «проходила» бы на нём).
+  // The red has to be a verdict rather than a failure of the script itself (a broken import is a
+  // non-zero code too, and without this comparison the probe would "pass" on it).
   assert.match(hook.out, /правка гейта без трейлера/, 'красный не назвал причину:\n' + hook.out);
   assert.match(hook.out, /package\.json/, 'хук не назвал гейт-файл:\n' + hook.out);
 
@@ -82,13 +81,13 @@ test('гейт-файл без трейлера красный, с трейле�
   const hookOk = gate(['--commit-msg', staged]);
   assert.equal(hookOk.code, 0, 'трейлер не был принят:\n' + hookOk.out);
 
-  // Коммит без трейлера в диапазоне — вердикт CI.
+  // A commit without the trailer in the range — the CI verdict.
   const bad = commit('chore: правка порога без трейлера');
   assert.equal(bad.code, 0, 'git не смог закоммитить:\n' + bad.out);
   const range = gate(['--range', base]);
   assert.equal(range.code, 1, 'коммит с правкой гейт-файла прошёл диапазон без трейлера:\n' + range.out);
 
-  // Тот же коммит с трейлером — зелёный: аменд, и диапазон снова чист.
+  // The same commit with the trailer is green: amend, and the range is clean again.
   const amend = git(['commit', '--amend', '-m',
     'chore: правка порога\n\nGate-Change: порог поднят по замеру, причина такая'], { cwd: repo });
   assert.equal(amend.code, 0, 'аменд не прошёл:\n' + amend.out);

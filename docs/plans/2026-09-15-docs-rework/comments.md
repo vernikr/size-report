@@ -182,18 +182,40 @@ comment diff stays under the commit budget, otherwise it is split by file groups
     function in `templates` reached 61 lines against a limit of 60, because comment lines inside a
     function count towards its length; fixed by compressing the comments (61 → 57), not by touching the
     threshold.
-  - [ ] **M10f the probes of the gates** — `gates-metrics` (46), `gates-verify` (31), `suites` (22),
-    `gates-files` (21), `gates-dup` (12), `gates-coverage` (11), `gates-deps` (10). All seven are
-    gate files, so this part's commit needs the `Gate-Change:` trailer.
+  - [x] **M10f the probes of the gates** — `gates-metrics` 152 → 148, `gates-verify` 164 → 161,
+    `suites` 79 → 77, `gates-files` 117 → 116, `gates-dup` 87 → 89, `gates-coverage` 86 → 85,
+    `gates-deps` 61 → 61 (plus `tools/gates/dup.js` 205 → 209, where a claim proved false — the two
+    files grew because the measured correction needs more words than the false short one); 153 comment
+    lines → 313 changed lines in 8 files (journal entry `worklog/0096`, 2026-09-15). Correcting the plan
+    itself: **six of the seven are gate files** (`test/gates-*.test.js` matches, `test/suites.test.js`
+    does not — the gate list holds `tools/suites.js`), which changes nothing practically since the
+    trailer is needed anyway. Measured, and the reason the pass was worth it: `tools/gates/dup.js` and
+    `gates-dup` both claimed that jscpd's own `--baseline` is bound to the checkout path. **It is not**
+    for the pinned 5.2.0: a baseline jscpd wrote keeps the same tree green in another directory
+    (`--fail-on-new-clones=0`, exit 0), survives renames and shifted lines, and reddens on a genuinely
+    new copy — measured on a toy tree and on the package's whole tree (11 fingerprints). What produces
+    "every clone is new" is handing jscpd the project's own `dup-baseline.json`: it answers `missing
+    field version` and exits 1, which is probably what the old measurement ("15 new clones", and the
+    project's baseline holds 15 fingerprints) actually observed. Both comments now say what is true
+    (the project's file is what `gatefiles` guards, carries a schema and a note, and is what the gate's
+    counters speak about), and the question of whether the own fingerprint is still needed at all is
+    recorded as note **N15** in `BLOCKERS.md` — a user's decision, not this pass's. Also removed: two
+    "was X, now Y" stretches and one stale count ("a graph of eight dozen modules" — the sensor reports
+    well over a hundred), and one future tense that had already happened (the required check `verify`
+    is required, not about to become it).
   - [ ] **M10g the contracts and the frozen copies** — `contract-data` (38), `frozen` (21),
     `git-pins` (20), `environment` (17), `contract-derived` (16), `parity` (15), `runner` (10),
     `crlf` (7), `api` (5).
 - [ ] **M11 shell and configs** — `.githooks/*`, `eslint.config.js`,
-  `eslint.metrics.config.js`, `.dependency-cruiser.cjs` (~500). Known defect to fix here, found
+  `eslint.metrics.config.js`, `.dependency-cruiser.cjs` (~500). Known defects to fix here, found
   during M9e: `eslint.metrics.config.js` (line 5) names the ratchet `eslint-suppressions.json` —
   without the leading dot, that is, the very name the strict formatting linter picks up by default
   (measured on ESLint 9.39.5: the file beside a config is read with no flag, and unused entries
-  fail the run with code 2). The baseline itself is `.eslint-suppressions.json`.
+  fail the run with code 2). The baseline itself is `.eslint-suppressions.json`. Second find, from
+  M10f: that same header dates its thresholds by `` `WORKLOG.md` §14 `` — a root file that has not
+  existed since the journal moved, and a section address pointing into a document this work rewrites.
+  Third, also M10f: the same header comments are in Russian (the file is a config rather than code,
+  so it sat outside every module until now).
 
 Order within a module: the file a reader opens first (entry, then what it calls), so the
 diffs read in the same order as the code.

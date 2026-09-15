@@ -1,16 +1,19 @@
-/* Проба датчика дублей (`pnpm run dup`): копия обязана красить прогон, а база —
- * держать уже живущие в дереве клоны. Проба идёт на своём маленьком дереве во
- * временном каталоге, а не на репозитории: так проверяются и храповик, и
- * переносимость базы, и ничего не приходится трогать в рабочем дереве.
+/* A probe of the duplication sensor (`pnpm run dup`): a copy has to colour the run, while the baseline
+ * has to hold the clones already living in the tree. The probe runs on a small tree of its own in a
+ * temporary directory rather than on the repository: that way the ratchet and the portability of the
+ * baseline are both checked, and nothing in the working tree is touched.
  *
- * Копия берётся **целым файлом** (две одинаковые функции-модуля), и это не
- * случайность: участок, вырезанный из середины функции, не разбирается, а пары
- * функций jscpd сравнивает по дереву разбора — проба из обрезанного участка
- * доказала бы не то, что работает в коммите (`tools/gates/dup.js`, шапка).
+ * A copy is taken as **a whole file** (two identical functions-modules), and that is no accident: a
+ * stretch cut out of the middle of a function does not parse, and jscpd compares function pairs by parse
+ * tree — a probe made of a cut stretch would prove something other than what runs in a commit
+ * (`tools/gates/dup.js`, its header).
  *
- * Отдельно проверяется то, ради чего база сделана по содержимому: та же база,
- * применённая к тому же дереву в другом каталоге, остаётся зелёной. Родная база
- * jscpd этого не умеет — на копии дерева она объявляет все клоны новыми.
+ * Separately checked is the portability of the baseline: the same baseline applied to the same tree in
+ * another directory stays green, because the fingerprint is taken from the clone's content rather than
+ * from its place. The file itself is the project's own — a schema, the config name and a note a person
+ * reads — and `gatefiles` guards it, which is the reason for not leaning on a baseline file of jscpd's
+ * own (measured: a jscpd baseline survives a moved tree as well, but it carries nothing but versions and
+ * fingerprints, and no gate protects it).
  */
 
 import { test, after } from 'node:test';
@@ -22,8 +25,7 @@ import { probe, readJson, tempDir, write } from '../tools/gate-probe.js';
 const tmp = tempDir('dup');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-/* Копируемый модуль: тринадцать строк разбирающегося кода — больше и `minLines`, и
- * `minTokens`. */
+/* The module to be copied: thirteen lines of parsing code — above both `minLines` and `minTokens`. */
 const MODULE = [
   'export function alpha(a, b) {',
   '  const x = a + b;',

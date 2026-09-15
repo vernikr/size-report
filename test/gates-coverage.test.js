@@ -1,14 +1,13 @@
-/* Проба датчика покрытия (`pnpm run cover`). Снятие покрытия стоит полный набор под
- * c8 (десятки секунд) и живёт в slow-профиле, поэтому здесь проверяется то, что
- * решает вердикт, — сравнение базы со снятым покрытием, — на готовых отчётах в
- * формате c8 (`json-summary`). Это тот же формат, что датчик читает в slow-профиле,
- * поэтому шов «отчёт c8 → вердикт» проверен, а не обойдён.
+/* A probe of the coverage sensor (`pnpm run cover`). Taking coverage costs the whole suite under c8 and
+ * lives in the slow profile, so what is checked here is what decides the verdict — the baseline compared
+ * with the coverage taken — on ready-made reports in c8's format (`json-summary`). That is the same format
+ * the sensor reads in the slow profile, so the "c8 report → verdict" seam is checked rather than skipped.
  *
- * Храповик проверяется с двух сторон: просадка ниже своей же базы — красный; новый
- * исходник, который ни разу не выполнился, — тоже; новый файл с покрытием — зелено.
- * Плюс отдельно сверяется, что база не разошлась с деревом: файл, названный в базе,
- * обязан быть в дереве, а исходники `src`/`bin` — в базе (иначе новую папку или
- * смену расширения покрытие пропустит тихо, а храповик станет пустым).
+ * The ratchet is checked from two sides: a drop below its own baseline — red; a new source file that never
+ * ran — red too; a new file with coverage — green. On top of that the baseline is compared with the tree:
+ * a file named in the baseline has to be in the tree, and the sources of `src`/`bin` have to be in the
+ * baseline (otherwise a new directory or a changed extension would slip past coverage, and the ratchet
+ * would come out empty).
  */
 
 import { test, after } from 'node:test';
@@ -20,7 +19,7 @@ import { ROOT, git, probe, readJson, tempDir, write } from '../tools/gate-probe.
 const tmp = tempDir('cover');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-/* Отчёт в форме c8: на файл — четыре метрики по `{ total, covered, skipped, pct }`. */
+/* A report in c8's shape: per file, four metrics of `{ total, covered, skipped, pct }`. */
 function point(lines, branches, functions) {
   const one = (pct) => ({ total: 10, covered: Math.round(pct / 10), skipped: 0, pct: pct });
   return { lines: one(lines), statements: one(lines), functions: one(functions), branches: one(branches) };

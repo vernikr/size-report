@@ -2,11 +2,15 @@
 /* The duplication sensor: copy-paste (Type-1/2) and token twins (Type-3, `similarity`). The settings
  * live in `.jscpd.json`; here are the ratchet and the machine report.
  *
- * **The fingerprint is its own, taken from the content rather than jscpd's own.** jscpd's `--baseline`
- * is bound to the checkout path: the same revision unpacked in another directory reported the clones
- * living in the tree as new, so on CI it would be red always and no ratchet could rest on it. Hence a
- * clone is fingerprinted by a hash of its own text (fragment + lines + tokens): a moved file, shifted
- * lines or another checkout do not shift the fingerprint, while a new duplicate shows up at once.
+ * **The fingerprint is its own, taken from the content rather than jscpd's own.** A clone is
+ * fingerprinted by a hash of its own text (fragment + lines + tokens): a moved file, shifted lines or
+ * another checkout do not shift the fingerprint, while a new duplicate shows up at once. The baseline
+ * file is the project's own as well — JSON with a schema, the config name and a note a person reads, and
+ * `gatefiles` guards it — which is what a file of jscpd's own cannot be: that one carries a version and
+ * fingerprints and nothing else, and no gate protects it. Measured, since the opposite once stood here:
+ * a jscpd baseline keeps the same tree green in another directory, renames and shifted lines included,
+ * and reddens on a genuinely new copy; what reports every clone as new is jscpd being handed the
+ * project's own file (`missing field `version``).
  *
  * **The ratchet** is the baseline of fingerprints (`dup-baseline.json`): the clones living today sit in
  * the baseline and do not fail the gate, while a new one is named and does fail. The baseline is

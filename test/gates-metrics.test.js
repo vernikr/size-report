@@ -1,20 +1,19 @@
-/* Проба датчика раздувания (`pnpm run metrics`): искусственное нарушение обязано
- * красить прогон, а не проходить незамеченным. Каждая проба — это тот класс
- * дефекта, ради которого правило и заведено: простыня-функция, ветвистая функция,
- * проверка без утверждения, утверждение без сравнения, выключенная проверка, долг
- * пометкой.
+/* A probe of the bloat sensor (`pnpm run metrics`): an artificial violation has to colour the run
+ * rather than slip through unseen. Each probe is the defect class the rule exists for: a function that
+ * is a wall of code, a branching function, a check without an assertion, an assertion without a
+ * comparison, a switched-off check, a debt marker.
  *
- * Проба идёт **через stdin с виртуальным именем файла**, а не файлом на диске: имя
- * выбирает, какие правила применяются (`src/` — размер, `test/` — вес проверок), а
- * дерево остаётся чистым — иначе проба сама попадала бы в датчик и в базу.
+ * A probe goes **through stdin with a virtual file name** rather than through a file on disk: the name
+ * decides which rules apply (`test/**` gets the test-weight rules on top of the size ones), and the tree
+ * stays clean — otherwise the probe would land in the sensor and in the baseline itself.
  *
- * Отдельно проверяется храповик, и обе половины его обещания: то, что уже в базе,
- * проходит молча, а чистка базы человеком работает и ничего не ломает:
- * `--prune-suppressions` даёт подмножество базы, а не отказ. База для этого берётся
- * своя, собранная на своём же файле: репозиторная может быть пуста — весь долг
- * разобран, и это цель датчика, а не поломка храповика. Устаревшая запись (нарушение
- * починили, строка в базе осталась) гейт не валит: иначе починка кода требовала бы
- * правки гейт-файла, которую тот же гейт и запрещает без трейлера.
+ * The ratchet is checked separately, both halves of its promise: what is already in the baseline passes
+ * in silence, and a person's pruning works and breaks nothing (`--prune-suppressions` produces a subset
+ * of the baseline rather than a refusal). Its baseline is one of its own, built on a file of its own: the
+ * repository's may be empty — the whole debt sorted out is the sensor's goal rather than a broken
+ * ratchet. A stale record (the violation was fixed, the line stayed in the baseline) does not fail the
+ * gate: otherwise fixing code would require editing a gate file, which that same gate forbids without the
+ * trailer.
  */
 
 import { test, after } from 'node:test';
@@ -26,16 +25,15 @@ import { ROOT, exec, probe, readJson, tempDir, write } from '../tools/gate-probe
 const tmp = tempDir('metrics');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-/* Проба «датчика живого» и храповика пишется **внутри репозитория**: ESLint линтует
- * только то, что под его базовым путём, а на дереве во временном каталоге молча не
- * делает ничего — проба краснела бы на «файл вне базового пути», а не на нарушении.
- * Место выбрано так, что остаток не видит ни один читатель дерева: `reports/` назван и
- * в `.gitignore`, и в игноре линтера. Поэтому оборванный прогон (убитый процесс,
- * упавшая проверка) не оставляет ни неотслеживаемого файла, который занесёт
- * `git add -A`, ни кода, на котором краснеет `lint:strict` — первого шага профиля.
- * Самому датчику файл при этом виден: его игнор (`eslint.metrics.config.js`) каталог
- * не называет — иначе проба краснела бы на игноре, а не на нарушении. Гейты `reports/`
- * не сканируют (их обход — `src`, `bin`, `tools`, `test`) и не чистят. */
+/* The "live sensor" and ratchet probes are written **inside the repository**: ESLint lints only what
+ * lies under its base path and quietly does nothing on a tree in a temporary directory — the probe would
+ * go red on "file outside the base path" rather than on a violation. The place is chosen so that no
+ * reader of the tree sees the leftovers: `reports/` is named in `.gitignore` and in the linter's ignores
+ * as well. So an interrupted run (a killed process, a failed check) leaves neither an untracked file for
+ * `git add -A` to pick up nor code that reddens `lint:strict` — the profile's first step. The sensor
+ * itself does see the file: its ignore list (`eslint.metrics.config.js`) does not name the directory —
+ * otherwise the probe would go red on the ignore rather than on a violation. The gates do not scan
+ * `reports/` (their walk is `src`, `bin`, `tools`, `test`) and do not clean it. */
 const SCRATCH = path.join(ROOT, 'reports', 'probe');
 
 function scratch(name, source) {
@@ -44,15 +42,15 @@ function scratch(name, source) {
   return path.relative(ROOT, file).split(path.sep).join('/');
 }
 
-/* Простыня внутри функции: одна инструкция, но 64 строки — красное ровно по
- * `max-lines-per-function` (счёт операторов молчит: инструкция одна). */
+/* A wall of code inside a function: the array is long enough to pass the limit, and the length comes out
+ * red by `max-lines-per-function` alone (the statement count stays silent: there is one statement). */
 const LONG = ['export function big() {', '  return [', '    0,'
 ].concat(Array.from({ length: 60 }, (_v, i) => '    ' + (i + 1) + ','))
   .concat(['  ];', '}', '']).join('\n');
 
-/* Прогон правил датчика по куску кода: `--stdin-filename` выбирает, какой набор
- * правил к нему применится. Каждое ожидаемое правило обязано быть названо — общая
- * часть двух проб, чтобы не повторять разбор и сверку дважды. */
+/* A run of the sensor's rules over a piece of code: `--stdin-filename` decides which rule set applies
+ * to it. Every expected rule has to be named — the shared part of two probes, so that parsing and
+ * comparison are not written twice. */
 function lint(text, stdinFilename, expected) {
   const res = exec('pnpm', ['exec', 'eslint', '--config', 'eslint.metrics.config.js',
     '--stdin', '--stdin-filename', stdinFilename, '--format', 'json'], { input: text });
@@ -68,14 +66,13 @@ function lint(text, stdinFilename, expected) {
   });
 }
 
-/* Строка долга собирается из частей: иначе проба сама попала бы в датчик долгов —
- * он читает и этот файл. */
+/* The debt line is assembled from parts: otherwise the probe would land in the debt sensor itself, which
+ * reads this very file. */
 const DEBT = 'TO' + 'DO' + ': починить';
 
-/* Все нарушения — в одной пробе на файл, а не по одной пробе на правило: прогон
- * линтера стоит секунды, и шесть проб стоили бы шесть прогонов там, где хватает двух
- * (иначе датчик сам стал бы раздуванием — тем, что ловит). Проверяется по-прежнему
- * каждое правило поимённо. */
+/* All the violations sit in one probe per file rather than one probe per rule: a linter run costs
+ * seconds, and six probes would cost six runs where two suffice (otherwise the sensor would become the
+ * bloat it catches). Every rule is still checked by name. */
 test('размер, сложность и долг в исходнике красят датчик', () => {
   const source = '// ' + DEBT + '\n'
     + 'export function big(x) {\n'
@@ -107,10 +104,10 @@ test('храповик держит обе половины: база прохо
     'в базе назван файл, которого в дереве нет: переименование или удаление делают'
       + ' запись мёртвой, а храповик — тихо слабее');
 
-  /* Молчаливый проход и чистка проверяются на **своей** базе, а не на репозиторной:
-   * весь долг может быть разобран — это цель датчика, и запретом на пустоту её не
-   * удержать, — а свою базу можно собрать ровно на том нарушении, которое проверяешь
-   * (что новое нарушение красно, проверяет соседняя проба). */
+  /* The silent pass and the pruning are checked on a baseline of **its own** rather than on the
+   * repository's: the whole debt may be sorted out — that is the sensor's goal, and a ban on emptiness
+   * would not hold it — while a baseline of one's own can be built on exactly the violation under test
+   * (that a new violation goes red is the neighbour probe's business). */
   const file = scratch('src/baselined.js', LONG);
   try {
     const own = path.join(tmp, 'ratchet-suppressions.json');
@@ -120,9 +117,9 @@ test('храповик держит обе половины: база прохо
     const kept = probe('metrics', ['--paths', file, '--baseline', own]);
     assert.equal(kept.code, 0, 'нарушение из базы повалило гейт (храповик не работает):\n' + kept.out);
 
-    /* Устаревшая запись (нарушение починили, строка в базе осталась) гейт не валит, а
-     * обрезка её снимает: иначе починка кода требовала бы правки гейт-файла, которую
-     * тот же гейт и запрещает без трейлера. */
+    /* A stale record (the violation is fixed, the line stays in the baseline) does not fail the gate,
+     * while pruning takes it away: otherwise fixing code would require editing a gate file, which that
+     * same gate forbids without the trailer. */
     write(path.join(ROOT, file), 'export const one = 1;\n');
     const stale = probe('metrics', ['--paths', file, '--baseline', own]);
     assert.equal(stale.code, 0, 'устаревшая запись базы повалила гейт:\n' + stale.out);
@@ -138,9 +135,8 @@ test('храповик держит обе половины: база прохо
 });
 
 test('нарушение, которого в дереве нет, датчик всё равно называет', () => {
-  // База гейта берётся из репозитория, поэтому «датчик живой» проверяется на файле,
-  // которого в ней быть не может.
-  // Проба «датчик живой»: файл, которого нет в базе, с нарушением — красный.
+  // The gate's baseline comes from the repository, so "the sensor is live" is checked on a file it
+  // cannot hold: a file absent from the baseline, carrying a violation, has to go red.
   const file = scratch('src/plain.js', LONG);
   try {
     const res = probe('metrics', ['--paths', file]);
