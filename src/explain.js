@@ -3,16 +3,15 @@ import { measureHistory } from './history.js';
 import { cliCommand, refuseCause } from './refusal.js';
 import { outsideFix, pathRoles } from './config.js';
 
-/* Почему у коммита нет строки — ответ на конкретный вопрос про конкретный коммит.
+/* Why a commit has no row — the answer to one question about one commit.
  *
- * Ответ строится на том же проходе, что и сам отчёт: причина берётся у движка, а
- * не выводится здесь заново, — иначе два ответа о том же коммите разошлись бы. Но
- * причина у движка одна на два случая («без изменения объёма» — это и «числа не
- * сдвинулись», и «ни одного файла колонок»), потому что отчёту эта разница не
- * нужна; здесь она и есть суть вопроса, поэтому к причине добавляются улики —
- * какие файлы коммит тронул и что из них колонки, что исключено, а что не
- * отслеживается вовсе. Улики читаются из тех же фактов (список изменённых путей
- * коммита), так что выдумать их нельзя: чего нет в истории — о том молчание. */
+ * The answer is built on the same run as the report itself: the reason comes from the engine rather than
+ * being derived here anew, or two answers about one commit would drift apart. But the engine has one reason
+ * for two cases ("no change in volume" covers both "the numbers did not move" and "not a single column
+ * file"), because the report does not need that difference; here it is the whole question, so the reason is
+ * joined by evidence — which files the commit touched and which of them are columns, what is excluded, and
+ * what is not tracked at all. The evidence comes from the same facts (the commit's list of changed paths),
+ * so it cannot be invented: what the history does not hold, the answer is silent about. */
 
 const REASON_TEXT = {
   merge: 'коммит — слияние, а строки слияний скрыты настройкой «rows.merges: false»',
@@ -21,17 +20,17 @@ const REASON_TEXT = {
   flat: 'числа не сдвинулись: файлы колонок тронуты, а объём не изменился'
 };
 
-/* Коммит по названию. Имя ревизии разрешает git, и только если имени нет — ищем
- * начало sha по списку коммитов: так у неоднозначного префикса остаётся
- * человеческий отказ со списком подходящих, а у имени — правила git, а не наши. */
+/* A commit by name. git resolves a revision name, and only when there is no such name do we look up a sha
+ * prefix in the list of commits: that way an ambiguous prefix keeps a human refusal listing the candidates,
+ * while a name follows git's rules rather than ours. */
 function lookup(root, commits, target) {
   const resolved = resolveCommit(root, String(target));
   const needle = String(target).toLowerCase();
   const found = resolved === null
     ? commits.filter((c) => c.sha.toLowerCase().indexOf(needle) === 0)
     : commits.filter((c) => c.sha === resolved);
-  // Имя разрешилось, а коммита в отчёте нет: это не «нет коммита» — коммит есть,
-  // и сказать надо именно это, иначе человек пойдёт искать проблему в истории.
+  // The name resolved and the commit is missing from the report: that is not "no such commit" — the commit
+  // exists, and exactly that has to be said, or the person goes looking for a problem in the history.
   if (resolved !== null && found.length === 0) {
     refuseCause('коммит вне истории', '«' + target + '» — это коммит ' + resolved.slice(0, 7)
       + ', но его нет в истории отчёта: строки строятся по коммитам текущей ветки'
@@ -51,8 +50,9 @@ function lookup(root, commits, target) {
   return found[0];
 }
 
-/* Улики: что коммит тронул — колонки, исключённое, мимо колонок. Суждение о роли пути
- * — одно и живёт в настройках (`pathRoles`), здесь только раскладка его ответа. */
+/* The evidence: what the commit touched — columns, excluded, past the columns. The judgement about a path's
+ * role is one and lives with the settings (`pathRoles`); here it is only sorted into buckets by that
+ * answer. */
 function touchedOf(cfg, files) {
   const role = pathRoles(cfg);
   const touched = { columns: [], excluded: [], untracked: [] };
@@ -70,9 +70,9 @@ const FIX = {
   flat: 'не требуется: числа не изменились — строка без единого числа читалась бы как поломка'
 };
 
-/* Починка по причине. У «мимо колонок» она одна на два ответа (`outsideFix`) и называет
- * пути. У коммита без файлов (`--allow-empty`) называть нечего — значит, починки нет
- * вовсе, а не команда без имён; этот случай и держит ветка. */
+/* The fix by reason. For "past the columns" it is one text for two answers (`outsideFix`) and names the
+ * paths. For a commit with no files (`--allow-empty`) there is nothing to name — so there is no fix at all
+ * rather than a command without names, and this branch is what holds that case. */
 function fixFor(reason, touched) {
   if (reason === 'outside') {
     return touched.untracked.length === 0 ? null : outsideFix(touched.untracked);
@@ -89,8 +89,8 @@ export function explainCommit(cfg, root, target) {
   const dropped = measured.dropped.find((d) => d.sha === c.sha);
   const touched = touchedOf(cfg, c.files);
 
-  /* Разница, которой нет в строке отчёта: «без изменения объёма» у коммита мимо
-   * колонок означает не то же самое, что у коммита, тронувшего колонку. */
+  /* The difference the report's row does not carry: "no change in volume" means something else for a commit
+   * past the columns than for one that touched a column. */
   let reason = row >= 0 ? null : dropped.reason;
   if (reason === 'flat' && touched.columns.length === 0) reason = 'outside';
   const fix = fixFor(reason, touched);
@@ -108,8 +108,8 @@ export function explainCommit(cfg, root, target) {
   };
 }
 
-/* Отказ для объяснения даётся человеку текстом, а агенту — полем: «есть строка» и
- * «нет строки» одинаково успешные ответы, поэтому код выхода 0 у обоих. */
+/* A refusal here reaches a person as text and an agent as a field: "there is a row" and "there is no row"
+ * are equally successful answers, hence exit code 0 for both. */
 export function explainText(rep) {
   const lines = [];
   const where = '  коммит ' + rep.sha.slice(0, 7) + ' «' + rep.subject.slice(0, 60) + '»';

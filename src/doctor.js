@@ -8,26 +8,25 @@ import { derivedSummary } from './project.js';
 import { minifier } from './minify.js';
 import { tokenizer } from './tokens.js';
 
-/* Диагностика одним ответом (`size doctor`): отвечает ли машина за числа, чем
- * считаются метрики здесь и сейчас, годятся ли настройки, всё ли из истории
- * покрыто. Ничего своего он не считает: покрытие — тот же ответ, что даёт
- * `size check` (`coverage`), окружение — факты этой машины, зависимости — те же
- * загрузчики, которыми пользуются датчики. Второго расчёта в пакете нет.
+/* Diagnostics in a single answer (`size doctor`): does the machine stand behind the numbers, what counts
+ * the metrics here and now, are the settings usable, is everything from the history covered. It computes
+ * nothing of its own: coverage is the same answer `size check` gives (`coverage`), the environment is this
+ * machine's facts, and the dependencies are the very loaders the sensors use. There is no second calculation
+ * in the package.
  *
- * Правило ответа: `ok` значит «делать нечего», а у находки назван уровень.
- * `action` — что-то надо сделать (и, где возможно, названа команда починки);
- * `note` — наблюдение: знать полезно, делать нечего. Код выхода считает один
- * `verdictOf` в конце: шаги чтения только называют вид обстоятельства (`troubles`),
- * а и порядок видов, и код каждого — один список `WEIGHT`. Своего кода у шага нет,
- * поэтому разойтись эти два ответа не могут.
+ * The rule of the answer: `ok` means "nothing to do", and every finding names its level. `action` means
+ * something has to be done (with a fix command where one exists); `note` is an observation — useful to know,
+ * nothing to do. One `verdictOf` at the end counts the exit code: the reading steps only name the kind of
+ * trouble (`troubles`), while both the order of the kinds and each of their codes come from one list,
+ * `WEIGHT`. A step has no code of its own, so those two answers cannot drift apart.
  *
- * Чего ответ не делает: не говорит, «правильно» ли выбраны колонки (это знает
- * проект), и не угадывает там, где данных нет, — отсутствие ответа называется
- * словами (`coverage: null` и находка с причиной).
+ * What the answer does not do: it does not say whether the columns are chosen "correctly" (the project knows
+ * that), and it does not guess where there are no data — a missing answer is named in words (`coverage: null`
+ * and a finding carrying the reason).
  */
 
-/* Окружение: что за машина и что она говорит о числах. Без ответа git ответ
- * честно неполон (`git: null`), а не выдуман. */
+/* The environment: what machine this is and what it says about the numbers. With no answer from git the
+ * answer is honestly incomplete (`git: null`) rather than invented. */
 function environment(root) {
   const env = {
     node: process.version,
@@ -42,26 +41,23 @@ function environment(root) {
     env.git = git(root, ['--version']).trim();
     env.shallow = git(root, ['rev-parse', '--is-shallow-repository']).trim() === 'true';
   } catch (_e) {
-    // git не ответил — об этом скажет находка, а не выдуманное значение.
+    // git did not answer — the finding will say so, rather than an invented value.
   }
   return env;
 }
 
-/* Зависимости: чем метрики считаются здесь и сейчас. Спрашиваются те же
- * загрузчики, что и у датчиков (`minifier`, `tokenizer`), поэтому ответ не может
- * разойтись с числом: без минификатора `min` считает упрощением, без словаря
- * `tok` — оценкой.
+/* Dependencies: what counts the metrics here and now. The very loaders the sensors use are asked
+ * (`minifier`, `tokenizer`), so the answer cannot drift from the number: without the minifier `min` counts
+ * by approximation, without the dictionary `tok` by estimate.
  *
- * Загружается только то, о чём проект действительно спросил: словарь весит
- * мегабайты, и трогать его ради строки «есть» значило бы заплатить за ответ,
- * которого у чисел не было (то же правило, что у отчёта: `test/tokens.test.js`).
- * Ненужный датчик назван не «неизвестным», а ненужным — на точность он не влияет,
- * и это и есть ответ; «неизвестно» остаётся там, где настройки нечитаемы и
- * спросить не у кого. */
+ * Only what the project actually asked for is loaded: the dictionary weighs megabytes, and touching it for
+ * the sake of an "installed" line would mean paying for an answer the numbers never needed (the same rule as
+ * in the report: `test/tokens.test.js`). An unwanted sensor is named unneeded rather than unknown — it does
+ * not affect accuracy, and that is the answer; "unknown" stays for the case where the settings are unreadable
+ * and there is nobody to ask. */
 const UNREADABLE = 'неизвестно: настройки нечитаемы';
 
-/* Спрошено — спрашиваем загрузчик; не спрошено — говорим об этом словами и не
- * платим за него. */
+/* Asked — ask the loader; not asked — say so in words and do not pay for it. */
 function entry(asked, name, metric, load, note) {
   if (asked !== true) return { name: name, metric: metric, present: null, note: note };
   const { tool, version } = load();
@@ -79,14 +75,14 @@ function dependencies(cfg) {
   ];
 }
 
-/* Настройки: при нечитаемых ответ честно неполон (покрытие считать нечем), а
- * причина — не отказ, а находка: диагностика затем и нужна, чтобы назвать причину
- * и починку, — их и несёт текст отказа. Вес обстоятельства шаг только **называет**
- * (`troubles`), а важнее оно или нет — не его дело: решает `verdictOf`.
+/* Settings: with unreadable ones the answer is honestly incomplete (there is nothing to count coverage with),
+ * and the cause is a finding rather than a refusal — diagnostics exist to name the cause and its fix, and the
+ * refusal's text carries both. A step only **names** the weight of a trouble (`troubles`); whether it outranks
+ * another is not its business — `verdictOf` decides.
  *
- * Настроек, выведенных из проекта, тут не обстоятельство, а наблюдение: проект
- * работает, но числа его отчёта зависят от того, что инструмент о нём угадал, —
- * поэтому находка уровня `note` (код выхода она не несёт) и поле `derived` в ответе. */
+ * Settings derived from the project are an observation here rather than a trouble: the project works, but the
+ * numbers in its report depend on what the tool guessed about it — hence a `note` finding (it carries no exit
+ * code) and the `derived` field in the answer. */
 function readConfig(root, configFile) {
   try {
     const cfg = loadConfig(configFile, root);
@@ -113,8 +109,8 @@ function readConfig(root, configFile) {
   }
 }
 
-/* Хук: две находки, у каждой своя починка. Веса у них нет и своего кода выхода тоже —
- * отчёт собирается и без хука, поэтому сломанный хук меняет только вердикт `ok`. */
+/* The hook: two findings, each with a fix of its own. They carry neither weight nor an exit code of their
+ * own — the report is built without the hook too, so a broken hook changes only the `ok` verdict. */
 function hookFindings(hooks) {
   const found = [];
   if (!hooks.installed) return found;
@@ -135,12 +131,12 @@ function hookFindings(hooks) {
   return found;
 }
 
-/* Покрытие — тот же ответ, что даёт `size check`, плюс вид обстоятельства, если оно есть:
- * неполнота пути или приближение датчика (вес у видов разный — `WEIGHT`); неполнота
- * старше, потому что без неё чисел нет вовсе.
- * Что попадает в находки, а что нет: в отчёте целиком стоит блок покрытия (тот же текст,
- * что у `size check`), поэтому неполнота второй раз не пересказывается — она весит. А по
- * датчикам находка есть: `size check` печатает их строкой `!`, здесь они часть ответа. */
+/* Coverage is the same answer `size check` gives, plus the kind of trouble if there is one: an incomplete path
+ * or an approximating sensor (the kinds weigh differently — `WEIGHT`), with incompleteness outranking, because
+ * without it there are no numbers at all.
+ * What becomes a finding and what does not: the report holds the whole coverage block (the same text as
+ * `size check`), so incompleteness is not retold a second time — it weighs. Sensors do get a finding:
+ * `size check` prints them as a `!` line, while here they are part of the answer. */
 function readCoverage(cfg, root, configFile) {
   if (cfg === null) {
     return {
@@ -161,10 +157,10 @@ function readCoverage(cfg, root, configFile) {
     };
   } catch (e) {
     if (!(e instanceof Refusal)) throw e;
-    /* Внутри покрытия отказывают двое, и род у них разный: обрезанной истории —
-     * свой вид (`assertFullHistory`), а неразобранному файлу — настройки: числа
-     * нет из-за них, и починка у него настройками же. Вид выбирается по коду
-     * отказа — эти два кода и есть весь выбор. */
+    /* Two things refuse inside coverage, of different kinds: a truncated history gets a kind of its own
+     * (`assertFullHistory`), while an unparsed file counts as settings — the number is missing because of them,
+     * and its fix is in the settings too. The kind is picked by the refusal's code: those two codes are the
+     * whole choice. */
     return {
       report: null,
       findings: [{ level: 'action', what: e.message }],
@@ -173,11 +169,11 @@ function readCoverage(cfg, root, configFile) {
   }
 }
 
-/* Вес обстоятельств — вот и весь порядок важности, и он один на весь модуль: ключи идут
- * по важности, значения — код каждого вида. Код выхода берётся у самого важного из
- * найденного, а не у того, что нашлось позже: сначала чем считать нечем (настройки,
- * история), потом неполное покрытие, потом оговорка о счёте.
- * Хук в список не входит: отчёт собирается и без него (см. `hookFindings`). */
+/* The weight of troubles — the whole order of importance, and one for the entire module: the keys run by
+ * importance, the values are each kind's code. The exit code comes from the most important thing found rather
+ * than from the last one found: first what leaves nothing to count with (settings, history), then incomplete
+ * coverage, then the caveat about the count.
+ * The hook is not in this list: the report is built without it too (see `hookFindings`). */
 const WEIGHT = {
   config: EXIT.CONFIG,
   history: EXIT.SHALLOW,
@@ -185,9 +181,9 @@ const WEIGHT = {
   sensor: EXIT.SENSOR
 };
 
-/* Вердикт — одно место, где обстоятельства превращаются в код выхода и в `ok`.
- * «Делать нечего» — это ни одной находки-действия и сосчитанное полное покрытие: без
- * покрытия вердикта нет, потому что считать больше нечего (см. заметку в `readCoverage`). */
+/* The verdict — the one place where troubles turn into an exit code and into `ok`. "Nothing to do" means no
+ * action finding and counted complete coverage: with no coverage there is no verdict, because there is nothing
+ * left to count (see the note in `readCoverage`). */
 function verdictOf(rep, troubles) {
   const found = Object.keys(WEIGHT).filter((kind) => troubles.indexOf(kind) >= 0);
   rep.exit = found.length === 0 ? EXIT.OK : WEIGHT[found[0]];
@@ -215,8 +211,8 @@ export function doctor(root, configFile) {
   return verdictOf(rep, config.troubles.concat(cov.troubles));
 }
 
-/* Итог последнего запуска хука словами: по нему человек понимает, что произошло
- * после коммита, не заглядывая в `.git`. */
+/* The outcome of the hook's last run in words: it tells a person what happened after a commit without looking
+ * into `.git`. */
 const HOOK_RESULT = {
   committed: 'отчёт пересобран и закоммичен',
   rebuilt: 'отчёт пересобран без коммита',
@@ -225,12 +221,12 @@ const HOOK_RESULT = {
   failed: 'ошибка',
   skipped: 'пропущен'
 };
-// Итоги, которые требуют действий: отказ инструмента и его собственная ошибка.
+// The outcomes that call for action: a refusal by the tool and its own error.
 const HOOK_BAD = ['refused', 'failed'];
 
-/* Состояние хука: установлен ли, включён ли настройкой и чем кончился последний
- * запуск. «Не установлен» — не находка: автоматика ставится явной командой,
- * и её отсутствие — решение проекта, а не забывчивость. */
+/* The state of the hook: whether it is installed, switched on by the settings, and how its last run ended.
+ * "Not installed" is not a finding: the automation is installed by an explicit command, and its absence is the
+ * project's decision rather than forgetfulness. */
 function hooksReport(root, cfg) {
   const status = hookStatus(root);
   return {
@@ -251,8 +247,8 @@ function hookLine(hooks) {
   return hooks.files.join(', ') + (hooks.enabled === false ? ' (выключен настройкой)' : '') + '; ' + last;
 }
 
-/* Текст для человека. Покрытие печатает `coverageText` — тот же, что у
- * `size check`: два ответа об одном не должны разойтись формулировками. */
+/* The text for a person. Coverage is printed by `coverageText` — the same one `size check` uses: two answers
+ * about one thing must not drift apart in wording. */
 export function doctorText(rep) {
   const env = rep.environment;
   const lines = [];
@@ -260,8 +256,8 @@ export function doctorText(rep) {
   lines.push('  окружение: Node ' + env.node + ', ' + env.platform + ', '
     + (env.git === null ? 'git недоступен' : env.git)
     + (env.shallow === null ? '' : env.shallow ? ', история обрезана' : ', история полная'));
-  // Закрепления — механизм, а не украшение: движок ставит их сам на границе вызова,
-  // поэтому настройки машины на числа не влияют (проверка — `test/environment.test.js`).
+  // The pins are a mechanism rather than decoration: the engine sets them itself at the call boundary, so the
+  // machine's settings do not reach the numbers (guarded by `test/environment.test.js`).
   lines.push('  git читается с закреплениями: ' + env.pins.join(', ') + '; локаль ' + env.locale
     + ' (настройки машины на числа не влияют)');
   lines.push('  настройки: ' + (rep.config.ok

@@ -63,8 +63,9 @@ comment diff stays under the commit budget, otherwise it is split by file groups
   entry `worklog/0075`, 2026-09-15).
 - [x] **M5a project: derived settings** — `src/project.js`, `src/config.js`, `src/init.js`
   (614 → 604; journal entry `worklog/0076`, 2026-09-15).
-- [ ] **M5b project: diagnostics and coverage** — `src/doctor.js`, `src/check.js`,
-  `src/explain.js` (551).
+- [x] **M5b project: diagnostics and coverage** — `src/doctor.js`, `src/check.js`,
+  `src/explain.js` (551 → 544; module M5 as a whole 1165 → 1148; journal entry `worklog/0077`,
+  2026-09-15).
 - [ ] **M6 report data** — `src/data.js`, `src/derived.js`, `src/artifact.js`, `src/css.js`
   (302).
 - [ ] **M7 page** — `src/page/app.js`, `build.js`, `dom.js`, `panel.js`, `state.js`,

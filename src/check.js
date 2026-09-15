@@ -4,29 +4,27 @@ import { sensorGaps } from './metrics.js';
 import { outsideFix, pathRoles } from './config.js';
 import { cliCommand } from './refusal.js';
 
-/* Полнота покрытия — ответ на вопрос «всё ли в истории попало в отчёт». Правило
- * из требований (§4.2) одно: каждый путь, тронутый историей, обязан быть либо
- * колонкой, либо объявленным исключением (`skip` и сам файл отчёта), а путь,
- * который не то и не другое, — это нарушение: изменение прошло мимо отчёта.
+/* Coverage — the answer to "did everything in the history get into the report". The project's rule of
+ * completeness is one: every path the history touched has to be either a column or a declared exception
+ * (`skip` and the report file itself), and a path that is neither is a violation — an edit went past the
+ * report.
  *
- * Поэтому полнота считается по фактам истории (объединение изменённых путей всех
- * коммитов), а не по списку файлов в дереве: файл, появившийся и удалённый до
- * HEAD, в дереве не виден, а история его помнит — и его правки не посчитаны
- * ничем. Отсюда же и то, чего инструмент не утверждает: он не говорит, «правильные»
- * ли колонки выбрал проект, — он говорит только, что мимо них ничего не прошло и
- * что именно не поместилось.
+ * Hence coverage is counted over the facts of the history (the union of the changed paths of every commit)
+ * rather than over the file list in the tree: a file created and deleted before HEAD is invisible there
+ * while the history remembers it, and its edits went into no number at all. The same place explains what
+ * the tool does **not** claim: it does not say whether the project picked the "right" columns — only that
+ * nothing went past them, and what exactly did not fit.
  *
- * Сводка по строкам идёт тем же проходом, что и отчёты (`measureHistory`), — по
- * тем же причинам, что и везде: второго расчёта в пакете нет. Отсюда цена: ответ
- * стоит одного прохода по истории, как и любой отчёт. */
+ * The rows are counted by the same run as the reports (`measureHistory`), for the usual reason: there is no
+ * second calculation in the package. That is the price — the answer costs one pass over the history, like
+ * any report. */
 
-// Сколько путей и коммитов показывать человеку в тексте: остальное — числом.
+// How many paths and commits to show a person in the text: the rest as a number.
 const SHOW = 8;
 
-/* Список коммитов одной причины — строками не длиннее экрана: у большой истории
- * одних пропущенных коммитов набирается полсотни, и одна строка на всех не
- * читается вовсе. Все они остаются в ответе (и целиком — в `--json`), но перенос
- * делает его читаемым. */
+/* The list of commits of one reason — lines no longer than a screen: a large history gathers fifty dropped
+ * commits alone, and one line for all of them is not readable at all. Every one of them stays in the answer
+ * (in full in `--json`), while the wrapping is what makes it readable. */
 function wrapped(head, items) {
   const lines = [];
   let line = head;
@@ -45,9 +43,9 @@ function short(sha) {
   return sha.slice(0, 7);
 }
 
-/* Пути, тронутые историей, разложенные на три части: отслеживаемые колонками,
- * исключённые объявлением и незнакомые. Само суждение — одно и живёт в настройках
- * (`pathRoles`), а здесь только его применение ко всей истории. */
+/* The paths the history touched, split in three: tracked by columns, excluded by declaration, and unknown.
+ * The judgement itself is one and lives with the settings (`pathRoles`); here it is only applied to the
+ * whole history. */
 function pathCoverage(cfg, commits) {
   const role = pathRoles(cfg);
   const seen = { covered: new Set(), excluded: new Set() };
@@ -57,9 +55,8 @@ function pathCoverage(cfg, commits) {
       const kind = role(f);
       if (kind === 'columns') { seen.covered.add(f); return; }
       if (kind === 'excluded') { seen.excluded.add(f); return; }
-      /* Коммит, заведший путь, — первый по истории (порядок чтения — от старых к
-       * новым), и показывается он человеку как улика: по нему видно, чья это была
-       * правка. */
+      /* The commit that introduced the path is the first one in the history (reads run oldest first), and it
+       * is shown to a person as evidence: it tells whose edit it was. */
       if (!unknown.has(f)) unknown.set(f, { path: f, since: c.sha, subject: c.subject });
     });
   });
@@ -70,9 +67,9 @@ function pathCoverage(cfg, commits) {
   };
 }
 
-/* Полный ответ: настройки, история, пути, датчики — и вердикт. `ok` — это только
- * «мимо отчёта не прошло»: датчик, считающий приближённо, вердикта не меняет (это
- * отдельный код выхода, как и у остальных режимов). */
+/* The full answer: settings, history, paths, sensors — and the verdict. `ok` means only "nothing went past
+ * the report": a sensor counting approximately does not change the verdict (it has an exit code of its own,
+ * as in every other mode). */
 export function coverage(cfg, root, configFile) {
   assertFullHistory(root);
   const commits = readHistory(root);
@@ -104,9 +101,9 @@ export function coverage(cfg, root, configFile) {
   };
 }
 
-/* Текст для человека: короткое «да» или список того, что не поместилось, — с
- * путём, коммитом, который его завёл, и готовой командой. Печатает `cli`, а не
- * этот модуль: у модуля нет и не должно быть вывода. */
+/* The text for a person: a short "yes", or the list of what did not fit — with the path, the commit that
+ * introduced it, and a ready command. `cli` does the printing rather than this module: a module has no
+ * output and must not have one. */
 export function coverageText(rep) {
   const lines = [];
   const unknown = rep.paths.unknown;
