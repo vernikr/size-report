@@ -4,46 +4,44 @@ import { execFileSync } from 'child_process';
 import { MAX_BUF, git, gitArgv, gitEnv, gitTry, readHistory } from './git.js';
 import { cliCommand, invocation } from './refusal.js';
 
-/* Настройки, выведенные из самого проекта: что считать, где журнал, куда писать и
- * что колонкой быть не может.
+/* Settings derived from the project itself: what to measure, where the journal is, where to write,
+ * and what cannot be a column.
  *
- * Зачем отдельно от `src/config.js`. Тот читает **готовые** настройки и только
- * затем их проверяет, а этот смотрит на проект впервые и почти всё о нём
- * догадывается — та же работа, что была у черновика (`--init`). Отсюда две роли
- * одного вывода: без файла настроек он и есть настройки (проект работает сразу,
- * ничего не заводив), а с `--init` он же ложится файлом, который дальше правят.
- * Второго вывода «как угадать проект» в пакете нет.
+ * Why separate from `src/config.js`: that one reads **ready** settings and checks them, while this
+ * one looks at the project for the first time and guesses about almost everything — the same work
+ * the draft used to do (`--init`). Hence the two roles of one output: with no settings file it *is*
+ * the settings (the project works at once, having set up nothing), and under `--init` the very same
+ * output is written to a file, which is edited afterwards. There is no second way to guess a project
+ * in this package.
  *
- * Два правила, из которых выведено всё остальное.
+ * Two rules, from which everything else follows.
  *
- * **Колонка — это файл.** Состояние движка хранит на колонку один путь, а список
- * путей колонки — её переименования (в ревизии берётся тот, который в ней есть).
- * Поэтому «папка целиком» колонкой быть не может, и профиль называет файлы, а не
- * группы путей. Колонкой идёт **каждый** отслеживаемый файл, который можно
- * измерить: выборка из проекта выдавала объём выборки за объём проекта.
+ * **A column is a file.** The report names a column by one path — the first of its list — while the
+ * whole list is the column's renames, and a revision resolves whichever of them is present there. So
+ * "a whole directory" cannot be a column, and the profile names files rather than groups of paths. A
+ * column is **every** tracked file that can be measured: a sample of the project passed the volume of
+ * the sample off as the volume of the project.
  *
- * **Профиль обязан проходить ту же проверку, которой его встретит первый запуск**
- * (BLOCKERS §N2, REFACTOR R-0.4): путь, не ставший колонкой и не объявленный
- * исключением, — это код 1 на первом же прогоне. Поэтому `skip` называет и то,
- * что колонкой быть не может (сам отчёт, замки зависимостей, собранное, незнакомый
- * формат, слишком крупный файл), и то, чего git не отслеживает: так первый `check`
- * зелёный, а про каждый файл вне отчёта сказано, почему его там нет.
+ * **The profile has to pass the very check its first run will apply**: a path that became neither a
+ * column nor a declared exception is code 1 on that first run. So `skip` names both what cannot be a
+ * column (the report itself, dependency locks, built output, an unknown format, a file too large) and
+ * what git does not track: that way the first `check` is green, and every file outside the report has
+ * a stated reason for standing there.
  */
 
-/* Что вообще берётся колонкой: текстовые формы, с которыми движок умеет работать.
- * Файл без знакомого расширения (`LICENSE`, `.gitignore`) колонкой не становится и
- * называется исключением. */
+/* What may become a column at all: the text forms the engine can work with. A file without a known
+ * extension (`LICENSE`, `.gitignore`) never becomes one and is named as an exception. */
 const KNOWN_EXTS = ['.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.html', '.css', '.scss',
   '.json', '.yaml', '.yml', '.toml', '.md', '.txt', '.py', '.rb', '.go', '.rs', '.sh'];
 
 const JOURNALS = ['WORKLOG.md', 'CHANGELOG.md', 'CHANGES.md', 'HISTORY.md'];
 
-/* Порог по размеру — предохранитель: очень крупный файл в истории обычно собран или
- * сгенерирован, и в отчёте он перевесил бы весь проект. */
+/* The size threshold is a guard: a very large file is usually built or generated, and in the report
+ * it would outweigh the whole project. */
 const MAX_BYTES = 512 * 1024;
 
-/* Индекс — путь и размер: `ls-files -s` даёт объекты, размер спрашивается у них
- * одной пачкой (`cat-file --batch-check`), а не чтением содержимого. */
+/* The index gives paths and sizes: `ls-files -s` yields the objects, and their sizes are asked for in
+ * one batch (`cat-file --batch-check`) rather than by reading the content. */
 function indexFiles(root) {
   const listed = git(root, ['ls-files', '-s']).split('\n').filter((l) => l !== '');
   const sizes = new Map();
@@ -60,25 +58,25 @@ function indexFiles(root) {
   return listed.map((line) => ({ p: line.split('\t')[1], size: sizes.get(line.split(/\s+/)[1]) || 0 }));
 }
 
-/* История — объединение путей всех коммитов, тем же чтением, которым пользуется
- * полнота (`readHistory`): иначе профиль и `check` считали бы разные истории. Файл,
- * живущий только в истории, в отчёте просто пуст на HEAD — это не потеря, а факт, и
- * колонкой (или исключением) он быть обязан. */
+/* The history is the union of the paths of every commit, read the same way coverage reads it
+ * (`readHistory`): otherwise the profile and `check` would count different histories. A file living
+ * only in the history is simply empty at HEAD — a fact rather than a loss, and it has to be a column
+ * (or an exception). */
 function historyPaths(root) {
   const seen = new Set();
   try {
     readHistory(root).forEach((c) => c.files.forEach((f) => seen.add(f)));
   } catch (e) {
-    // У репозитория без коммитов истории нет вовсе: `git log` там отказывает, и
-    // это состояние проекта, а не дефект инструмента — `--init` обязан работать и
-    // в нём (первый запуск бывает и до первого коммита).
+    // A repository without commits has no history at all: `git log` refuses there, and that is a state
+    // of the project rather than a defect of the tool — `--init` has to work in one too (a first run
+    // may come before the first commit).
     if (/does not have any commits/.test(String(e.stderr))) return seen;
     throw e;
   }
   return seen;
 }
 
-// Дерево и история — одним списком: колонкой становится всё, что тронула история.
+// The tree and the history in one list: everything the history touched may become a column.
 function allPaths(root) {
   const files = indexFiles(root);
   const known = new Set(files.map((f) => f.p));
@@ -88,23 +86,22 @@ function allPaths(root) {
   return files;
 }
 
-// Наличие каталога решает, куда ляжет отчёт: рядом с доками или в корне.
+// Whether the project has this path at all; nothing else is asked of this helper.
 function exists(root, p) {
   return fs.existsSync(path.join(root, p));
 }
 
-/* Куда ложится отчёт — одно на пакет: `docs/size-report.html`, и каталог создаётся
- * сам. Прежняя развилка («в доки, если они есть, иначе в корень») убрана по замеру:
- * в свежем проекте каталога `docs` ещё нет, и отчёт оказывался в корне — то есть
- * ни в том месте, где его ищут, ни в том, куда его хочет положить человек,
- * который ставит пакет ради отчёта. Каталог здесь не признак проекта, а часть
- * адреса; создавать его — работа того, кто пишет файл (`writeFileEnsured`). */
+/* Where the report lands — one answer for the package: `docs/size-report.html`, with the directory
+ * created by the writer (`writeFileEnsured`). A fork on the existence of `docs/` was measured and
+ * dropped: a fresh project has no such directory, so the report ended up in the root — neither where
+ * it is looked for nor where a person installing the package for the sake of the report would put it.
+ * The directory is part of the address here, not a sign of a project. */
 function outputOf() {
   return 'docs/size-report.html';
 }
 
-/* Менеджер пакетов — по lock-файлу, а не догадкой: команда обязана существовать
- * в чужом проекте. Один на два места (команду починки и подсказку `--init`). */
+/* The package manager comes from a lock file rather than a guess: the command has to exist in
+ * someone else's project. One answer for two places (the fix command and the `--init` prompt). */
 export function packageManager(root) {
   if (exists(root, 'pnpm-lock.yaml')) return 'pnpm';
   return exists(root, 'yarn.lock') ? 'yarn' : 'npm';
@@ -118,12 +115,11 @@ function readJson(file) {
   }
 }
 
-/* Подпись артефакта и отказы цитируют эту команду, поэтому она обязана работать
- * здесь и сейчас: свой скрипт — только если он объявлен (иначе `npm run sizes`
- * отвечает «нет такого скрипта», а совет, который не работает, — худшая подсказка),
- * иначе — установленный пакет внутри проекта. Имени пакета в команде нет намеренно:
- * `npx <имя>` без установленного пакета уходит в реестр и запускает чужой код
- * (REFACTOR R-4.21). */
+/* The artifact's note and the refusals quote this command, so it has to work right here and now: the
+ * project's own script only if it is declared (or `npm run sizes` answers "no such script", and
+ * advice that does not work is the worst kind), otherwise the installed package inside the project.
+ * The package name is deliberately absent from the command: `npx <name>` without an installed package
+ * goes to the registry and runs someone else's code. */
 function fixCommandOf(root) {
   const pkg = readJson(path.join(root, 'package.json')) || {};
   const script = pkg.scripts === undefined ? '' : pkg.scripts.sizes;
@@ -131,10 +127,10 @@ function fixCommandOf(root) {
   return packageManager(root) + ' run sizes';
 }
 
-/* Ссылка на коммит — из адреса origin: два хозяина собирают её одним правилом из
- * владельца и пути к репозиторию (у GitLab в пути бывают подгруппы, поэтому путь
- * берётся целиком), а всякий третий хозяин — догадка, которая ведёт не туда.
- * Remote нет или он не тот — ссылок нет: пустой шаблон строка просто не несёт. */
+/* The commit link comes from the origin address: the two hosts are covered by one rule that builds
+ * the address from the host and the repository path (GitLab nests subgroups, hence the whole path),
+ * while any third host would be a guess leading somewhere else. No remote, or the wrong one — no
+ * links: an empty template is simply not spelled out. */
 const REMOTE_RE = /^\S+?(?:@|\/\/)(?:[^@/]*@)?(github\.com|gitlab\.com)[/:]+((?:[^/\s]+\/)*[^/\s]+?)(?:\.git)?$/;
 
 function commitUrlOf(root) {
@@ -148,9 +144,9 @@ function journalOf(root) {
   return JOURNALS.find((p) => exists(root, p)) || '';
 }
 
-/* Колонкой не становится: сам отчёт (его размер зависит от числа строк, то есть от
- * себя), замки зависимостей (их размер — про чужие пакеты), карты и собранное (их
- * сделала сборка, а не человек) и всё, чего движок не умеет читать. */
+/* What never becomes a column: the report itself (its size depends on the number of rows, that is,
+ * on itself), dependency locks (their size is about someone else's packages), maps and built output
+ * (made by a build rather than by a person), and anything the engine cannot read. */
 function generated(p, output) {
   const ext = path.extname(p).toLowerCase();
   return p === output || KNOWN_EXTS.indexOf(ext) < 0
@@ -158,8 +154,8 @@ function generated(p, output) {
     || /\.min\./.test(p) || /\.map$/.test(p);
 }
 
-/* Метка колонки — имя файла; совпадение имён в разных папках разводится путём, а
- * если и путь занят — числом. Повтор метки проверка настроек не пропустит. */
+/* A column's label is the file name; a clash of names in different directories is split by the path
+ * and, if that is taken too, by a number. The settings check lets no repeated label through. */
 function labelFor(used, p) {
   const candidates = [path.basename(p), p];
   const free = candidates.find((name) => used.indexOf(name) < 0);
@@ -169,17 +165,16 @@ function labelFor(used, p) {
   return p + ' (' + n + ')';
 }
 
-/* Выбор колонок: колонкой идёт всё, что можно измерить, — то есть каждый файл
- * проекта, а не выборка из него. Выборка (прежде — крупнейшие по одному от каждого
- * расширения, всего не больше двенадцати) врала дважды: отчёт называл объём файлов,
- * которых в нём не было, а читатель принимал это за объём проекта. Границы остались
- * только у того, что колонкой **не может** быть: сам отчёт, замки, собранное,
- * незнакомый формат и слишком крупный файл (`generated` и `MAX_BYTES`) — они уходят
- * в `skip` и называются там.
+/* How columns are chosen: everything measurable becomes one — that is, every file of the project
+ * rather than a sample of it. The sample (formerly the largest file per extension, at most twelve)
+ * lied twice: the report named the volume of files it did not contain, and a reader took that for the
+ * volume of the project. The only things left out are those that **cannot** be a column: the report
+ * itself, locks, built output, an unknown format, and a file too large (`generated` and `MAX_BYTES`) —
+ * they go to `skip` and are named there.
  *
- * Порядок колонок — по кругу от каждого расширения, от крупнейшего к мелкому:
- * сперва то, чего в проекте больше всего, и в каждом расширении крупное раньше
- * мелкого. Это порядок чтения отчёта, а не вес: числа от него не зависят. */
+ * The order of columns is a ring over the extensions, largest first: what the project has most of comes
+ * first, and within an extension the large comes before the small. That is the reading order of the
+ * report rather than weight — numbers do not depend on it. */
 function columnsOf(files, journal) {
   const byExt = new Map();
   files.forEach((f) => {
@@ -211,23 +206,23 @@ export function projectConfig(root) {
   const output = outputOf(root);
   const journal = journalOf(root);
   const files = allPaths(root);
-  /* Колонками идёт отслеживаемое git: файл, которого на HEAD нет, измерять нечего
-   * (в отчёте он был бы пуст во всех строках). Путь, живущий только в истории,
-   * поэтому — исключение, а не колонка; сам список путей — всё равно полный. */
+  /* Only what git tracks becomes a column: a file absent at HEAD has nothing to measure (it would be
+   * empty in every row of the report). A path living only in the history is therefore an exception
+   * rather than a column, while the list of paths stays complete either way. */
   const tracked = new Set(indexFiles(root).map((f) => f.p));
   const readable = files.filter((f) => tracked.has(f.p) && !generated(f.p, output) && f.size <= MAX_BYTES);
   const columns = columnsOf(readable, journal);
   const taken = new Set(columns.reduce((all, c) => all.concat(c.paths), []));
-  // Язык, заголовок, порядок строк и выключатель хука не выводятся ни из чего:
-  // они берутся из умолчаний (`DEFAULT_CONFIG`), а не выдаются за вывод из проекта.
+  // The language, the title, the row order and the hook switch are derived from nothing: they come
+  // from the defaults (`DEFAULT_CONFIG`) instead of being passed off as derived from the project.
   return {
     output: output,
     fixCommand: fixCommandOf(root),
     metrics: ['raw', 'min', 'tok'],
-    // Настоящее сжатие и настоящий словарь, а не приближения: новый проект не должен
-    // начинать с чисел, которые честны наполовину. Без необязательной зависимости
-    // метрика отступает к другому счёту и прогон возвращает код 4 — это сказано
-    // подписью метрики, а не умолчанием.
+    // Real compression and a real dictionary rather than approximations: a new project must not start
+    // with numbers that are honest only by half. Without the optional dependency the metric falls back
+    // to another count and the run returns code 4 — said by the metric label rather than left to a
+    // default.
     minify: { engine: 'esbuild' },
     tokens: { family: 'openai', encoding: 'o200k_base' },
     columns: columns,
@@ -238,30 +233,30 @@ export function projectConfig(root) {
       anchor: 'heading'
     },
     links: { commitUrl: commitUrlOf(root) },
-    // Исключения — всё, что колонкой не стало: то, что ею быть не может, и то, чего
-    // git не отслеживает (путь из одной истории). Так первый запуск полон, а
-    // названное в `skip` — это ответ на вопрос «почему его нет в отчёте».
+    // Exceptions are everything that did not become a column: what cannot be one, and what git does
+    // not track (a path from the history alone). That way the first run is complete, and what `skip`
+    // names is the answer to "why is it not in the report".
     skip: [output].concat(files.filter((f) => !taken.has(f.p)).map((f) => f.p))
       .filter((p, i, all) => all.indexOf(p) === i)
   };
 }
 
-/* Путь самого отчёта — в проекте ли он назван (не пустой, не абсолютный и не с
- * выходом наверх): только такой путь дереву можно назвать листом. */
+/* Whether the report's own path lies inside the project (non-empty, not absolute, not climbing out):
+ * only such a path can be named as a leaf of the tree. */
 const ownPath = (output) => output !== '' && !path.isAbsolute(output) && output.indexOf('..') !== 0;
 
-/* Каталог проекта для страницы: все пути, которые видит git, и причина у тех из
- * них, что колонкой не стали (`null` — стал: страница по этому знаку решает, лист
- * — галочка или подпись). Дерево страницы — дерево проекта, поэтому пути берутся
- * из индекса, а не из колонок; причины — **теми же** правилами, по которым профиль
- * выбирает колонки (`generated` и предел размера), иначе подсказка говорила бы
- * одно, а выбор колонок делал другое. Колонка, чьего файла на HEAD уже нет, в
- * каталог не попадает: в индексе её нет, а на месте в дереве её держит страница.
+/* The project catalogue for the page: every path git sees, with a reason for those that did not become
+ * columns (`null` means it did — the page reads this mark to decide between a checkbox and a label).
+ * The page's tree is the project's tree, so the paths come from the index rather than from the columns,
+ * and the reasons follow **the same** rules the profile uses to pick columns (`generated` and the size
+ * limit) — otherwise the hint would say one thing while the choice of columns did another. A column
+ * whose file is gone from HEAD does not enter the catalogue: the index does not hold it, and the page
+ * keeps its place in the tree.
  *
- * Сам отчёт в каталоге есть всегда — и пока он ещё не собран, и когда он вне git:
- * его отслеживаемость — свойство момента, а не проекта. Зависеть от неё отчёт не
- * должен: иначе первая же пересборка в свежем клоне даёт другие байты (отчёт в
- * каталоге появился), и хук коммитит его второй раз на пустом месте. */
+ * The report itself is always in the catalogue, both before it is first built and while it is not
+ * tracked: whether it is tracked is a property of the moment rather than of the project. The report
+ * must not depend on it — otherwise the first rebuild in a fresh clone yields different bytes (the
+ * report appeared in the catalogue) and the hook commits it a second time out of nowhere. */
 export function projectTree(root, output, measured) {
   const files = indexFiles(root);
   if (ownPath(output) && files.every((f) => f.p !== output)) files.push({ p: output, size: 0 });
@@ -272,9 +267,9 @@ export function projectTree(root, output, measured) {
   }));
 }
 
-/* Имя черновика (`sniffColumns`) осталось публичным: на него опираются те, кто звал
- * вывод колонок (`test/api.test.js` держит список имён), и форма ответа та же —
- * колонки, знакомые расширения проекта и сколько путей всего. */
+/* The draft's name (`sniffColumns`) stays public: the callers of the column output rely on it
+ * (`test/api.test.js` holds the list of names), and the shape of the answer is the same — columns,
+ * the extensions the project knows, and how many paths there are in total. */
 export function sniffColumns(root) {
   const files = allPaths(root);
   const exts = [...new Set(files.map((f) => path.extname(f.p).toLowerCase()))]
@@ -282,9 +277,9 @@ export function sniffColumns(root) {
   return { columns: projectConfig(root).columns, exts: exts, total: files.length };
 }
 
-/* Что сказать человеку, когда настроек нет и работать пришлось на выведенных: одна
- * строка про то, что вышло, и одна — про то, чем это закрепить. Текст — тем же
- * списком, что и находка `doctor`: два ответа об одном не должны разойтись словами. */
+/* What to tell a person when there is no settings file and the settings had to be derived: one line
+ * about what came out, one about how to pin it. The text comes from the same list as the `doctor`
+ * finding: two answers about one thing must not drift apart in words. */
 export function derivedSummary(cfg) {
   const labels = cfg.columns.map((c) => c.label);
   return 'настройки выведены из проекта (файла нет): колонок ' + cfg.columns.length

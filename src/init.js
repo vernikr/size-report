@@ -5,19 +5,18 @@ import { advicePath, cliCommand, refuseCause } from './refusal.js';
 import { writeFileEnsured } from './artifact.js';
 import { packageManager } from './project.js';
 
-/* Закрепление настроек файлом (`--init`): то, что проект вывел о себе сам
- * (`src/project.js`), записывается туда, где его встретит следующий запуск.
+/* Pinning the settings to a file (`--init`): what the project derived about itself
+ * (`src/project.js`) is written where the next run will meet it.
  *
- * Отдельным модулем от вывода профиля: тот смотрит на проект впервые и почти всё о
- * нём угадывает, а этот делает одну вещь — кладёт результат файлом и говорит, что
- * записал. Требование к себе одно и оно жёсткое: **закреплённое обязано проходить
- * ту же проверку, которой его встретит первый запуск** — иначе подсказка приводит
- * человека в новый тупик (BLOCKERS §N2, REFACTOR R-0.4).
+ * A module of its own, separate from deriving the profile: that one looks at the project for the first
+ * time and guesses about almost everything, while this one does a single thing — puts the result into
+ * a file and says what it wrote. It has one strict requirement of itself: **what was pinned has to
+ * pass the very check the first run will apply**, or the advice leads a person into a new dead end.
  */
 
-/* Что сказать после записи: тем же порядком, что и раньше, — что записано, чем
- * заменятся приближения и что делать дальше. Строки собираются списком, а не
- * печатаются по ходу: тогда «что сказано» читается целиком. */
+/* What to say after writing: what was written, what will replace the approximations, and what to do
+ * next. The lines are assembled into a list rather than printed as they come, so that "what was said"
+ * can be read as a whole. */
 function draftLines(root, target, cfg) {
   const hasPkg = fs.existsSync(path.join(root, 'package.json'));
   const manager = packageManager(root);
@@ -39,9 +38,9 @@ function draftLines(root, target, cfg) {
   ];
 }
 
-/* Пустой профиль — не отказ, а примечание: работа сделана, а колонки за человека не
- * выберет никто. Поэтому «!», а не «✗»: знак и код выхода не имеют права говорить
- * разное (каталог отказов считает такие знаки отдельно). */
+/* An empty profile is a note rather than a refusal: the work was done, and nobody will pick the columns
+ * for the person. Hence "!", not the cross: a mark and an exit code must not say different things (the
+ * refusal catalogue counts a cross as a refusal and a note as not one). */
 function noteNoColumns(root, target, cfg) {
   if (cfg.columns.length > 0) return;
   console.error('! в проекте не нашлось путей, которые можно взять колонками'
@@ -53,16 +52,16 @@ function noteNoColumns(root, target, cfg) {
 export function initMode(root, file, force) {
   const target = file ? path.resolve(root, file) : path.join(root, CONFIG_NAME);
   if (fs.existsSync(target) && !force) {
-    // Совет называет тот же файл, о котором шла речь: `--init --force` без файла
-    // перезаписал бы черновиком умолчательное имя, а не тот файл, что человек звал.
+    // The advice names the very file in question: `--init --force` without a file would overwrite the
+    // default name with a draft rather than the file the person named.
     const name = file === undefined || file === null ? CONFIG_NAME : advicePath(file);
     refuseCause('конфиг уже есть', 'конфиг уже есть: ' + target
       + '\n  починка: правьте его или перезапишите черновиком: ' + cliCommand('--init ' + name + ' --force'));
   }
-  // Закреплённое — то же, чем проект работает без файла (вывод из проекта поверх
-  // умолчаний), и оно же обязано проходить ту же проверку, которой его встретит
-  // запуск: путь в тексте отказа — тот файл, куда оно легло. «Выведено» и «путь
-  // отказа» в файл не пишутся: это свойства не настроек, а того, откуда они взялись.
+  // What is pinned is the very thing the project runs on without a file (the project's derivation on
+  // top of the defaults), and it has to pass the same check the run will apply: the path in a refusal
+  // text is the file it landed in. "Derived" and that path are not written to the file: they are
+  // properties of where the settings came from rather than of the settings.
   const cfg = derivedProfile(root);
   if (cfg.columns.length > 0) validateConfig(Object.assign({}, cfg, { path: target }));
   const written = Object.assign({}, cfg);

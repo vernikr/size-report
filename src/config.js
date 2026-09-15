@@ -9,36 +9,35 @@ import { TOKEN_DEFAULTS, TOKEN_FAMILIES } from './tokens.js';
 import { CATEGORY_ORDER } from './data.js';
 import { projectConfig } from './project.js';
 
-/* Настройки проекта-потребителя: значения по умолчанию, чтение и проверка.
- * Настройки описывают проект, а не механику, поэтому проверка стоит здесь же и
- * без неё не идёт ни один режим. */
+/* The settings of a consumer project: defaults, reading and checking. Settings describe a project
+ * rather than the mechanics, which is why the check lives right here, and no mode runs without it. */
 
 export const CONFIG_NAME = 'size-table.config.json';
 
 export const DEFAULT_CONFIG = {
   output: 'size-report.html',
   locale: 'ru',
-  title: '',          // по умолчанию — заголовок из локали
+  title: '',          // by default: the heading from the locale
   heading: '',
-  // Починка — зов, который не может уйти в реестр: путь внутри проекта. Имя
-  // пакета здесь не годится (`npx <имя>` в проекте без пакета — чужой код).
+  // The fix is a call that cannot go to the registry: a path inside the project. The package name
+  // is no good here (`npx <name>` in a project without the package runs foreign code).
   fixCommand: invocation() + ' --write',
   metrics: ['raw', 'min'],
   columns: [],
-  // `engine` — чем считается метрика `min`: снятием балласта (умолчание, под ним
-  // сняты замороженные эталоны) или настоящим сжатием минификатором.
+  // `engine` says what counts the `min` metric: stripping ballast (the default, and the one the
+  // frozen fixtures were taken under) or real compression by the minifier.
   minify: { engine: 'strip', ext: {}, guard: ['.js', '.mjs', '.cjs'] },
-  // Токены: каким словарём считать. Семейство — про модели, кодировка — про число.
+  // Tokens: which dictionary counts them. The family is about models, the encoding about the number.
   tokens: Object.assign({}, TOKEN_DEFAULTS),
-  // Автоматика хука: хук обновляет отчёт после каждого коммита и ставится сам —
-  // после установки пакета (`bin/postinstall.js`) и при первом запуске в проекте
-  // (`src/hook.js`); этот ключ — её выключатель (`.size-report/…` не нужен: снятие
-  // хука возвращает проект к прежнему поведению).
+  // Hook automation: the hook rebuilds the report after every commit and installs itself — after the
+  // package is installed (`bin/postinstall.js`) and on the first run in a project (`src/hook.js`);
+  // this key is its switch (no `.size-report/…` state is needed: removing the hook returns the
+  // project to its previous behaviour).
   hooks: { enabled: true },
   journal: null,
   links: { commitUrl: '' },
-  // Слияние — обычный коммит: у него есть правки разрешения конфликта, и без
-  // строки они не попали бы в сумму дельт над текущим размером.
+  // A merge is an ordinary commit: it carries the edits that resolved a conflict, and without a row
+  // they would never reach the sum of deltas above the current size.
   rows: { merges: true, sha: true },
   skip: []
 };
@@ -56,10 +55,9 @@ export function gitRoot() {
       encoding: 'utf8', maxBuffer: MAX_BUF, env: gitEnv()
     }).trim();
   } catch (e) {
-    // Два тупика с разной починкой — «git не запустился» и «репозитория здесь нет»,
-    // — и расходятся они по тому, что сказал сам git, а не по догадке: ENOENT
-    // значит, что не нашлась программа. Один текст на оба случая («не git-репозиторий
-    // или git недоступен») не называл ни одного из них.
+    // Two dead ends with different fixes — "git did not start" and "there is no repository here" —
+    // are told apart by what git itself said rather than by a guess: ENOENT means the program was not
+    // found. One text for both ("not a git repository, or git is unavailable") named neither of them.
     if (e.code === 'ENOENT') {
       refuseCause('нет git', 'git не запустился: его нет в PATH (таблица собирается по его'
         + ' истории, а смотрю я в ' + process.cwd() + ').\n'
@@ -72,13 +70,12 @@ export function gitRoot() {
   }
 }
 
-/* Настроек нет — их выводит сам проект (`src/project.js`), и работа начинается сразу:
- * заводить файл ради первого запуска незачем, а `--init` закрепляет выведенное
- * файлом, когда его хотят править. Так бывает только с умолчательным именем: файл,
- * названный ключом `--config`, — это уже запрос про конкретный файл, и его
- * отсутствие остаётся отказом (иначе опечатка в пути молча дала бы чужие настройки).
- * `path` назван словами, а не путём: файла нет, и текст «правьте <путь>» привёл бы
- * человека к тому, чего в проекте не лежит. */
+/* No settings file — the project derives them (`src/project.js`) and work starts at once: there is no
+ * reason to create a file for a first run, and `--init` pins the derived ones to a file when someone
+ * wants to edit them. This happens for the default name only: a file named by `--config` is already a
+ * request for that very file, so its absence stays a refusal (otherwise a typo in the path would
+ * silently yield someone else's settings). `path` is given in words rather than as a path: there is no
+ * file, and "edit <path>" would lead the reader to something the project does not have. */
 export function derivedConfig(root) {
   const cfg = derivedProfile(root);
   cfg.path = 'настройки, выведенные из проекта';
@@ -87,18 +84,17 @@ export function derivedConfig(root) {
   return cfg;
 }
 
-/* Выведенное из проекта + умолчания — то, чем проект работает без файла, и то,
- * что закрепляет `--init`. Одно место на две роли (иначе «файл» и «работа без
- * файла» разошлись бы колонкой или числом), а сам вывод (`src/project.js`) о
- * умолчаниях не знает: он говорит только то, что видит в проекте. */
+/* Derived from the project plus the defaults — what a project runs on without a file, and what
+ * `--init` pins. One place for two roles (or "the file" and "work without a file" would drift by a
+ * column or a number), while the deriving itself (`src/project.js`) knows nothing of the defaults: it
+ * says only what it sees in the project. */
 export function derivedProfile(root) {
   return withDefaults(projectConfig(root));
 }
 
-/* Настройки поверх умолчаний — одним местом на два источника (файл и проект):
- * вложенное досыпается по ключам, потому что `minify: {engine: …}` не значит «у
- * `minify` больше нет других полей», а значило бы, что снятие балласта потеряло
- * список расширений. */
+/* Settings on top of the defaults — one place for two sources (a file and the project): nested keys
+ * are filled in by key, because `minify: {engine: …}` does not mean "`minify` has no other fields",
+ * and reading it that way would lose the stripping's list of extensions. */
 function withDefaults(raw) {
   const cfg = Object.assign({}, DEFAULT_CONFIG, raw);
   ['minify', 'tokens', 'hooks', 'links', 'rows'].forEach((key) => {
@@ -107,13 +103,13 @@ function withDefaults(raw) {
   return cfg;
 }
 
-/* Настройки читаются как есть и досыпаются значениями по умолчанию: у проекта,
- * который только подключил генератор, конфиг может быть в три строки. */
+/* Settings are read as they are and filled in with the defaults: in a project that has just attached
+ * the generator the config may be three lines long. */
 export function loadConfig(file, root) {
   if (!fs.existsSync(file)) {
-    // Совет называет тот же файл, о котором шла речь: `--init` без файла записал бы
-    // черновик под умолчательным именем в корне проекта — то есть починил бы не то,
-    // о чём спросили. Имя не называем ровно тогда, когда оно и так умолчательное.
+    // The advice names the very file in question: `--init` without a file would write a draft under the
+    // default name in the project root — fixing something other than what was asked. The name is left
+    // out exactly when it is the default one anyway.
     const dflt = root !== undefined && path.resolve(root, CONFIG_NAME) === path.resolve(file);
     if (dflt) return derivedConfig(root);
     refuseCause('нет файла настроек', 'нет файла настроек ' + file
@@ -133,9 +129,9 @@ export function loadConfig(file, root) {
   return cfg;
 }
 
-/* Колонки: метка и пути — имена, а не что попало: путь числом или объектом молча не
- * совпадает ни с чем, и колонка отчитывается нулём строк за успех. Отказ обязан
- * случиться здесь, а не превратиться в пустой отчёт. */
+/* Columns: a label and paths have to be names rather than anything at all — a path given as a number
+ * or an object silently matches nothing, and the column reports zero rows as success. The refusal has
+ * to happen here instead of turning into an empty report. */
 function checkColumns(cfg, fail) {
   if (!cfg.columns || cfg.columns.length === 0) fail('не задано ни одной колонки (columns)');
   const labels = new Set();
@@ -181,8 +177,8 @@ function checkTokens(cfg, fail) {
   }
 }
 
-/* Файл таблицы не может быть её колонкой: размер артефакта зависит от числа строк,
- * то есть от самого себя. */
+/* The report file cannot be a column of itself: the size of the artifact depends on the number of
+ * rows, that is, on itself. */
 function checkOutput(cfg, fail) {
   cfg.columns.forEach((c) => {
     if (c.paths.indexOf(cfg.output) >= 0) fail('файл таблицы (' + cfg.output + ') не может быть колонкой');
@@ -197,11 +193,11 @@ function checkJournal(cfg, fail) {
   try { new RegExp(cfg.journal.pattern); } catch (e) { fail('journal.pattern не компилируется: ' + e.message); }
 }
 
-/* Что настройки говорят про путь: `columns` — его отслеживает колонка, `excluded` — он
- * объявлен исключением (`skip` и сам файл отчёта), `outside` — мимо того и другого.
- * Суждение одно на два ответа: `check` спрашивает его про всю историю, `explain` — про
- * один коммит. Знакомство считается по колонкам целиком, а не по метке: у колонки путей
- * может быть несколько (переименование), и любой из них — она сама. */
+/* What the settings say about a path: `columns` — a column tracks it, `excluded` — it is declared an
+ * exception (`skip` and the report file itself), `outside` — neither. One judgement for two answers:
+ * `check` asks it about the whole history, `explain` about a single commit. Membership is counted over
+ * all paths of a column rather than by its label: a column may have several paths (a rename), and any
+ * of them is that column. */
 export function pathRoles(cfg) {
   const tracked = new Set();
   cfg.columns.forEach((col) => col.paths.forEach((p) => tracked.add(p)));
@@ -212,10 +208,10 @@ export function pathRoles(cfg) {
   };
 }
 
-/* Починка «мимо колонок» — один текст на два ответа, и он называет пути: команда без
- * имён не команда. Текст собирается из имён, а не приписывает их по ветке, поэтому и
- * предусматривать тут нечего: коммит без файлов вовсе починки не получает — на пустом
- * списке её не зовут (см. `fixFor` в `src/explain.js`). */
+/* The fix for "outside the columns" — one text for two answers, and it names the paths: a command
+ * without names is no command. The text is assembled from the names rather than appending them per
+ * branch, which is why nothing has to be guarded here: a commit with no files at all gets no fix — the
+ * list being empty, nobody calls it (`fixFor` in `src/explain.js`). */
 export function outsideFix(paths) {
   return 'допишите эти пути колонкой или в «skip» файла ' + CONFIG_NAME + ': ' + paths.join(', ');
 }
@@ -228,8 +224,8 @@ export function validateConfig(cfg) {
   checkMinify(cfg, fail);
   checkTokens(cfg, fail);
   if (!LOCALES[cfg.locale]) fail('неизвестная локаль «' + cfg.locale + '» (есть: ' + Object.keys(LOCALES).join(', ') + ')');
-  // Выключатель хука — «да/нет», а не «правда/ложь»: `false` от случайной строки
-  // отличать обязан инструмент, иначе выключенная автоматика осталась бы включённой.
+  // The hook switch is a yes/no rather than a truthy/falsy one: the tool has to tell `false` from a
+  // stray string, or switched-off automation would stay switched on.
   if (typeof cfg.hooks.enabled !== 'boolean') {
     fail('hooks.enabled — не «да/нет»: ' + JSON.stringify(cfg.hooks.enabled));
   }
