@@ -567,135 +567,127 @@ knows them and they know no one. Both reports are counted at build time: the pag
 shared calculation and of its own program pasted in (`src/derived.js`, `src/page/*.js`), because it opens
 from disk, with no server and no network. The rest is planned step by step in `PLAN.md`.
 
-## Как подключить к своему проекту
+## Wiring it into your project
 
-Инструкция проверена покомандно на свежем проекте (три коммита, ESM в `src/`,
-`pnpm`): ниже — ровно те команды, которые работают сегодня. Всё, что сегодня
-**не** работает, названо здесь же и с причиной, чтобы это не искали опытом;
-каждый такой случай — отдельный пункт `REFACTOR.md`.
+The instruction was walked through command by command in a fresh project (the protocol is in
+`worklog/archive/WORKLOG.md` §54): below are exactly the commands that work today. What does **not** work
+today is named here too, with its reason, so that nobody has to find it out by trying.
 
-Эта же инструкция — рецепт для шага 5 (`PLAN.md`): интеграция в проект-потребитель
-идёт по ней, а не по памяти.
+What is needed: **a git repository with history** — at least one commit, because the table is built from
+commits (a repository with none ends in an internal error today: `BLOCKERS.md` §N16) — and
+**Node ≥ 20.19** (`engines` of the package).
 
-Нужны: **git-репозиторий с историей** (хотя бы один коммит — таблица строится по
-коммитам) и **Node ≥ 20.19** (`engines` пакета).
-
-### 1. Установка
+### 1. Installation
 
 ```bash
 pnpm add -D @vernikr/size-report
 ```
 
-Пакет **опубликован в реестре**, и публично: `npm view @vernikr/size-report
-version` отвечает `2.4.0`, `npm access get status @vernikr/size-report` — `public`,
-а анонимный запрос тарболла — код 200. `npm i -D` и `yarn add -D` принимают то же
-имя; ни ключа, ни ссылки на репозиторий не нужно.
+The package is **published in the registry**, and publicly: `npm view @vernikr/size-report version`
+answers the same version the manifest names, `npm access get status @vernikr/size-report` says `public`,
+and an anonymous request for the tarball is a 200. `npm i -D` and `yarn add -D` take the same name; no key
+and no link to the repository are needed.
 
-Тот же выпуск можно взять ссылкой на репозиторий — так установка не зависит от
-реестра, но остаётся привязанной к ревизии:
+The same release can be taken by a reference to the repository — installation then does not depend on the
+registry, but stays tied to a revision:
 
 ```bash
 pnpm add -D github:vernikr/size-report#v2.4.0
 ```
 
-Без сети (или если тянуть из codeload нечем) — тарболл: `pnpm pack` в клоне
-пакета, затем `pnpm add -D ./vernikr-size-report-2.4.0.tgz`.
+With no network (or nothing to fetch from codeload) — the tarball: `pnpm pack` in the package clone, then
+`pnpm add -D ./vernikr-size-report-<version>.tgz`, where the name is the one `pnpm pack` printed.
 
-**Почему тег, а не sha.** Короткий sha pnpm разрешает только через видимые рефы, а
-`git ls-remote` отдаёт одни верхушки веток: пока ревизия — верхушка, короткий sha
-работает, а как только ветка ушла вперёд, установка падает с `Could not resolve
-<sha> to a commit`. Это не рассуждение, а проба: короткий пин `6530237` ставился,
-пока `main` стоял на нём, и перестал — на следующем же коммите, а тот же sha
-целиком поставился. Имя ветки (`#main`) или тег принимаются оба, но ветка —
-движущаяся цель, а тег постоянен: этот выпуск стоит на теге `v2.4.0`, он же и в
-примере (сорок знаков тоже годятся, но их придётся брать глазами из истории).
+**Why a tag rather than a sha.** pnpm resolves a short sha only through visible refs, while
+`git ls-remote` gives branch tips alone: while the revision is a tip, a short sha installs, and as soon as
+the branch moves on the installation fails with `Could not resolve <sha> to a commit`. This is an
+observation rather than reasoning: the short pin `6530237` installed while `main` stood on it and stopped
+working at the very next commit, while the same sha in full installed. A branch name (`#main`) and a tag
+are both accepted, but a branch is a moving target and a tag is constant: this release stands on the tag
+`v2.4.0`, which is also the one in the example (forty characters work as well, but they have to be copied
+out of the history by eye).
 
-Ревизия в примере — не украшение, а часть утверждения: она закреплена за тем, что
-описано ниже. Пин старше подкоманд (`check`, `doctor`, `explain`, `install-hook`)
-означал бы, что текст учит командам, которых в установленной ревизии нет, а
-лишнее слово там не отвергается, а молча пропускается — то есть вместо отказа
-человек получил бы ноль и решил, что всё в порядке. Поэтому пин берётся не «какой был под рукой», а
-ревизией, в которой есть всё названное ниже — включая отказы на незнакомое слово. За этим следит сторож документации (`test/docs-pin.test.js`): пин обязан вести
-на ревизию этого репозитория, и все названные в тексте команды обязаны быть в её
-справке.
+The revision in the example is a part of the claim rather than decoration: what is described below is
+pinned to it. A pin older than the commands (`check`, `explain`, `doctor`, `install-hook`) would teach
+commands the installed revision does not have, and an extra word there is not refused but silently
+skipped — that is, instead of a refusal the person gets a zero and concludes all is well. So the pin is
+the revision that holds everything named below, refusals on an unknown word included.
+`test/docs-pin.test.js` guards that: the pin has to lead to a revision of this repository, and every
+command named in the text has to be in that revision's help.
 
-Репозиторий пакета **публичный** (приватным был до 2026-09-14), и это ровно то,
-что упрощает установку: ни ключа разработчика, ни шага в CI с доступом. Проверено
-прогоном в пустом проекте, где у git не было ни глобальных настроек, ни
-помощника учётных данных (`GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
-GIT_SSH_COMMAND=false`): установка 3,4 с, дальше `size --write` и `size` работают
-(`WORKLOG.md` §44). Прежнее требование было ценой приватности: локально — ключ, а
-в CI — read-only deploy key перед `pnpm install` (то самое первое подключение,
-`WORKLOG.md` §18); шаг с ключом из шаблона ушёл вместе с приватностью. Публикация
-в npm сделана 2026-09-15, и у неё была цена: имя `size-report` в реестре занято чужим
-пакетом (2017 год, три версии), поэтому выкладка — это ещё и смена имени на имя в
-области владельца (`@vernikr/size-report`), а не только отправка архива; что
-затронуло переименование — `PLAN.md` §10, чем доказана выкладка — `WORKLOG.md` §53.
+The package repository is **public** (it was private until 2026-09-14), and that is exactly what makes the
+installation simple: no developer key and no CI step with access. Checked by a run in an empty project
+where git had neither global settings nor a credential helper (`GIT_CONFIG_GLOBAL=/dev/null
+GIT_CONFIG_SYSTEM=/dev/null GIT_SSH_COMMAND=false`): `size --write` and `size` work there
+(`worklog/archive/WORKLOG.md` §44). The earlier requirement was the price of privacy: a key locally and a
+read-only deploy key before `pnpm install` in CI (that first wiring, `worklog/archive/WORKLOG.md` §18);
+the template's key step went away together with the privacy. The publication to npm happened on
+2026-09-15, and it had a price: the name `size-report` in the registry is taken by someone else's package
+(2017, three versions), so the release was also a renaming into the owner's scope (`@vernikr/size-report`)
+rather than just an upload of an archive; what the renaming touched — `PLAN.md` §10, what proves the
+publication — `worklog/archive/WORKLOG.md` §53.
 
-### 2. Настройки: их можно не заводить
+### 2. Settings: you need not create them
 
 ```bash
-pnpm exec size --write     # таблица; настроек нет — их выведет сам инструмент
-pnpm exec size --init      # закрепить выведенное в size-table.config.json
+pnpm exec size --write     # the table; no settings — the tool derives them itself
+pnpm exec size --init      # pin what it derived into size-table.config.json
 ```
 
-Начинать с настроек не нужно: без файла инструмент выводит их из проекта — колонками
-берёт **каждый отслеживаемый git файл, который можно измерить** (отчёт называет
-объём проекта, а не выборки из него; границы остались только у того, что колонкой
-быть не может: сам отчёт, замки зависимостей, собранное, незнакомый формат и файл
-сверх 512 КБ), а прочие называет в `skip`, журналом —
-первый знакомый (`WORKLOG.md`, `CHANGELOG.md`, …), файлом отчёта — `docs/`, если
-каталог есть, командой починки — объявленный скрипт `sizes`, а без него — путь
-к установленному пакету (его цитируют подпись отчёта и отказы, поэтому он обязан
-работать уже сейчас), ссылкой на коммит — адрес `origin`, метриками — `raw`, `min`,
-`tok`. Метрика `min` считается настоящим сжатием (`"minify": {"engine": "esbuild"}`),
-а `tok` — словарём (`"tokens": {"family": "openai", "encoding": "o200k_base"}`): без
-этих необязательных зависимостей метрика честно отступает к другому счёту и прогон
-отдаёт код 4 — правки настроек и тут не требуются.
+There is no need to start with settings: without a file the tool derives them from the project — the
+columns are **every tracked file git can measure** (the report names the volume of the project rather than
+of a sample of it, and the only limits are what cannot be a column at all: the report itself, dependency
+locks, built output, an unknown format and a file above 512 KB), while everything else is named in `skip`;
+the journal is the first familiar one (`WORKLOG.md`, `CHANGELOG.md`, …); the report file is
+`docs/size-report.html` (the directory is created by the writer); the fix command is the declared `sizes`
+script, or the path to the installed package without one (the report's signature and the refusals quote it,
+so it has to work right here and now); the commit link comes from the `origin` address; the metrics are
+`raw`, `min` and `tok`. The `min` metric is counted by real compression here (`"minify": {"engine":
+"esbuild"}`), and `tok` by a dictionary (`"tokens": {"family": "openai", "encoding": "o200k_base"}`):
+without those optional dependencies the metric honestly falls back to another count and the run returns
+code 4 — no settings need editing for that either.
 
-Всё, что колонкой быть не может (сам отчёт, замки зависимостей, карты, собранное,
-незнакомый формат, слишком крупный файл) и чего git не отслеживает, называется
-в `skip` — поэтому первый же `size check`
-полон, а не красен: «пути мимо колонок» появляются от новых правок, а не от того, что
-проект ещё не описан. О том, что настройки выведены, инструмент говорит строкой в
-stderr и называет команду, которая их закрепляет, — `--init`; закреплённое проходит
-ту же проверку, что любой файл настроек, и дальше его правят глазами (сам `--init`
-печатает, что закрепил, и что делать дальше — скрипты и проверку в CI). Без
-закрепления профиль выводится заново на каждом запуске: числа не «поедут», но
-повторить прежний замер — в том числе хуком и проверкой — можно только по файлу.
+Everything that cannot be a column (the report itself, dependency locks, maps, built output, an unknown
+format, a file too large) and everything git does not track is named in `skip` — which is why the first
+`size check` is complete rather than red: "paths past the columns" appear from new edits, not from a
+project that has not been described yet. That the settings were derived, the tool says in a line on stderr
+and names the command that pins them, `--init`; what is pinned passes the same check as any settings file,
+and afterwards it is edited by hand (the `--init` itself prints what it pinned and what to do next — the
+scripts and the CI check). Without pinning, the profile is derived anew on every run: the column set
+changes from run to run (the tool says so with that very line), so repeating the same measurement — by the
+hook and by the check included — is possible only from a file.
 
-Закрепляется **то же, чем проект работает без файла**: вывод из проекта поверх
-умолчаний. Поэтому в закреплённом файле видны и значения, которых в проекте никто не
-писал, — тогда смена умолчаний в новой версии пакета не поедет по уже настроенному
-проекту молча.
+What is pinned is **the very thing the project runs on without a file**: the derivation from the project
+on top of the defaults. That is why the pinned file holds values nobody wrote in the project — then a
+change of the defaults in a new version of the package does not travel over an already configured project
+in silence.
 
-> Subкоманды `size init` пока нет — CLI знает только флаги (`--init`, `--write`,
-> `--data`, `--json`, без флага — проверка); полный список даёт `size --help`.
-> Subкоманды — шаг 5 плана (`REFACTOR.md` R-4.5).
+> `size init` as a command does not exist — `--init` is a mode: the commands are `check`, `explain`,
+> `doctor` and the hook, and the full list is given by `size --help`.
 
-### 3. Что правится в конфиге
+### 3. What is edited in the config
 
-Вывод знает про проект только то, что видно в дереве и истории, — какие колонки важны,
-знает человек. Чаще всего правят:
+The derivation knows about the project only what the tree and the history show — which columns matter is
+known to a person. What is edited most often:
 
-| Ключ | Что это |
+| Key | What it is |
 |---|---|
-| `columns` | колонки таблицы: `{label, paths: [...]}`; **колонка — это файл**: список путей — её переименования (в ревизии берётся тот путь, который в ней есть), а не несколько файлов разом; `label` — то, что увидит человек |
-| `metrics` | из чего состоит число: `raw` (размер объекта git), `min` (минифицированная форма — какая именно, решает `minify.engine`), `tok` (токены), `gzip` |
-| `tokens.family`, `tokens.encoding` | словарь для `tok`: семейство (`openai`) и кодировка (`o200k_base` или `cl100k_base`) — кодировка меняет число, поэтому она и в настройках, и в подписи метрики |
-| `minify.engine` | чем считается `min`: `strip` (комментарии и отступы, точность не обещается) или `esbuild` (настоящее сжатие; форматы без минификатора — упрощение, и это видно в подписи метрики) |
-| `output` | файл отчёта (в выведенном профиле — `docs/size-report.html`; каталог создаётся сам, имя отчёта — его имя) |
-| `journal` | где искать разделы журнала, на которые ссылаются строки |
-| `links.commitUrl` | шаблон ссылки на коммит, например `https://github.com/org/repo/commit/{sha}`; выводится из адреса `origin` у GitHub и GitLab (у остальных хозяев — пусто, а не догадка) |
-| `skip` | пути, которые колонкой не стали: и те, что ею быть не могут (сам отчёт, замки зависимостей), и те, что в колонки не поместились (выведенный профиль объявляет исключениями всё остальное — поэтому первый `check` полон) |
-| `fixCommand` | команда, которую цитирует подпись отчёта и подсказывает отказ; в выведенном профиле — ваш скрипт `sizes`, если он объявлен, иначе путь к установленному пакету внутри проекта (зов по имени пакета уходит в реестр — `REFACTOR.md` R-4.21) |
-| `locale`, `title`, `heading` | язык текстов отчёта и его заголовки; пустые `title`/`heading` значат «взять из локали» |
-| `minify.guard` | расширения, где результат стриппера проверяется разбором; модуль в `.js` гард понимает сам, трогать его не нужно |
-| `hooks.enabled` | выключатель хука автообновления (`false` — хук не ставится сам и молчит, если уже стоит; убирается он только `size uninstall-hook`) |
+| `columns` | the table's columns: `{label, paths: [...]}`; **a column is a file**: the list of paths is its renames (a revision takes whichever of them it holds), not several files at once; `label` is what a person will see |
+| `metrics` | what a number is made of: `raw` (the size of the git object), `min` (the minified form — which one, `minify.engine` decides), `tok` (tokens), `gzip` |
+| `tokens.family`, `tokens.encoding` | the dictionary for `tok`: the family (`openai`) and the encoding (`o200k_base` or `cl100k_base`) — the encoding changes the number, which is why it is both in the settings and in the metric's label |
+| `minify.engine` | what counts `min`: `strip` (comments and indentation, with no accuracy promised) or `esbuild` (real compression; a format without a minifier counts as stripping, and the metric's label says so) |
+| `output` | the report file (in the derived profile `docs/size-report.html`; the directory is created by the writer). The path enters the report's passport — the key of the saved choice — so a changed path means a fresh choice |
+| `journal` | where to look for the journal sections the rows refer to |
+| `links.commitUrl` | the commit link template, for example `https://github.com/org/repo/commit/{sha}`; derived from the `origin` address for GitHub and GitLab (for other hosts — empty rather than a guess) |
+| `skip` | the paths that did not become columns: both those that cannot be (the report itself, dependency locks) and those that did not fit (the derived profile declares everything else an exception — which is why the first `check` is complete) |
+| `fixCommand` | the command the report's signature quotes and a refusal suggests; in the derived profile it is your `sizes` script if it is declared, and otherwise the path to the installed package inside the project (a call by package name goes to the registry — `REFACTOR.md` R-4.21) |
+| `locale`, `title`, `heading` | the language of the report's texts and its headings; empty `title`/`heading` mean "take them from the locale" |
+| `minify.guard` | the extensions whose stripper output is checked by parsing; a module in `.js` the guard understands by itself, and there is nothing to touch there |
+| `hooks.enabled` | the switch of the self-updating hook (`false` — the hook is not installed by itself and keeps quiet if it is already there; it is removed only by `size uninstall-hook`) |
 
-Остальные ключи и умолчания — `src/config.js` (`DEFAULT_CONFIG`).
+The other keys and defaults are in `src/config.js` (`DEFAULT_CONFIG`).
 
-### 4. Скрипты и первый отчёт
+### 4. Scripts and the first report
 
 ```jsonc
 // package.json
@@ -703,85 +695,86 @@ stderr и называет команду, которая их закрепля�
 ```
 
 ```bash
-pnpm run sizes            # → docs/size-report.html — отчёт: таблица, фильтры, ссылка
+pnpm run sizes            # → docs/size-report.html — the report: the table, the filters, the link
 ```
 
-Отчёт — один самодостаточный файл: открывается двойным щелчком, без сервера и без
-сети (внешних ссылок в нём нет вовсе, данные, оформление и программа вклеены).
-Производные (дельты, итоги, фильтры) считает сама страница — из абсолютных
-значений, которые даёт движок, и тем же кодом, что и его расчёт.
+The report is one self-contained file: it opens with a double click, with no server and no network (it
+holds no external references at all — the data, the styling and the program are pasted in). What is
+derived (the deltas, the totals, the filters) is counted by the page itself — from the absolute values the
+engine gives, and by the same code as the engine's own calculation.
 
-**Порядок правок:** код → `pnpm run sizes` → коммит с одной таблицей. Таблица
-обновляется **отдельным коммитом**, потому что строка коммита не может попасть в
-саму таблицу: обновили её вместе с кодом — инструмент предупредит
-(`! таблицу обновляли вместе с кодом: <sha>`) и назовёт коммит, который выпал.
-Проверка `size` собирает таблицу заново и сверяет с файлом на диске, поэтому она
-же ловит и забытую пересборку. Убрать отчёт из git совсем — шаг 5 плана
-(`PLAN.md` §5).
+**The order of edits:** code → `pnpm run sizes` → a commit with the table alone. The table is updated in a
+**commit of its own**, because a commit cannot have a row inside itself: update it together with the code
+and the tool warns (`! таблицу обновляли вместе с кодом: <sha>`) and names the commit that dropped out.
+The `size` check rebuilds the table and compares it with the file on disk, so it catches a forgotten
+rebuild too. Dropping the report from git altogether is possible as well: the completeness check exists
+for that, and `templates/ci.yml` says which step to put in its place when the report is not in git.
 
-### 5. Проверка в CI и перед коммитом
+### 5. The check in CI and before a commit
 
 ```bash
-pnpm run test:sizes       # 0 — таблица сходится с историей
-pnpm exec size check      # 0 — ни одно изменение не прошло мимо колонок
-pnpm exec size doctor     # 0 — делать нечего; иначе первый по важности код
+pnpm run test:sizes       # 0 — the table agrees with the history
+pnpm exec size check      # 0 — not one change went past the columns
+pnpm exec size doctor     # 0 — nothing to do; otherwise the first code by importance
 ```
 
-`size check` отвечает на другой вопрос, чем сама команда `size`: та говорит
-«таблица совпадает с историей», а эта — «история вся посчитана»: каждый путь,
-который трогали коммиты, должен быть либо колонкой, либо объявленным исключением
-(`skip` и сам файл отчёта), иначе это **код 1** со списком путей, коммитом,
-который путь завёл, и командой починки. Отчёт при этом не обязан лежать в git —
-полнота и есть та проверка, которой заменяют «артефакт ↔ история».
-Если сомнение вызывает один коммит, `pnpm exec size explain <коммит>` объяснит,
-почему строки нет: тронут только отчёт, числа не сдвинулись, коммит мимо колонок
-или слияние скрыто настройкой — с уликами и починкой, где она есть. Коммит можно
-назвать так, как его зовёт git: `HEAD`, `HEAD~1`, имя ветки или тега, полный sha
-или его начало. Если имя ведёт на коммит вне истории отчёта (другая ветка),
-инструмент скажет именно это и назовёт его sha — а не «нет такого коммита».
+`size check` answers a different question than the `size` command itself: that one says "the table agrees
+with the history", while this one says "the whole history is counted": every path the commits touched has
+to be either a column or a declared exception (`skip` and the report file itself), otherwise it is **code
+1** with the list of paths, the commit that introduced the path and a fix command. The report need not lie
+in git for that — completeness is exactly the check that replaces "artifact ↔ history". When a single
+commit is in doubt, `pnpm exec size explain <commit>` explains why it has no row: the report alone was
+touched, the numbers did not move, the commit went past the columns, or a merge is hidden by a setting —
+with evidence and a fix where there is one. The commit may be named the way git names it: `HEAD`,
+`HEAD~1`, a branch or a tag, a full sha or its beginning. If the name leads to a commit outside the
+report's history (another branch), the tool says exactly that and names its sha — rather than "no such
+commit".
 
-`size doctor` собирает всю диагностику в один ответ: окружение и его влияние на
-числа (настройки машины на числа не влияют — движок закрепляет их на границе
-вызова), состояние необязательных зависимостей и что оно значит для точности,
-годность настроек и полноту покрытия. Отвечает он теми же кусками, что и
-остальные команды: блок покрытия — это ровно ответ `size check`, а не второй
-расчёт. Код выхода — первый по важности, а не «что-то нашлось»: `2` настройки
-нечитаемы (читать больше нечего), `3` история обрезана, `1` покрытие неполно,
-`4` число приближённо, `0` делать нечего. Датчик, о котором настройки молчат,
-назван ненужным, а не отсутствующим, и не загружается: словарь весит мегабайты,
-а платить за строку ответа, которой у чисел не было, нечем.
+`size doctor` gathers all the diagnostics into one answer: the environment and its influence on the numbers
+(the machine's settings do not influence them — the engine pins them at the call's border), the state of
+the optional dependencies and what it means for accuracy, the validity of the settings and the completeness
+of the coverage. It answers with the same pieces as the other commands: the coverage block is exactly the
+answer of `size check` rather than a second calculation. The exit code is the first by importance rather
+than "something was found": `2` the settings are unreadable (there is nothing else to read), `3` the
+history is cut short, `1` the coverage is incomplete, `4` a number is approximate, `0` nothing to do. A
+sensor the settings are silent about is named unneeded rather than missing, and it is not loaded: the
+dictionary weighs megabytes, and there is nothing to pay with for an answer the numbers never needed.
 
-В шаблонный CI (`templates/ci.yml`) полнота намеренно **не** входит: колонки в
-шаблоне — пример, и на проекте, где колонки ещё не подобраны, такая проверка была
-бы красной не по делу. Когда колонки обрисуют проект, её добавляют одной строкой
-(`pnpm exec size check`).
+The completeness check is deliberately **not** in the template CI (`templates/ci.yml`): the columns there
+are an example, and in a project whose columns are not chosen yet such a check would be red for no reason.
+Once the columns describe the project, it is added in one line (`pnpm exec size check`).
 
-Готовая строка для CI: `pnpm run test:sizes` — больше ничего не нужно: проверка —
-это и есть команда `size`, своего набора тестов потребителю ставить не надо.
-Подсказка `--init` говорит то же самое: проверка — команда пакета, своих файлов в
-проект она не приносит.
+The ready line for CI: `pnpm run test:sizes` — nothing else is needed: the check *is* the `size` command,
+and a consumer has no test suite of its own to install. The `--init` prompt says the same: the check is a
+command of the package and brings no files of its own into the project.
 
-В поставке лежит и готовое описание этой проверки: `templates/ci.yml` из пакета
-(`node_modules/@vernikr/size-report/templates/ci.yml`) кладётся в
-`.github/workflows/size-report.yml` без правок — сборка таблицы, сверка с файлом
-на диске, два снимка чисел (обычный и в среде без настроек git) и их сравнение.
-Секретов оно не требует. Для `npm`/`yarn` в самом файле сказано, какие две строки
-заменить. Рядом — `templates/size-report.config.json`, образец настроек: колонки в нём
-примерные (`README.md`, `package.json`), они есть почти в любом проекте, поэтому
-первый отчёт собирается сразу. Нужен он, только если хочется начать с правленого
-файла: без файла настройки выводятся из проекта (`--init` закрепляет выведенное).
+The package also ships a ready description of that check: `templates/ci.yml` from the package
+(`node_modules/@vernikr/size-report/templates/ci.yml`) goes to `.github/workflows/size-report.yml` without
+edits — the table rebuilt and compared with the file on disk, two snapshots of the numbers (a plain one
+and one in an environment without the machine's git settings) and their comparison. It needs no secrets.
+For `npm`/`yarn` the file itself says which two lines to replace. Next to it is
+`templates/size-report.config.json`, a sample of settings: its columns are examples (`README.md`,
+`package.json`) that nearly any project has, so the first report is built at once. It is needed only to
+start from an edited file: with no file the settings are derived from the project (`--init` pins the
+derived ones), and the sample is copied to the project root as `size-table.config.json`.
 
-Свой CI у пакета — `.github/workflows/ci.yml`: он гоняет у себя тот же список
-команд, что описан ниже, и его можно взять за образец для шага потребителя.
+The package's own CI is `.github/workflows/ci.yml`: it runs at home the same list of checks as a local run
+(one command, `pnpm run verify`, whose list lives in `tools/gates/run.js`), while what a consumer's CI is
+put together from are the templates above.
 
-| Код | Что случилось | Что делать |
+| Code | What happened | What to do |
 |---|---|---|
-| 0 | всё сходится | ничего |
-| 1 | таблица разошлась с историей (или правка на диске не закоммичена); у `size check` — путь истории не отслеживается и не исключён | `pnpm run sizes` и закоммитить таблицу; для `check` — дописать путь колонкой или в `skip` |
-| 2 | что-то в вызове или в проекте — **командная строка** (незнакомый ключ, ключ без значения, повтор ключа, два режима сразу, лишнее слово, команда и режим, неизвестная команда, несовместимый ключ, нет ответа в JSON, два ответа сразу, нет коммита); **настройки и проект** (нет файла настроек, настройки не разобраны, настройки неверны, нет git, не git-репозиторий, конфиг уже есть); **история** (нет такого коммита, коммит назван неточно, коммит вне истории); **хук** (чужой хук, чужой core.hooksPath, нечем звать инструмент); **измерение** (файл не JavaScript, минификатор не разобрал) | текст отказа называет причину и готовую команду — и она выполнима: это сторожит `test/refusals.test.js` |
-| 3 | неполная история (clone с `--depth`) | полный клон: `git fetch --unshallow` |
-| 4 | нет датчика | `minify.engine: "esbuild"`, а минификатора нет: числа получены упрощением. Отчёт собран, причина и починка — в тексте; если при этом таблица расходится с историей, код остаётся **1** (нарушение старше приближения), а заметка о другом счёте печатается рядом |
-| 5 | внутренняя ошибка | это дефект инструмента: текст нужен нам, см. «Traps worth testing the engine on» ниже |
+| 0 | everything agrees | nothing |
+| 1 | the table diverged from the history (or an edit on disk is not committed); for `size check` — a path of the history is neither tracked nor excluded | `pnpm run sizes` and commit the table; for `check` — add the path as a column or to `skip` |
+| 2 | something in the call or in the project — the causes are quoted as the tool prints them: **командная строка** (незнакомый ключ, ключ без значения, повтор ключа, два режима сразу, лишнее слово, команда и режим, неизвестная команда, несовместимый ключ, нет ответа в JSON, два ответа сразу, нет коммита); **настройки и проект** (нет файла настроек, настройки не разобраны, настройки неверны, нет git, не git-репозиторий, конфиг уже есть); **история** (нет такого коммита, коммит назван неточно, коммит вне истории); **хук** (чужой хук, чужой core.hooksPath, нечем звать инструмент); **измерение** (файл не JavaScript, минификатор не разобрал) | the refusal text names the reason and a ready command — and it is executable: `test/refusals.test.js` guards that |
+| 3 | a shallow history (a clone with `--depth`) | a full clone: `git fetch --unshallow` |
+| 4 | no sensor | `minify.engine: "esbuild"` with no minifier: the numbers are stripped rather than minified. The report is built, and its text carries the reason and the fix; if the table also diverges from the history, the code stays **1** (a mismatch outranks the approximation) while the note about the other count is printed next to it |
+| 5 | an internal error | this is a defect of the tool: we are the ones who need the text — see "Traps worth testing the engine on" below |
+
+The cell of code 2 quotes the tool rather than describing it: those are the names of the refusal registry
+(`CONFIG_CAUSES` in `src/refusal.js`), and the documentation guard compares this table with it word by
+word — which is why that one cell speaks the language of the command line, while the report's own texts
+are translated by the `locale` key.
 
 ### 6. Отчёт обновляется сам после коммита
 

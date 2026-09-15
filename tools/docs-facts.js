@@ -95,7 +95,7 @@ export function withoutSection(text, title) {
  * wording. The section about wiring the tool into another project is dropped only where
  * **paths** are concerned: its paths are someone else's, its commands are ours and must work. */
 export const NOT_TODAY = { 'README.md': ['What is not here yet', 'For an AI agent'] };
-export const OWN_PROJECT = { 'README.md': ['Как подключить к своему проекту'] };
+export const OWN_PROJECT = { 'README.md': ['Wiring it into your project'] };
 export function facts(doc, sections) {
   let text = read(doc);
   (sections || []).forEach((title) => { text = withoutSection(text, title); });

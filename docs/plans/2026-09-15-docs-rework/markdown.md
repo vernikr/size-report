@@ -32,7 +32,8 @@ edit is allowed — but it belongs in the same diff, never as a silent follow-up
 | Reader | What it looks for | Breaks when |
 |---|---|---|
 | `tools/docs-facts.js` `publishedRuns` | README run-table rows starting with «Быстрый» / «Полный» | the row words become English |
-| `tools/docs-facts.js` `NOT_TODAY`, `OWN_PROJECT` | README section titles | those headings are renamed — `NOT_TODAY` was renamed in M6 and the guard reddened as predicted (`docs-commands`: `size init` from the "not yet" block was read as a call); `OWN_PROJECT` waits for M7 |
+| `tools/docs-facts.js` `NOT_TODAY`, `OWN_PROJECT` | README section titles | those headings are renamed — both were renamed (M6, M7). `NOT_TODAY` reddened the guard as predicted (`docs-commands` read `size init` from the "not yet" block as a call); **`OWN_PROJECT` did not** — see the M7 note below: today it only repeats what `FOREIGN` already covers |
+| `test/docs-commands.test.js` `readmeCauses` | the code-2 row of the README table, `**group** (cause, cause)` | the causes are translated — they are not: the registry's names are quoted as the tool prints them |
 | `test/docs-paths.test.js` | the README table under the heading `## Что в репозитории` | that heading is renamed |
 | `test/docs-commands.test.js` | a bare `§N` resolved to `requirements.md` by the word «требовани» | requirements are quoted without naming the file |
 | `tools/docs-facts.js` `DOCS`, `TARGETS`, `FOREIGN` | file *names* (`README.md`, `WORKLOG.md`, …) | a document moves |
@@ -203,7 +204,34 @@ files). The parts below are the order to work in; each is one commit.
   `note` levels and explain's `touched` all match `USAGE`, `src/doctor.js` and `src/explain.js`. Three
   stale named references were fixed outside README (`templates/README.md`, `REFACTOR.md` R-4.11, and the
   exit-code row 5 in README itself).
-- [ ] **M7 README 706–921** — 159 Russian: «Как подключить к своему проекту», steps 1–5.
+- [x] **M7 README, the wiring instruction** — the intro and steps 1–5: 157 Russian lines → **385 changed
+  lines in five files** (`worklog/0106`). README's Cyrillic 263 → 106, and what is left in this part is
+  two quoted lines of the tool's own output; the next Russian line is 779 (M8). The heading became
+  `## Wiring it into your project` and `OWN_PROJECT` in `tools/docs-facts.js` was renamed with it. **The
+  experiment asked for by the mission was run and disproved the expectation**: with the old title put back,
+  the four documentation guards stay green (8 of 8), because the section's paths — `size-table.config.json`,
+  `docs/size-report.html`, `.github/workflows/size-report.yml`,
+  `node_modules/@vernikr/size-report/templates/ci.yml` — are in `FOREIGN` anyway, so the entry only repeats
+  what that list already covers and the map's title was the only thing wrong in it. The entry stays as a
+  second line of defence (a consumer path added to the section but not to `FOREIGN` would be silenced by it
+  rather than redden the guard), now naming the real heading. The code-2 cell of
+  the exit-code table is the one exception to "no Cyrillic": its groups and causes are the refusal
+  registry (`CONFIG_CAUSES`) that the tool prints, and `readmeCauses` compares the cell with the registry
+  word for word — translating them would either lie or demand an engine change, so the cell is quoted and
+  the reason is said in the text right under the table. Three claims were wrong and each was checked in
+  code or by measurement: the report file is **always** `docs/size-report.html` (the fork on the existence
+  of `docs/` was dropped long ago — `src/project.js` says why), the `size init` note called the CLI
+  flag-only (there are six commands today), and the package's own CI was said to run "the same list of
+  commands as described below" (it runs one command, `pnpm run verify`, and the list lives in
+  `tools/gates/run.js`) — where a consumer's CI comes from are the templates. Snapshots were replaced by
+  rules: the npm version and the tarball name (both age with every release), the "3.4 s installation time"
+  (no profile has a time target), and the choice of a tag over a sha, which now names the observation
+  behind it (`REFACTOR.md` R-4.13). Two claims were re-measured and held: the registry serves the package
+  publicly (`npm access get status`, a 200 for the tarball) and the unscoped `size-report` is someone
+  else's package (2017, three versions, `PLAN.md` §10). The new finding — a repository without a single
+  commit ends with code 5 and a stack — was recorded as **N16 in `BLOCKERS.md`** with the reproduction,
+  the options and the cost, the code left untouched. References from `REFACTOR.md` R-4.2 and `PLAN.md`
+  were renamed to the new heading, and journal references now name the archive path.
 - [ ] **M8 README 922–1044** — 104 Russian: steps 6–8 (the hook, the traps found by this very
   instruction, an already installed copy).
 - [ ] **M9 templates and the fixture notes** — `templates/README.md` 93 lines / 77 Russian,
