@@ -1,23 +1,23 @@
 import fs from 'node:fs';
 
-/* Оформление отчёта — обычные `.css` рядом с кодом, а не строки внутри модулей:
- * то же правило, что и у программы страницы (`src/page/app.js`), — исходник видит
- * редактор, а не только шаблонная строка. Читаются они с диска относительно
- * своего места, поэтому работают и у того, кто поставил пакет.
+/* The report's styling is ordinary `.css` next to the code rather than strings inside modules — the same rule
+ * as for the page's program (`src/page/app.js`): an editor sees a real source file instead of a template
+ * string. They are read from disk relative to their own place, so they work for whoever installed the package
+ * as well.
  *
- * Наборов два, и у каждого своя роль:
+ * There are two sets, each with a role of its own:
  *
- *   1. `table.css` — **таблица**: геометрия клеток, липкие шапка и колонка коммита,
- *      подпись коммита, цвета дельт.
- *   2. `page/app.css` — оформление страницы **сверх таблицы**: холст, панель
- *      выбора, состояния пустоты и адаптации под узкое окно.
+ *   1. `table.css` — the **table**: cell geometry, the sticky header and commit column, a commit's caption,
+ *      the colours of the deltas.
+ *   2. `page/app.css` — the page's look **on top of the table**: the canvas, the panel of choices, the empty
+ *      states and the adaptation to a narrow window.
  *
- * Соглашение о цвете дельт задано один раз — в `table.css`: `.up` зелёный, `.down`
- * красный (рост — «больше логики», а не тревога). Второго места у него нет
- * намеренно: рост не может быть показан разными цветами в двух местах одной
- * страницы. Смена соглашения — две строки в `table.css`.
+ * The convention about the colour of a delta is set once, in `table.css`: `.up` green, `.down` red (growth is
+ * "more logic" rather than alarm). It has no second place on purpose: growth cannot be shown in different
+ * colours in two spots of one page. Changing the convention is two lines in `table.css`.
  *
- * Путь у `readCss` — от каталога `src/`: так его видит движок, где бы он ни лежал.
+ * The path given to `readCss` is relative to the `src/` directory: that is how the engine sees it wherever it
+ * lies.
  */
 
 export const TABLE_CSS = readCss('./table.css');

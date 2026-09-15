@@ -1,29 +1,27 @@
-/* Производные величины отчёта: из абсолютных значений получаются итоги, дельты,
- * содержимое клетки и подпись коммита.
+/* The report's derived quantities: totals, deltas, the content of a cell and a commit's caption come out of
+ * the absolute values.
  *
- * Единственное место, где это считается. Оба вывода пользуются этим файлом:
- * статический артефакт импортирует его как обычный модуль, а страница получает
- * его текст вклеенным в свой единственный файл (внешних ссылок страница иметь не
- * может). Поэтому у этого файла два требования, и оба обязательны:
+ * The only place where they are counted. Both outputs use this file: the page gets its text pasted into its
+ * single file (which may hold no external reference), while the terminal answers import it as an ordinary
+ * module. Hence two requirements of this file, both binding:
  *
- *   1. Ни импортов, ни состояния модуля — иначе текст нельзя вклеить;
- *   2. Один `import` на строку и экспорт объявлением (`export function`), а не
- *      списком имён: модульный синтаксис при вклейке снимается построчно, и
- *      непонятая строка не должна молча попасть в страницу (`pageScript`).
+ *   1. No imports and no module state — or the text cannot be pasted in;
+ *   2. One `import` per line and exports as declarations (`export function`) rather than a list of names:
+ *      module syntax is removed line by line when pasting, and an unparsed line must not slip into the page
+ *      silently (`stripModules` / `pageScript`).
  *
- * Расхождение двух отчётов возможно только здесь, поэтому и стеречь его надо
- * здесь: `test/contract-derived.test.js` сверяет числа страницы с числами
- * артефакта, а `test/page-view.test.js` следит, чтобы у страницы не появилось
- * своего расчёта. */
+ * The two outputs can drift apart only here, so here is where it has to be guarded:
+ * `test/contract-derived.test.js` compares the page's numbers with the artifact's, while `test/page-view.test.js`
+ * watches that the page grows no calculation of its own. */
 
-// Разряды тонкими пробелами: toLocaleString зависит от ICU сборки Node, а строка
-// таблицы обязана совпадать побайтово на любой машине.
+// Thousands split by thin spaces: toLocaleString depends on the Node build's ICU, while the report has to be
+// byte-identical on any machine.
 export function group(n) {
   return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '\u2009');
 }
 
-/* Итог: сумма по включённым файлам. Выключенный файл не участвует ни в таблице,
- * ни в сумме, — иначе «итого» отвечало бы не про то, что видно. */
+/* The total: the sum over the switched-on files. A switched-off file joins neither the table nor the sum —
+ * otherwise "total" would answer about something other than what is visible. */
 export function totalsOf(values, metrics, on) {
   const out = {};
   metrics.forEach((m) => { out[m] = 0; });
@@ -34,17 +32,17 @@ export function totalsOf(values, metrics, on) {
   return out;
 }
 
-/* Дельта к предыдущему коммиту. Появление файла — рост на весь его объём: иначе
- * сумма дельт по колонке не сходилась бы с текущим размером. */
+/* The delta to the previous commit. A file's appearance is a growth by its whole volume: otherwise the sum
+ * of a column's deltas would not add up to the current size. */
 export function deltaOf(now, before) {
   return before === null || before === undefined ? now : now - before;
 }
 
-/* Содержимое клетки строки-коммита: что в ней написано и каким цветом. Разметку
- * из этого делает каждый вывод сам (строка HTML или узел DOM), а правила одни.
- * Пустая клетка — «не менялось», `—` — файла в ревизии нет.
- * `minus` — знак минуса: у артефакта он заморожен эталоном побайтово, страница
- * ставит типографский. */
+/* The content of a cell of a commit row: what it says and in which colour. Each output turns this into markup
+ * itself (an HTML string or a DOM node), while the rules are one. An empty cell means "no change", `—` that
+ * the file is absent in the revision.
+ * `minus` is passed in rather than chosen here: the page draws the typographic one, and the signature is part
+ * of the package's frozen API (`test/api.test.js` holds the list of names). */
 export function cellParts(value, delta, minus) {
   if (value === null) return { text: '—', dir: null, miss: true };
   if (!delta) return { text: '', dir: null, miss: false };
@@ -55,14 +53,13 @@ export function cellParts(value, delta, minus) {
   };
 }
 
-// Клетка верхней строки: абсолютный размер, без дельты.
+// A cell of the top row: the absolute size, with no delta.
 export function valueParts(value) {
   return value === null ? { text: '—', miss: true } : { text: group(value), miss: false };
 }
 
-/* Строка-коммит: блок «общий объём» и по блоку на включённый файл, в каждом —
- * клетка на метрику. Отбор включённых файлов происходит здесь, поэтому и таблица,
- * и суммы считаются от одного выбора. */
+/* A commit row: a "total volume" block and one block per switched-on file, each with a cell per metric. The
+ * choosing of the switched-on files happens here, so both the table and the totals come out of one choice. */
 export function rowModel(values, prev, metrics, on) {
   const total = totalsOf(values, metrics, on);
   const prevTotal = prev === null ? null : totalsOf(prev, metrics, on);
@@ -85,8 +82,8 @@ export function rowModel(values, prev, metrics, on) {
   return out;
 }
 
-/* Верхняя строка — абсолютные размеры на HEAD: абсолютное число стоит в таблице
- * один раз, и именно с ним сходятся все дельты под ним. */
+/* The top row is the absolute sizes at HEAD: an absolute number stands in the table once, and it is the one
+ * every delta below it adds up to. */
 export function nowModel(values, metrics, on) {
   const total = totalsOf(values, metrics, on);
   const files = [];
@@ -97,10 +94,9 @@ export function nowModel(values, metrics, on) {
   return { total: metrics.map((m) => total[m]), files: files };
 }
 
-/* Подпись коммита в терминах данных: что показать, чем подписать и куда вести.
- * Ссылку считает `rowHref` движка — то же место, откуда её берёт контракт для
- * страницы, поэтому оба вывода ведут туда же. Подпись всплывающей строки тоже
- * здесь: два вывода не должны подписывать один коммит по-разному. */
+/* A commit's caption in terms of data: what to show, how to caption it and where to lead. The link is counted
+ * by the engine's `rowHref` — the same place the page's contract takes it from, so both outputs lead there. The
+ * caption of the tooltip is here too: two outputs must not caption one commit differently. */
 export function commitParts(row, showSha, href) {
   const short = showSha ? row.sha.slice(0, 7) : '';
   return {

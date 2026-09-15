@@ -6,15 +6,13 @@ import { build, skipLine } from './history.js';
 import { projectTree } from './project.js';
 import { TOOL_PKG } from './tool.js';
 
-/* Категории файлов и контракт со страницей: абсолютные значения и устройство
- * таблицы, без единой производной величины. Всё, что страница считает сама,
- * начинается там, где этот модуль заканчивается. */
+/* File categories and the contract with the page: absolute values and the shape of the table, with no
+ * derived quantity at all. Everything the page counts itself begins where this module ends. */
 
-/* Категория файла — только для быстрых кнопок «включить/выключить группу» на
- * странице: на числа она не влияет. Правило одно — расширение даёт категорию, всё
- * остальное считается кодом; категория, заданная в настройках колонки, старше
- * правила, и в данных видно, откуда она взялась (`categoryBy`): ручное решение
- * объяснимо, а таблица расширений — догадка по имени файла. */
+/* A file's category is only for the page's quick on/off buttons for a group: it does not reach the
+ * numbers. The rule is one: the extension gives the category, everything else counts as code; a category
+ * set in the column's settings outranks that rule, and the data says where it came from (`categoryBy`) — a
+ * manual decision is explainable, while a table of extensions is a guess by file name. */
 export const CATEGORY_EXTS = {
   docs: ['.md', '.markdown', '.rst', '.txt', '.adoc'],
   chore: ['.json', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.conf', '.lock', '.editorconfig'],
@@ -29,15 +27,14 @@ export function categoryOf(col) {
   return { key: known === undefined ? 'code' : known, by: 'auto' };
 }
 
-/* Контракт между движком и страницей: абсолютные значения и устройство таблицы —
- * и ни одной производной величины. Дельты, суммы, «сейчас» и фильтры считает
- * страница: движок не знает, что включено в просмотр, поэтому заранее посчитать
- * сумму он не может. Числа в контракте те же, что в артефакте, — это та же правда,
- * разложенная по полям.
+/* The engine-to-page contract: deltas, totals, "now" and the filters are counted by the page — the engine
+ * does not know what is switched on in the view, so it cannot total anything up in advance. The numbers
+ * here are the same as in the artifact: one truth laid out in fields.
  *
- * Причины пропущенных коммитов идут строками — и остаются ими: у страницы нет
- * вопроса, на который пригодилось бы поле («почему у коммита нет строки» задают
- * командой `explain`, и там причина уже разложена). */
+ * The reasons of skipped commits travel as strings and stay strings: they are sentences for a person, and
+ * the question behind them (why a commit has no row) is asked by the `explain` command, where the reason is
+ * laid out into fields. The page does not carry this list at all, and on purpose: the report's own commit
+ * is one of the skipped ones, so the file would never become a fixed point. */
 export function reportData(cfg, root) {
   const { rows, state, dropped, last } = build(cfg, root);
   const loc = LOCALES[cfg.locale];
@@ -67,30 +64,28 @@ export function reportData(cfg, root) {
     categories: CATEGORY_ORDER.filter((key) => files.some((f) => f.category === key))
       .map((key) => ({ key: key, label: loc.categories[key] })),
     files: files,
-    /* Дерево страницы — дерево проекта: все пути, а не только колонки. Числа есть
-     * лишь у колонок, поэтому у каждой записи каталога сказано, чего ей не
-     * досталось: `why` пусто — файл измеряется, иначе названа причина. */
+    /* The page's tree is the project's tree: every path rather than the columns alone. The numbers belong to
+     * columns only, which is why each catalogue entry says what it did not get: `why` empty — the file is
+     * measured, otherwise a reason is named. */
     catalog: projectTree(root, cfg.output, files.map((f) => (f.path === null ? f.paths[0] : f.path))),
     rows: rows.map((r) => Object.assign(rowShape(r),
       { href: rowHref(r.section, r.sha, cfg), values: r.cells })),
     now: state.map((s) => (s === null ? null : s.cells)),
-    /* Какие колонки тронул последний коммит: страница по этому знаку ставит их
-     * впереди — читателю нужнее то, что изменилось только что. Это факт из истории,
-     * а не производная величина: она не считает, а говорит, чего коснулась правка. */
+    /* Which columns the last commit touched: the page puts those in front by this mark — a reader needs what
+     * changed just now rather than the rest. This is a fact from the history rather than a derived quantity:
+     * it does not count anything, it says what the edit touched. */
     last: last,
     approx: approxMarks(rows, state, cfg),
     skipped: dropped.map(skipLine)
   };
 }
 
-/* Пометки приближённых клеток — по одной записи на метрику: строка знаков по
- * клеткам строк и строка знаков по верхней строке «сейчас». '1' — число получено
- * упрощением или оценкой, '0' — точное. Метрика без ни одной пометки в отчёте не
- * появляется вовсе: все числа точны — молчание.
+/* Marks of approximate cells — one record per metric: a string of marks over the row cells and one over the
+ * "now" row. '1' means the number came out of stripping or an estimate, '0' that it is exact. A metric with
+ * no mark at all does not appear in the report: all numbers exact — silence.
  *
- * Знак ставит движок там же, где считает число, — из того же правила, что и
- * подпись метрики. Поэтому страница ничего про пути и форматы не выводит: она
- * только показывает то, что сказано, и второго правила точности не заводит. */
+ * The engine sets a mark where it counts the number, by the same rule as the metric's label. Hence the page
+ * derives nothing about paths and formats: it only shows what was said and keeps no second rule of accuracy. */
 function approxMarks(rows, state, cfg) {
   const out = {};
   cfg.metrics.forEach((m) => {
@@ -102,10 +97,9 @@ function approxMarks(rows, state, cfg) {
   return out;
 }
 
-/* Общая часть строки ответа: она есть и у контракта страницы (`--data`), и у
- * прежней формы `--json` (она заморожена эталоном паритета). Одно место — потому
- * что разойтись эти два ответа могут ровно здесь, а **порядок полей и есть байты
- * ответа**: они в объекте в том же порядке, в каком их печатает замороженная форма. */
+/* The part of a row shared by both answers: the page's contract (`--data`) and the older `--json` form (frozen
+ * by the parity fixture). One place, because these two answers can drift apart exactly here, and **the order
+ * of the fields is the bytes of the answer**: the object holds them in the order the frozen form prints. */
 export function rowShape(r) {
   return {
     sha: r.sha,
@@ -115,7 +109,7 @@ export function rowShape(r) {
   };
 }
 
-/* Производные величины живут в `src/derived.js`: их считает и артефакт (импорт
- * ниже), и страница (получает тот же файл текстом). Второго расчёта той же
- * таблицы нет вовсе, поэтому разойтись молча двум отчётам нечем — это стережёт
- * `test/contract-derived.test.js`. */
+/* The derived quantities live in `src/derived.js`: the page gets that whole file pasted into itself as text
+ * (`pageScript`), while the terminal answers import it. There is no second calculation of the same table, so
+ * the page's numbers and the artifact's bytes have nothing to drift apart with — `test/contract-derived.test.js`
+ * guards that. */

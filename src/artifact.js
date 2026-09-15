@@ -3,28 +3,28 @@ import path from 'path';
 import { reportData } from './data.js';
 import { pageHtml } from './page/build.js';
 
-/* Отчёт — один файл: самодостаточная страница. Она и есть артефакт, потому что
- * несёт всё сама (данные, оформление, программу), а второй формы того же отчёта не
- * существует: два вывода одной истории разошлись бы молча, и выбрать, какой из них
- * верный, было бы нечем.
+/* The report is one file: a self-sufficient page. It is the artifact because it carries everything itself
+ * (data, styling, program), and a second form of the same report does not exist: two outputs of one history
+ * would drift apart silently, with nothing to tell which of them is right.
  *
- * Через это место проходят оба потребителя — режим записи (`--write`) и хук после
- * коммита (`src/hook.js`), поэтому «что записано в файл» не может разойтись между
- * ними: в коммит хук кладёт ровно те байты, которые показывает `--write`.
+ * Both consumers pass through here — the writing mode (`--write`) and the hook after a commit
+ * (`src/hook.js`), so "what went into the file" cannot drift between them: the hook commits exactly the bytes
+ * `--write` shows.
  *
- * Каталог создаётся здесь же: `--write docs/size-report.html` в свежем проекте —
- * обычный запуск, а не ошибка пользователя. Тем же путём пишется черновик настроек
- * (`--init`), поэтому он один на пакет. */
+ * The directory is created here as well: `--write docs/size-report.html` in a fresh project is an ordinary run
+ * rather than a user's mistake. The settings draft (`--init`) is written the same way, which is why there is one
+ * such place in the package. */
 
-/* Запись файла с созданием каталога: путь может не существовать ни одной своей
- * частью — это не ошибка того, кто его назвал. */
+/* Writing a file while creating the directory: not a single part of the path may exist, and that is not a
+ * mistake of whoever named it. */
 export function writeFileEnsured(file, text) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, text);
 }
 
-/* Собранные байты отчёта без записи: они же нужны проверке (`таблица совпадает с
- * историей`), и собирать их вторым способом значило бы сверять не то, что пишется. */
+/* The report's bytes built without writing: the check needs them too (it compares the file on disk with exactly
+ * these bytes and reports it as diverging from the history), and building them a second way would compare
+ * something other than what gets written. */
 export function artifact(cfg, root) {
   const data = reportData(cfg, root);
   return { data: data, html: pageHtml(data, cfg), file: path.join(root, cfg.output) };
