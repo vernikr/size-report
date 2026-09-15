@@ -184,8 +184,15 @@ const local = {
   }
 };
 
+/* `reports/` здесь НЕ в игноре, хотя у линтера (`eslint.config.js`) и в `.gitignore`
+ * он назван, — и это условие одной пробы, а не расхождение. Проба датчика пишет файл
+ * с нарочным нарушением в `reports/probe/`: остаток от оборванного прогона не должны
+ * видеть ни `git status`, ни `lint:strict`. Датчику же файл нужен видимым: он зовётся
+ * явным путём (`--paths`), а игнор глушит и явный путь — с `reports/` здесь проба
+ * краснела бы на самом игноре («File ignored because of a matching ignore pattern»),
+ * а не на нарушении. Обход по умолчанию (`src`, `bin`, `tools`, `test`) сюда не заходит. */
 export default [
-  { ignores: ['node_modules/', 'fixtures/', '.freebuff/', 'reports/'] },
+  { ignores: ['node_modules/', 'fixtures/', '.freebuff/'] },
   {
     files: ['**/*.js'],
     languageOptions: {

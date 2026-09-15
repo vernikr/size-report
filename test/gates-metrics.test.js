@@ -26,14 +26,17 @@ import { ROOT, exec, probe, readJson, tempDir, write } from '../tools/gate-probe
 const tmp = tempDir('metrics');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-/* Проба «датчика живого» и храповика пишется **внутри репозитория** — в каталоге,
- * которого нет для git (`.size-report/`, он же в `.gitignore`): ESLint линтует только
- * файлы под своим базовым путём, а на дереве во временном каталоге молча не делает
- * ничего, и проба краснела бы на «файл вне базового пути», а не на нарушении.
- * Каталог убирается тем же прогоном; гейты его не сканируют (их обход — `src`, `bin`,
- * `tools`, `test`). */
-const SCRATCH = path.join(ROOT, '.size-report', 'probe');
-after(() => fs.rmSync(SCRATCH, { recursive: true, force: true }));
+/* Проба «датчика живого» и храповика пишется **внутри репозитория**: ESLint линтует
+ * только то, что под его базовым путём, а на дереве во временном каталоге молча не
+ * делает ничего — проба краснела бы на «файл вне базового пути», а не на нарушении.
+ * Место выбрано так, что остаток не видит ни один читатель дерева: `reports/` назван и
+ * в `.gitignore`, и в игноре линтера. Поэтому оборванный прогон (убитый процесс,
+ * упавшая проверка) не оставляет ни неотслеживаемого файла, который занесёт
+ * `git add -A`, ни кода, на котором краснеет `lint:strict` — первого шага профиля.
+ * Самому датчику файл при этом виден: его игнор (`eslint.metrics.config.js`) каталог
+ * не называет — иначе проба краснела бы на игноре, а не на нарушении. Гейты `reports/`
+ * не сканируют (их обход — `src`, `bin`, `tools`, `test`) и не чистят. */
+const SCRATCH = path.join(ROOT, 'reports', 'probe');
 
 function scratch(name, source) {
   const file = path.join(SCRATCH, name);
@@ -109,32 +112,41 @@ test('храповик держит обе половины: база прохо
    * удержать, — а свою базу можно собрать ровно на том нарушении, которое проверяешь
    * (что новое нарушение красно, проверяет соседняя проба). */
   const file = scratch('src/baselined.js', LONG);
-  const own = path.join(tmp, 'ratchet-suppressions.json');
-  exec('pnpm', ['exec', 'eslint', '--config', 'eslint.metrics.config.js',
-    '--suppressions-location', own, '--suppress-all', file]);
-  assert.ok(fs.existsSync(own), 'база не записалась — храповик нечем проверить');
-  const kept = probe('metrics', ['--paths', file, '--baseline', own]);
-  assert.equal(kept.code, 0, 'нарушение из базы повалило гейт (храповик не работает):\n' + kept.out);
+  try {
+    const own = path.join(tmp, 'ratchet-suppressions.json');
+    exec('pnpm', ['exec', 'eslint', '--config', 'eslint.metrics.config.js',
+      '--suppressions-location', own, '--suppress-all', file]);
+    assert.ok(fs.existsSync(own), 'база не записалась — храповик нечем проверить');
+    const kept = probe('metrics', ['--paths', file, '--baseline', own]);
+    assert.equal(kept.code, 0, 'нарушение из базы повалило гейт (храповик не работает):\n' + kept.out);
 
-  /* Устаревшая запись (нарушение починили, строка в базе осталась) гейт не валит, а
-   * обрезка её снимает: иначе починка кода требовала бы правки гейт-файла, которую
-   * тот же гейт и запрещает без трейлера. */
-  write(path.join(ROOT, file), 'export const one = 1;\n');
-  const stale = probe('metrics', ['--paths', file, '--baseline', own]);
-  assert.equal(stale.code, 0, 'устаревшая запись базы повалила гейт:\n' + stale.out);
-  const copy = path.join(tmp, 'ratchet-pruned.json');
-  fs.copyFileSync(own, copy);
-  const pruned = exec('pnpm', ['exec', 'eslint', '--config', 'eslint.metrics.config.js',
-    '--suppressions-location', copy, '--prune-suppressions', file]);
-  assert.equal(pruned.code, 0, 'обрезка базы не прошла:\n' + pruned.out.slice(0, 600));
-  assert.deepEqual(readJson(copy), {}, 'обрезка не сняла устаревшую запись');
+    /* Устаревшая запись (нарушение починили, строка в базе осталась) гейт не валит, а
+     * обрезка её снимает: иначе починка кода требовала бы правки гейт-файла, которую
+     * тот же гейт и запрещает без трейлера. */
+    write(path.join(ROOT, file), 'export const one = 1;\n');
+    const stale = probe('metrics', ['--paths', file, '--baseline', own]);
+    assert.equal(stale.code, 0, 'устаревшая запись базы повалила гейт:\n' + stale.out);
+    const copy = path.join(tmp, 'ratchet-pruned.json');
+    fs.copyFileSync(own, copy);
+    const pruned = exec('pnpm', ['exec', 'eslint', '--config', 'eslint.metrics.config.js',
+      '--suppressions-location', copy, '--prune-suppressions', file]);
+    assert.equal(pruned.code, 0, 'обрезка базы не прошла:\n' + pruned.out.slice(0, 600));
+    assert.deepEqual(readJson(copy), {}, 'обрезка не сняла устаревшую запись');
+  } finally {
+    fs.rmSync(SCRATCH, { recursive: true, force: true });
+  }
 });
 
 test('нарушение, которого в дереве нет, датчик всё равно называет', () => {
   // База гейта берётся из репозитория, поэтому «датчик живой» проверяется на файле,
   // которого в ней быть не может.
   // Проба «датчик живой»: файл, которого нет в базе, с нарушением — красный.
-  const res = probe('metrics', ['--paths', scratch('src/plain.js', LONG)]);
-  assert.equal(res.code, 1, 'новое нарушение не покрасило датчик:\n' + res.out);
-  assert.match(res.out, /новых нарушений 1/, 'датчик не назвал число новых нарушений:\n' + res.out);
+  const file = scratch('src/plain.js', LONG);
+  try {
+    const res = probe('metrics', ['--paths', file]);
+    assert.equal(res.code, 1, 'новое нарушение не покрасило датчик:\n' + res.out);
+    assert.match(res.out, /новых нарушений 1/, 'датчик не назвал число новых нарушений:\n' + res.out);
+  } finally {
+    fs.rmSync(SCRATCH, { recursive: true, force: true });
+  }
 });
