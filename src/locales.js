@@ -1,9 +1,7 @@
-/* Тексты отчёта: заголовки, подписи и служебные слова на языке проекта. Это
- * словарь, а не рендер: механика таблицы от языка не зависит. */
-
-/* Тексты артефакта: колонка, метрики и служебные слова. Механика (заголовки
- * таблицы, клетки, дельты) от локали не зависит, поэтому перевод — это словарь,
- * а не отдельный рендер. */
+/* Texts of the artifact and of the report page: headings, labels and service words, in the
+ * language of the project. A dictionary, not a renderer: the mechanics of the table (cells,
+ * deltas, headings) do not depend on the language, so translating a report means adding
+ * words here rather than writing a second renderer. */
 export const LOCALES = {
   ru: {
     html: 'ru',
@@ -12,29 +10,29 @@ export const LOCALES = {
     total: 'Общий объём',
     now: 'сейчас',
     categories: { code: 'Код', docs: 'Документация', chore: 'Служебные', assets: 'Ресурсы' },
-    /* Тексты страницы отчёта. Они лежат в самом файле отчёта (отдельным словарём,
-     * рядом с данными), поэтому меняются вместе с ним — и правка слова стоит
-     * пересборки отчёта, иначе файл разойдётся с историей. */
+    /* The page texts live inside the report file itself (a dictionary of their own, next to
+     * the data), so changing a word costs a rebuild of the report — otherwise the file
+     * drifts from the history. */
     page: {
       metrics: 'Метрики',
       files: 'Файлы',
       dir: 'все файлы папки {name} ({n})',
       dirNone: 'ни один файл папки {name} в отчёт не попал (в папке {n})',
-      /* Знак сложенной папки — своя цель нажатия: галочка отвечает за числа,
-       * знак — за то, сколько дерева видно. */
+      /* The fold mark is a click target of its own: the checkbox answers for the numbers,
+       * the mark for how much of the tree is visible. */
       foldClose: 'свернуть папку {name}',
       foldOpen: 'развернуть папку {name}',
-      /* Причина — у листа: в дереве он подписью, а не галочкой, и без этих слов
-       * читатель решил бы, что файл потерялся. */
+      /* The reason belongs to a leaf: in the tree it is a label rather than a checkbox,
+       * and without these words a reader would think the file was lost. */
       notMeasuredRule: 'не измеряется: такой файл колонкой быть не может'
         + ' (собранный, замок зависимостей, сам отчёт или слишком крупный)',
       notMeasuredChoice: 'не измеряется: в набор колонок отчёта не попал'
         + ' — набор задают настройки (columns)',
       all: 'все',
       sub: '{tool} {version} · {artifact}',
-      /* Слова точности: подпись метрики говорит про худшее в колонке, а клетки —
-       * про своё число. Одно слово на подпись и на подсказку клетки, чтобы не
-       * разошлось и не звучало по-разному. */
+      /* Words of precision: a metric label speaks about the worst in its column, a cell
+       * about its own number. One word serves both the label and the cell hint, so the two
+       * cannot drift or sound differently. */
       exact: 'точное число',
       approximate: 'приближение',
       approximateCell: 'приближённое число: ',

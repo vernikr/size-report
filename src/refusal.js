@@ -3,17 +3,17 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { TOOL_PKG } from './tool.js';
 
-/* Отказ и справка: код выхода, сообщение с готовой командой починки и текст
- * «--help». Стоит ниже всех в цепочке — ни о настройках, ни о git не знает,
- * поэтому его может звать любой модуль. */
+/* Refusal and help: an exit code, a message carrying the command that fixes the problem,
+ * and the `--help` text. It stands at the bottom of the chain — it knows neither the
+ * settings nor git — which is why any module may call it. */
 
-// Пакет — модуль, а подсказка в `loadConfig` цитирует путь самого движка: в ESM
-// `__filename` нет, поэтому путь берётся от `import.meta.url`.
+// ESM has no `__filename`, and `invocation()` needs the engine's own location: the path
+// comes from `import.meta.url`.
 const __filename = fileURLToPath(import.meta.url);
 
-/* Отказ — это код выхода и одна строка с готовой командой починки: по коду
- * ветвится агент (таблица кодов в `PLAN.md` §4.1), по тексту — человек. Стек
- * наружу не отдаётся вовсе: подсказки в нём нет, зато есть пути машины. */
+/* A refusal is an exit code and one line with the command that fixes it: an agent branches
+ * on the code (the table is in `USAGE` below), a human reads the text. The stack is never
+ * handed out — it holds no hint, only paths of the machine. */
 export const EXIT = { OK: 0, VIOLATION: 1, CONFIG: 2, SHALLOW: 3, SENSOR: 4, INTERNAL: 5 };
 
 export class Refusal extends Error {
@@ -27,12 +27,12 @@ export function refuse(code, message) {
   throw new Refusal(code, message);
 }
 
-/* Причины отказа кодом 2 — одним списком, и он единственное место, где они
- * перечислены словами: справка печатает их из него, таблица кодов в `README.md`
- * сверяется с ним проверкой (`test/docs-commands.test.js`), а `refuseCause` не
- * пропускает отказ, не назвавший причины. Поэтому «в документации сказано
- * меньше, чем бывает» здесь не может случиться молча. Группы — по тому, откуда
- * причина: разбор вызова, настройки и проект, история, хук, измерение. */
+/* The causes of a code-2 refusal in one list, and this is the only place where they are
+ * spelled out: the help prints them from it, the code table in `README.md` is checked
+ * against it (`test/docs-commands.test.js`), and `refuseCause` lets no refusal through
+ * without a named cause. So "the documentation says less than happens" cannot pass here
+ * silently. The groups say where a cause comes from: the command line, settings and the
+ * project, history, the hook, measurement. */
 export const CONFIG_CAUSES = [
   ['командная строка', [
     'незнакомый ключ', 'ключ без значения', 'повтор ключа', 'два режима сразу',
@@ -48,8 +48,8 @@ export const CONFIG_CAUSES = [
   ['измерение', ['файл не JavaScript', 'минификатор не разобрал']]
 ];
 
-/* Причина — объявленное имя, а не украшение текста: неназванная не доедет до
- * пользователя, потому что это дефект инструмента, а не тупик человека. */
+/* A cause is a declared name, not decoration of the text: an undeclared one never reaches
+ * the user, because that is a defect of the tool rather than a dead end for a human. */
 export function refuseCause(cause, message) {
   if (!CONFIG_CAUSES.some((g) => g[1].indexOf(cause) >= 0)) {
     throw new Error('причина отказа не объявлена: ' + cause);
@@ -57,21 +57,22 @@ export function refuseCause(cause, message) {
   refuse(EXIT.CONFIG, message);
 }
 
-/* Строки справки про причины — из того же списка, поэтому справка не может
- * разойтись с проверками. */
+/* The help lines about causes come from the same list, so the help cannot drift from the
+ * checks. */
 const CAUSE_LINES = CONFIG_CAUSES.map((g) => '  ' + g[0] + ': ' + g[1].join(' · '));
 
-/* Как инструмент вызывается там, где его читают. Совет называет то, что лежит
- * рядом, и никогда — имя пакета: `npx <имя>` запускает установленный пакет, только
- * пока тот на месте, а в проекте без него имя уходит в реестр и запускает чужой
- * пакет с тем же именем — текст, который должен выручать, приводит к чужому коду.
- * Поэтому форма одна: путь внутри проекта (`node node_modules/<имя>/bin/size.js`) —
- * в проекте с пакетом она работает, без пакета отказывает на месте и в сеть не идёт.
+/* How the tool is called where it is read. The advice names what lies nearby and never the
+ * package name: `npx <name>` runs the installed package only while it is there, and in a
+ * project without it the name goes to the registry and runs a foreign package of the same
+ * name — a text meant to rescue the user would lead into foreign code. Hence one form: a
+ * path inside the project (`node node_modules/<name>/bin/size.js`), which works where the
+ * package is installed and, where it is not, refuses on the spot without touching the
+ * network.
  *
- * Команда починки цитирует точку входа, а не сам движок: при импорте движок ничего
- * не запускает, поэтому `--init` работает только через команду. Путь в репозитории
- * пакета считается от места движка, а не от текущего каталога, — сообщение обязано
- * работать из любого места проекта. */
+ * The fix command quotes the entry point rather than the engine itself: importing the
+ * engine runs nothing, so `--init` works through the command only. Inside the package's own
+ * repository the path is computed from the engine's location rather than from the current
+ * directory — the message has to work from anywhere in the project. */
 export function invocation() {
   const local = path.join('node_modules', TOOL_PKG.name, 'bin', 'size.js');
   if (fs.existsSync(path.resolve(process.cwd(), local))) return 'node ' + local;
@@ -84,8 +85,8 @@ export function cliCommand(flag) {
   return invocation() + ' ' + flag;
 }
 
-/* Путь внутри готовой команды: пробел или кавычка в нём сломали бы копирование,
- * поэтому такой путь берётся в кавычки — так его и приняла бы оболочка. */
+/* A path inside a ready-made command: a space or a quote in it would break copying, so such
+ * a path is quoted the way a shell would accept it. */
 export function advicePath(p) {
   return /[\s"'$`\\]/.test(p) ? JSON.stringify(p) : p;
 }

@@ -51,8 +51,8 @@ comment diff stays under the commit budget, otherwise it is split by file groups
 
 - [x] **M1 entry** — `bin/size.js`, `bin/postinstall.js`, `src/size-table.js`, `src/cli.js`,
   `src/args.js`, `src/modes.js` (610 → 568 lines; journal entry `worklog/0071`, 2026-09-15).
-- [ ] **M2 texts** — `src/refusal.js`, `src/locales.js` (271). Comments only: the
-  dictionaries themselves are data.
+- [x] **M2 texts** — `src/refusal.js`, `src/locales.js` (271 → 270; journal entry `worklog/0072`,
+  2026-09-15). Comments only: the dictionaries themselves are data.
 - [ ] **M3 measures** — `src/metrics.js`, `src/minify.js`, `src/tokens.js`, `src/optional.js`,
   `src/strip.js`, `src/strip/js.js`, `src/strip/forms.js`, `src/strip/guard.js`,
   `src/parse.js`, `src/parse-worker.js` (891).
