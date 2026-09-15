@@ -90,7 +90,9 @@ a prerequisite.
 
 - No Russian prose left outside `worklog/**` and user-visible strings; checked with
   `rg -l '[А-Яа-яЁё]' -g '*.md' -g '!worklog/**' -g '!docs/size-report.html'`.
-- `pnpm run verify` green after every portion; `pnpm run verify:slow` green once at the end.
+- `pnpm run verify` green after every portion. `pnpm run verify:slow` cannot be green under this
+  plan alone: its `cover` step is red for two measured reasons and going green needs a human
+  decision — the coverage ratchet item under Open questions, `BLOCKERS.md` note N14.
 - Every document checked against the tree of the day it was rewritten; every deleted claim
   named in the worklog entry together with why it no longer held.
 - `wc -l` before and after recorded per file in the worklog entry, and the report's own
@@ -114,6 +116,18 @@ a prerequisite.
   the release commit that opened it and the one that touched an existing section touched only
   that one. Evidence, the three options with their costs and what is left for the user:
   `BLOCKERS.md`, note N11.
+- **Coverage ratchet versus comment-only portions — measured 2026-09-15.** The `cover` step of
+  the slow profile is red (11 per-file regressions), and comment passes make it red mechanically:
+  `c8` counts every line of a file while the coverage share falls when a comment inside executed
+  code is removed, since numerator and denominator both drop. Measured with three worktrees: green
+  at `202c768` (where the baseline was taken), red already at `758a385` — the parent of the first
+  comment pass — with one regression (`src/data.js` branches, from the report work that followed
+  the baseline and never refreshed it), and eleven now, ten of them ours by this mechanism. No check
+  was lost: tree totals are 80.53 % → 80.57 % lines, branches 89.05 % and functions 92.37 %
+  unchanged, and no comment commit touched a code line. So this plan's "`verify:slow` green once at
+  the end" cannot come true by itself, and the remaining portions (`M9f`, `M10`, `M11`) will redden
+  the step again. Evidence, the three options with their costs and the question: `BLOCKERS.md`,
+  note N14.
 - **Release per comment-only portion.** A comment rewrite changes the bytes that ship in the
   tarball without changing behaviour. Decide once, with the mission agent: release a PATCH
   per portion, or batch the releases and say so in the commit.
