@@ -65,13 +65,13 @@ export function noteText(rows, cfg) {
     + fill(loc.note.rows, { rows: rows.length, command: cfg.fixCommand });
 }
 
-export function render(rows, cfg) {
-  const loc = LOCALES[cfg.locale];
+/* Шапка таблицы: строка групп (итог и колонки) и под ней строка метрик. */
+function tableHead(cfg, loc) {
   const metrics = cfg.metrics;
   const groupHead = (label, cls) => '<th colspan="' + metrics.length + '" class="' + cls + '">' + esc(label) + '</th>';
   const subHead = () => metrics.map((m, i) => '<th' + (i === 0 ? ' class="g"' : '') + '>'
     + esc(METRICS[m].label) + '</th>').join('');
-  const head = '<tr>'
+  return '<tr>'
     + '<th rowspan="2" class="c-commit">' + esc(loc.commit) + '</th>'
     + groupHead(loc.total, 'g')
     + cfg.columns.map((c) => groupHead(c.label, 'g')).join('')
@@ -79,11 +79,17 @@ export function render(rows, cfg) {
     + subHead()
     + cfg.columns.map(() => subHead()).join('')
     + '</tr>';
+}
 
-  /* Дельта считается к предыдущему коммиту (в списке ниже он идёт строкой ниже),
-   * а появление файла — рост на весь его объём: иначе сумма дельт по колонке не
-   * сходилась бы с текущим размером, и верхняя строка была бы недоказуемой. Всё
-   * это считает `rowModel` — тот же, что и на странице. */
+/* Тело таблицы: строки-коммиты сверху вниз — от старых к новым, — а над ними
+ * строка «сейчас» с абсолютными размерами.
+ *
+ * Дельта считается к предыдущему коммиту (в списке ниже он идёт строкой ниже),
+ * а появление файла — рост на весь его объём: иначе сумма дельт по колонке не
+ * сходилась бы с текущим размером, и верхняя строка была бы недоказуемой. Всё
+ * это считает `rowModel` — тот же, что и на странице. */
+function tableBody(rows, cfg, loc) {
+  const metrics = cfg.metrics;
   const cellsHtml = (make) => (cells) => cells.map((c, mi) => make(c, mi === 0)).join('');
   const rowCells = cellsHtml((c, first) => cellHtml(c, first));
   const nowCells = cellsHtml((v, first) => valueHtml(v, first));
@@ -94,12 +100,15 @@ export function render(rows, cfg) {
       + blocksHtml(rowModel(row.cells, prev === null ? null : prev.cells, metrics), rowCells)
       + '</tr>';
   }).reverse().join('\n');
-
   const nowRow = rows.length === 0 ? '' : '<tr class="now">'
     + '<th class="c-commit">' + esc(loc.now) + '</th>'
     + blocksHtml(nowModel(rows[rows.length - 1].cells, metrics), nowCells)
     + '</tr>';
+  return nowRow + '\n' + body;
+}
 
+export function render(rows, cfg) {
+  const loc = LOCALES[cfg.locale];
   /* Подпись называет только то, что не меняется от самих служебных коммитов:
    * число строк и список колонок. Иначе таблица считалась бы устаревшей сразу
    * после собственного коммита — из-за пересчитанного «пропущено N» в тексте. */
@@ -118,11 +127,10 @@ ${CSS}
 <p class="note">${noteText(rows, cfg)}</p>
 <table>
 <thead>
-${head}
+${tableHead(cfg, loc)}
 </thead>
 <tbody>
-${nowRow}
-${body}
+${tableBody(rows, cfg, loc)}
 </tbody>
 </table>
 </body>

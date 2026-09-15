@@ -148,13 +148,38 @@ async function checkContract(bin, dir, env, frozen) {
   return { errors: errors, gaps: gaps, rows: got.rows.length, files: got.files.length };
 }
 
-/* Одно окружение целиком: свой клон, свои прогоны, свой список строк вывода.
- * Строки копятся, а не печатаются по ходу: окружения идут вперемешку, и живая
- * печать перемешала бы два отчёта в один нечитаемый. */
+/* Одна сверка: строка о результате и признак «плохо» (0 или 1). Строки копятся в
+ * общем списке окружения, а не печатаются по ходу: окружения идут вперемешку, и
+ * живая печать перемешала бы два отчёта в один нечитаемый. */
+function verdict(lines, ok, good, bad) {
+  lines.push('    ' + (ok ? '✓ ' : '✗ ') + (ok ? good : bad));
+  return ok ? 0 : 1;
+}
+
+/* Прогон не отдал ответа вовсе — сверять дальше нечего: окружение закрывается
+ * сразу, но провал считается вместе с уже найденными. */
+function broken(lines, bad, why) {
+  lines.push('    ✗ ' + why);
+  return { bad: bad + 1, lines: lines };
+}
+
+/* Контракт данных — не побайтовая сверка, а раскладка той же истории по полям; его
+ * ошибки печатаются не все, а первые три: остальные — следствие первой. */
+function contractLines(lines, contract) {
+  if (contract.errors.length === 0) {
+    lines.push('    ✓ контракт данных несёт те же числа: ' + contract.rows + ' строк, '
+      + contract.files + ' файлов, итоги и дельты сходятся с «сейчас»'
+      + (contract.gaps.length === 0 ? '' : ' (кроме колонок с возвратом файла: ' + contract.gaps.join(', ') + ')'));
+    return 0;
+  }
+  contract.errors.slice(0, 3).forEach((e) => lines.push('    ✗ контракт данных: ' + e));
+  return 1;
+}
+
+/* Одно окружение целиком: свой клон, свои прогоны, свой список строк вывода. */
 async function checkProfile(profile, expected, tmp) {
   const { bin, repo, head, data, frozen, artifactSha, artifactRel } = expected;
   const lines = ['— ' + profile.label];
-  const say = (text) => lines.push(text);
   let bad = 0;
 
   const dir = path.join(tmp, 'clone-' + PROFILES.indexOf(profile));
@@ -162,49 +187,23 @@ async function checkProfile(profile, expected, tmp) {
   gitIn(dir, ['checkout', '-q', head]);
 
   const json = await runCli(bin, dir, ['--json'], profile.env);
-  if (json.code !== 0) {
-    say('    ✗ движок не отдал --json (код ' + json.code + '): ' + json.stderr.trim());
-    return { bad: bad + 1, lines: lines };
-  }
-  if (json.stdout === data) {
-    say('    ✓ числа совпали с эталоном побайтово');
-  } else {
-    bad++;
-    say('    ✗ числа разошлись с эталоном: ' + firstDiff(json.stdout, data));
-  }
+  if (json.code !== 0) return broken(lines, bad, 'движок не отдал --json (код ' + json.code + '): ' + json.stderr.trim());
+  bad += verdict(lines, json.stdout === data, 'числа совпали с эталоном побайтово',
+    'числа разошлись с эталоном: ' + firstDiff(json.stdout, data));
 
   const wrote = await runCli(bin, dir, ['--write'], profile.env);
-  if (wrote.code !== 0) {
-    say('    ✗ движок не собрал артефакт: ' + wrote.stderr.trim());
-    return { bad: bad + 1, lines: lines };
-  }
+  if (wrote.code !== 0) return broken(lines, bad, 'движок не собрал артефакт: ' + wrote.stderr.trim());
   const artifact = fs.readFileSync(path.join(dir, artifactRel));
-  if (sha256(artifact) === artifactSha) {
-    say('    ✓ артефакт совпал побайтово: ' + artifact.length + ' Б, sha256 ' + artifactSha.slice(0, 12));
-  } else {
-    bad++;
-    say('    ✗ артефакт разошёлся: sha256 ' + sha256(artifact).slice(0, 12)
+  bad += verdict(lines, sha256(artifact) === artifactSha,
+    'артефакт совпал побайтово: ' + artifact.length + ' Б, sha256 ' + artifactSha.slice(0, 12),
+    'артефакт разошёлся: sha256 ' + sha256(artifact).slice(0, 12)
       + ' против эталонного ' + artifactSha.slice(0, 12));
-  }
 
   const checked = await runCli(bin, dir, [], profile.env);
-  if (checked.code === 0) {
-    say('    ✓ контрольный режим на своём артефакте зелёный');
-  } else {
-    bad++;
-    say('    ✗ контрольный режим красный: ' + checked.stderr.trim());
-  }
+  bad += verdict(lines, checked.code === 0, 'контрольный режим на своём артефакте зелёный',
+    'контрольный режим красный: ' + checked.stderr.trim());
 
-  const contract = await checkContract(bin, dir, profile.env, frozen);
-  if (contract.errors.length === 0) {
-    say('    ✓ контракт данных несёт те же числа: ' + contract.rows + ' строк, '
-      + contract.files + ' файлов, итоги и дельты сходятся с «сейчас»'
-      + (contract.gaps.length === 0 ? '' : ' (кроме колонок с возвратом файла: ' + contract.gaps.join(', ') + ')'));
-  } else {
-    bad++;
-    contract.errors.slice(0, 3).forEach((e) => say('    ✗ контракт данных: ' + e));
-  }
-
+  bad += contractLines(lines, await checkContract(bin, dir, profile.env, frozen));
   return { bad: bad, lines: lines };
 }
 

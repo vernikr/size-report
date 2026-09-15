@@ -36,18 +36,22 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      # Действия закреплены по SHA коммита, а не по плавающей метке: метку двигают.
+      # actions/checkout v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
+      # pnpm/action-setup v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
 
       # `registry-url` здесь намеренно не указан: setup-node пишет тогда в `.npmrc`
       # строку `_authToken=${NODE_AUTH_TOKEN}`, а с ней npm считает учётные данные
       # заданными и за удостоверением OIDC не идёт — публикация падает 404 при
       # верной настройке издателя. Адрес реестра и так по умолчанию
       # registry.npmjs.org, а нужный явно прописан в `publishConfig` манифеста.
-      - uses: actions/setup-node@v7
+      # actions/setup-node v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
           cache: pnpm

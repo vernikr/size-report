@@ -286,7 +286,8 @@ function record(root, fields, note) {
  * Подпись коммита не спрашивается: настройка машины не должна останавливать коммит.
  * Дешёвый индекс здесь — временный: настоящий трогается один раз, и только в записи
  * об отчёте, иначе после коммита дерево было бы грязным. */
-function commitReport(root, rel, file, message, branch, head) {
+function commitReport(root, job) {
+  const { rel, file, message, branch, head } = job;
   const fail = (why) => ({ ok: false, why: why });
   const blob = gitTry(root, ['hash-object', '-w', '--', file]);
   if (blob.status !== 0) return fail('git hash-object: ' + blob.stderr.trim());
@@ -374,31 +375,36 @@ function runLocked(root, configFile, sha) {
       '✗ size-report: внутренняя ошибка: ' + e.stack);
   }
 
-  const rel = path.relative(root, out.file);
+  return storeReport(root, cfg, branch, sha, out.file);
+}
+
+/* Запись отчёта после пересборки: не отслеживается — сказать словами, не
+ * изменился — ничего не делать, изменился — закоммитить. */
+function storeReport(root, cfg, branch, head, file) {
+  const rel = path.relative(root, file);
   if (gitTry(root, ['ls-files', '--error-unmatch', '--', rel]).status !== 0) {
     return record(root, {
       result: 'rebuilt',
-      head: sha,
+      head: head,
       report: cfg.output,
       why: 'отчёт не отслеживается git: пересобран, коммита нет'
     });
   }
   const diff = gitTry(root, ['diff', '--quiet', 'HEAD', '--', rel]);
   if (diff.status === 0) {
-    return record(root, { result: 'unchanged', head: sha, report: cfg.output });
+    return record(root, { result: 'unchanged', head: head, report: cfg.output });
   }
   if (diff.status !== 1) {
-    return record(root, { result: 'failed', head: sha, report: cfg.output, why: 'git diff: ' + diff.stderr.trim() },
+    return record(root, { result: 'failed', head: head, report: cfg.output, why: 'git diff: ' + diff.stderr.trim() },
       '✗ size-report: git diff -- ' + rel + ': ' + diff.stderr.trim());
   }
 
-  const message = 'chore(report): отчёт пересобран после ' + sha.slice(0, 7);
-  const commit = commitReport(root, rel, out.file, message, branch, sha);
+  const message = 'chore(report): отчёт пересобран после ' + head.slice(0, 7);
+  const commit = commitReport(root, { rel: rel, file: file, message: message, branch: branch, head: head });
   if (!commit.ok) {
-    return record(root, { result: 'refused', head: sha, report: cfg.output, why: commit.why },
+    return record(root, { result: 'refused', head: head, report: cfg.output, why: commit.why },
       '✗ size-report: коммит отчёта не прошёл: ' + commit.why);
   }
-  const made = commit.sha;
-  return record(root, { result: 'committed', head: sha, report: cfg.output, commit: made },
-    '✓ size-report: ' + cfg.output + ' пересобран и закоммичен (' + made + ')');
+  return record(root, { result: 'committed', head: head, report: cfg.output, commit: commit.sha },
+    '✓ size-report: ' + cfg.output + ' пересобран и закоммичен (' + commit.sha + ')');
 }

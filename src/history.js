@@ -36,112 +36,129 @@ function changesVolume(state, before, columns, metrics) {
   });
 }
 
-/* Проход по истории. Состояние колонки переносится вперёд, а перезамер делается
- * только для изменившихся в коммите файлов. Читается всё сразу: сначала план
- * «какие пары ревизия:путь понадобятся», затем один поход в git (`readBlobs`),
- * затем собственно измерение — иначе на каждый коммит приходилось бы по
- * git-вызову на колонку. Значения метрик кэшируются по sha блоба: ревизия с тем
- * же содержимым (откат, повторный merge) не пересчитывается.
- *
- * `known` — уже прочитанная история: проходам, которым она нужна ещё и сама по
- * себе (полнота покрытия), незачем звать `git log` второй раз. */
-export function measureHistory(cfg, root, known) {
-  const commits = known === undefined ? readHistory(root) : known;
-  const metrics = cfg.metrics;
-  // Текст журнала нужен всегда: ссылка в раздел — не метрика, но тоже чтение.
-  const needText = !!cfg.journal || metrics.some((m) => METRICS[m].needsText);
-  const skipPaths = [cfg.output].concat(cfg.skip || []);
-  const state = cfg.columns.map(() => null);
-  const rows = [];
-  const dropped = [];
-  const mixed = [];
-  let journalPrev = '';
-
+/* План чтения: какие пары «ревизия:путь» понадобятся и всё содержимое сразу — иначе
+ * на каждый коммит приходилось бы по git-вызову на колонку. Псевдонимов колонки,
+ * которых коммит коснулся, может быть и два: при выключенном распознавании
+ * переименований git отдаёт в одном коммите и старое имя, и новое. Собираются все —
+ * какой из них в коммите действительно есть, решается потом, по прочитанным блобам. */
+function readPlan(cfg, root, commits, needText) {
   const plan = commits.map((c) => {
     const changed = new Set(c.files);
-    /* Псевдонимов колонки, которых коммит коснулся, может быть и два: при
-     * выключенном распознавании переименований git отдаёт в одном коммите и старое
-     * имя, и новое. Собираются все — какой из них в коммите действительно есть,
-     * решается потом, по прочитанным блобам. */
     const picks = cfg.columns.map((col) => col.paths
       .filter((cand) => changed.has(cand))
       .map((path) => ({ path: path, spec: c.sha + ':' + path })));
     const journal = cfg.journal && changed.has(cfg.journal.path) ? c.sha + ':' + cfg.journal.path : null;
     return { picks: picks, journal: journal };
   });
-
   const specs = [];
   plan.forEach((p) => {
     p.picks.forEach((candidates) => { candidates.forEach((cand) => specs.push(cand.spec)); });
     if (p.journal !== null) specs.push(p.journal);
   });
-  const blobs = readBlobs(root, specs, needText);
+  return { plan: plan, blobs: readBlobs(root, specs, needText) };
+}
 
+/* Замер блоба с памятью на проход: ревизия с тем же содержимым (откат, повторный
+ * merge) не пересчитывается. */
+function measurer(cfg) {
   const measured = new Map(); // sha блоба + метрика → число
-  const measure = (name, blob, file, rev) => {
+  return (name, blob, file, rev) => {
     const key = blob.sha + '\u0000' + name;
     if (measured.has(key)) return measured.get(key);
     const value = measureBlob(name, blob, file, cfg, rev);
     measured.set(key, value);
     return value;
   };
+}
 
-  commits.forEach((c, ci) => {
-    let section = null;
-    if (plan[ci].journal !== null) {
-      const journalBlob = blobs.get(plan[ci].journal);
-      if (journalBlob !== undefined) {
-        section = touchedSection(journalPrev, journalBlob.text, cfg.journal.pattern);
-        journalPrev = journalBlob.text;
-      }
-    }
-
-    const before = state.slice();
-    plan[ci].picks.forEach((candidates, i) => {
-      /* Из псевдонимов берётся тот, который в коммите есть, а не первый по
-       * порядку настроек: исчезнувшее имя в коммите отсутствует, и состояние,
-       * взятое по порядку, теряло файл (а сверка с деревом — отказывала). */
-      const pick = candidates.find((cand) => blobs.get(cand.spec) !== undefined);
-      if (pick === undefined) {
-        // Путь в коммите есть, а файла по нему нет — файл удалён.
-        if (candidates.length > 0) state[i] = null;
-        return;
-      }
-      const blob = blobs.get(pick.spec);
-      const cells = {};
-      /* Приближённость числа — свойство пути, а не блоба: от расширения зависит,
-       * возьмёт ли формат минификатор. Поэтому она считается здесь, вместо с
-       * замером, и в кэш содержимого не попадает. */
-      const approx = {};
-      metrics.forEach((m) => {
-        cells[m] = measure(m, blob, pick.path, c.sha);
-        approx[m] = !pointExact(m, pick.path, cfg);
-      });
-      state[i] = { path: pick.path, sha: blob.sha, cells: cells, approx: approx };
-    });
-
-    if (c.parents.length > 1 && !cfg.rows.merges) { dropped.push({ sha: c.sha, reason: 'merge' }); return; }
-    if (c.files.length > 0 && c.files.every((f) => skipPaths.indexOf(f) >= 0)) {
-      dropped.push({ sha: c.sha, reason: 'report' });
+/* Правки коммита в состояние: из псевдонимов берётся тот, который в коммите есть, а
+ * не первый по порядку настроек, — исчезнувшее имя в коммите отсутствует, и
+ * состояние, взятое по порядку, теряло файл (а сверка с деревом — отказывала). */
+function applyPicks(pass, c, picks) {
+  picks.forEach((candidates, i) => {
+    const pick = candidates.find((cand) => pass.blobs.get(cand.spec) !== undefined);
+    if (pick === undefined) {
+      // Путь в коммите есть, а файла по нему нет — файл удалён.
+      if (candidates.length > 0) pass.state[i] = null;
       return;
     }
-    if (!changesVolume(state, before, cfg.columns, metrics)) {
-      dropped.push({ sha: c.sha, reason: 'flat' });
-      return;
-    }
-    if (c.files.some((f) => f === cfg.output)) mixed.push(c.sha.slice(0, 7));
-
-    rows.push({
-      sha: c.sha,
-      when: c.when,
-      subject: c.subject,
-      section: section,
-      cells: state.map((s) => (s === null ? null : s.cells)),
-      approx: state.map((s) => (s === null ? null : s.approx))
+    const blob = pass.blobs.get(pick.spec);
+    const cells = {};
+    /* Приближённость числа — свойство пути, а не блоба: от расширения зависит,
+     * возьмёт ли формат минификатор. Поэтому она считается здесь, вместо с
+     * замером, и в кэш содержимого не попадает. */
+    const approx = {};
+    pass.metrics.forEach((m) => {
+      cells[m] = pass.measure(m, blob, pick.path, c.sha);
+      approx[m] = !pointExact(m, pick.path, pass.cfg);
     });
+    pass.state[i] = { path: pick.path, sha: blob.sha, cells: cells, approx: approx };
   });
+}
 
-  return { rows, dropped, mixed, state };
+/* Один коммит прохода: сдвиг состояния, затем — нужна ли коммиту строка. `pass`
+ * общий на весь проход (состояние, списки, память замеров), поэтому функция только
+ * двигает его вперёд. */
+function stepCommit(pass, c, ci) {
+  const plan = pass.plan[ci];
+  let section = null;
+  if (plan.journal !== null) {
+    const journalBlob = pass.blobs.get(plan.journal);
+    if (journalBlob !== undefined) {
+      section = touchedSection(pass.journalPrev, journalBlob.text, pass.cfg.journal.pattern);
+      pass.journalPrev = journalBlob.text;
+    }
+  }
+
+  const before = pass.state.slice();
+  applyPicks(pass, c, plan.picks);
+
+  if (c.parents.length > 1 && !pass.cfg.rows.merges) { pass.dropped.push({ sha: c.sha, reason: 'merge' }); return; }
+  if (c.files.length > 0 && c.files.every((f) => pass.skipPaths.indexOf(f) >= 0)) {
+    pass.dropped.push({ sha: c.sha, reason: 'report' });
+    return;
+  }
+  if (!changesVolume(pass.state, before, pass.cfg.columns, pass.metrics)) {
+    pass.dropped.push({ sha: c.sha, reason: 'flat' });
+    return;
+  }
+  if (c.files.some((f) => f === pass.cfg.output)) pass.mixed.push(c.sha.slice(0, 7));
+
+  pass.rows.push({
+    sha: c.sha,
+    when: c.when,
+    subject: c.subject,
+    section: section,
+    cells: pass.state.map((s) => (s === null ? null : s.cells)),
+    approx: pass.state.map((s) => (s === null ? null : s.approx))
+  });
+}
+
+/* Проход по истории. Состояние колонки переносится вперёд, а перезамер делается
+ * только для изменившихся в коммите файлов.
+ *
+ * `known` — уже прочитанная история: проходам, которым она нужна ещё и сама по
+ * себе (полнота покрытия), незачем звать `git log` второй раз. */
+export function measureHistory(cfg, root, known) {
+  const commits = known === undefined ? readHistory(root) : known;
+  // Текст журнала нужен всегда: ссылка в раздел — не метрика, но тоже чтение.
+  const needText = !!cfg.journal || cfg.metrics.some((m) => METRICS[m].needsText);
+  const reads = readPlan(cfg, root, commits, needText);
+  const pass = {
+    cfg: cfg,
+    metrics: cfg.metrics,
+    plan: reads.plan,
+    blobs: reads.blobs,
+    measure: measurer(cfg),
+    skipPaths: [cfg.output].concat(cfg.skip || []),
+    state: cfg.columns.map(() => null),
+    rows: [],
+    dropped: [],
+    mixed: [],
+    journalPrev: ''
+  };
+  commits.forEach((c, ci) => stepCommit(pass, c, ci));
+  return { rows: pass.rows, dropped: pass.dropped, mixed: pass.mixed, state: pass.state };
 }
 
 /* Сверка с рабочим деревом отвечает на два вопроса, и оба обязательны: состояние

@@ -47,6 +47,9 @@ export const FOREIGN = [
   // прошлое: путь, под которым лежали байты замороженной копии реализации, — она
   // выведена из дерева (REFACTOR.md R-1.5), а документы называют её по-прежнему
   'fixtures/legacy/size-table.cjs',
+  // прошлое: набор контракта разделён по предмету на четыре файла (WORKLOG §59),
+  // а исторические записи называют его прежним именем — и это правда о них
+  'test/contract.test.js',
   // плановое: то, что описано как цель, а не как факт
   'dist/app.js', '.size-report/report.html', '.size-report/data.json',
   'docs/METHODS.md', 'docs/DATA-FORMAT.md', 'docs/ARCHITECTURE.md',

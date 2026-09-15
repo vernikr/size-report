@@ -41,7 +41,21 @@
     "parity:live": "node tools/parity-live.js",
     "pack:check": "node tools/pack-check.js",
     "check:standards": "node tools/check-standards.js",
-    "fixture": "node tools/make-fixture.js"
+    "fixture": "node tools/make-fixture.js",
+    "verify:fast": "node tools/gates/run.js fast",
+    "verify": "node tools/gates/run.js full",
+    "verify:slow": "node tools/gates/run.js slow",
+    "metrics": "node tools/gates/metrics.js",
+    "dup": "node tools/gates/dup.js",
+    "dup:ci": "node tools/gates/dup.js --ref origin/main",
+    "dup:baseline": "node tools/gates/dup.js --update",
+    "deps": "node tools/gates/deps.js",
+    "cover": "node tools/gates/coverage.js",
+    "gate:files": "node tools/gates/gatefiles.js",
+    "baseline:metrics": "eslint --config eslint.metrics.config.js --suppressions-location .eslint-suppressions.json --prune-suppressions src bin tools test && eslint --config eslint.metrics.config.js --suppressions-location .eslint-suppressions.json --suppress-all src bin tools test",
+    "baseline:dup": "node tools/gates/dup.js --update",
+    "baseline:coverage": "node tools/gates/coverage.js --update",
+    "hooks:install": "git config core.hooksPath .githooks"
   },
   "keywords": [
     "size",
@@ -51,7 +65,11 @@
     "report"
   ],
   "devDependencies": {
+    "c8": "10",
+    "dependency-cruiser": "17",
     "eslint": "^9.18.0",
+    "eslint-plugin-sonarjs": "4",
+    "jscpd": "5.2.0",
     "jsdom": "~26"
   },
   "optionalDependencies": {

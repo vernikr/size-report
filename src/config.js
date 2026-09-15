@@ -99,15 +99,13 @@ export function loadConfig(file, root) {
   return cfg;
 }
 
-export function validateConfig(cfg) {
-  const fail = (msg) => refuseCause('настройки неверны',
-    'конфиг ' + cfg.path + ': ' + msg + '\n  починка: правьте ' + cfg.path);
+/* Колонки: метка и пути — имена, а не что попало: путь числом или объектом молча не
+ * совпадает ни с чем, и колонка отчитывается нулём строк за успех. Отказ обязан
+ * случиться здесь, а не превратиться в пустой отчёт. */
+function checkColumns(cfg, fail) {
   if (!cfg.columns || cfg.columns.length === 0) fail('не задано ни одной колонки (columns)');
   const labels = new Set();
   cfg.columns.forEach((c, i) => {
-    // Метка и пути — имена, а не что попало: путь числом или объектом молча не
-    // совпадает ни с чем, и колонка отчитывается нулём строк за успех. Отказ
-    // обязан случиться здесь, а не превратиться в пустой отчёт.
     const pathsAreNames = c && Array.isArray(c.paths)
       && c.paths.length > 0 && c.paths.every((p) => typeof p === 'string' && p !== '');
     if (!c || typeof c.label !== 'string' || c.label === '' || !pathsAreNames) {
@@ -122,13 +120,22 @@ export function validateConfig(cfg) {
     }
     labels.add(c.label);
   });
+}
+
+function checkMetrics(cfg, fail) {
   if (!Array.isArray(cfg.metrics) || cfg.metrics.length === 0) fail('не заданы метрики (metrics)');
   cfg.metrics.forEach((m) => {
     if (!METRICS[m]) fail('неизвестная метрика «' + m + '» (есть: ' + Object.keys(METRICS).join(', ') + ')');
   });
+}
+
+function checkMinify(cfg, fail) {
   if (MINIFY_ENGINES.indexOf(cfg.minify.engine) < 0) {
     fail('неизвестный способ минификации «' + cfg.minify.engine + '» (есть: ' + MINIFY_ENGINES.join(', ') + ')');
   }
+}
+
+function checkTokens(cfg, fail) {
   const family = TOKEN_FAMILIES[cfg.tokens.family];
   if (family === undefined) {
     fail('неизвестное семейство токенизатора «' + cfg.tokens.family + '» (есть: '
@@ -138,21 +145,37 @@ export function validateConfig(cfg) {
     fail('неизвестная кодировка токенизатора «' + cfg.tokens.encoding + '» у семейства '
       + cfg.tokens.family + ' (есть: ' + family.encodings.join(', ') + ')');
   }
+}
+
+/* Файл таблицы не может быть её колонкой: размер артефакта зависит от числа строк,
+ * то есть от самого себя. */
+function checkOutput(cfg, fail) {
+  cfg.columns.forEach((c) => {
+    if (c.paths.indexOf(cfg.output) >= 0) fail('файл таблицы (' + cfg.output + ') не может быть колонкой');
+  });
+  if (!cfg.output) fail('не задан output');
+}
+
+function checkJournal(cfg, fail) {
+  if (!cfg.journal) return;
+  if (!cfg.journal.path) fail('journal.path не задан');
+  if (!cfg.journal.pattern) fail('journal.pattern не задан');
+  try { new RegExp(cfg.journal.pattern); } catch (e) { fail('journal.pattern не компилируется: ' + e.message); }
+}
+
+export function validateConfig(cfg) {
+  const fail = (msg) => refuseCause('настройки неверны',
+    'конфиг ' + cfg.path + ': ' + msg + '\n  починка: правьте ' + cfg.path);
+  checkColumns(cfg, fail);
+  checkMetrics(cfg, fail);
+  checkMinify(cfg, fail);
+  checkTokens(cfg, fail);
   if (!LOCALES[cfg.locale]) fail('неизвестная локаль «' + cfg.locale + '» (есть: ' + Object.keys(LOCALES).join(', ') + ')');
   // Выключатель хука — «да/нет», а не «правда/ложь»: `false` от случайной строки
   // отличать обязан инструмент, иначе выключенная автоматика осталась бы включённой.
   if (typeof cfg.hooks.enabled !== 'boolean') {
     fail('hooks.enabled — не «да/нет»: ' + JSON.stringify(cfg.hooks.enabled));
   }
-  // Файл таблицы не может быть её колонкой: размер артефакта зависит от числа
-  // строк, то есть от самого себя.
-  cfg.columns.forEach((c) => {
-    if (c.paths.indexOf(cfg.output) >= 0) fail('файл таблицы (' + cfg.output + ') не может быть колонкой');
-  });
-  if (!cfg.output) fail('не задан output');
-  if (cfg.journal) {
-    if (!cfg.journal.path) fail('journal.path не задан');
-    if (!cfg.journal.pattern) fail('journal.pattern не задан');
-    try { new RegExp(cfg.journal.pattern); } catch (e) { fail('journal.pattern не компилируется: ' + e.message); }
-  }
+  checkOutput(cfg, fail);
+  checkJournal(cfg, fail);
 }

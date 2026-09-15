@@ -16,6 +16,10 @@
  * Чего проверка не берёт — сказано в шапке каталога: формулировки вне фраз, смысл и
  * `--json`. Одно исключение названо явно и закрытым списком: отказ, который нельзя
  * вызвать прогоном, обязан объяснить, почему (сейчас такой ровно один).
+ *
+ * Разделение на три прогона — по предметам: счёт мест в исходниках, наличие случая у
+ * места, исполнение совета. Каждый читает дерево сам, поэтому порядок между ними не
+ * важен, а красный прогон называет свой предмет, а не «каталог вообще».
  */
 
 import { test } from 'node:test';
@@ -23,7 +27,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { CASES, PRINTED, SITES } from '../tools/refusals.js';
-import { ROOT } from '../tools/harness.js';
+import { ROOT, gitIn } from '../tools/harness.js';
 
 test('отказы, стерегомые другой проверкой, названы и в самом деле ею утверждаются', () => {
   const covered = CASES.filter((c) => c.coveredBy !== undefined);
@@ -39,22 +43,31 @@ test('отказы, стерегомые другой проверкой, наз
   });
 });
 
-test('у каждого места отказа в исходниках есть пункт каталога', () => {
+/* Места отказа в исходниках: причина из реестра и код из таблицы — два способа
+ * отказать, считаются оба. `src/refusal.js` не считается: он и есть механизм
+ * отказа, а не место, где инструмент отказывается. Обход — рекурсивный и по дереву
+ * git: место отказа может жить и в подкаталоге (`src/strip/guard.js`, `src/page/*`),
+ * а пропущенное место — это ровно то, чего проверка обязана не пропускать. Список
+ * берётся у git, как у соседней проверки причин (`docs-commands`): второй список
+ * разошёлся бы с первым тихо. */
+function refusalSites() {
   const found = new Map();
   const bump = (key) => found.set(key, (found.get(key) || 0) + 1);
-  // `src/refusal.js` не считается: он и есть механизм отказа, а не место, где
-  // инструмент отказывается.
-  const files = fs.readdirSync(path.join(ROOT, 'src')).filter((f) => f.endsWith('.js') && f !== 'refusal.js');
+  const files = gitIn(ROOT, ['ls-files', 'src']).split('\n')
+    .filter((f) => f.endsWith('.js') && f !== 'src/refusal.js');
   const printed = {};
   files.forEach((f) => {
-    const text = fs.readFileSync(path.join(ROOT, 'src', f), 'utf8');
-    // Причина из реестра и код из таблицы — два способа отказать; считаются оба.
+    const text = fs.readFileSync(path.join(ROOT, f), 'utf8');
     [...text.matchAll(/refuseCause\('([^']+)'/g)].forEach((m) => bump(m[1]));
     [...text.matchAll(/refuse\(EXIT\.([A-Z]+)/g)].forEach((m) => bump('EXIT.' + m[1]));
     const marks = [...text.matchAll(/'✗ /g)].length;
-    if (marks > 0) printed['src/' + f] = marks;
+    if (marks > 0) printed[f] = marks;
   });
+  return { found: found, printed: printed };
+}
 
+test('у каждого места отказа в исходниках есть пункт каталога', () => {
+  const { found, printed } = refusalSites();
   const declared = new Map(Object.entries(SITES));
   const missing = [...found.keys()].filter((k) => !declared.has(k));
   assert.deepEqual(missing, [], 'в исходниках есть место отказа без пункта каталога (tools/refusals.js): '
@@ -72,11 +85,13 @@ test('у каждого места отказа в исходниках есть
   // в этих файлах не проскочило молча.
   assert.deepEqual(printed, PRINTED, 'число отказов со знаком «✗» разошлось с картой PRINTED'
     + ' (tools/refusals.js) — у нового места обязан быть свой пункт');
+});
 
-  // У каждого объявленного места отказа есть случай: место без строки в каталоге,
-  // без ссылки на другую проверку и без названной причины, почему его не поймать,
-  // не стережёт никто. Счёт мест этого не ловит: место и пункт карты сходятся, а
-  // проверки у места нет.
+test('у каждого места отказа есть случай в каталоге', () => {
+  const declared = new Map(Object.entries(SITES));
+  // Место без строки в каталоге, без ссылки на другую проверку и без названной
+  // причины, почему его не поймать, не стережёт никто. Счёт мест этого не ловит:
+  // место и пункт карты сходятся, а проверки у места нет.
   const named = new Set(CASES.map((c) => (c.id === undefined ? c.key : c.id)));
   const noCase = [...declared.keys()].filter((k) => !named.has(k));
   assert.deepEqual(noCase, [], 'у места отказа нет ни случая в каталоге, ни названной'
@@ -94,6 +109,17 @@ test('у каждого места отказа в исходниках есть
     assert.deepEqual(c.advice, [], '«' + c.id + '»: отказ, который нельзя вызвать прогоном,'
       + ' не может ничего советовать — его вывод никто не читает');
   });
+
+  // Закрытый список того, что нельзя проверить прогоном: причина сказана словами.
+  const loose = CASES.filter((c) => c.uncatchable !== undefined);
+  assert.deepEqual(loose.map((c) => c.id), ['внутренняя ошибка'],
+    'список непроверяемых отказов изменился — это решение, а не мелочь, и его надо назвать');
+  loose.forEach((c) => {
+    assert.ok(c.uncatchable.length > 40, 'непроверяемый отказ «' + c.id + '» не объяснил, почему его не поймать');
+  });
+});
+
+test('совет, отданный другой проверке, она в самом деле исполняет', () => {
   const unfixed = [];
   CASES.forEach((c) => c.advice.forEach((a) => {
     if (a.kind !== 'coveredBy') return;
@@ -107,12 +133,4 @@ test('у каждого места отказа в исходниках есть
     }
   }));
   assert.deepEqual(unfixed, [], 'совет отдан другой проверке, а она его не исполняет:\n  ' + unfixed.join('\n  '));
-
-  // Закрытый список того, что нельзя проверить прогоном: причина сказана словами.
-  const loose = CASES.filter((c) => c.uncatchable !== undefined);
-  assert.deepEqual(loose.map((c) => c.id), ['внутренняя ошибка'],
-    'список непроверяемых отказов изменился — это решение, а не мелочь, и его надо назвать');
-  loose.forEach((c) => {
-    assert.ok(c.uncatchable.length > 40, 'непроверяемый отказ «' + c.id + '» не объяснил, почему его не поймать');
-  });
 });

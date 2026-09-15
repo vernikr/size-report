@@ -96,7 +96,8 @@ test('публикация не требует ни секрета, ни код�
    * издателе. Реестр и так по умолчанию registry.npmjs.org, а выставленный явно
    * адрес живёт в `publishConfig` манифеста. */
   const setup = doc.jobs.release.steps.find((s) => String(s.uses || '').startsWith('actions/setup-node'));
-  assert.ok(setup, 'в описании выпуска нет шага setup-node: Node берётся неизвестно откуда');
+  assert.notEqual(setup, undefined,
+    'в описании выпуска нет шага setup-node: Node берётся неизвестно откуда');
   assert.equal((setup.with || {})['registry-url'], undefined,
     'setup-node получает `registry-url`: подставная строка `_authToken` в `.npmrc`'
       + ' отменяет удостоверение OIDC, и публикация падает 404');

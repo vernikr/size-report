@@ -21,12 +21,10 @@ const REASON_TEXT = {
   flat: 'числа не сдвинулись: файлы колонок тронуты, а объём не изменился'
 };
 
-export function explainCommit(cfg, root, target) {
-  assertFullHistory(root);
-  const commits = readHistory(root);
-  /* Имя ревизии разрешает git, и только если имени нет — ищем начало sha по
-   * списку коммитов: так у неоднозначного префикса остаётся человеческий отказ
-   * со списком подходящих, а у имени — правила git, а не наши. */
+/* Коммит по названию. Имя ревизии разрешает git, и только если имени нет — ищем
+ * начало sha по списку коммитов: так у неоднозначного префикса остаётся
+ * человеческий отказ со списком подходящих, а у имени — правила git, а не наши. */
+function lookup(root, commits, target) {
   const resolved = resolveCommit(root, String(target));
   const needle = String(target).toLowerCase();
   const found = resolved === null
@@ -50,33 +48,57 @@ export function explainCommit(cfg, root, target) {
       + '\n  ' + found.slice(0, 5).map((c) => c.sha.slice(0, 7) + ' ' + c.subject).join('\n  ')
       + '\n  починка: назовите больше знаков');
   }
-  const c = found[0];
-  const measured = measureHistory(cfg, root, commits);
-  const row = measured.rows.findIndex((r) => r.sha === c.sha);
-  const dropped = measured.dropped.find((d) => d.sha === c.sha);
+  return found[0];
+}
 
+/* Улики: что коммит тронул — колонки, исключённое, мимо колонок. Одна и та же
+ * раскладка и у ответа, и у починки. */
+function touchedOf(cfg, files) {
   const tracked = new Set();
   cfg.columns.forEach((col) => col.paths.forEach((p) => tracked.add(p)));
   const excluded = new Set([cfg.output].concat(cfg.skip || []));
   const touched = { columns: [], excluded: [], untracked: [] };
-  c.files.forEach((f) => {
+  files.forEach((f) => {
     if (tracked.has(f)) { if (touched.columns.indexOf(f) < 0) touched.columns.push(f); return; }
     if (excluded.has(f)) { if (touched.excluded.indexOf(f) < 0) touched.excluded.push(f); return; }
     if (touched.untracked.indexOf(f) < 0) touched.untracked.push(f);
   });
+  return touched;
+}
+
+const FIX = {
+  merge: 'включите строки слияний: "rows": { "merges": true }',
+  report: 'не требуется: строка про коммит не может лежать внутри самого коммита — обновляйте отчёт отдельным коммитом',
+  flat: 'не требуется: числа не изменились — строка без единого числа читалась бы как поломка'
+};
+
+/* Слово выбирается индексом, а не тернарником: второй случай («мимо колонок ничего
+ * не осталось» — коммит вообще без файлов) отчётом не встречается, и ветка была бы
+ * вечно непокрытой строкой, то есть обещанием без проверки. */
+const WHAT = ['тронутые файлы', 'эти пути'];
+
+function fixFor(reason, touched) {
+  if (reason === 'outside') {
+    return 'допишите ' + WHAT[Number(touched.untracked.length > 0)]
+      + ' колонкой или в «skip» файла ' + CONFIG_NAME;
+  }
+  return FIX[reason];
+}
+
+export function explainCommit(cfg, root, target) {
+  assertFullHistory(root);
+  const commits = readHistory(root);
+  const c = lookup(root, commits, target);
+  const measured = measureHistory(cfg, root, commits);
+  const row = measured.rows.findIndex((r) => r.sha === c.sha);
+  const dropped = measured.dropped.find((d) => d.sha === c.sha);
+  const touched = touchedOf(cfg, c.files);
 
   /* Разница, которой нет в строке отчёта: «без изменения объёма» у коммита мимо
    * колонок означает не то же самое, что у коммита, тронувшего колонку. */
   let reason = row >= 0 ? null : dropped.reason;
   if (reason === 'flat' && touched.columns.length === 0) reason = 'outside';
-
-  const fix = {
-    merge: 'включите строки слияний: "rows": { "merges": true }',
-    report: 'не требуется: строка про коммит не может лежать внутри самого коммита — обновляйте отчёт отдельным коммитом',
-    outside: 'допишите ' + (touched.untracked.length > 0 ? 'эти пути' : 'тронутые файлы')
-      + ' колонкой или в «skip» файла ' + CONFIG_NAME,
-    flat: 'не требуется: числа не изменились — строка без единого числа читалась бы как поломка'
-  }[reason];
+  const fix = fixFor(reason, touched);
 
   return {
     schema: 1,

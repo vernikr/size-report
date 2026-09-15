@@ -66,14 +66,8 @@ export function reportData(cfg, root) {
     categories: CATEGORY_ORDER.filter((key) => files.some((f) => f.category === key))
       .map((key) => ({ key: key, label: loc.categories[key] })),
     files: files,
-    rows: rows.map((r) => ({
-      sha: r.sha,
-      when: r.when,
-      subject: r.subject,
-      section: r.section === null ? null : { id: r.section.id, head: r.section.head, added: r.section.added },
-      href: rowHref(r.section, r.sha, cfg),
-      values: r.cells
-    })),
+    rows: rows.map((r) => Object.assign(rowShape(r),
+      { href: rowHref(r.section, r.sha, cfg), values: r.cells })),
     now: state.map((s) => (s === null ? null : s.cells)),
     approx: approxMarks(rows, state, cfg),
     skipped: dropped.map(skipLine)
@@ -99,7 +93,20 @@ function approxMarks(rows, state, cfg) {
   return out;
 }
 
+/* Общая часть строки ответа: она есть и у контракта страницы (`--data`), и у
+ * прежней формы `--json` (она заморожена эталоном паритета). Одно место — потому
+ * что разойтись эти два ответа могут ровно здесь, а **порядок полей и есть байты
+ * ответа**: они в объекте в том же порядке, в каком их печатает замороженная форма. */
+export function rowShape(r) {
+  return {
+    sha: r.sha,
+    when: r.when,
+    subject: r.subject,
+    section: r.section === null ? null : { id: r.section.id, head: r.section.head, added: r.section.added }
+  };
+}
+
 /* Производные величины живут в `src/derived.js`: их считает и артефакт (импорт
  * ниже), и страница (получает тот же файл текстом). Второго расчёта той же
  * таблицы нет вовсе, поэтому разойтись молча двум отчётам нечем — это стережёт
- * `test/contract.test.js`. */
+ * `test/contract-derived.test.js`. */

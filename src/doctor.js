@@ -81,6 +81,78 @@ function dependencies(cfg) {
   ];
 }
 
+/* Настройки: при нечитаемых ответ честно неполон (покрытие считать нечем), а
+ * причина — не отказ, а находка: диагностика затем и нужна, чтобы назвать причину
+ * и починку, — их и несёт текст отказа. */
+function readConfig(rep, root, configFile) {
+  try {
+    const cfg = loadConfig(configFile, root);
+    rep.config = { file: configFile, ok: true, columns: cfg.columns.length, metrics: cfg.metrics };
+    return cfg;
+  } catch (e) {
+    if (!(e instanceof Refusal)) throw e;
+    rep.config = { file: configFile, ok: false, problem: e.message };
+    rep.findings.push({ level: 'action', what: e.message });
+    rep.exit = e.code;
+    return null;
+  }
+}
+
+/* Хук: две находки, у каждой своя починка. Своего кода выхода у них нет — отчёт
+ * собирается и без хука, поэтому сломанный хук меняет только вердикт. */
+function hookFindings(rep) {
+  const hooks = rep.hooks;
+  if (!hooks.installed) return;
+  if (hooks.enabled === false) {
+    rep.findings.push({
+      level: 'action',
+      what: 'хук установлен, но автоматика выключена настройкой hooks.enabled: отчёт обновляется руками',
+      fix: 'верните «"hooks": {"enabled": true}» в файл настроек или снимите хук: ' + cliCommand('uninstall-hook')
+    });
+  }
+  if (hooks.last !== null && HOOK_BAD.indexOf(hooks.last.result) >= 0) {
+    rep.findings.push({
+      level: 'action',
+      what: 'хук: последний запуск не пересобрал отчёт — ' + hooks.last.why,
+      fix: 'починьте то, на что жалуется причина, и пересоберите отчёт: ' + cliCommand('--write')
+    });
+  }
+}
+
+/* Покрытие — тот же ответ, что даёт `size check`. */
+function readCoverage(rep, cfg, root, configFile) {
+  if (cfg === null) {
+    rep.findings.push({
+      level: 'note',
+      what: 'покрытие не считалось: настройки нечитаемы — почините их и спросите снова'
+    });
+    return;
+  }
+  try {
+    rep.coverage = coverage(cfg, root, configFile);
+  } catch (e) {
+    if (!(e instanceof Refusal)) throw e;
+    rep.findings.push({ level: 'action', what: e.message });
+    rep.exit = e.code;
+  }
+}
+
+/* Что попадает в находки, а что нет: в отчёте уже целиком стоит блок покрытия
+ * (тот же текст, что у `size check`), поэтому неполнота здесь второй раз не
+ * пересказывается — она меняет вердикт и код выхода. Находкой становится то,
+ * чего в блоке покрытия нет: нечитаемые настройки, обрезанная история, а по
+ * датчикам — их причина и починка (их `size check` печатает отдельной строкой
+ * `!`, а здесь они часть того же ответа). Неполнота старше приближения: из
+ * двух причин починки код выхода несёт ту, без которой чисел нет вовсе. */
+function coverageFindings(rep) {
+  if (rep.coverage === null) return;
+  rep.coverage.sensors.forEach((gap) => {
+    rep.findings.push({ level: 'action', what: gap.why, fix: gap.fix });
+  });
+  if (!rep.coverage.ok) rep.exit = EXIT.VIOLATION;
+  else if (rep.coverage.sensors.length > 0) rep.exit = EXIT.SENSOR;
+}
+
 export function doctor(root, configFile) {
   const rep = {
     schema: 1,
@@ -94,63 +166,12 @@ export function doctor(root, configFile) {
     findings: [],
     exit: EXIT.OK
   };
-  let cfg = null;
-  try {
-    cfg = loadConfig(configFile, root);
-    rep.config = { file: configFile, ok: true, columns: cfg.columns.length, metrics: cfg.metrics };
-  } catch (e) {
-    // Отказ настроек здесь не отказ, а находка: диагностика затем и нужна, чтобы
-    // назвать причину и починку, — их и несёт текст отказа.
-    if (!(e instanceof Refusal)) throw e;
-    rep.config = { file: configFile, ok: false, problem: e.message };
-    rep.findings.push({ level: 'action', what: e.message });
-    rep.exit = e.code;
-  }
+  const cfg = readConfig(rep, root, configFile);
   rep.dependencies = dependencies(cfg);
   rep.hooks = hooksReport(root, cfg);
-  if (rep.hooks.installed && rep.hooks.enabled === false) {
-    rep.findings.push({
-      level: 'action',
-      what: 'хук установлен, но автоматика выключена настройкой hooks.enabled: отчёт обновляется руками',
-      fix: 'верните «"hooks": {"enabled": true}» в файл настроек или снимите хук: ' + cliCommand('uninstall-hook')
-    });
-  }
-  if (rep.hooks.installed && rep.hooks.last !== null && HOOK_BAD.indexOf(rep.hooks.last.result) >= 0) {
-    rep.findings.push({
-      level: 'action',
-      what: 'хук: последний запуск не пересобрал отчёт — ' + rep.hooks.last.why,
-      fix: 'починьте то, на что жалуется причина, и пересоберите отчёт: ' + cliCommand('--write')
-    });
-  }
-  if (cfg === null) {
-    rep.findings.push({
-      level: 'note',
-      what: 'покрытие не считалось: настройки нечитаемы — почините их и спросите снова'
-    });
-  } else {
-    try {
-      rep.coverage = coverage(cfg, root, configFile);
-    } catch (e) {
-      if (!(e instanceof Refusal)) throw e;
-      rep.findings.push({ level: 'action', what: e.message });
-      rep.exit = e.code;
-    }
-  }
-
-  /* Что попадает в находки, а что нет: в отчёте уже целиком стоит блок покрытия
-   * (тот же текст, что у `size check`), поэтому неполнота здесь второй раз не
-   * пересказывается — она меняет вердикт и код выхода. Находкой становится то,
-   * чего в блоке покрытия нет: нечитаемые настройки, обрезанная история, а по
-   * датчикам — их причина и починка (их `size check` печатает отдельной строкой
-   * `!`, а здесь они часть того же ответа). Неполнота старше приближения: из
-   * двух причин починки код выхода несёт ту, без которой чисел нет вовсе. */
-  if (rep.coverage !== null) {
-    rep.coverage.sensors.forEach((gap) => {
-      rep.findings.push({ level: 'action', what: gap.why, fix: gap.fix });
-    });
-    if (!rep.coverage.ok) rep.exit = EXIT.VIOLATION;
-    else if (rep.coverage.sensors.length > 0) rep.exit = EXIT.SENSOR;
-  }
+  hookFindings(rep);
+  readCoverage(rep, cfg, root, configFile);
+  coverageFindings(rep);
 
   /* «Делать нечего»: ни одной находки-действия и покрытие сосчитано и полно.
    * Покрытие спрашивается отдельно, потому что его неполнота говорится не находкой,

@@ -18,7 +18,7 @@ import { installSpec } from '../src/tool.js';
 
 test('пример установки ведёт на ревизию, чья справка знает названные команды', () => {
   const pin = read('README.md').match(/github:vernikr\/size-report#([\w./-]+)/);
-  assert.ok(pin, 'README не называет ревизию в примере установки — сверить нечего');
+  assert.notEqual(pin, null, 'README не называет ревизию в примере установки — сверить нечего');
   const rev = pin[1];
 
   /* Инструмент учит ставить пакет **той же** ссылкой: так документ и совет не могут

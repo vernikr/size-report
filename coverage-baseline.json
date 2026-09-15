@@ -1,0 +1,197 @@
+{
+  "schema": 1,
+  "suite": "full",
+  "note": "База покрытия: снимок по файлам, снятый с полного набора (`pnpm run cover`). Обновляется человеком. Нуль бывает честным: главы программы страницы (`src/page/*.js`) node не исполняет — они вклеиваются в собранную страницу, и их стерегут наборы страницы.",
+  "files": {
+    "bin/size.js": {
+      "lines": 100,
+      "branches": 100,
+      "functions": 100
+    },
+    "src/args.js": {
+      "lines": 100,
+      "branches": 100,
+      "functions": 100
+    },
+    "src/artifact.js": {
+      "lines": 100,
+      "branches": 100,
+      "functions": 100
+    },
+    "src/check.js": {
+      "lines": 100,
+      "branches": 95.23,
+      "functions": 100
+    },
+    "src/cli.js": {
+      "lines": 90,
+      "branches": 96.66,
+      "functions": 100
+    },
+    "src/config.js": {
+      "lines": 93.67,
+      "branches": 78.26,
+      "functions": 80
+    },
+    "src/css.js": {
+      "lines": 100,
+      "branches": 100,
+      "functions": 100
+    },
+    "src/data.js": {
+      "lines": 100,
+      "branches": 86.11,
+      "functions": 100
+    },
+    "src/derived.js": {
+      "lines": 100,
+      "branches": 88.7,
+      "functions": 100
+    },
+    "src/doctor.js": {
+      "lines": 97.77,
+      "branches": 83.87,
+      "functions": 100
+    },
+    "src/explain.js": {
+      "lines": 97.34,
+      "branches": 95.12,
+      "functions": 100
+    },
+    "src/git.js": {
+      "lines": 98.19,
+      "branches": 86.79,
+      "functions": 92.85
+    },
+    "src/history.js": {
+      "lines": 94.66,
+      "branches": 96.62,
+      "functions": 100
+    },
+    "src/hook.js": {
+      "lines": 87.87,
+      "branches": 75.28,
+      "functions": 90.9
+    },
+    "src/init.js": {
+      "lines": 100,
+      "branches": 91.22,
+      "functions": 100
+    },
+    "src/journal.js": {
+      "lines": 89.39,
+      "branches": 71.42,
+      "functions": 100
+    },
+    "src/locales.js": {
+      "lines": 100,
+      "branches": 75,
+      "functions": 100
+    },
+    "src/metrics.js": {
+      "lines": 99.25,
+      "branches": 98.59,
+      "functions": 85.71
+    },
+    "src/minify.js": {
+      "lines": 100,
+      "branches": 77.77,
+      "functions": 100
+    },
+    "src/modes.js": {
+      "lines": 100,
+      "branches": 92.85,
+      "functions": 100
+    },
+    "src/optional.js": {
+      "lines": 93.54,
+      "branches": 66.66,
+      "functions": 100
+    },
+    "src/page/app.js": {
+      "lines": 0,
+      "branches": 0,
+      "functions": 0
+    },
+    "src/page/build.js": {
+      "lines": 100,
+      "branches": 100,
+      "functions": 100
+    },
+    "src/page/dom.js": {
+      "lines": 0,
+      "branches": 0,
+      "functions": 0
+    },
+    "src/page/panel.js": {
+      "lines": 0,
+      "branches": 0,
+      "functions": 0
+    },
+    "src/page/state.js": {
+      "lines": 0,
+      "branches": 0,
+      "functions": 0
+    },
+    "src/page/table.js": {
+      "lines": 0,
+      "branches": 0,
+      "functions": 0
+    },
+    "src/parse-worker.js": {
+      "lines": 100,
+      "branches": 80,
+      "functions": 100
+    },
+    "src/parse.js": {
+      "lines": 79.41,
+      "branches": 61.9,
+      "functions": 66.66
+    },
+    "src/refusal.js": {
+      "lines": 100,
+      "branches": 86.66,
+      "functions": 100
+    },
+    "src/render.js": {
+      "lines": 100,
+      "branches": 92.45,
+      "functions": 100
+    },
+    "src/size-table.js": {
+      "lines": 100,
+      "branches": 100,
+      "functions": 100
+    },
+    "src/strip.js": {
+      "lines": 98.27,
+      "branches": 83.33,
+      "functions": 100
+    },
+    "src/strip/forms.js": {
+      "lines": 80.76,
+      "branches": 85.71,
+      "functions": 75
+    },
+    "src/strip/guard.js": {
+      "lines": 96.61,
+      "branches": 81.25,
+      "functions": 100
+    },
+    "src/strip/js.js": {
+      "lines": 97.79,
+      "branches": 80.55,
+      "functions": 100
+    },
+    "src/tokens.js": {
+      "lines": 100,
+      "branches": 80,
+      "functions": 100
+    },
+    "src/tool.js": {
+      "lines": 100,
+      "branches": 28.57,
+      "functions": 100
+    }
+  }
+}

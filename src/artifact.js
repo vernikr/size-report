@@ -11,11 +11,18 @@ import { render } from './render.js';
  * Каталог создаётся здесь же: `--write .size-report/report.html` в свежем проекте —
  * обычный запуск, а не ошибка пользователя. */
 
+/* Запись файла с созданием каталога: `--write .size-report/report.html` в свежем
+ * проекте — обычный запуск, а не ошибка пользователя. Тем же путём пишутся
+ * страница (`--page`) и черновик настроек (`--init`), поэтому он один на пакет. */
+export function writeFileEnsured(file, text) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, text);
+}
+
 export function rebuild(cfg, root) {
   const { rows, dropped, state } = build(cfg, root);
   const html = render(rows, cfg);
   const file = path.join(root, cfg.output);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, html);
+  writeFileEnsured(file, html);
   return { rows: rows, dropped: dropped, state: state, html: html, file: file };
 }

@@ -65,12 +65,16 @@
  *   data → locales, metrics, journal, history, tool    — контракт со страницей;
  *   render → locales, metrics, journal, derived        — статический артефакт;
  *   page/build → locales, render                       — страница отчёта;
- *   cli → все                                          — режимы и разбор ключей.
+ *   modes → почти все                                  — что делать по запросу;
+ *   init → config, refusal, git, artifact              — черновик настроек;
+ *   cli → args, modes, init, config, refusal           — вход: разбор и доставка.
  *
  * Публичный API — то, чем пользуются `bin/size.js` и `test/`: список ниже не
  * сокращается при разбиении (это проверяет `test/api.test.js`).
  */
-export { main, initMode, sniffColumns, check, dataMode, pageMode } from './cli.js';
+export { main } from './cli.js';
+export { initMode, sniffColumns } from './init.js';
+export { check, dataMode, pageMode } from './modes.js';
 export { reportData, categoryOf, CATEGORY_EXTS, CATEGORY_ORDER } from './data.js';
 export { measureHistory } from './history.js';
 export { render, noteText, cellHtml, valueHtml } from './render.js';

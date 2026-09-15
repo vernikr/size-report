@@ -102,7 +102,7 @@ test('описание проверки в CI разбирается и запу
   /* История целиком: без `fetch-depth: 0` инструмент откажет кодом 3 — то есть
    * проверка падала бы на самой себе, а не на расхождении чисел. */
   const checkout = job.steps.find((s) => typeof s.uses === 'string' && s.uses.indexOf('actions/checkout') === 0);
-  assert.ok(checkout, 'в описании нет шага checkout');
+  assert.notEqual(checkout, undefined, 'в описании нет шага checkout');
   assert.equal(checkout.with['fetch-depth'], 0,
     'история клонируется обрезанной: таблица строится по коммитам и обрежется вместе с ней');
 

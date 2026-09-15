@@ -1,0 +1,13 @@
+#!/bin/sh
+# Быстрый профиль на каждую правку: оформление, датчики раздувания и быстрый набор
+# проверок — те же команды, что в CI (список один, `tools/gates/run.js`).
+# Полный профиль (`pnpm run verify`) тяжелее и живёт в CI и перед отправкой правки,
+# а не в хуке: хук — это секунды.
+# Ставится один раз: `pnpm run hooks:install` (core.hooksPath = .githooks).
+set -e
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "pre-commit: pnpm не найден в PATH — быстрый профиль не выполнен" >&2
+  echo "  поставить хуки заново: pnpm run hooks:install" >&2
+  exit 1
+fi
+exec pnpm run verify:fast

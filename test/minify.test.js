@@ -149,7 +149,8 @@ test('с настоящим сжатием точность объявлена �
   assert.equal(all.code, 0, 'прогон со сжатием упал: ' + all.stderr.trim());
   const data = JSON.parse(all.stdout);
   const min = (data.approx || {}).min;
-  assert.ok(min, 'приближённые клетки не объявлены, хотя часть форматов минификатор не берёт');
+  assert.notEqual(min, undefined,
+    'приближённые клетки не объявлены, хотя часть форматов минификатор не берёт');
   assert.equal(data.approx.raw, undefined, 'размер объекта git помечен приближением');
   const where = (label) => data.files.findIndex((f) => f.label === label);
   const cell = (r, i) => min.rows.charAt(r * data.files.length + i);

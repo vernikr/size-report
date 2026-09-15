@@ -53,7 +53,7 @@ test('движок пакета: --write собирает тот же артеф
     'контрольный режим красный на своём же артефакте: ' + checked.stderr.trim());
 
   const rows = /: (\d+) строк × (\d+) файлов/.exec(wrote.stdout);
-  assert.ok(rows, 'сборка не отчиталась числом строк: ' + wrote.stdout.trim());
+  assert.notEqual(rows, null, 'сборка не отчиталась числом строк: ' + wrote.stdout.trim());
   assert.equal(Number(rows[1]), goldenJson.rows.length, 'число строк разошлось с эталоном');
   assert.equal(Number(rows[2]), goldenJson.columns.length, 'число колонок разошлось с эталоном');
 });

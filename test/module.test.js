@@ -149,10 +149,13 @@ test('гард жив: сломанный стриппер не проходит
   const ok = runTool(engine.target, dir, ['--write']);
   assert.equal(ok.code, 0, 'до мутации проект не собрался: ' + firstLine(ok.stderr));
 
-  const file = path.join(engine.dir, 'src', 'strip.js');
+  /* Мутация — в ветке строк снятия балласта (`src/strip/js.js`): она теряет
+   * случай одинарной кавычки, а в фикстуре такая строка несёт `//` внутри —
+   * сломанный стриппер съедает остаток строки, и код перестаёт разбираться. */
+  const file = path.join(engine.dir, 'src', 'strip', 'js.js');
   const original = fs.readFileSync(file, 'utf8');
-  const from = "    if (ch === '\"' || ch === \"'\" || ch === '`') {\n      const end = endOfString(src, i, ch);";
-  const to = "    if (ch === '\"' || ch === '`') {\n      const end = endOfString(src, i, ch);";
+  const from = "  if (quote !== '\"' && quote !== \"'\" && quote !== '`') return false;";
+  const to = "  if (quote !== '\"' && quote !== '`') return false;";
   assert.ok(original.indexOf(from) >= 0, 'мутация не применилась: ветка строк в стриппере переписана');
   try {
     fs.writeFileSync(file, original.replace(from, to));
@@ -227,12 +230,12 @@ test('не JavaScript в графе — отказ с командой почи�
   assert.equal(builtGuard.code, 0, 'совет не починил прогон: ' + firstLine(builtGuard.stderr || builtGuard.stdout));
 });
 
-/* Совет обязан работать в обоих состояниях проекта: там, где пакет лежит рядом, и
- * там, где его нет. Поэтому форма одна — путь внутри проекта, — и проверяются обе
- * половины: зов из подсказки выполняется в проекте с пакетом и отказывает на месте
- * в проекте без него. Проверяется тем же движком, но положенным на место установки. */
-test('совет называет путь внутри проекта, а не имя из реестра', () => {
-  const dir = path.join(tmp, 'installed');
+/* Проект с пакетом, положенным на место установки: проверяется ровно то, что видит
+ * проект-потребитель (движок берётся из репозитория, как его положил бы пакетный
+ * менеджер). Проект у каждой проверки свой: ниже совет исполняется и правит
+ * настройки, и второй проверке нужен свой такой же. */
+function installEngine(name) {
+  const dir = path.join(tmp, name);
   const pkg = path.join(dir, INSTALL_DIR);
   for (const part of ['bin', 'src']) {
     fs.cpSync(path.join(ROOT, part), path.join(pkg, part), { recursive: true });
@@ -244,13 +247,17 @@ test('совет называет путь внутри проекта, а не 
   gitIn(dir, ['config', 'user.name', 'Тест']);
   gitIn(dir, ['add', 'lib.js']);
   gitIn(dir, ['commit', '-qm', 'начало']);
+  return { dir: dir, engine: { name: 'движок из node_modules', file: path.join(pkg, 'bin', 'size.js'), env: null } };
+}
 
-  const installed = { name: 'движок из node_modules', file: path.join(pkg, 'bin', 'size.js'), env: null };
-  const res = runTool(installed, dir, []);
+/* Совет — путь внутри проекта, а не имя из реестра. */
+test('совет называет путь внутри проекта, а не имя из реестра', () => {
+  const { dir, engine } = installEngine('installed');
+  const res = runTool(engine, dir, []);
   assert.notEqual(res.code, 0, 'без настроек инструмент не отказал');
 
   const hint = (res.stderr.match(/создайте его: (.+)$/m) || [])[1];
-  assert.ok(hint, 'подсказка не называет команду починки:\n' + res.stderr);
+  assert.notEqual(hint, undefined, 'подсказка не называет команду починки:\n' + res.stderr);
   assert.match(hint, new RegExp('^node ' + INSTALL_RE + ' --init$'),
     'совет ведёт не путём внутри проекта: ' + hint);
   assert.equal(BY_NAME_RE.test(res.stderr),
@@ -263,11 +270,20 @@ test('совет называет путь внутри проекта, а не 
   fs.cpSync(dir, cfgless, { recursive: true });
   fs.writeFileSync(path.join(cfgless, 'size-table.config.json'),
     JSON.stringify({ output: 'size-table.html', columns: [{ label: 'lib.js', paths: ['lib.js'] }] }, null, 2) + '\n');
-  const data = runTool({ name: installed.name, file: path.join(cfgless, INSTALL_BIN), env: null }, cfgless, ['--data']);
+  const data = runTool({ name: engine.name, file: path.join(cfgless, INSTALL_BIN), env: null }, cfgless, ['--data']);
   assert.equal(data.code, 0, 'контракт не отдался: ' + firstLine(data.stderr));
   const fix = JSON.parse(data.stdout).report.fixCommand;
   assert.match(fix, new RegExp('^node ' + INSTALL_RE + ' --write$'),
     'умолчание команды починки — не путь внутри проекта: ' + fix);
+});
+
+/* Вторая половина того же обещания: совет выполним там, где пакет лежит рядом, и
+ * отказывает на месте там, где его нет, — а справка называет тот же путь. */
+test('совет выполним рядом с пакетом и отказывает на месте без него', () => {
+  const { dir, engine } = installEngine('installed-run');
+  const res = runTool(engine, dir, []);
+  const hint = (res.stderr.match(/создайте его: (.+)$/m) || [])[1];
+  assert.notEqual(hint, undefined, 'подсказка не называет команду починки:\n' + res.stderr);
 
   // Совет выполним: та же строка в том же проекте делает обещанное.
   const ran = spawnSync('bash', ['-c', hint], { cwd: dir, encoding: 'utf8' });
@@ -292,7 +308,7 @@ test('совет называет путь внутри проекта, а не 
   assert.equal(/registry|ERR_PNPM|npm error/.test(lost.stderr || ''), false,
     'зов ушёл в реестр, а не отказал на месте:\n' + lost.stderr);
 
-  const help = runTool(installed, dir, ['--help']);
+  const help = runTool(engine, dir, ['--help']);
   assert.equal(help.code, 0, 'справка не ответила: ' + firstLine(help.stderr));
   assert.match(help.stdout, new RegExp('Запуск: node ' + INSTALL_RE),
     'справка не называет путь: ' + help.stdout.split('\n')[2]);

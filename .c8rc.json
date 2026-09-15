@@ -1,0 +1,10 @@
+{
+  "all": true,
+  "include": ["src/**/*.js", "bin/**/*.js"],
+  "reporter": ["json-summary", "text-summary"],
+  "report-dir": "reports/coverage",
+  "temp-directory": "reports/coverage/tmp",
+  "clean": true,
+  "check-coverage": false,
+  "skip-full": false
+}

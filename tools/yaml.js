@@ -13,8 +13,16 @@
  * верное описание от того, которое **не разбирается вовсе** (так и вышло с выпуском:
  * `? … : …` внутри незакавыченного значения — синтаксис YAML ломает, а подстрока
  * находится).
+ *
+ * Разбор идёт по шагам (`map` / `list` / `node`), а строка и указатель на неё живут в
+ * одном состоянии (`p`): вложенные функции пришлось бы собирать заново на каждый
+ * уровень, а рекурсия уровней здесь и есть суть разбора.
  */
-export function parseWorkflow(src) {
+
+/* Строки описания без комментариев и пустых, с отступом и номером в исходном тексте.
+ * Отступ и хвостовые пробелы — вне подмножества: разбор по отступу на неоднозначном
+ * отступе давал бы разное дерево у разных людей. */
+function linesOf(src) {
   const lines = [];
   src.split('\n').forEach((raw, i) => {
     const text = raw.replace(/(^|\s)#.*$/, '').trimEnd();
@@ -26,84 +34,101 @@ export function parseWorkflow(src) {
       throw new Error('строка ' + l.line + ': отступ или хвостовые пробелы вне подмножества');
     }
   }
-  let at = 0;
-  /* Элемент потокового списка может быть закавычен (`tags: ['v*']`) — кавычки в
-   * самом YAML не часть значения, и значение читается без них. */
-  const flowItem = (text) => {
-    if (text.length > 1 && (text[0] === "'" || text[0] === '"') && text[text.length - 1] === text[0]) {
-      return text.slice(1, -1);
-    }
-    return text;
-  };
-  const scalar = (text, line) => {
-    if (text === '|' || text === '>') {
-      throw new Error('строка ' + line + ': блочный скаляр (`' + text + '`) вне подмножества —'
-        + ' соберите значение шага в одну строку');
-    }
-    /* Правило самого YAML, и в этом файле оно не украшение: `? … : …` в команде
-     * незакавыченным значением разбирается как конец значения, то есть описание не
-     * разбирается вовсе, а поиск подстроки этого не видит. */
-    const quoted = text[0] === '"' || text[0] === "'" || text[0] === '[';
-    if (!quoted && text.indexOf(': ') >= 0) {
-      throw new Error('строка ' + line + ': двоеточие с пробелом в незакавыченном значении —'
-        + ' YAML прочитает это как конец значения; закавычьте значение или перепишите команду');
-    }
-    if (text[0] === '[') {
-      if (text[text.length - 1] !== ']') throw new Error('потоковый список не закрыт: ' + text);
-      return text.slice(1, -1).split(',').map((s) => flowItem(s.trim()));
-    }
-    if (/^\d+$/.test(text)) return Number(text);
-    return text;
-  };
-  function map(indent) {
-    const out = {};
-    while (at < lines.length && lines[at].indent === indent && lines[at].text[0] !== '-') {
-      const head = lines[at];
-      const cut = head.text.indexOf(':');
-      if (cut < 0) throw new Error('строка ' + head.line + ': не ключ и не элемент списка');
-      const key = head.text.slice(0, cut).trim();
-      const value = head.text.slice(cut + 1).trim();
-      at++;
-      if (value !== '') out[key] = scalar(value, head.line);
-      else if (at < lines.length && lines[at].indent > indent) out[key] = node(lines[at].indent);
-      else out[key] = null;
-    }
-    return out;
+  return lines;
+}
+
+/* Элемент потокового списка может быть закавычен (`tags: ['v*']`) — кавычки в
+ * самом YAML не часть значения, и значение читается без них. */
+function flowItem(text) {
+  if (text.length > 1 && (text[0] === "'" || text[0] === '"') && text[text.length - 1] === text[0]) {
+    return text.slice(1, -1);
   }
-  function list(indent) {
-    const out = [];
-    while (at < lines.length && lines[at].indent === indent && lines[at].text[0] === '-') {
-      const head = lines[at];
-      const rest = head.text.slice(1).trim();
-      at++;
-      if (rest === '') {
-        out.push(node(head.indent + 2));
-        continue;
-      }
-      /* Элемент-отображение записан первой строкой (`- name: …`), остальные его
-       * ключи стоят на два пробела глубже. */
-      const cut = rest.indexOf(':');
-      if (cut < 0) throw new Error('строка ' + head.line + ': элемент списка не отображение');
-      const item = {};
-      const value = rest.slice(cut + 1).trim();
-      const key = rest.slice(0, cut).trim();
-      if (value !== '') item[key] = scalar(value, head.line);
-      else if (at < lines.length && lines[at].indent > head.indent) item[key] = node(lines[at].indent);
-      else item[key] = null;
-      const more = at < lines.length && lines[at].indent > head.indent && lines[at].text[0] !== '-'
-        ? map(head.indent + 2) : {};
-      out.push(Object.assign(item, more));
+  return text;
+}
+
+function scalar(text, line) {
+  if (text === '|' || text === '>') {
+    throw new Error('строка ' + line + ': блочный скаляр (`' + text + '`) вне подмножества —'
+      + ' соберите значение шага в одну строку');
+  }
+  /* Правило самого YAML, и в этом файле оно не украшение: `? … : …` в команде
+   * незакавыченным значением разбирается как конец значения, то есть описание не
+   * разбирается вовсе, а поиск подстроки этого не видит. */
+  const quoted = text[0] === '"' || text[0] === "'" || text[0] === '[';
+  if (!quoted && text.indexOf(': ') >= 0) {
+    throw new Error('строка ' + line + ': двоеточие с пробелом в незакавыченном значении —'
+      + ' YAML прочитает это как конец значения; закавычьте значение или перепишите команду');
+  }
+  if (text[0] === '[') {
+    if (text[text.length - 1] !== ']') throw new Error('потоковый список не закрыт: ' + text);
+    return text.slice(1, -1).split(',').map((s) => flowItem(s.trim()));
+  }
+  if (/^\d+$/.test(text)) return Number(text);
+  return text;
+}
+
+/* Ключ и значение из строки `ключ: значение`; `null` — строка не отображение (сообщение
+ * об ошибке зависит от места и потому живёт у того, кто спросил). */
+function split(text) {
+  const cut = text.indexOf(':');
+  if (cut < 0) return null;
+  return { key: text.slice(0, cut).trim(), value: text.slice(cut + 1).trim() };
+}
+
+/* Значение ключа: пустое — вложенный узел глубже по отступу, а если его нет — null. */
+function valueAt(p, kv, line, indent) {
+  if (kv.value !== '') return scalar(kv.value, line);
+  if (p.at < p.lines.length && p.lines[p.at].indent > indent) return node(p, p.lines[p.at].indent);
+  return null;
+}
+
+function map(p, indent) {
+  const out = {};
+  while (p.at < p.lines.length && p.lines[p.at].indent === indent && p.lines[p.at].text[0] !== '-') {
+    const head = p.lines[p.at];
+    const kv = split(head.text);
+    if (kv === null) throw new Error('строка ' + head.line + ': не ключ и не элемент списка');
+    p.at++;
+    out[kv.key] = valueAt(p, kv, head.line, indent);
+  }
+  return out;
+}
+
+function list(p, indent) {
+  const out = [];
+  while (p.at < p.lines.length && p.lines[p.at].indent === indent && p.lines[p.at].text[0] === '-') {
+    const head = p.lines[p.at];
+    const rest = head.text.slice(1).trim();
+    p.at++;
+    if (rest === '') {
+      out.push(node(p, head.indent + 2));
+      continue;
     }
-    return out;
+    /* Элемент-отображение записан первой строкой (`- name: …`), остальные его
+     * ключи стоят на два пробела глубже. */
+    const kv = split(rest);
+    if (kv === null) throw new Error('строка ' + head.line + ': элемент списка не отображение');
+    const item = {};
+    item[kv.key] = valueAt(p, kv, head.line, head.indent);
+    const more = p.at < p.lines.length && p.lines[p.at].indent > head.indent && p.lines[p.at].text[0] !== '-'
+      ? map(p, head.indent + 2) : {};
+    out.push(Object.assign(item, more));
   }
-  function node(indent) {
-    const first = lines[at];
-    if (first === undefined || first.indent < indent) return null;
-    if (first.text[0] === '-') return list(first.indent);
-    if (first.indent > indent) throw new Error('строка ' + first.line + ': отступ глубже ожидаемого');
-    return map(first.indent);
-  }
-  const doc = map(lines[0].indent);
-  if (at !== lines.length) throw new Error('разбор кончился на строке ' + lines[at].line);
+  return out;
+}
+
+function node(p, indent) {
+  const first = p.lines[p.at];
+  if (first === undefined || first.indent < indent) return null;
+  if (first.text[0] === '-') return list(p, first.indent);
+  if (first.indent > indent) throw new Error('строка ' + first.line + ': отступ глубже ожидаемого');
+  return map(p, first.indent);
+}
+
+export function parseWorkflow(src) {
+  const lines = linesOf(src);
+  const p = { lines: lines, at: 0 };
+  const doc = map(p, lines[0].indent);
+  if (p.at !== lines.length) throw new Error('разбор кончился на строке ' + lines[p.at].line);
   return doc;
 }

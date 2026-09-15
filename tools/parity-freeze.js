@@ -120,84 +120,101 @@ function manifestNote(ctx) {
   ].join('\n') + '\n';
 }
 
-function main() {
+/* Что снимать и куда: каталог, проект и ревизия. Ревизия и проект по умолчанию —
+ * из манифеста: эталон неподвижен, пока его не переснимут осознанно. */
+function plan() {
   const args = parseArgs(process.argv.slice(2));
   const out = path.resolve(args.flags['--out'] || DEFAULT_OUT);
   const manifestFile = path.join(out, 'manifest.json');
   const frozen = fs.existsSync(manifestFile) ? JSON.parse(fs.readFileSync(manifestFile, 'utf8')) : null;
   const project = path.resolve(args.positional || (frozen ? frozen.project.path : DEFAULT_PROJECT));
   const want = args.flags['--at'] || (frozen ? frozen.project.head : null);
-
   if (!fs.existsSync(project)) {
     throw new Error('проект не найден: ' + project
       + '\n  укажите путь: node tools/parity-freeze.js <путь-к-проекту>');
   }
+  return { out: out, project: project, want: want };
+}
+
+/* Снятие на клоне: ревизия, настройки, числа, артефакт. Копия запускается
+ * трижды — `--json`, `--write` и контрольный режим на своём артефакте: эталон
+ * описывает согласованный отчёт, а не набор файлов рядом. */
+function take(work, project, want) {
+  const clone = path.join(work, 'clone');
+  git(work, ['clone', '-q', '--no-hardlinks', project, clone]);
+  /* Обрезанность проверяется у клона, а не у источника: источником может быть
+   * и бандл истории (файл), у которого своего рабочего дерева нет. */
+  if (git(clone, ['rev-parse', '--is-shallow-repository']) === 'true') {
+    throw new Error('история проекта обрезана (shallow): эталон снимается только с полной истории');
+  }
+  const at = want || git(clone, ['rev-parse', 'HEAD']);
+  try {
+    git(clone, ['checkout', '-q', at]);
+  } catch (_e) {
+    throw new Error('в проекте нет ревизии ' + at + ' — эталон снимается только с той, что в нём есть');
+  }
+  const head = git(clone, ['rev-parse', 'HEAD']);
+  const short = head.slice(0, 7);
+  if (!fs.existsSync(path.join(clone, CONFIG_NAME))) {
+    throw new Error('в ревизии ' + short + ' нет ' + CONFIG_NAME + ' — эталону нечего описывать');
+  }
+  const cfg = JSON.parse(fs.readFileSync(path.join(clone, CONFIG_NAME), 'utf8'));
+  const headDate = git(clone, ['log', '-1', '--date=format:%Y-%m-%d %H:%M', '--pretty=format:%ad', head]);
+  const commits = Number(git(clone, ['rev-list', '--count', head]));
+  const data = JSON.parse(legacy(clone, ['--json']));
+
+  legacy(clone, ['--write']);
+  const artifact = fs.readFileSync(path.join(clone, cfg.output));
+  if (!artifact.equals(gitBytes(clone, ['show', head + ':' + cfg.output]))) {
+    throw new Error('копия собрала не тот артефакт, что лежит в ревизии ' + short
+      + ' — эталон снимается не этой ревизией инструмента');
+  }
+  legacy(clone, []);
+  return { head: head, headDate: headDate, commits: commits, cfg: cfg, data: data, artifact: artifact };
+}
+
+/* Запись эталона: данные, настройки, хеш артефакта, манифест и объяснение рядом. */
+function store(out, project, taken) {
+  const { head, headDate, commits, cfg, data, artifact } = taken;
+  fs.mkdirSync(out, { recursive: true });
+  const write = (name, bytes) => fs.writeFileSync(path.join(out, name), bytes);
+  const dataBytes = Buffer.from(JSON.stringify(data, null, 2) + '\n', 'utf8');
+  const configBytes = Buffer.from(JSON.stringify(cfg, null, 2) + '\n', 'utf8');
+  write('data.json', dataBytes);
+  write('config.json', configBytes);
+  write('artifact.sha256', sha256(artifact) + '  ' + cfg.output + '\n');
+
+  const ctx = {
+    schema: 1,
+    kind: 'parity',
+    project: { path: project, name: path.basename(project), head, headDate, commits },
+    tool: { file: LEGACY_PATH, sha256: sha256(fs.readFileSync(legacyTool())) },
+    artifact: { path: cfg.output, bytes: artifact.length, sha256: sha256(artifact) },
+    data: {
+      rows: data.rows.length,
+      columns: data.columns.length,
+      metrics: data.metrics,
+      sha256: sha256(dataBytes)
+    },
+    config: { sha256: sha256(configBytes) }
+  };
+  write('manifest.json', Buffer.from(JSON.stringify(ctx, null, 2) + '\n', 'utf8'));
+  write('README.md', Buffer.from(manifestNote(ctx), 'utf8'));
+
+  console.log('✓ эталон паритета: ' + path.relative(ROOT, out));
+  console.log('  проект ' + ctx.project.name + ' на ' + head.slice(0, 7) + ': '
+    + commits + ' коммитов, ' + data.rows.length + ' строк × ' + data.columns.length + ' колонок');
+  console.log('  артефакт ' + cfg.output + ': ' + artifact.length + ' Б, sha256 '
+    + ctx.artifact.sha256.slice(0, 12));
+  console.log('  инструмент ' + ctx.tool.file + ' sha256 ' + ctx.tool.sha256.slice(0, 12)
+    + ' — эталон привязан к этой ревизии');
+}
+
+function main() {
+  const opts = plan();
   const work = fs.mkdtempSync(path.join(os.tmpdir(), 'size-report-parity-'));
   try {
-    const clone = path.join(work, 'clone');
-    git(work, ['clone', '-q', '--no-hardlinks', project, clone]);
-    /* Обрезанность проверяется у клона, а не у источника: источником может быть
-     * и бандл истории (файл), у которого своего рабочего дерева нет. */
-    if (git(clone, ['rev-parse', '--is-shallow-repository']) === 'true') {
-      throw new Error('история проекта обрезана (shallow): эталон снимается только с полной истории');
-    }
-    const at = want || git(clone, ['rev-parse', 'HEAD']);
-    try {
-      git(clone, ['checkout', '-q', at]);
-    } catch (_e) {
-      throw new Error('в проекте нет ревизии ' + at + ' — эталон снимается только с той, что в нём есть');
-    }
-    const head = git(clone, ['rev-parse', 'HEAD']);
-    const short = head.slice(0, 7);
-
-    if (!fs.existsSync(path.join(clone, CONFIG_NAME))) {
-      throw new Error('в ревизии ' + short + ' нет ' + CONFIG_NAME + ' — эталону нечего описывать');
-    }
-    const cfg = JSON.parse(fs.readFileSync(path.join(clone, CONFIG_NAME), 'utf8'));
-    const headDate = git(clone, ['log', '-1', '--date=format:%Y-%m-%d %H:%M', '--pretty=format:%ad', head]);
-    const commits = Number(git(clone, ['rev-list', '--count', head]));
-    const data = JSON.parse(legacy(clone, ['--json']));
-
-    legacy(clone, ['--write']);
-    const artifact = fs.readFileSync(path.join(clone, cfg.output));
-    if (!artifact.equals(gitBytes(clone, ['show', head + ':' + cfg.output]))) {
-      throw new Error('копия собрала не тот артефакт, что лежит в ревизии ' + short
-        + ' — эталон снимается не этой ревизией инструмента');
-    }
-    legacy(clone, []);
-
-    fs.mkdirSync(out, { recursive: true });
-    const write = (name, bytes) => fs.writeFileSync(path.join(out, name), bytes);
-    const dataBytes = Buffer.from(JSON.stringify(data, null, 2) + '\n', 'utf8');
-    const configBytes = Buffer.from(JSON.stringify(cfg, null, 2) + '\n', 'utf8');
-    write('data.json', dataBytes);
-    write('config.json', configBytes);
-    write('artifact.sha256', sha256(artifact) + '  ' + cfg.output + '\n');
-
-    const ctx = {
-      schema: 1,
-      kind: 'parity',
-      project: { path: project, name: path.basename(project), head, headDate, commits },
-      tool: { file: LEGACY_PATH, sha256: sha256(fs.readFileSync(legacyTool())) },
-      artifact: { path: cfg.output, bytes: artifact.length, sha256: sha256(artifact) },
-      data: {
-        rows: data.rows.length,
-        columns: data.columns.length,
-        metrics: data.metrics,
-        sha256: sha256(dataBytes)
-      },
-      config: { sha256: sha256(configBytes) }
-    };
-    write('manifest.json', Buffer.from(JSON.stringify(ctx, null, 2) + '\n', 'utf8'));
-    write('README.md', Buffer.from(manifestNote(ctx), 'utf8'));
-
-    console.log('✓ эталон паритета: ' + path.relative(ROOT, out));
-    console.log('  проект ' + ctx.project.name + ' на ' + head.slice(0, 7) + ': '
-      + commits + ' коммитов, ' + data.rows.length + ' строк × ' + data.columns.length + ' колонок');
-    console.log('  артефакт ' + cfg.output + ': ' + artifact.length + ' Б, sha256 '
-      + ctx.artifact.sha256.slice(0, 12));
-    console.log('  инструмент ' + ctx.tool.file + ' sha256 ' + ctx.tool.sha256.slice(0, 12)
-      + ' — эталон привязан к этой ревизии');
+    store(opts.out, opts.project, take(work, opts.project, opts.want));
   } finally {
     fs.rmSync(work, { recursive: true, force: true });
   }

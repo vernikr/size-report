@@ -34,7 +34,7 @@ const manifest = readJson(path.join(ROOT, 'package.json'));
 /* Верхний выпуск в файле: от его заголовка до следующего заголовка того же уровня. */
 function release() {
   const head = TEXT.match(/^## (\d+\.\d+\.\d+) — (\d{4}-\d{2}-\d{2})$/m);
-  assert.ok(head, 'в CHANGELOG нет строки выпуска вида «## 1.0.0 — 2026-09-14»');
+  assert.notEqual(head, null, 'в CHANGELOG нет строки выпуска вида «## 1.0.0 — 2026-09-14»');
   const from = TEXT.slice(head.index);
   const next = from.slice(1).search(/^## /m);
   return { version: head[1], date: head[2], text: next < 0 ? from : from.slice(0, next + 1) };
@@ -44,7 +44,7 @@ function release() {
  * токены. Разбирается она, а не читается глазами: иначе сверять было бы нечего. */
 function numbersTable() {
   const section = TEXT.match(/^### Что изменится в числах$[\s\S]*?(?=\n#{2,3} |(?![\s\S]))/m);
-  assert.ok(section, 'в CHANGELOG нет раздела «Что изменится в числах» — выпуск не отвечает,'
+  assert.notEqual(section, null, 'в CHANGELOG нет раздела «Что изменится в числах» — выпуск не отвечает,'
     + ' у кого числа поедут и почему');
   const rows = [];
   section[0].split('\n').forEach((line) => {

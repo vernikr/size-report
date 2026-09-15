@@ -1,0 +1,21 @@
+{
+  "path": ["src", "bin", "tools", "test"],
+  "minTokens": 50,
+  "minLines": 5,
+  "similarity": 0.85,
+  "mode": "mild",
+  "format": ["javascript"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/fixtures/**",
+    "**/reports/**",
+    "**/*.css",
+    "**/*.json",
+    "**/*.md"
+  ],
+  "reporters": ["json"],
+  "output": "reports/jscpd",
+  "absolute": false,
+  "gitignore": true,
+  "maxSize": "1mb"
+}
