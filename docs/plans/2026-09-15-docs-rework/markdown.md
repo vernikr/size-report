@@ -57,6 +57,87 @@ edit is allowed — but it belongs in the same diff, never as a silent follow-up
    framing prose is translated and tightened.
 8. `docs/plans/**` — already English, kept current as the work advances.
 
+## Parts, measured (2026-09-15)
+
+The commit budget is hard (≤ 600 changed lines, ≤ 10 files), and a translation of a Russian
+line costs about two changed lines (the Russian one goes, the English one arrives; measured on
+the comment passes: 128 comment lines → 259 changed lines, `worklog/0098`). So a part holds
+≤ 210 Russian lines, and a document longer than that is cut by its own seams — section
+numbers, paragraph breaks — rather than by size alone. Measured in the tree of 2026-09-15
+(`rg -c '[А-Яа-яЁё]'` per line range; total outside the journal: 3683 Russian lines in 15
+files). The parts below are the order to work in; each is one commit.
+
+- [x] **M1 `AGENTS.md`** — 97 → 104 lines, 72 Russian lines → 173 changed lines, i.e. **≈2.4
+  changed lines per Russian line** (journal entry `worklog/0099`, 2026-09-16). No guards read it,
+  and the full profile was run after it because the file is one of those the subplan names for
+  that. With this multiplier the ≤ 210-Russian-line part bound is 500 changed lines, still inside
+  the budget: the bound is confirmed rather than assumed, and a part of 250 Russian lines would
+  be the first to break it. Three claims were actualized, each measured: the durations of both
+  profiles are gone (they age with the machine, and this project sets no time target for any
+  profile); the trailer paragraph promised that CI is red on a commit without `Gate-Change:` —
+  it is not, CI runs the profiles and reads no trailers, while the `pre-push` hook does the range
+  check; and the commit budget was justified by "the p75 of the history, 591 lines / 7 files" —
+  re-measured over 189 commits today: 419 lines / 7 files (p50 123/3, p90 763/13), which does not
+  move the budget (it is a bound), so the figures are named with their dates. Two clarifications
+  were added: `tools/suites.js` is a gate file too, and `sg` is the deprecated name of
+  `ast-grep`.
+- [ ] **M2 README 1–190** — 173 Russian: the head and the opening of «Статус» (what the tool
+  is, the current release, the run numbers in prose).
+- [ ] **M3 README 191–350** — 145 Russian. Carries the run table (lines 229–230), so
+  `tools/docs-facts.js` `publishedRuns` — which matches rows by their first words «Быстрый» /
+  «Полный» — is edited in the same commit.
+- [ ] **M4 README 351–553** — 190 Russian: the rest of «Статус» (the report page, its memory
+  and folding, performance).
+- [ ] **M5 README 554–686** — 129 Russian: «Что в репозитории». Its heading is read by
+  `test/docs-paths.test.js` (the table of paths), so that reader changes in the same commit.
+- [ ] **M6 README 687–705 + 1045–1139** — 94 Russian: «Чего ещё нет», «Гейт против
+  раздувания», «Для ИИ-агента», «Ловушки…». Two of those headings are named by
+  `tools/docs-facts.js` `NOT_TODAY` / `OWN_PROJECT` — same commit.
+- [ ] **M7 README 706–921** — 159 Russian: «Как подключить к своему проекту», steps 1–5.
+- [ ] **M8 README 922–1044** — 104 Russian: steps 6–8 (the hook, the traps found by this very
+  instruction, an already installed copy).
+- [ ] **M9 templates and the fixture notes** — `templates/README.md` 93 lines / 77 Russian,
+  `fixtures/live/README.md` 32 / 22, `fixtures/parity/README.md` 20 / 15 (114 Russian, 3 files).
+  `pack:check` ships `templates/`, so the full profile runs after this part.
+  **Out of scope, measured:** `fixtures/synthetic/README.md` (32 Russian) is written by
+  `tools/make-fixture.js` and compared byte for byte by `check:standards` (its `FIXTURE_FILES`
+  include `README.md`), so translating it means re-taking the fixture — a data change and a
+  decision, not a documentation pass. The scope line excludes `fixtures/**`; this bullet is the
+  exception the order names, and it holds for the two hand-written notes only.
+- [ ] **M10 `docs/requirements.md`** — 216 lines, 115 Russian. A target of `§` references, so
+  the section numbers stay.
+- [ ] **M11 `docs/module-design.md` §0–§7** (1–341) — 209 Russian.
+- [ ] **M12 `docs/module-design.md` §8–§17** (342–558) — 147 Russian. A document about the
+  move, so it is compacted hard: architecture and invariants stay, the retelling goes.
+- [ ] **M13 `BLOCKERS.md` B1–B3** (18–208) — 128 Russian. Per item: these three are closed, so
+  what stays is the class of defect and the witness — the story belongs to the journal, and the
+  journal is not this subplan's scope.
+- [ ] **M14 `BLOCKERS.md` notes, first part** (209–330) — 114 Russian.
+- [ ] **M15 `BLOCKERS.md` notes, second part** (331–509) — 149 Russian. Known defect for this
+  part: the note keys are out of order (N1 N3 N4 N6 N7 N5 N8 N9 N12 N11 N13 N10 N14 N15) and
+  **two items are numbered N11**. All fifteen keys exist, so no reference is dangling today
+  (`REFACTOR.md` and `CHANGELOG.md` cite §N2 and §N10 — checked by hand: those keys are
+  present). Renumbering one of the two N11 notes moves an address other documents use, so the
+  part that does it names what the referring documents mean by N11 (`plan.md` means the journal
+  decision, `worklog/0097` the other).
+- [ ] **M16 `REFACTOR.md`** — 269 lines, 217 Russian: the log of the finished waves, so it is
+  compacted into "what the wave established" rather than rewritten sentence by sentence.
+- [ ] **M17 PLAN §1–§3** (21–165) — 111 Russian.
+- [ ] **M18 PLAN §4** (166–471) — 206 Russian: the target architecture, the load-bearing part.
+- [ ] **M19 PLAN §5, steps 0–2** (472–597) — 161 Russian.
+- [ ] **M20 PLAN §5, steps 3–6** (598–845) — 140 Russian.
+- [ ] **M21 PLAN §6–§9** (846–1030) — 129 Russian.
+- [ ] **M22 PLAN §10–§14** (1031–1219) — 155 Russian. The plan of a finished move: what the
+  steps settled is kept, the steps themselves go (the architecture is what is still
+  load-bearing). PLAN is a `§`-reference target, so its numbering stays.
+- [ ] **M23 CHANGELOG 1–222** — 148 Russian: the framing of "what changes in numbers" and the
+  releases 2.4.0 … 2.1.0. Numbers and tables are facts and stay.
+- [ ] **M24 CHANGELOG 223–422** — 114 Russian: 2.0.2 … 1.3.0.
+- [ ] **M25 CHANGELOG 423–691** — 190 Russian: 1.2.0 … 1.0.0.
+- [ ] **M26 the plan files themselves** — 10 Russian lines in `docs/plans/**` (quotations of the
+  tool's own words). Last, because the subplan's own completion criterion
+  (`rg -l '[А-Яа-яЁё]' -g '*.md' -g '!worklog/**'` finds nothing) has to hold after it.
+
 ## Definition of done, per document
 
 - English, no stale claim, nothing restated that another document owns; the guard readers

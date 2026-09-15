@@ -1,97 +1,104 @@
-# AGENTS.md — как работать в этом репозитории
+# AGENTS.md — how to work in this repository
 
-Только то, что нельзя вывести из кода: что запускать, что делать при красном и чего
-нельзя трогать. Подробности о гейте — `README.md`, раздел «Гейт против раздувания».
+Only what cannot be derived from the code: what to run, what to do when a sensor is red, what
+must not be touched. The gate itself is described in `README.md`.
 
-## Что запускать
+## What to run
 
-- `pnpm run verify:fast` — перед каждой правкой и в хуке (десятки секунд): строгий
-  линтер, датчики раздувания (размер и сложность, дубли, связи), быстрый набор проверок.
-- `pnpm run verify` — перед отправкой правки и в CI (~63 с): то же плюс полный набор,
-  он же в среде без настроек git машины, паритет с живым проектом, воспроизводимость
-  эталонов, работа из собранного тарболла.
-- `pnpm run verify:slow` — по расписанию: то же плюс покрытие под c8.
-- Один датчик: `pnpm run metrics` (`dup`, `deps`, `cover`). Список шагов профиля —
-  в одном месте (`tools/gates/run.js`), в CI гоняются те же команды: проверки,
-  которой нет в профиле, в CI быть не может (`test/gates-verify.test.js`).
+- `pnpm run verify:fast` — before every edit and in the `pre-commit` hook: the strict linter,
+  the bloat sensors (size and complexity, duplication, dependencies) and the fast set of checks.
+- `pnpm run verify` — before pushing an edit and in CI: the same plus the full set, the same
+  set in an environment without the machine's git settings, parity with the live project,
+  reproducibility of the standards, and work from the built tarball.
+- `pnpm run verify:slow` — on a schedule: the same plus coverage under c8.
+- One sensor at a time: `pnpm run metrics`, `pnpm run dup`, `pnpm run deps`, `pnpm run cover`.
+  The list of profile steps lives in one place (`tools/gates/run.js`), and CI runs the same
+  commands: a check that is not in the profile cannot be in CI
+  (`test/gates-verify.test.js`).
 
-## Поиск до письма
+## Look before writing
 
-Перед тем как писать новую функцию или модуль — проверить, нет ли её уже, и **показать
-найденное до кода**:
+Before writing a new function or module, check whether it already exists and **show what you
+found before the code**:
 
-- `pnpm run dup` — что уже дублируется в дереве (копипаста и близнецы по токенам);
-- `rg -n '<имя или фрагмент>' src tools test` и структурный поиск
-  `sg run -p 'function $N($$$) { $$$ }'` (ast-grep, если установлен) — форма, а не подстрока;
-- `pnpm run deps` — какие модули уже связаны и не заведёте ли вы кольцо.
+- `pnpm run dup` — what is already duplicated in the tree (copy-paste and token twins);
+- `rg -n '<name or fragment>' src tools test`, and for shape rather than substring a structural
+  search — `ast-grep run -p 'function $N($$$) { $$$ }'` (`sg` is the same tool under a
+  deprecated name);
+- `pnpm run deps` — which modules are already connected, and whether you are about to close a
+  cycle.
 
-## Когда датчик красный
+## When a sensor is red
 
-Чините **код**, а не датчик. Нельзя: поднимать порог, расширять `ignore`, править или
-удалять базу (`.eslint-suppressions.json`, `dup-baseline.json`, `coverage-baseline.json`),
-отключать правило, снимать `error`, ставить `eslint-disable`. Порог кажется
-несправедливым — вынесите это в отчёт: решает человек, а не тот, кого он останавливает.
+Fix the **code**, not the sensor. Forbidden: raising a threshold, widening `ignore`, editing or
+deleting a baseline (`.eslint-suppressions.json`, `dup-baseline.json`, `coverage-baseline.json`),
+switching a rule off, downgrading `error`, writing `eslint-disable`. If a threshold looks
+unfair, put that in the report: a person decides, not the thing it stopped.
 
-## Гейт-файлы и трейлер
+## Gate files and the trailer
 
-Список гейт-файлов — в `tools/gates/gatefiles.js` (пороги, базы, конфиги датчиков,
-`package.json`, lockfile, `.github/workflows/`, `.githooks/`, `tools/gates/`, тесты
-датчиков). Правка любого из них проходит только с трейлером в сообщении коммита:
+The list of gate files is in `tools/gates/gatefiles.js` (thresholds, baselines, sensor configs,
+`package.json`, the lockfile, `.github/workflows/`, `.githooks/`, `tools/gates/`,
+`tools/suites.js`, the sensors' own tests). A change to any of them passes only with a trailer
+in the commit message:
 
 ```text
-Gate-Change: <причина — что изменилось, по какому замеру>
+Gate-Change: <reason — what changed, by which measurement>
 ```
 
-Без него красен и хук `commit-msg`, и CI (по каждому коммиту диапазона). Обновление
-баз — человеческие команды: `pnpm run baseline:metrics`, `baseline:dup`, `baseline:coverage`.
+Without it the `commit-msg` hook is red on that commit and the `pre-push` hook is red over the
+range; CI runs the profiles and reads no trailers. Baselines are updated by hand:
+`pnpm run baseline:metrics`, `baseline:dup`, `baseline:coverage`.
 
-## Размер коммита
+## Commit size
 
-Ориентир — p75 истории репозитория (591 строка / 7 файлов): **≤ 600 строк и ≤ 10 файлов**.
-Больше — обоснование
-в теле коммита (иначе `Gate-Change` на такое не выдают).
+The budget comes from the p75 of the repository's history (591 lines / 7 files when it was set,
+419 / 7 measured on 2026-09-16) and is a bound rather than a target: **≤ 600 lines and ≤ 10
+files**. More needs a justification in the commit body (on that alone a `Gate-Change:` trailer
+is not given).
 
-## Выпуск и подключение копии
+## Release and attaching the copy
 
-После каждой порции работы пакет выпускается в реестр, и в самом проекте обновляется
-подключённая копия — это часть работы, а не отдельное решение.
+After every portion of work the package is released to the registry, and the attached copy in
+this project is updated — that is part of the work, not a separate decision.
 
-1. Версия по SemVer (`docs`/`fix`/`refactor`/`chore` → PATCH, `feat` → MINOR), раздел в
-   `CHANGELOG.md` с «Что изменится в числах», пин в `README.md` (он равен
-   `installSpec()`, то есть тегу текущей версии) — одним коммитом.
-2. Тег `v<версия>` ставится локально **до** этого коммита и переносится на него после:
-   `test/docs-pin.test.js` требует, чтобы пин вёл на существующую ревизию, а до
-   коммита выпуска такого тега нет.
-   Отправка — **одной командой с тегом впереди**: `git push origin v<версия> main`.
-   Двумя командами (сперва ветка, потом тег) CI успевает прогнать ветку без тега и
-   краснеет на стороже пина — зелёный тот заход, где тег уже есть.
-   Выпуск идёт из CI по удостоверению GitHub Actions (тег и версия манифеста сверяются).
-3. После выпуска — `pnpm add -D -E @vernikr/size-report@<версия>` (`package.json` плюс
-   lockfile) и коммит с трейлером `Gate-Change:`. Этот коммит **нового выпуска не требует**:
-   в реестре уже лежит тот же код, и выпускать под него ещё раз значило бы выпускать
-   бесконечно.
+1. The version by SemVer (`docs`/`fix`/`refactor`/`chore` → PATCH, `feat` → MINOR), a section in
+   `CHANGELOG.md` saying what changes in the numbers, and the pin in `README.md` (it equals
+   `installSpec()`, that is, the tag of the current version) — in one commit.
+2. The tag `v<version>` is placed locally **before** that commit and moved onto it afterwards:
+   `test/docs-pin.test.js` requires the pin to lead to an existing revision, and before the
+   release commit there is no such tag. The push is **one command with the tag first**:
+   `git push origin v<version> main`. Pushed as two commands (the branch first, the tag after),
+   CI has time to run the branch without the tag and reddens on the pin guard — the green run is
+   the one where the tag is already there. The release itself runs from CI on GitHub Actions
+   attestation (the tag and the manifest version are compared).
+3. After the release — `pnpm add -D -E @vernikr/size-report@<version>` (`package.json` plus the
+   lockfile) and a commit carrying the `Gate-Change:` trailer. That commit **needs no new
+   release**: the registry already holds the same code, and releasing for it again would mean
+   releasing forever.
 
-Исключение одно и тоже самое: если коммит не меняет то, что уезжает в тарболл (только
-журнал, базы датчиков, отчёты), выпускать нечего — сказать об этом в коммите словами.
+The exception is always the same one: when a commit changes nothing that ships in the tarball
+(only the journal, the sensors' baselines, the reports), there is nothing to release — say so in
+the commit in words.
 
-## Отчёт об объёме
+## The size report
 
-Отчёт — один файл, самодостаточная страница `docs/size-report.html`. Обновляется он
-хуком (`post-commit` + `post-merge`) и **сам ложится отдельным коммитом**: хук правит
-только этот путь, индекс и незакоммиченная работа не тронуты. Писать его руками
-(`--write` и коммитить) нужно лишь тогда, когда хук выключен.
+The report is one file, a self-contained page: `docs/size-report.html`. A hook
+(`post-commit` + `post-merge`) refreshes it, and **it lands as a commit of its own**: the hook
+edits that path only, and the index and the uncommitted work are left alone. Writing the report
+by hand (`--write` and committing it) is needed only when the hook is switched off.
 
-В этом репозитории `core.hooksPath = .githooks`, поэтому строка зова инструмента
-вписана человеком в `.githooks/post-commit` (сам инструмент чужой каталог хуков не
-правит). Знать про это стоит по двум причинам: после коммита может появиться ещё
-один (отчёт) — это норма, а не сбой; и выключить автоматику здесь можно только
-правкой файла хука (`hooks.enabled` относится к хукам поставленным в `.git`).
+In this repository `core.hooksPath = .githooks`, so the line calling the tool was written by a
+person into `.githooks/post-commit` (the tool refuses to edit someone else's hooks directory).
+Two reasons to know this: another commit may appear after yours (the report) — that is normal,
+not a failure; and the automation can be switched off here only by editing the hook file
+(`hooks.enabled` is about hooks installed into `.git`).
 
-## Окружение
+## Environment
 
-- Хуки ставятся один раз: `pnpm run hooks:install` (`core.hooksPath = .githooks`).
-  Полный профиль в хуки не ставится — он живёт в CI и запускается руками.
-- Отчёты датчиков — в `reports/` (в `.gitignore`), машинные (JSON), со стабильной
-  сортировкой: их диффят, а не читают глазами в истории.
-- Сканеры не читают `.git`, `node_modules`, `fixtures`, `reports` — это источники
-  ложных срабатываний (клоны замороженных копий, «секреты» в фикстурах).
+- Hooks are installed once: `pnpm run hooks:install` (`core.hooksPath = .githooks`). The full
+  profile is not put into hooks — it lives in CI and is run by hand.
+- The sensors' reports live in `reports/` (in `.gitignore`), machine-readable (JSON), with a
+  stable sort: they are diffed rather than read in history by eye.
+- The scanners do not read `.git`, `node_modules`, `fixtures`, `reports`: those are sources of
+  false findings (clones of frozen copies, "secrets" in fixtures).
