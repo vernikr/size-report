@@ -1,0 +1,952 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Объём файлов по коммитам</title>
+<style>
+/* Гарнитура одна на всю таблицу; числа выравниваются по разрядам за счёт
+ * tabular-nums, а не за счёт моноширинного шрифта. */
+table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { padding: 2px 7px; border-bottom: 1px solid rgba(127, 127, 127, .25); white-space: nowrap; }
+/* Шапка из двух строк: обе липкие, поэтому вторая сдвинута ровно на высоту первой
+ * (line-height 20 + 2px нижней границы), иначе строки накладывались бы друг на друга. */
+thead th { position: sticky; top: 0; z-index: 3; background: Canvas; text-align: center; line-height: 20px; padding: 0 7px; }
+thead tr:first-child th { border-bottom-width: 2px; }
+thead tr:last-child th { top: 22px; }
+.num { text-align: right; }
+.g { border-left: 1px solid rgba(127, 127, 127, .35); }
+/* Липкая левая колонка: фон непрозрачный (Canvas), иначе при скролле вправо под
+ * клеткой были бы видны числа. Ярус выше соседних клеток (2) и ниже шапки (3);
+ * угол шапки — выше всех, иначе группы колонок наползают на «Коммит». */
+.c-commit { position: sticky; left: 0; z-index: 2; background: Canvas; text-align: left; font-weight: 400; }
+.c-commit a { color: inherit; }
+thead .c-commit { z-index: 6; }
+/* Ширину колонки задаёт этот блок. Без него содержимое ячейки выходило за её
+ * границы и рисовалось поверх соседних чисел: у ячейки таблицы нет обрезки. */
+.clip { display: flex; align-items: baseline; gap: 6px; width: 300px; }
+.when { flex: none; opacity: .7; }
+.subj { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; display: block; }
+.subj.plain { opacity: .7; }
+.sect { flex: none; opacity: .7; font-size: 11px; text-decoration: none; border-bottom: 1px dotted currentColor; }
+/* Рост зелёный, спад красный — по договорённости с заказчиком (рост — «больше
+ * логики», а не тревога). */
+.up { color: #1e8449; }
+.down { color: #c0392b; }
+.miss { opacity: .5; }
+/* Верхняя строка — текущие размеры: она же и объясняет, к чему относятся дельты. */
+tr.now th, tr.now td { border-bottom: 2px solid rgba(127, 127, 127, .35); }
+tr.now .c-commit { font-weight: 600; }
+/* Подсветка строки — наложением, а не подменой фона: липкая колонка обязана
+ * оставаться непрозрачной, иначе под ней при скролле видны числа. */
+tbody tr:hover th, tbody tr:hover td { background-image: linear-gradient(rgba(127, 127, 127, .08), rgba(127, 127, 127, .08)); }
+/* Оформление страницы отчёта — то, что стоит сверх общей таблицы (`src/table.css`):
+ * холст и типографика, панель выбора с легендой, состояния пустоты и адаптации под
+ * узкое окно. Чисел и цвета дельт здесь нет намеренно: их задаёт общая часть, и она
+ * же попадает в статический артефакт, поэтому двух наборов одной таблицы не
+ * бывает. Страница открывается с диска, без сервера и без сети, поэтому ни одной
+ * внешней ссылки в ней быть не может: только системные семейства шрифтов
+ * (`ui-sans-serif`) и системные цвета (`Canvas`, `CanvasText`, `AccentColor`),
+ * которые есть в любой теме.
+ *
+ * Общая часть заморожена байтами артефакта (`src/css.js`), поэтому всё, где
+ * страница расходится с её геометрией, собрано в разделе «адаптации» с причиной:
+ * растить общую часть нельзя, а на узком экране колонка коммита в 300px съедает
+ * весь экран. */
+
+:root {
+  color-scheme: light dark;
+  --gap: 12px;
+  --pad: clamp(16px, 3vw, 34px);
+  --radius: 10px;
+  --muted: rgba(127, 127, 127, .85);
+  --line: rgba(127, 127, 127, .32);
+  --tint: rgba(127, 127, 127, .07);
+}
+
+/* Типографика и ритм: один шаг между блоками (--gap), крупный заголовок,
+ * приглушённая подпись — чтобы взгляд доходил до чисел, а не до служебного текста. */
+body {
+  margin: 0;
+  padding: var(--pad) var(--pad) 48px;
+  background: Canvas;
+  color: CanvasText;
+  font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em; }
+.sub { margin: 0 0 calc(var(--gap) + 4px); color: var(--muted); font-size: 12.5px; }
+
+/* Панель выбора — карточка: она отделяет управление от данных и не сливается с
+ * таблицей, которая начинается ниже. */
+.panel {
+  margin: 0 0 var(--gap);
+  padding: 12px 14px 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--tint);
+}
+.panel fieldset { margin: 0; padding: 0; border: 0; }
+.panel fieldset + fieldset { margin-top: 10px; }
+.panel legend, .panel .cap {
+  padding: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+.panel .cap { display: block; margin-bottom: 4px; }
+.panel .row { display: flex; flex-wrap: wrap; gap: 3px 6px; align-items: center; }
+/* Способ замера — видимым текстом под переключателями: словарь токенов и способ
+ * сжатия выбираются настройками запуска, а не галочкой, поэтому читателю мало
+ * навести мышь — он должен видеть, чем получено число. */
+.panel .about { margin: 5px 0 0; color: var(--muted); font-size: 11.5px; }
+
+/* Дерево файлов: вложенность показана отступом и линией уровня, папка — такой же
+ * переключатель, как файл, только его галочка отвечает за всё поддерево, а число
+ * рядом говорит, за сколько файлов. Список файлов длиннее окна, поэтому панель
+ * прокручивается сама: иначе управление вытолкнуло бы таблицу за экран. */
+.panel .files { max-height: min(30vh, 320px); overflow: auto; }
+.panel .tree { margin: 0; padding: 0; list-style: none; }
+.panel .tree .tree { margin-left: 14px; padding-left: 9px; border-left: 1px solid var(--line); }
+.panel .tree .box { padding: 1px 7px 1px 5px; }
+.box.dir { font-weight: 600; }
+.box .n { margin-left: 1px; color: var(--muted); font-size: 11px; }
+
+/* Переключатель — метка вокруг поля ввода: и подпись, и цель нажатия одна, поэтому
+ * по нему попадает и мышь, и клавиатура (Space на поле ввода), и вспомогательные
+ * технологии. */
+.box {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 3px 9px 3px 7px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.box:hover { background: var(--tint); }
+.box input { margin: 0; accent-color: AccentColor; }
+.box.all { font-weight: 600; }
+
+/* Легенда: те же классы цвета, что и в клетках (.up/.down из общей части), поэтому
+ * образец в легенде не может разойтись с цветом числа. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 18px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+.legend li { display: inline-flex; gap: 6px; align-items: center; }
+.swatch { width: 10px; height: 10px; border-radius: 3px; background: currentColor; }
+.swatch.same { background: none; border: 1px dashed currentColor; }
+.swatch.miss { background: none; border: 1px solid currentColor; border-radius: 0; }
+.swatch.approx { background: none; border-bottom: 2px dotted currentColor; }
+
+/* Приближённое число помечено пунктиром, а не цветом: цвет в таблице занят дельтой
+ * (рост и спад), и второй смысл на том же признаке читался бы как первый. */
+#grid td.approx { text-decoration: underline dotted; text-underline-offset: 2.5px; }
+
+/* Таблица — в своей рамке и со своим скроллом: шапка и колонка коммита липнут к ней
+ * (правила липкости — в общей части), а не к странице, поэтому при прокрутке вбок
+ * видно, чей это ряд, а при прокрутке вниз — что за колонка. */
+.shell {
+  overflow: auto;
+  max-height: calc(100vh - 300px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: Canvas;
+}
+/* Числа плотнее текста страницы: их больше и они короче, а читаются по разрядам. */
+#grid { font-size: 12.5px; }
+
+/* Сообщение о присланной ссылке — над таблицей, чтобы пропустить его было нельзя,
+ * но таблицу оно не отодвигает: одна строка на месте страницы. Цвет берётся
+ * системный (акцент), своих цветов у страницы нет. */
+.notice {
+  margin: 0 0 var(--gap);
+  padding: 9px 13px;
+  border-left: 3px solid AccentColor;
+  border-radius: 4px;
+  background: var(--tint);
+  font-size: 12.5px;
+}
+.notice[hidden] { display: none; }
+
+/* Состояния пустоты: когда таблицу не из чего собрать, страница говорит об этом
+ * словами, а не пустой сеткой. */
+.state {
+  margin: var(--gap) 0 0;
+  padding: 11px 13px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.state[hidden], .shell[hidden] { display: none; }
+
+.note { margin: 14px 0 0; max-width: 90em; color: var(--muted); font-size: 12px; }
+.note code { background: var(--tint); padding: 0 3px; border-radius: 3px; }
+
+/* Клавиатура: рамка фокуса видна на любом фоне (системный цвет акцента) и не
+ * сдвигает разметку. Ссылки журнала и все переключатели доступны с Tab. */
+:focus-visible { outline: 2px solid AccentColor; outline-offset: 2px; border-radius: 3px; }
+
+/* Широкая страница: панель выбора (метрики, дерево файлов, легенда) стоит **слева**
+ * от таблицы. Это не украшение: на десктопе бокового места много, а вертикального
+ * мало — переключатели и числа видны одновременно, и прокрутка страницы не уводит
+ * управление за экран. Узкое окно эту же раскладку снимает (ниже): там столбцы
+ * снова идут друг под другом, потому что рядом им не хватает ширины.
+ *
+ * Раскладка — сетка на `body`, а не обёртка в разметке: страница собирается
+ * вклейкой глав (`src/page/build.js`), и добавлять ей узлы ради оформления значило
+ * бы менять форму страницы в двух местах вместо одного.
+ *
+ * Порог 900px — тот же, что у адаптаций ниже: одна граница на «широко» и «узко»,
+ * иначе между двумя порогами страница осталась бы без ни одного правила. */
+@media (min-width: 900px) {
+  body {
+    display: grid;
+    grid-template-columns: minmax(230px, 300px) minmax(0, 1fr);
+    column-gap: var(--gap);
+    /* Оба столбца начинаются сверху и не растягиваются под соседа: у панели своя
+     * высота, у таблицы своя. */
+    align-content: start;
+    align-items: start;
+  }
+  header { grid-column: 1 / -1; }
+  #panel { grid-column: 1; }
+  #notice, #shell, #state, #note { grid-column: 2; }
+  /* В столбце дерево прокручивается выше, чем над таблицей: место занимает
+   * боковая колонка, а числа не отодвигает. */
+  .panel .files { max-height: min(62vh, 620px); }
+}
+
+/* Адаптации: единственное место, где страница правит общую геометрию, — потому что
+ * общая часть заморожена байтами артефакта, а не потому что так удобнее. */
+@media (max-width: 900px) {
+  body { padding: 14px 14px 32px; }
+  h1 { font-size: 18px; }
+  #grid { font-size: 12px; }
+  .shell { max-height: calc(100vh - 260px); }
+  .clip { width: 190px; }
+}
+</style>
+</head>
+<body>
+<header>
+<h1>Объём файлов по коммитам</h1>
+<p class="sub">@vernikr/size-report 2.0.0 · docs/size-report.html</p>
+</header>
+<div id="panel" class="panel"></div>
+<p id="notice" class="notice" hidden></p>
+<div id="shell" class="shell"><table id="grid"></table></div>
+<p id="state" class="state" hidden></p>
+<p id="note" class="note"></p>
+<script type="application/json" id="data">{"schema":1,"tool":{"name":"@vernikr/size-report","version":"2.0.0"},"report":{"locale":"ru","title":"Объём файлов по коммитам","heading":"Объём файлов по коммитам","artifact":"docs/size-report.html","fixCommand":"node node_modules/@vernikr/size-report/bin/size.js --write","journal":{"path":"WORKLOG.md"},"showSha":true},"metrics":[{"key":"raw","label":"raw","note":"файл как он есть","method":"размер объекта git","accuracy":"exact"},{"key":"min","label":"min","note":"настоящая минификация: имена сокращены, пробелы убраны","method":"esbuild 0.28.2 (minify, rename); остальные форматы (.md .yml) — упрощение без комментариев и отступов, то есть приближение","accuracy":"approximate"},{"key":"tok","label":"tok","note":"вес для языковой модели: на сколько единиц текста (токенов) он разбирается","method":"gpt-tokenizer 4.0.0, o200k_base (BPE)","accuracy":"exact"}],"categories":[{"key":"code","label":"Код"},{"key":"docs","label":"Документация"},{"key":"chore","label":"Служебные"}],"files":[{"label":"data.json","path":"fixtures/parity/data.json","paths":["fixtures/parity/data.json"],"category":"chore","categoryBy":"auto"},{"label":".dependency-cruiser.cjs","path":".dependency-cruiser.cjs","paths":[".dependency-cruiser.cjs"],"category":"code","categoryBy":"auto"},{"label":"release.yml","path":".github/workflows/release.yml","paths":[".github/workflows/release.yml"],"category":"chore","categoryBy":"auto"},{"label":"REFACTOR.md","path":"REFACTOR.md","paths":["REFACTOR.md"],"category":"docs","categoryBy":"auto"},{"label":"refusals.js","path":"tools/refusals.js","paths":["tools/refusals.js"],"category":"code","categoryBy":"auto"},{"label":"app.css","path":"src/page/app.css","paths":["src/page/app.css"],"category":"code","categoryBy":"auto"},{"label":"golden.json","path":"fixtures/synthetic/golden.json","paths":["fixtures/synthetic/golden.json"],"category":"chore","categoryBy":"auto"},{"label":"size-table.cjs","path":null,"paths":["fixtures/legacy/size-table.cjs"],"category":"code","categoryBy":"auto"},{"label":"ci.yml","path":"templates/ci.yml","paths":["templates/ci.yml"],"category":"chore","categoryBy":"auto"},{"label":"README.md","path":"README.md","paths":["README.md"],"category":"docs","categoryBy":"auto"},{"label":"page-view.test.js","path":"test/page-view.test.js","paths":["test/page-view.test.js"],"category":"code","categoryBy":"auto"},{"label":"table.css","path":"src/table.css","paths":["src/table.css"],"category":"code","categoryBy":"auto"}],"rows":[{"sha":"b7459b1838cd679864f16565506c2243eeafa1a7","when":"2026-09-14 01:29","subject":"docs: план выноса учёта объёма в пакет size-report","section":{"id":"2.","head":"2. 2026-09-14 — перенос папки, репозиторий и шаг 0: паритет и фикстура","added":true},"href":"../WORKLOG.md#2-2026-09-14--перенос-папки-репозиторий-и-шаг-0-паритет-и-фикстура","values":[null,null,null,null,null,null,null,null,null,{"raw":5642,"min":5620,"tok":1119},null,null]},{"sha":"77976fefc117b3f6f2ec5af714f57fc998d98cf1","when":"2026-09-14 01:29","subject":"docs: зафиксировать воспроизводимость эталонов и команды их сборки","section":{"id":"2.","head":"2. 2026-09-14 — перенос папки, репозиторий и шаг 0: паритет и фикстура","added":false},"href":"../WORKLOG.md#2-2026-09-14--перенос-папки-репозиторий-и-шаг-0-паритет-и-фикстура","values":[null,null,null,null,null,null,null,null,null,{"raw":5923,"min":5900,"tok":1170},null,null]},{"sha":"c939def217cdacb3c0798f672b30686d70eed264","when":"2026-09-14 01:39","subject":"test: паритет-тест и замороженная копия текущей реализации","section":{"id":"3.","head":"3. 2026-09-14 — шаг 1, проход 1: паритет-тест до переноса","added":true},"href":"../WORKLOG.md#3-2026-09-14--шаг-1-проход-1-паритет-тест-до-переноса","values":[{"raw":196032,"min":91989,"tok":57728},null,null,null,null,null,{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":6762,"min":6739,"tok":1337},null,null]},{"sha":"e31bb84a34464fbb48fe5b3b4330be34697263e4","when":"2026-09-14 01:41","subject":"refactor: перенести движок в раскладку пакета без изменения поведения","section":{"id":"3.","head":"3. 2026-09-14 — шаг 1, проход 1: паритет-тест до переноса","added":false},"href":"../WORKLOG.md#3-2026-09-14--шаг-1-проход-1-паритет-тест-до-переноса","values":[{"raw":196032,"min":91989,"tok":57728},null,null,null,null,null,{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":7378,"min":7355,"tok":1459},null,null]},{"sha":"84798c13781c4eadbf92f03de143ba0f1cb1422b","when":"2026-09-14 01:48","subject":"fix: закрепить настройки git на границе вызова — вывод не зависит от машины","section":{"id":"4.","head":"4. 2026-09-14 — починка B1: вывод больше не зависит от настроек git","added":true},"href":"../WORKLOG.md#4-2026-09-14--починка-b1-вывод-больше-не-зависит-от-настроек-git","values":[{"raw":196032,"min":91989,"tok":57728},null,null,null,null,null,{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":8013,"min":7989,"tok":1571},null,null]},{"sha":"d4d9d7f1323e71f3bc3a8a4cb9c7cd25a8241df2","when":"2026-09-14 01:54","subject":"docs: пути эталонов и числа приёмки привести к факту","section":null,"href":"https://github.com/vernikr/size-report/commit/d4d9d7f1323e71f3bc3a8a4cb9c7cd25a8241df2","values":[{"raw":196032,"min":91989,"tok":57728},null,null,null,null,null,{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":8003,"min":7979,"tok":1567},null,null]},{"sha":"1b187c207e489b15a48661466357ddc72323a8c9","when":"2026-09-14 02:09","subject":"fix: сверка с рабочим деревом сравнивает содержимое, а не размеры","section":{"id":"6.","head":"6. 2026-09-14 — починка B2: сверка с рабочим деревом не зависит от выкладки","added":true},"href":"../WORKLOG.md#6-2026-09-14--починка-b2-сверка-с-рабочим-деревом-не-зависит-от-выкладки","values":[{"raw":196032,"min":91989,"tok":57728},null,null,null,null,null,{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":8463,"min":8408,"tok":1650},null,null]},{"sha":"1c7da07c62d1caabcf7c9ee7b78661bc1f2add50","when":"2026-09-14 02:33","subject":"feat: контракт данных между движком и страницей отчёта","section":{"id":"7.","head":"7. 2026-09-14 — шаг 2, срез 1: контракт данных и минимальная страница","added":true},"href":"../WORKLOG.md#7-2026-09-14--шаг-2-срез-1-контракт-данных-и-минимальная-страница","values":[{"raw":196032,"min":91989,"tok":57728},null,null,null,null,null,{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":9876,"min":9787,"tok":1905},null,null]},{"sha":"4202191c9307f9406262dc77f393e6d868687848","when":"2026-09-14 02:44","subject":"docs: поканальный план чистки пакета после аудита","section":{"id":"7.","head":"7. 2026-09-14 — шаг 2, срез 1: контракт данных и минимальная страница","added":false},"href":"../WORKLOG.md#7-2026-09-14--шаг-2-срез-1-контракт-данных-и-минимальная-страница","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":18104,"min":18062,"tok":3871},null,null,{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":10095,"min":10006,"tok":1943},null,null]},{"sha":"5ea00dc509c557cbdb9ea34d421615e9e4907e51","when":"2026-09-14 02:53","subject":"fix: отказ командной строки — это код выхода и готовая команда починки","section":{"id":"7.","head":"7. 2026-09-14 — шаг 2, срез 1: контракт данных и минимальная страница","added":false},"href":"../WORKLOG.md#7-2026-09-14--шаг-2-срез-1-контракт-данных-и-минимальная-страница","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":19557,"min":19515,"tok":4168},null,null,{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":10943,"min":10851,"tok":2111},null,null]},{"sha":"a3421ba8b1b8559b4a0d02802ce9180874695581","when":"2026-09-14 03:03","subject":"refactor: один вычислительный слой на артефакт и страницу","section":{"id":"7.","head":"7. 2026-09-14 — шаг 2, срез 1: контракт данных и минимальная страница","added":false},"href":"../WORKLOG.md#7-2026-09-14--шаг-2-срез-1-контракт-данных-и-минимальная-страница","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":21487,"min":21437,"tok":4532},null,null,{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":11515,"min":11422,"tok":2221},null,null]},{"sha":"ea4c3d7062897f6ae6d4f108216895877dde785e","when":"2026-09-14 03:16","subject":"refactor: программа страницы — обычные исходники вместо строк в движке","section":{"id":"11.","head":"11. 2026-09-14 — R-2.1: программа страницы — обычные исходники","added":true},"href":"../WORKLOG.md#11-2026-09-14--r-21-программа-страницы--обычные-исходники","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":23314,"min":23264,"tok":4968},null,null,{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":12053,"min":11960,"tok":2333},null,null]},{"sha":"604a760b629ce426450b3477eacd0c63f7193191","when":"2026-09-14 03:27","subject":"chore: линтер пакета, который ловит склейку операторов в строку","section":{"id":"12.","head":"12. 2026-09-14 — R-1.2: линтер в пакете","added":true},"href":"../WORKLOG.md#12-2026-09-14--r-12-линтер-в-пакете","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":25377,"min":25327,"tok":5439},null,null,{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":12671,"min":12577,"tok":2451},null,null]},{"sha":"923f965c6e2830984d012c47f7b6b37edf3eba08","when":"2026-09-14 04:04","subject":"refactor: движок разложен по модулям, точка входа — только реэкспорт","section":{"id":"13.","head":"13. 2026-09-14 — R-1.3: разбиение движка по модулям","added":true},"href":"../WORKLOG.md#13-2026-09-14--r-13-разбиение-движка-по-модулям","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":27686,"min":27636,"tok":5969},null,null,{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":15391,"min":15297,"tok":2975},null,null]},{"sha":"f236e89f212df1f43f6973fcda5f7a57d5e1e17d","when":"2026-09-14 04:32","subject":"refactor(tests): одна обвязка проверок, один прогон на проверку","section":{"id":"14.","head":"14. 2026-09-14 — волна 3 (`REFACTOR.md`): общий харнесс и скорость тестов","added":true},"href":"../WORKLOG.md#14-2026-09-14--волна-3-refactormd-общий-харнесс-и-скорость-тестов","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":31096,"min":31044,"tok":6708},null,null,{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":17024,"min":16929,"tok":3328},null,null]},{"sha":"cf7e6b5e822ac80606c63e203835ca15b14ae173","when":"2026-09-14 04:48","subject":"feat(page): один набор стилей таблицы и современный вид страницы","section":{"id":"15.","head":"15. Проход: R-2.2 — один набор стилей и внешний вид страницы (2026-09-14)","added":true},"href":"../WORKLOG.md#15-проход-r-22--один-набор-стилей-и-внешний-вид-страницы-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":34647,"min":34601,"tok":7419},null,{"raw":6547,"min":2292,"tok":1629},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":18948,"min":18852,"tok":3680},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"b28312293c6483dd75e15247c6e69d887284f720","when":"2026-09-14 04:56","subject":"docs: инструкция подключения, проверенная прогоном в свежем проекте","section":{"id":"16.","head":"16. Проход: волна 4 — документация и инструкция подключения (2026-09-14)","added":true},"href":"../WORKLOG.md#16-проход-волна-4--документация-и-инструкция-подключения-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":39401,"min":39355,"tok":8417},null,{"raw":6547,"min":2292,"tok":1629},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":28176,"min":28038,"tok":5601},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"d63468df25b86947c490f5ea723d7697b0958938","when":"2026-09-14 05:06","subject":"fix: модуль в .js измеряется как любой файл, подсказки называют команду","section":{"id":"17.","head":"17. Проход: R-4.6 и R-4.7 — форма `.js` и правдивые подсказки (2026-09-14)","added":true},"href":"../WORKLOG.md#17-проход-r-46-и-r-47--форма-js-и-правдивые-подсказки-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":42557,"min":42510,"tok":9057},null,{"raw":6547,"min":2292,"tok":1629},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":30093,"min":29943,"tok":5914},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"4c0b5a53efe0f5bddcfce080b28d0dfe457e892b","when":"2026-09-14 05:22","subject":"docs: шаг 5 сделан — проект подключён, инструкция дописана по прогону","section":{"id":"18.","head":"18. Проход: шаг 5 — подключение к проекту-потребителю (2026-09-14)","added":true},"href":"../WORKLOG.md#18-проход-шаг-5--подключение-к-проекту-потребителю-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":42557,"min":42510,"tok":9057},null,{"raw":6547,"min":2292,"tok":1629},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":35029,"min":34831,"tok":6801},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"0a0c6e74a9a2aeb0533865ee8bbb55f51de71c9e","when":"2026-09-14 05:24","subject":"docs: пересборка таблицы нужна и после доковой правки","section":{"id":"18.","head":"18. Проход: шаг 5 — подключение к проекту-потребителю (2026-09-14)","added":false},"href":"../WORKLOG.md#18-проход-шаг-5--подключение-к-проекту-потребителю-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":42557,"min":42510,"tok":9057},null,{"raw":6547,"min":2292,"tok":1629},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":35696,"min":35490,"tok":6918},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"7a204c31a934489c4633eb56f11048f03d552319","when":"2026-09-14 05:34","subject":"perf(parse): один рабочий поток на прогон вместо запуска Node на клетку","section":{"id":"19.","head":"19. Проход: R-5.4 — цена разбора модуля (2026-09-14)","added":true},"href":"../WORKLOG.md#19-проход-r-54--цена-разбора-модуля-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":43747,"min":43700,"tok":9321},null,{"raw":6547,"min":2292,"tok":1629},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":37812,"min":37603,"tok":7343},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"f5d3d6c70024b42bd1e474a98e4ff0190c2d005b","when":"2026-09-14 05:48","subject":"fix: снятие эталонов снова работает, обещания пакета сведены к факту","section":{"id":"20.","head":"20. Проход: R-4.9 — обещания пакета сведены к факту (2026-09-14)","added":true},"href":"../WORKLOG.md#20-проход-r-49--обещания-пакета-сведены-к-факту-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":48163,"min":48113,"tok":10349},null,{"raw":6547,"min":2292,"tok":1629},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":40656,"min":40446,"tok":7889},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"5162f7c6257060ca9c4a508d5abfac6df68ed06a","when":"2026-09-14 05:55","subject":"ci: проверки идут на каждый пуш — линтер, набор в двух средах, тарболл, живая история, эталоны","section":{"id":"21.","head":"21. Проход: шаг 6 — CI пакета (2026-09-14)","added":true},"href":"../WORKLOG.md#21-проход-шаг-6--ci-пакета-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":49136,"min":49086,"tok":10529},null,{"raw":6547,"min":2292,"tok":1629},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":43231,"min":43019,"tok":8346},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"dee3ceb24b46979bd2380815c3bc8b7d92376d42","when":"2026-09-14 06:01","subject":"fix: живой паритет читает вывод процесса буферами, а не строкой","section":{"id":"21.","head":"21. Проход: шаг 6 — CI пакета (2026-09-14)","added":false},"href":"../WORKLOG.md#21-проход-шаг-6--ci-пакета-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":49831,"min":49781,"tok":10671},null,{"raw":6547,"min":2292,"tok":1629},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":43992,"min":43779,"tok":8480},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"e04d078130a672bc630f84a4279e186538ca897d","when":"2026-09-14 06:15","subject":"fix: сверка эталонов не зависит от версии git, бандл живой истории — с HEAD","section":{"id":"22.","head":"22. Проход: шаг 6 — CI доведён до зелёного (2026-09-14)","added":true},"href":"../WORKLOG.md#22-проход-шаг-6--ci-доведён-до-зелёного-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":53345,"min":53295,"tok":11458},null,{"raw":6547,"min":2292,"tok":1629},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":45759,"min":45545,"tok":8810},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"8e551b993275bda8d8ea84109f1861449827d51b","when":"2026-09-14 11:23","subject":"feat(page): панель страницы показывает дерево файлов по папкам","section":{"id":"23.","head":"23. Проход: шаг 2, срез 2 — дерево файлов в панели страницы (2026-09-14)","added":true},"href":"../WORKLOG.md#23-проход-шаг-2-срез-2--дерево-файлов-в-панели-страницы-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":56034,"min":55982,"tok":12009},null,{"raw":7486,"min":2607,"tok":1844},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":48010,"min":47795,"tok":9212},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"658f0ad1144b0e342d00fa11f444566a72be0c35","when":"2026-09-14 11:31","subject":"feat(page): панель помнит выбор читателя между открытиями","section":{"id":"24.","head":"24. Проход: шаг 2, срез 3 — память выбора читателя (2026-09-14)","added":true},"href":"../WORKLOG.md#24-проход-шаг-2-срез-3--память-выбора-читателя-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":59827,"min":59775,"tok":12722},null,{"raw":7486,"min":2607,"tok":1844},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":50176,"min":49960,"tok":9606},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"56804620b8efcb64ab2e494ab64333dc486db546","when":"2026-09-14 11:43","subject":"feat(page): выбор читателя передаётся ссылкой","section":{"id":"25.","head":"25. Проход: шаг 2, срез 4 — обмен выбором ссылкой (2026-09-14)","added":true},"href":"../WORKLOG.md#25-проход-шаг-2-срез-4--обмен-выбором-ссылкой-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":63841,"min":63789,"tok":13500},null,{"raw":8069,"min":2775,"tok":1974},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":52700,"min":52483,"tok":10039},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"4983bcbe34d1f70ee11306f42dca79f9ec289abf","when":"2026-09-14 12:02","subject":"feat(min): метрика min умеет считать настоящим минификатором","section":{"id":"26.","head":"26. Проход: шаг 3, срез 1 — настоящее сжатие (2026-09-14)","added":true},"href":"../WORKLOG.md#26-проход-шаг-3-срез-1--настоящее-сжатие-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":70149,"min":70096,"tok":14814},null,{"raw":8069,"min":2775,"tok":1974},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":57812,"min":57584,"tok":10997},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"5dd423f9e410498d483d1d8a89cdc2f7c0ad45e0","when":"2026-09-14 12:20","subject":"feat(tok): метрика tok считает токены настоящим словарём","section":{"id":"27.","head":"27. Проход: шаг 4, срез 1 — токены (2026-09-14)","added":true},"href":"../WORKLOG.md#27-проход-шаг-4-срез-1--токены-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":76644,"min":76590,"tok":16190},null,{"raw":8069,"min":2775,"tok":1974},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":62609,"min":62380,"tok":11942},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"167ea9c61d34c76b973e385b8d1529193c8eb8d6","when":"2026-09-14 12:22","subject":"docs: числа прохода по токенам названы по факту","section":{"id":"27.","head":"27. Проход: шаг 4, срез 1 — токены (2026-09-14)","added":false},"href":"../WORKLOG.md#27-проход-шаг-4-срез-1--токены-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":76726,"min":76672,"tok":16218},null,{"raw":8069,"min":2775,"tok":1974},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":62609,"min":62380,"tok":11942},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"a93acf722bd31be8d9377b032e07f1ab54884f76","when":"2026-09-14 12:29","subject":"docs: цена токенов названа замером на живой истории","section":{"id":"27.","head":"27. Проход: шаг 4, срез 1 — токены (2026-09-14)","added":false},"href":"../WORKLOG.md#27-проход-шаг-4-срез-1--токены-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":76982,"min":76928,"tok":16319},null,{"raw":8069,"min":2775,"tok":1974},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":62939,"min":62710,"tok":12022},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"16d77440e74eb114bbef0ea58136cf5ab4adf28f","when":"2026-09-14 12:39","subject":"fix(disk): история с удалённым файлом больше не роняет прогон","section":{"id":"28.","head":"28. Проход: B3 — история с удалениями (2026-09-14)","added":true},"href":"../WORKLOG.md#28-проход-b3--история-с-удалениями-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":78354,"min":78300,"tok":16602},null,{"raw":8069,"min":2775,"tok":1974},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":64949,"min":64719,"tok":12395},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"e463b70df14dfb445aa58d070096d5a046fda442","when":"2026-09-14 12:51","subject":"fix(history): путь для состояния выбирается по тому, что есть в коммите","section":{"id":"29.","head":"29. Проход: N8 — выбор пути для состояния (2026-09-14)","added":true},"href":"../WORKLOG.md#29-проход-n8--выбор-пути-для-состояния-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":80286,"min":80232,"tok":17006},null,{"raw":8069,"min":2775,"tok":1974},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":66177,"min":65947,"tok":12615},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"9b0d5927b7b0c2d9aa88c09b6daec00c44933c5f","when":"2026-09-14 13:15","subject":"feat(accuracy): точность числа помечена по клетке, подпись — худшее в колонке","section":{"id":"30.","head":"30. Проход: шаг 4, срез 2 — точность по клетке и решение про семейство (2026-09-14)","added":true},"href":"../WORKLOG.md#30-проход-шаг-4-срез-2--точность-по-клетке-и-решение-про-семейство-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":86439,"min":86385,"tok":18272},null,{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},null,{"raw":68439,"min":68209,"tok":13005},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"00eee020f28b1252c08946d38280e8a957644508","when":"2026-09-14 13:34","subject":"feat(templates): шаблоны настроек и проверки в CI для подключаемого проекта","section":{"id":"31.","head":"31. Проход: шаг 5 — шаблоны для подключаемого проекта (2026-09-14)","added":true},"href":"../WORKLOG.md#31-проход-шаг-5--шаблоны-для-подключаемого-проекта-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":91052,"min":90998,"tok":19236},null,{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3569,"min":3353,"tok":733},{"raw":70474,"min":70243,"tok":13377},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"5f571f70054f19c47f6ff5902df4b19d6afcc41b","when":"2026-09-14 13:53","subject":"feat(check): полнота покрытия и объяснение пропущенной строки","section":{"id":"32.","head":"32. Проход: шаг 5 — полнота покрытия и объяснение пропущенной строки (2026-09-14)","added":true},"href":"../WORKLOG.md#32-проход-шаг-5--полнота-покрытия-и-объяснение-пропущенной-строки-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":95902,"min":95848,"tok":20287},null,{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3569,"min":3353,"tok":733},{"raw":76300,"min":76060,"tok":14408},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"d8ba03f90ee61e8a71e7e656a3b5604da79ebb47","when":"2026-09-14 14:24","subject":"test(docs): сторож обещаний документации","section":{"id":"33.","head":"33. Проход: R-4.1 — сторож документации (2026-09-14)","added":true},"href":"../WORKLOG.md#33-проход-r-41--сторож-документации-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":99154,"min":99100,"tok":20862},null,{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3569,"min":3353,"tok":733},{"raw":78859,"min":78618,"tok":14879},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"87773e10705a4fdcfd15870d5aa530941ef083fa","when":"2026-09-14 14:54","subject":"fix(tools): одна граница вызова git на движок и проверки","section":{"id":"34.","head":"34. Проход: N10 — одна граница вызова git на движок и проверки (2026-09-14)","added":true},"href":"../WORKLOG.md#34-проход-n10--одна-граница-вызова-git-на-движок-и-проверки-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":103207,"min":103153,"tok":21731},null,{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3569,"min":3353,"tok":733},{"raw":80300,"min":80058,"tok":15122},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"bb08bba918d692dc152db753cae2cff7bd6f6f6f","when":"2026-09-14 15:11","subject":"feat(doctor): диагностика одним ответом — окружение, зависимости, настройки, покрытие","section":{"id":"35.","head":"35. Проход: шаг 5 — диагностика одним ответом (`size doctor`, 2026-09-14)","added":true},"href":"../WORKLOG.md#35-проход-шаг-5--диагностика-одним-ответом-size-doctor-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":103811,"min":103757,"tok":21897},null,{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3569,"min":3353,"tok":733},{"raw":82169,"min":81924,"tok":15425},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"cd2e3aa78bdd818bc4a5a8add6502deca4bdf1ce","when":"2026-09-14 16:15","subject":"feat(hook): отчёт обновляется сам после коммита и слияния","section":{"id":"36.","head":"36. Проход: шаг 5 — хук автообновления (2026-09-14)","added":true},"href":"../WORKLOG.md#36-проход-шаг-5--хук-автообновления-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":104582,"min":104528,"tok":22100},null,{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3569,"min":3353,"tok":733},{"raw":86558,"min":86308,"tok":16258},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"6530237ab826b011240ad8283a4ef499cc90bf6f","when":"2026-09-14 17:07","subject":"fix(cli,docs): незнакомое слово — отказ, а пример установки — на ревизию со всеми командами","section":{"id":"37.","head":"37. Проход: R-4.13 — пин в примере установки и молчаливое слово (2026-09-14)","added":true},"href":"../WORKLOG.md#37-проход-r-413--пин-в-примере-установки-и-молчаливое-слово-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":109049,"min":108995,"tok":23029},null,{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3569,"min":3353,"tok":733},{"raw":88225,"min":87974,"tok":16560},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"73b499ed9b73e1515fdd1f0c03577e8f914cb75b","when":"2026-09-14 17:09","subject":"docs: пин в примере установки и в потребителе — на ревизию с отказами на незнакомое слово","section":{"id":"37.","head":"37. Проход: R-4.13 — пин в примере установки и молчаливое слово (2026-09-14)","added":false},"href":"../WORKLOG.md#37-проход-r-413--пин-в-примере-установки-и-молчаливое-слово-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":109268,"min":109214,"tok":23066},null,{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3569,"min":3353,"tok":733},{"raw":88461,"min":88210,"tok":16592},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"f980a0924a4c0c3c0d5bd7ea7c622a10e0d88fdd","when":"2026-09-14 17:11","subject":"fix(docs): пин в примере — сорок знаков, иначе он живёт до следующего коммита","section":{"id":"37.","head":"37. Проход: R-4.13 — пин в примере установки и молчаливое слово (2026-09-14)","added":false},"href":"../WORKLOG.md#37-проход-r-413--пин-в-примере-установки-и-молчаливое-слово-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":109893,"min":109839,"tok":23175},null,{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3569,"min":3353,"tok":733},{"raw":89382,"min":89130,"tok":16790},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"00dea7056bb6b2d0d4b16d9319dbd281c0543c6b","when":"2026-09-14 18:03","subject":"fix(cli): один разбор аргументов — два режима сразу стали отказом, а не тишиной","section":{"id":"38.","head":"38. Проход: R-1.6 — один владелец грамматики командной строки (2026-09-14)","added":true},"href":"../WORKLOG.md#38-проход-r-16--один-владелец-грамматики-командной-строки-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":115458,"min":115404,"tok":24353},null,{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3569,"min":3353,"tok":733},{"raw":89989,"min":89729,"tok":16891},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"52469d43bbebbb84130b03f692e73f799517bcf6","when":"2026-09-14 18:28","subject":"docs, cli, test: правила --json и причин отказа стали одним владельцем и сторож разложен","section":{"id":"39.","head":"39. Проход: три пункта аудита одним разом (`--json`, причины отказа, сторож) (2026-09-14)","added":true},"href":"../WORKLOG.md#39-проход-три-пункта-аудита-одним-разом---json-причины-отказа-сторож-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":125351,"min":125297,"tok":26231},null,{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3569,"min":3353,"tok":733},{"raw":92129,"min":91861,"tok":17293},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"19c3dd27dcfabff741c6febba45127ba2fe737d4","when":"2026-09-14 19:37","subject":"chore(release): 1.0.0 — версия, CHANGELOG с замером чисел и сторож выпуска","section":{"id":"40.","head":"40. Проход: выпуск 1.0.0 — версия, CHANGELOG с «что изменится в числах», тег (`PLAN.md` §5, шаг 6) (2026-09-14)","added":true},"href":"../WORKLOG.md#40-проход-выпуск-100--версия-changelog-с-что-изменится-в-числах-тег-planmd-5-шаг-6-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":129707,"min":129653,"tok":27219},null,{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3569,"min":3353,"tok":733},{"raw":94448,"min":94179,"tok":17765},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"69ae6734635da5fcab4c68833cf4918378d9249d","when":"2026-09-14 20:15","subject":"perf(test): набор разделён на быстрый и полный прогон (R-5.7)","section":{"id":"41.","head":"41. Разделение набора проверок на быстрый и полный (REFACTOR R-5.7, PLAN §5 остаток шага 6)","added":true},"href":"../WORKLOG.md#41-разделение-набора-проверок-на-быстрый-и-полный-refactor-r-57-plan-5-остаток-шага-6","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":139573,"min":139517,"tok":29242},null,{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3569,"min":3353,"tok":733},{"raw":99105,"min":98829,"tok":18614},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"e297a293043b25b11a54dc35c083f6a23dedfba0","when":"2026-09-14 20:18","subject":"docs(test): числа приёмки разделения прогонов — по последнему замеру","section":{"id":"41.","head":"41. Разделение набора проверок на быстрый и полный (REFACTOR R-5.7, PLAN §5 остаток шага 6)","added":false},"href":"../WORKLOG.md#41-разделение-набора-проверок-на-быстрый-и-полный-refactor-r-57-plan-5-остаток-шага-6","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":139648,"min":139592,"tok":29265},null,{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3569,"min":3353,"tok":733},{"raw":99105,"min":98829,"tok":18614},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"6e00277df69da17fa477ed91da1dc145def94d32","when":"2026-09-14 20:33","subject":"fix(explain): имя ревизии — не «нет такого коммита»","section":{"id":"42.","head":"42. `explain` понимает имена ревизий (REFACTOR R-4.17)","added":true},"href":"../WORKLOG.md#42-explain-понимает-имена-ревизий-refactor-r-417","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":145418,"min":145362,"tok":30534},null,{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3569,"min":3353,"tok":733},{"raw":99847,"min":99569,"tok":18756},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"24f70db475a2b81afaa9cf1e8b529bc6b1c0d222","when":"2026-09-14 21:05","subject":"fix(refusal): отказы говорят правду — каталог, сторож и шесть починенных мест (R-4.18)","section":{"id":"43.","head":"43. Проход: весь класс ложных причин в отказах — каталог и сторож (`REFACTOR` R-4.18) (2026-09-14)","added":true},"href":"../WORKLOG.md#43-проход-весь-класс-ложных-причин-в-отказах--каталог-и-сторож-refactor-r-418-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":155664,"min":155608,"tok":32686},{"raw":20599,"min":12602,"tok":4469},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3569,"min":3353,"tok":733},{"raw":103118,"min":102839,"tok":19343},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"8321e65297a100c8b4f06e836b35a7403b9fa148","when":"2026-09-14 21:19","subject":"docs: публичный репозиторий — установка без учётных данных (WORKLOG §44)","section":{"id":"44.","head":"44. Репозиторий пакета сделан публичным — установка без учётных данных (2026-09-14)","added":true},"href":"../WORKLOG.md#44-репозиторий-пакета-сделан-публичным--установка-без-учётных-данных-2026-09-14","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":155664,"min":155608,"tok":32686},{"raw":20599,"min":12602,"tok":4469},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3577,"min":3380,"tok":725},{"raw":103880,"min":103600,"tok":19517},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"8224ed3cb06b3afdde84c737cf63665e794e8e03","when":"2026-09-15 01:52","subject":"chore(release): 1.1.0 — числа не меняются, ответы инструмента исправлены","section":null,"href":"https://github.com/vernikr/size-report/commit/8224ed3cb06b3afdde84c737cf63665e794e8e03","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":155664,"min":155608,"tok":32686},{"raw":20599,"min":12602,"tok":4469},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3577,"min":3380,"tok":725},{"raw":104018,"min":103738,"tok":19545},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"b2fa2e407f9d3630fbc77bc02c9e0ed053896dd2","when":"2026-09-15 01:58","subject":"docs: выпуск 1.1.0 и потребитель на нём — журнал и план рефакторинга","section":{"id":"45.","head":"45. Выпуск 1.1.0 и потребитель на нём — установка без доступов (2026-09-15)","added":true},"href":"../WORKLOG.md#45-выпуск-110-и-потребитель-на-нём--установка-без-доступов-2026-09-15","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":159022,"min":158966,"tok":33413},{"raw":20599,"min":12602,"tok":4469},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3577,"min":3380,"tok":725},{"raw":104018,"min":103738,"tok":19545},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"c1e1d81f848276441eb0bbac415fee51cd0001dc","when":"2026-09-15 02:02","subject":"docs: журнал и план — числа прохода потребителя по факту","section":{"id":"45.","head":"45. Выпуск 1.1.0 и потребитель на нём — установка без доступов (2026-09-15)","added":false},"href":"../WORKLOG.md#45-выпуск-110-и-потребитель-на-нём--установка-без-доступов-2026-09-15","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":159233,"min":159177,"tok":33450},{"raw":20599,"min":12602,"tok":4469},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3577,"min":3380,"tok":725},{"raw":104018,"min":103738,"tok":19545},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"8924c9059bdfa3fbaadeafdf29d0c1da6eb21efe","when":"2026-09-15 02:11","subject":"docs: обещания про действия пользователя сверены с фактом (R-4.20)","section":{"id":"46.","head":"46. Обещания про действия пользователя — сверены с фактом (2026-09-15)","added":true},"href":"../WORKLOG.md#46-обещания-про-действия-пользователя--сверены-с-фактом-2026-09-15","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":164021,"min":163965,"tok":34382},{"raw":20599,"min":12602,"tok":4469},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3577,"min":3380,"tok":725},{"raw":104595,"min":104314,"tok":19638},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"e74e25ffedb7a7513bb112e87fa3aacb9ca6d5c8","when":"2026-09-15 02:18","subject":"docs: справка про имя в реестре и что затронет переименование (PLAN §10)","section":{"id":"47.","head":"47. Имя для реестра: что свободно и что затронет переименование (2026-09-15)","added":true},"href":"../WORKLOG.md#47-имя-для-реестра-что-свободно-и-что-затронет-переименование-2026-09-15","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":164021,"min":163965,"tok":34382},{"raw":20599,"min":12602,"tok":4469},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":3577,"min":3380,"tok":725},{"raw":104766,"min":104485,"tok":19672},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"9bb4270c7431365ecf4653b2387aa21d180281c3","when":"2026-09-15 02:49","subject":"fix: совет называет путь внутри проекта, а не имя пакета из реестра","section":{"id":"48.","head":"48. Совет называет путь внутри проекта, а не имя пакета (REFACTOR R-4.21) (2026-09-15)","added":true},"href":"../WORKLOG.md#48-совет-называет-путь-внутри-проекта-а-не-имя-пакета-refactor-r-421-2026-09-15","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":169160,"min":169104,"tok":35458},{"raw":20599,"min":12602,"tok":4469},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":4045,"min":3848,"tok":805},{"raw":105189,"min":104908,"tok":19746},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"11c4d6933b3538daa1db0d52f7b6a2f776e1a2cb","when":"2026-09-15 03:16","subject":"fix: совет отказа проверяется исполнением, а не на слово (REFACTOR R-4.22)","section":{"id":"49.","head":"49. Совет отказа проверяется исполнением (REFACTOR R-4.22) (2026-09-15)","added":true},"href":"../WORKLOG.md#49-совет-отказа-проверяется-исполнением-refactor-r-422-2026-09-15","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":176238,"min":176182,"tok":36941},{"raw":32128,"min":18782,"tok":6994},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},{"raw":60428,"min":29138,"tok":14749},{"raw":4045,"min":3848,"tok":805},{"raw":107668,"min":107386,"tok":20150},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"d36c88f6b9b04caa128d26a15c1f4de7ed353856","when":"2026-09-15 03:34","subject":"refactor: якорь фикстуры выведен из дерева в историю (REFACTOR R-1.5, R-3.4)","section":{"id":"50.","head":"50. Якорь фикстуры выведен из дерева в историю (REFACTOR R-1.5, R-3.4) (2026-09-15)","added":true},"href":"../WORKLOG.md#50-якорь-фикстуры-выведен-из-дерева-в-историю-refactor-r-15-r-34-2026-09-15","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":180679,"min":180622,"tok":37863},{"raw":32128,"min":18782,"tok":6994},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},null,{"raw":4045,"min":3848,"tok":805},{"raw":107904,"min":107622,"tok":20198},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"2fe0915b320f2b5366d57a03ca7905b9769f2023","when":"2026-09-15 03:57","subject":"feat!: имя пакета переехало в область владельца — @vernikr/size-report","section":{"id":"52.","head":"52. Пакет переехал в область владельца: `@vernikr/size-report` (2026-09-15)","added":true},"href":"../WORKLOG.md#52-пакет-переехал-в-область-владельца-vernikrsize-report-2026-09-15","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":180679,"min":180622,"tok":37863},{"raw":32128,"min":18782,"tok":6994},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},null,{"raw":4180,"min":3983,"tok":830},{"raw":108167,"min":107885,"tok":20272},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"23c10a39ea7e236d06cdaf294cf3ee064ceabd15","when":"2026-09-15 04:24","subject":"docs: выпуск 1.1.1 опубликован — установка ведёт именем из реестра","section":{"id":"53.","head":"53. Выпуск 1.1.1 опубликован в реестре и пройден как чужой (2026-09-15)","added":true},"href":"../WORKLOG.md#53-выпуск-111-опубликован-в-реестре-и-пройден-как-чужой-2026-09-15","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":180679,"min":180622,"tok":37863},{"raw":32128,"min":18782,"tok":6994},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},null,{"raw":4180,"min":3983,"tok":830},{"raw":108507,"min":108223,"tok":20355},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"9dd5e1a687f10884a98a33ff18ea03db51264eed","when":"2026-09-15 04:31","subject":"docs: инструкция проверена прогоном на живом проекте — две неточности исправлены","section":{"id":"54.","head":"54. Инструкция пройдена как чужой: свежий проект с пакетом из реестра (2026-09-15)","added":true},"href":"../WORKLOG.md#54-инструкция-пройдена-как-чужой-свежий-проект-с-пакетом-из-реестра-2026-09-15","values":[{"raw":196032,"min":91989,"tok":57728},null,null,{"raw":182783,"min":182726,"tok":38234},{"raw":32128,"min":18782,"tok":6994},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},null,{"raw":4180,"min":3983,"tok":830},{"raw":110357,"min":110058,"tok":20705},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"89ba9aa776ca2f2e8f39bda2a62dd3e0937cfcde","when":"2026-09-15 04:51","subject":"ci: время перестаёт быть гейтом — цели и потолок стоимости сняты","section":{"id":"56.","head":"56. Выпуск пакета становится воспроизводимым из CI (2026-09-15)","added":true},"href":"../WORKLOG.md#56-выпуск-пакета-становится-воспроизводимым-из-ci-2026-09-15","values":[{"raw":196032,"min":91989,"tok":57728},null,{"raw":4457,"min":4082,"tok":949},{"raw":190335,"min":190276,"tok":39678},{"raw":32128,"min":18782,"tok":6994},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},null,{"raw":4180,"min":3983,"tok":830},{"raw":111303,"min":111002,"tok":20862},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"f6a57a31e72bebf258e6fb6c799a4cc3b76741a0","when":"2026-09-15 04:57","subject":"fix(ci): описание выпуска не разбиралось вовсе — сторож искал подстроки","section":{"id":"56.","head":"56. Выпуск пакета становится воспроизводимым из CI (2026-09-15)","added":false},"href":"../WORKLOG.md#56-выпуск-пакета-становится-воспроизводимым-из-ci-2026-09-15","values":[{"raw":196032,"min":91989,"tok":57728},null,{"raw":4765,"min":4429,"tok":1017},{"raw":192667,"min":192608,"tok":40111},{"raw":32128,"min":18782,"tok":6994},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},null,{"raw":4180,"min":3983,"tok":830},{"raw":111863,"min":111562,"tok":20965},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"0589b71e216e862e068957f1d9ecb031beee71ba","when":"2026-09-15 05:04","subject":"fix(ci): черновой прогон выпуска был красным всегда и не проверял вход","section":null,"href":"https://github.com/vernikr/size-report/commit/0589b71e216e862e068957f1d9ecb031beee71ba","values":[{"raw":196032,"min":91989,"tok":57728},null,{"raw":5995,"min":5605,"tok":1236},{"raw":192667,"min":192608,"tok":40111},{"raw":32128,"min":18782,"tok":6994},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},null,{"raw":4180,"min":3983,"tok":830},{"raw":112446,"min":112145,"tok":21071},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"de9b45b7ad5906bf6bb3932bf62cbee485e4594f","when":"2026-09-15 05:06","subject":"docs: черновой прогон выпуска пройден — записаны оба его урока и предел","section":{"id":"56.","head":"56. Выпуск пакета становится воспроизводимым из CI (2026-09-15)","added":false},"href":"../WORKLOG.md#56-выпуск-пакета-становится-воспроизводимым-из-ci-2026-09-15","values":[{"raw":196032,"min":91989,"tok":57728},null,{"raw":5995,"min":5605,"tok":1236},{"raw":193856,"min":193797,"tok":40345},{"raw":32128,"min":18782,"tok":6994},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},null,{"raw":4180,"min":3983,"tok":830},{"raw":112446,"min":112145,"tok":21071},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"5777417fc9cc487b28b0c2fe7c04918b26c37090","when":"2026-09-15 05:07","subject":"fix(docs): имя пакета с версией больше не считается путём в документации","section":null,"href":"https://github.com/vernikr/size-report/commit/5777417fc9cc487b28b0c2fe7c04918b26c37090","values":[{"raw":196032,"min":91989,"tok":57728},null,{"raw":5995,"min":5605,"tok":1236},{"raw":193918,"min":193859,"tok":40356},{"raw":32128,"min":18782,"tok":6994},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},null,{"raw":4180,"min":3983,"tok":830},{"raw":112446,"min":112145,"tok":21071},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"473e069e7997a69bdc33d25c54e22500ff9b31db","when":"2026-09-15 05:15","subject":"fix: проверка называет другой счёт, а вердикт остаётся за расхождением","section":null,"href":"https://github.com/vernikr/size-report/commit/473e069e7997a69bdc33d25c54e22500ff9b31db","values":[{"raw":196032,"min":91989,"tok":57728},null,{"raw":5995,"min":5605,"tok":1236},{"raw":194760,"min":194701,"tok":40569},{"raw":32128,"min":18782,"tok":6994},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},null,{"raw":4180,"min":3983,"tok":830},{"raw":113136,"min":112829,"tok":21184},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"1d6c976bee052052385c4e923e3945709dd37728","when":"2026-09-15 05:18","subject":"fix(ci): выпуск по удостоверению упирался в подставной `_authToken` из setup-node","section":null,"href":"https://github.com/vernikr/size-report/commit/1d6c976bee052052385c4e923e3945709dd37728","values":[{"raw":196032,"min":91989,"tok":57728},null,{"raw":6511,"min":6101,"tok":1340},{"raw":194760,"min":194701,"tok":40569},{"raw":32128,"min":18782,"tok":6994},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},null,{"raw":4180,"min":3983,"tok":830},{"raw":113136,"min":112829,"tok":21184},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"1e3e0115e9a8492c30774452f06dcffd07e56f38","when":"2026-09-15 05:27","subject":"docs: выпуск 1.2.0 ушёл из CI по удостоверению — записаны обе причины первой попытки","section":{"id":"57.","head":"57. Выпуск 1.2.0: тег, CI без секрета и две причины, по которым он не уходил (2026-09-15)","added":true},"href":"../WORKLOG.md#57-выпуск-120-тег-ci-без-секрета-и-две-причины-по-которым-он-не-уходил-2026-09-15","values":[{"raw":196032,"min":91989,"tok":57728},null,{"raw":6511,"min":6101,"tok":1340},{"raw":196400,"min":196341,"tok":40923},{"raw":32128,"min":18782,"tok":6994},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},null,{"raw":4180,"min":3983,"tok":830},{"raw":114210,"min":113902,"tok":21429},null,{"raw":3104,"min":1095,"tok":774}]},{"sha":"10c9e43abfa0069b704c0abfecfc754843dd2b35","when":"2026-09-15 12:14","subject":"feat(gates): гейт против раздувания кода, база находок разобрана (56 → 0)","section":{"id":"65.","head":"65. 2026-09-15 — обещание документации шире собранного: гейт-файлы в CI","added":true},"href":"../WORKLOG.md#65-2026-09-15--обещание-документации-шире-собранного-гейт-файлы-в-ci","values":[{"raw":196032,"min":91989,"tok":57728},{"raw":3215,"min":1752,"tok":689},{"raw":6854,"min":6420,"tok":1453},{"raw":196400,"min":196341,"tok":40923},{"raw":32230,"min":18799,"tok":7020},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},null,{"raw":4180,"min":3983,"tok":830},{"raw":126010,"min":125695,"tok":23759},{"raw":29183,"min":15221,"tok":6219},{"raw":3104,"min":1095,"tok":774}]},{"sha":"5c920802d26241da778d522faa9c05142268dd21","when":"2026-09-15 15:26","subject":"feat(config): настройки выводятся из проекта — файл стал необязательным","section":{"id":"71.","head":"71. 2026-09-15 — настройки выводятся из проекта, выпуск 1.3.0, подключение обновлённой копии","added":true},"href":"../WORKLOG.md#71-2026-09-15--настройки-выводятся-из-проекта-выпуск-130-подключение-обновлённой-копии","values":[{"raw":196032,"min":91989,"tok":57728},{"raw":3215,"min":1752,"tok":689},{"raw":6854,"min":6420,"tok":1453},{"raw":196400,"min":196341,"tok":40923},{"raw":32230,"min":18799,"tok":7020},{"raw":8983,"min":2986,"tok":2158},{"raw":12712,"min":6208,"tok":3803},null,{"raw":4180,"min":3983,"tok":830},{"raw":129467,"min":129151,"tok":24335},{"raw":29183,"min":15221,"tok":6219},{"raw":3104,"min":1095,"tok":774}]},{"sha":"80cfc006290afc2ed7ba85c8a8b49b22cec2812a","when":"2026-09-15 15:46","subject":"feat(page): панель выбора встаёт слева от таблицы на широком экране","section":{"id":"72.","head":"72. 2026-09-15 — панель страницы слева от таблицы (выпуск 1.3.1)","added":true},"href":"../WORKLOG.md#72-2026-09-15--панель-страницы-слева-от-таблицы-выпуск-131","values":[{"raw":196032,"min":91989,"tok":57728},{"raw":3215,"min":1752,"tok":689},{"raw":6854,"min":6420,"tok":1453},{"raw":196400,"min":196341,"tok":40923},{"raw":32230,"min":18799,"tok":7020},{"raw":11123,"min":3275,"tok":2584},{"raw":12712,"min":6208,"tok":3803},null,{"raw":4180,"min":3983,"tok":830},{"raw":130882,"min":130565,"tok":24592},{"raw":29183,"min":15221,"tok":6219},{"raw":3104,"min":1095,"tok":774}]},{"sha":"202c768842647255b456b8b867fbac0e0ec8bae5","when":"2026-09-15 18:37","subject":"feat!: один отчёт вместо двух — самодостаточная страница и хук, который ставит себя сам","section":{"id":"73.","head":"73. 2026-09-15 — один отчёт вместо двух и хук, который ставит себя сам (выпуск 2.0.0)","added":true},"href":"../WORKLOG.md#73-2026-09-15--один-отчёт-вместо-двух-и-хук-который-ставит-себя-сам-выпуск-200","values":[{"raw":196032,"min":91989,"tok":57728},{"raw":3215,"min":1752,"tok":689},{"raw":6854,"min":6420,"tok":1453},{"raw":196400,"min":196341,"tok":40923},{"raw":32233,"min":18802,"tok":7020},{"raw":11123,"min":3275,"tok":2584},{"raw":12712,"min":6208,"tok":3803},null,{"raw":4211,"min":4014,"tok":838},{"raw":131714,"min":131397,"tok":24706},{"raw":29949,"min":15374,"tok":6366},{"raw":3104,"min":1095,"tok":774}]}],"now":[{"raw":196032,"min":91989,"tok":57728},{"raw":3215,"min":1752,"tok":689},{"raw":6854,"min":6420,"tok":1453},{"raw":196400,"min":196341,"tok":40923},{"raw":32233,"min":18802,"tok":7020},{"raw":11123,"min":3275,"tok":2584},{"raw":12712,"min":6208,"tok":3803},null,{"raw":4211,"min":4014,"tok":838},{"raw":131714,"min":131397,"tok":24706},{"raw":29949,"min":15374,"tok":6366},{"raw":3104,"min":1095,"tok":774}],"approx":{"min":{"rows":"000000000100000000000100000000000100000000000100000000000100000000000100000000000100000000000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100000100001100001100001100001100001100001100001100001100001100001100001100001100001100001100001100001100001100001100001100001100001100001100001100001100001100","now":"001100001100"}}}</script>
+<script type="application/json" id="ui">{"commit":"Коммит","total":"Общий объём","now":"сейчас","metrics":"Метрики","files":"Файлы","dir":"все файлы папки {name} ({n})","all":"все","linkForeign":"Ссылка собрана в другом отчёте и не применена: показано то, что выбрано в этом браузере. Адрес не тронут.","linkBroken":"В адресе испорченный выбор — прочитать его не удалось. Показано то, что выбрано в этом браузере.","linkExtra":"Часть ссылки пропущена: в этом отчёте нет {n} названных имён. Остальное применено.","exact":"точное число","approximate":"приближение","approxCell":"приближённое число: ","methodLabel":"способ:","legend":[{"cls":"up","text":"рост"},{"cls":"down","text":"спад"},{"cls":"approx","text":"подчёркнутое число — приближённое: способ назван под метриками"},{"cls":"same","text":"пустая клетка — не менялось"},{"cls":"miss","text":"«—» — файла в этой ревизии ещё нет"}],"empty":"Ни одна метрика не выбрана — таблицу не из чего собрать. Включите хотя бы одну в панели выше: без метрик нет ни одной колонки с числом.","noFiles":"Ни один файл не выбран: в таблице остался только общий объём. Включите файл в панели выше, чтобы увидеть его колонки.","note":"Абсолютные размеры стоят один раз — в строке «сейчас». Строк: {rows}: коммиты без изменения объёма и коммиты, тронувшие только выключенные файлы, строк не получают. Собрано из истории git: {command}."}</script>
+<script>
+/* Производные величины отчёта: из абсолютных значений получаются итоги, дельты,
+ * содержимое клетки и подпись коммита.
+ *
+ * Единственное место, где это считается. Оба вывода пользуются этим файлом:
+ * статический артефакт импортирует его как обычный модуль, а страница получает
+ * его текст вклеенным в свой единственный файл (внешних ссылок страница иметь не
+ * может). Поэтому у этого файла два требования, и оба обязательны:
+ *
+ *   1. Ни импортов, ни состояния модуля — иначе текст нельзя вклеить;
+ *   2. Один `import` на строку и экспорт объявлением (`export function`), а не
+ *      списком имён: модульный синтаксис при вклейке снимается построчно, и
+ *      непонятая строка не должна молча попасть в страницу (`pageScript`).
+ *
+ * Расхождение двух отчётов возможно только здесь, поэтому и стеречь его надо
+ * здесь: `test/contract-derived.test.js` сверяет числа страницы с числами
+ * артефакта, а `test/page-view.test.js` следит, чтобы у страницы не появилось
+ * своего расчёта. */
+
+// Разряды тонкими пробелами: toLocaleString зависит от ICU сборки Node, а строка
+// таблицы обязана совпадать побайтово на любой машине.
+function group(n) {
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '\u2009');
+}
+
+/* Итог: сумма по включённым файлам. Выключенный файл не участвует ни в таблице,
+ * ни в сумме, — иначе «итого» отвечало бы не про то, что видно. */
+function totalsOf(values, metrics, on) {
+  const out = {};
+  metrics.forEach((m) => { out[m] = 0; });
+  values.forEach((v, i) => {
+    if (v === null || (on !== undefined && !on[i])) return;
+    metrics.forEach((m) => { out[m] += v[m]; });
+  });
+  return out;
+}
+
+/* Дельта к предыдущему коммиту. Появление файла — рост на весь его объём: иначе
+ * сумма дельт по колонке не сходилась бы с текущим размером. */
+function deltaOf(now, before) {
+  return before === null || before === undefined ? now : now - before;
+}
+
+/* Содержимое клетки строки-коммита: что в ней написано и каким цветом. Разметку
+ * из этого делает каждый вывод сам (строка HTML или узел DOM), а правила одни.
+ * Пустая клетка — «не менялось», `—` — файла в ревизии нет.
+ * `minus` — знак минуса: у артефакта он заморожен эталоном побайтово, страница
+ * ставит типографский. */
+function cellParts(value, delta, minus) {
+  if (value === null) return { text: '—', dir: null, miss: true };
+  if (!delta) return { text: '', dir: null, miss: false };
+  return {
+    text: (delta > 0 ? '+' : minus) + group(Math.abs(delta)),
+    dir: delta > 0 ? 'up' : 'down',
+    miss: false
+  };
+}
+
+// Клетка верхней строки: абсолютный размер, без дельты.
+function valueParts(value) {
+  return value === null ? { text: '—', miss: true } : { text: group(value), miss: false };
+}
+
+/* Строка-коммит: блок «общий объём» и по блоку на включённый файл, в каждом —
+ * клетка на метрику. Отбор включённых файлов происходит здесь, поэтому и таблица,
+ * и суммы считаются от одного выбора. */
+function rowModel(values, prev, metrics, on) {
+  const total = totalsOf(values, metrics, on);
+  const prevTotal = prev === null ? null : totalsOf(prev, metrics, on);
+  const out = {
+    total: metrics.map((m) => ({
+      value: total[m],
+      delta: deltaOf(total[m], prevTotal === null ? null : prevTotal[m])
+    })),
+    files: []
+  };
+  values.forEach((v, i) => {
+    if (on !== undefined && !on[i]) return;
+    const before = prev === null || prev[i] === null ? null : prev[i];
+    out.files.push(metrics.map((m) => {
+      const value = v === null ? null : v[m];
+      const was = value === null || before === null ? null : before[m];
+      return { value: value, delta: value === null ? null : deltaOf(value, was) };
+    }));
+  });
+  return out;
+}
+
+/* Верхняя строка — абсолютные размеры на HEAD: абсолютное число стоит в таблице
+ * один раз, и именно с ним сходятся все дельты под ним. */
+function nowModel(values, metrics, on) {
+  const total = totalsOf(values, metrics, on);
+  const files = [];
+  values.forEach((v, i) => {
+    if (on !== undefined && !on[i]) return;
+    files.push(metrics.map((m) => (v === null ? null : v[m])));
+  });
+  return { total: metrics.map((m) => total[m]), files: files };
+}
+
+/* Подпись коммита в терминах данных: что показать, чем подписать и куда вести.
+ * Ссылку считает `rowHref` движка — то же место, откуда её берёт контракт для
+ * страницы, поэтому оба вывода ведут туда же. Подпись всплывающей строки тоже
+ * здесь: два вывода не должны подписывать один коммит по-разному. */
+function commitParts(row, showSha, href) {
+  const short = showSha ? row.sha.slice(0, 7) : '';
+  return {
+    when: row.when,
+    subject: row.subject,
+    short: short,
+    title: short === '' ? row.subject : row.subject + ' · ' + short,
+    href: href || null,
+    mark: row.section === null
+      ? { text: '—', title: null }
+      : { text: '§' + row.section.id + (row.section.added ? '' : '*'), title: row.section.head }
+  };
+}
+
+/* Программа страницы отчёта: панель выбора с легендой и таблица.
+ *
+ * Это обычный исходник, а не строка в движке: его видит линтер, и он же
+ * вклеивается в собранную страницу (`pageScript` снимает модульный синтаксис —
+ * импорт ниже и объявления с `export` из соседнего файла). Расчёт берётся из
+ * производных величин, поэтому включение метрики, категории или файла зовёт тот
+ * же расчёт, что считает статическую таблицу, и не может дать других чисел.
+ *
+ * Страница — один файл без внешних ссылок, поэтому здесь нет ни динамического
+ * импорта, ни загрузки чего-либо по сети: оформление приходит тем же файлом,
+ * а разметка клеток повторяет статическую таблицу (`clip` и подпись коммита —
+ * правила общей части оформления).
+ *
+ * Панель помнит выбор читателя между открытиями и умеет передать его ссылкой
+ * («Память выбора» ниже): запись привязана к паспорту отчёта и хранит только
+ * выключенное по именам, поэтому чужая запись не применяется, а исчезнувшее имя
+ * просто ничего не значит. Та же запись ложится в адрес — его и отправляют коллеге.
+ *
+ * Точность числа страница не выводит сама: пометки приближённых клеток приходят в
+ * данных, от того же правила, по которому названа точность метрики. Из путей и
+ * форматов страница такого вывода не делает — второго правила точности не будет. */
+
+/* Импорт — одной строкой: модульный синтаксис снимается при вклейке построчно,
+ * и оставшаяся строка `import` попала бы в страницу (её ловит проверка). */
+
+const appData = JSON.parse(document.getElementById('data').textContent);
+const appUi = JSON.parse(document.getElementById('ui').textContent);
+const appView = { metrics: {}, files: [] };
+appData.metrics.forEach((m) => { appView.metrics[m.key] = true; });
+appData.files.forEach(() => { appView.files.push(true); });
+
+/* Описание метрики по ключу: подсказка приближённой клетки называет способ её
+ * числа — тот же, что стоит в подписи метрики, поэтому двух ответов про «чем
+ * посчитано» у страницы нет. */
+const appMetric = {};
+appData.metrics.forEach((m) => { appMetric[m.key] = m; });
+
+/* Ссылка — это тот же выбор в адресе, под своим именем: чужой якорь страницы
+ * ссылкой не считается, и спорить с ним нечем. */
+const APP_LINK = '#size-report=';
+
+/* Три обстоятельства первой отрисовки, которые действуют только на ней:
+ * адрес в ней не переписывается (его прислали читателю, а не наоборот), память
+ * не трогается (присланная ссылка — не выбор читателя), а сообщение о ссылке
+ * ещё не гаснет. */
+let appStartup = true;
+let appForeign = false;
+let appTransient = false;
+
+/* -------- память выбора читателя -------- */
+
+/* Имя файла для записи — путь на HEAD, а если файла там уже нет, последний из
+ * настроек: по нему файл и опознаётся в отчёте. */
+function appFileAt(i) {
+  const f = appData.files[i];
+  return f.path === null ? f.paths[0] : f.path;
+}
+
+/* Отпечаток паспорта: опознавательный знак записи, а не защита от подделки,
+ * поэтому 32 бит достаточно (FNV-1a). */
+function appHash(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(16);
+}
+
+/* Паспорт отчёта: имя инструмента, схема данных, путь артефакта, заголовок и метки
+ * колонок в порядке отчёта. Он и отделяет один отчёт от другого — по нему выбирается
+ * ключ записи, поэтому выбор с чужого отчёта не подхватывается. Версии пакета и
+ * верхушки истории в паспорте нет намеренно: это тот же отчёт — обновление
+ * инструмента не меняет того, что значит колонка, а подросшая история это та же
+ * история, к которой читатель и возвращается. */
+function appPassport() {
+  return appHash([appData.tool.name, appData.schema, appData.report.artifact,
+    appData.report.title, appData.files.map((f) => f.label).join('|')].join('\n'));
+}
+const appKey = 'size-report:' + appPassport();
+
+/* Запись выбора — одна на всё: её кладут и в память, и в адрес, поэтому двух
+ * форматов одного состояния не бывает. Хранится только выключенное, по именам:
+ * «включено» и «записи нет» — одно и то же состояние, поэтому возврат всех галочек
+ * убирает запись, а не оставляет след, неотличимый от выбора. */
+function appRecord() {
+  const metrics = {};
+  const files = {};
+  appData.metrics.forEach((m) => { if (!appView.metrics[m.key]) metrics[m.key] = false; });
+  appData.files.forEach((_f, i) => { if (!appView.files[i]) files[appFileAt(i)] = false; });
+  return { v: 1, passport: appPassport(), metrics: metrics, files: files };
+}
+
+// Своя ли запись и того ли формата — одно правило и для памяти, и для адреса.
+function appRecordOk(rec) {
+  return rec !== null && typeof rec === 'object' && rec.v === 1 && rec.passport === appPassport();
+}
+
+function appWrite() {
+  const rec = appRecord();
+  const empty = Object.keys(rec.metrics).length === 0 && Object.keys(rec.files).length === 0;
+  if (!appTransient) {
+    try {
+      if (empty) window.localStorage.removeItem(appKey);
+      else window.localStorage.setItem(appKey, JSON.stringify(rec));
+    } catch (_e) {
+      /* Памяти нет (браузер её не даёт этой странице): выбор не переживёт закрытия,
+       * а числа и разметка от этого не зависят. */
+    }
+  }
+  /* Адрес и есть ссылка для коллеги, поэтому он повторяет выбор. Но не на первой
+   * отрисовке и не тогда, когда ссылка оказалась чужой: присланный адрес — не наш,
+   * его читателю ещё читать. */
+  if (appStartup || appForeign) return;
+  try {
+    window.history.replaceState(null, '', APP_LINK + encodeURIComponent(JSON.stringify(rec)));
+  } catch (_e) {
+    /* Браузер не даёт менять адрес: ссылку тогда берут из памяти браузера. */
+  }
+}
+
+/* Сброс к «включено всё»: граница между «в отчёте этого больше нет» и
+ * «выключено» — это запись, а не отсутствие значения. Ссылка несёт весь выбор
+ * отправителя, поэтому применяется на чистом виде, а не поверх чужого. */
+function appAll() {
+  appData.metrics.forEach((m) => { appView.metrics[m.key] = true; });
+  appData.files.forEach((_f, i) => { appView.files[i] = true; });
+}
+
+/* Что говорит адрес. Отвечает либо своей записью, либо отказом (`linkForeign` —
+ * ссылка другого отчёта, `linkBroken` — прочитать нечего): чужой или испорченный
+ * выбор не применяется, но и не молчит — иначе читатель не поймёт, почему он видит
+ * не то, что ему прислали. Адрес без имени ссылки не ссылка вовсе: молчание, чтобы
+ * не спорить с обычными якорями страницы. */
+function appLinkRead() {
+  const hash = window.location.hash || '';
+  if (hash.indexOf(APP_LINK) !== 0) return { rec: null, refused: null };
+  const body = hash.slice(APP_LINK.length);
+  let rec = null;
+  try {
+    rec = JSON.parse(decodeURIComponent(body));
+  } catch (_e) {
+    try {
+      rec = JSON.parse(body);
+    } catch (_e2) {
+      return { rec: null, refused: 'linkBroken' };
+    }
+  }
+  if (!appRecordOk(rec)) {
+    return { rec: null, refused: rec === null || typeof rec !== 'object' || rec.v !== 1
+      ? 'linkBroken' : 'linkForeign' };
+  }
+  return { rec: rec, refused: null, extra: appUnknown(rec) };
+}
+
+/* Сколько имён в ссылке этому отчёту неизвестны: о них читателю надо сказать —
+ * иначе он будет искать в таблице то, чего в ней и не было. */
+function appUnknown(rec) {
+  const known = {};
+  const metricKeys = {};
+  appData.files.forEach((_f, i) => { known[appFileAt(i)] = true; });
+  appData.metrics.forEach((m) => { metricKeys[m.key] = true; });
+  let n = 0;
+  Object.keys(rec.metrics || {}).forEach((k) => { if (!metricKeys[k]) n++; });
+  Object.keys(rec.files || {}).forEach((k) => { if (!known[k]) n++; });
+  return n;
+}
+
+/* Сообщение о ссылке гаснет после первого же действия читателя: он его прочитал, а
+ * постоянное предупреждение — это шум поверх чисел. */
+function appNotice(text) {
+  const el = document.getElementById('notice');
+  el.textContent = text;
+  el.hidden = text === '';
+}
+
+/* Что делает с адресом его событие — открытие страницы и перемена якоря на уже
+ * открытой (браузер в этом случае документ не перезагружает, а лишь переставляет
+ * якорь, поэтому без этого разбора ссылка работала бы только в новой вкладке).
+ * Своя ссылка заменяет вид целиком: в ней весь выбор отправителя, а не разница с
+ * чужим. Отказ объясняется словами — и не трогает ни вид, ни адрес. */
+function appLinkUse() {
+  const link = appLinkRead();
+  if (link.rec !== null) {
+    appAll();
+    appApply(link.rec);
+    if (link.extra > 0) appNotice(appUi.linkExtra.replace('{n}', link.extra));
+    return 'ours';
+  }
+  if (link.refused !== null) {
+    appNotice(appUi[link.refused]);
+    return 'refused';
+  }
+  return 'none';
+}
+
+/* Чтение: только своя запись — своей версии формата и своего паспорта. Запись
+ * чужого отчёта лежит под другим ключом, а чужая, устаревшая или испорченная
+ * равносильна её отсутствию. */
+function appRead() {
+  let text = null;
+  try {
+    text = window.localStorage.getItem(appKey);
+  } catch (_e) {
+    return null;
+  }
+  if (text === null) return null;
+  let rec = null;
+  try {
+    rec = JSON.parse(text);
+  } catch (_e) {
+    return null;
+  }
+  return appRecordOk(rec) ? rec : null;
+}
+
+/* Применение — по именам: файл опознаётся путём, метрика ключом. Имени, которого в
+ * отчёте нет, ничего не соответствует (колонку перенаправили на другой путь,
+ * метрику убрали из настроек), а появившиеся файлы и метрики остаются включёнными —
+ * как их видит тот, кто открыл страницу впервые. */
+function appApply(rec) {
+  const metrics = rec.metrics || {};
+  const files = rec.files || {};
+  appData.metrics.forEach((m) => { if (metrics[m.key] === false) appView.metrics[m.key] = false; });
+  appData.files.forEach((_f, i) => { if (files[appFileAt(i)] === false) appView.files[i] = false; });
+}
+
+function appEl(tag, cls, text) {
+  const el = document.createElement(tag);
+  if (cls) el.className = cls;
+  if (text !== undefined) el.textContent = text;
+  return el;
+}
+
+/* Переключатель — метка вокруг поля ввода: цель нажатия одна, поэтому по нему
+ * попадают и мышь, и клавиатура (`Space` на поле ввода), и вспомогательные
+ * технологии. Подпись видимая, подробности — во всплывающей строке. */
+function appBox(label, title, checked, onChange, cls) {
+  const box = appEl('label', 'box' + (cls ? ' ' + cls : ''));
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.checked = checked;
+  if (title) input.title = title;
+  input.addEventListener('change', onChange);
+  box.appendChild(input);
+  box.appendChild(appEl('span', null, label));
+  return box;
+}
+
+/* Легенда: образцы — теми же классами, что и числа в клетках (`up`/`down` из
+ * общей части оформления), поэтому образец не может разойтись с цветом числа. */
+function appLegend() {
+  const list = appEl('ul', 'legend');
+  appUi.legend.forEach((item) => {
+    const li = appEl('li');
+    li.appendChild(appEl('span', 'swatch ' + item.cls));
+    li.appendChild(appEl('span', null, item.text));
+    list.appendChild(li);
+  });
+  return list;
+}
+
+/* Галочку файла ставит только файл: и категория, и папка в дереве — способы
+ * переставить те же галочки сразу группой, а своего состояния у них нет. Иначе
+ * одно и то же решение жило бы в двух местах и расходилось. */
+function appFileBox(i) {
+  const f = appData.files[i];
+  const where = appFileAt(i) + (f.path === null ? ' (нет на HEAD)' : '');
+  return appBox(f.label, where + ' · категория: '
+    + (f.categoryBy === 'config' ? 'из настроек' : 'по расширению'), appView.files[i], (e) => {
+    appView.files[i] = e.target.checked;
+    appRender();
+  });
+}
+
+/* Все файлы поддерева — то, чем управляет переключатель папки. */
+function appIndexes(node) {
+  const out = node.files.slice();
+  node.dirs.forEach((sub) => { out.push(...appIndexes(sub)); });
+  return out;
+}
+
+/* Узлы одного уровня: сперва папки по алфавиту, затем файлы в порядке данных.
+ * Переключатель папки стоит над своим поддеревом и показывает три состояния: все
+ * файлы включены, часть, ни одного. */
+function appTreeList(node) {
+  const list = appEl('ul', 'tree');
+  [...node.dirs.keys()].sort().forEach((name) => {
+    const sub = node.dirs.get(name);
+    const idx = appIndexes(sub);
+    const on = idx.map((i) => appView.files[i]);
+    const some = on.some((v) => v);
+    const head = appBox(name + '/', appUi.dir.replace('{name}', name).replace('{n}', idx.length),
+      some && on.every((v) => v), (e) => {
+        idx.forEach((i) => { appView.files[i] = e.target.checked; });
+        appRender();
+      }, 'dir');
+    head.querySelector('input').indeterminate = some && !on.every((v) => v);
+    head.appendChild(appEl('span', 'n', idx.length));
+    const li = appEl('li');
+    li.appendChild(head);
+    li.appendChild(appTreeList(sub));
+    list.appendChild(li);
+  });
+  node.files.forEach((i) => {
+    const li = appEl('li');
+    li.appendChild(appFileBox(i));
+    list.appendChild(li);
+  });
+  return list;
+}
+
+/* Дерево файлов: путь делится по «/», папки становятся узлами, файлы — листьями.
+ * Строится из тех же путей, что показаны в подписи файла, поэтому дерево и список
+ * файлов не могут разойтись. */
+function appTree() {
+  const root = { files: [], dirs: new Map() };
+  appData.files.forEach((f, i) => {
+    const parts = (f.path === null ? f.paths[0] : f.path).split('/');
+    let node = root;
+    for (let d = 0; d < parts.length - 1; d++) {
+      if (!node.dirs.has(parts[d])) node.dirs.set(parts[d], { files: [], dirs: new Map() });
+      node = node.dirs.get(parts[d]);
+    }
+    node.files.push(i);
+  });
+  return appTreeList(root);
+}
+
+function appPanel() {
+  const panel = document.getElementById('panel');
+  panel.textContent = '';
+
+  const metrics = appEl('fieldset');
+  metrics.appendChild(appEl('legend', null, appUi.metrics));
+  const mrow = appEl('div', 'row');
+  appData.metrics.forEach((m) => {
+    const word = m.accuracy === 'exact' ? appUi.exact : appUi.approximate;
+    mrow.appendChild(appBox(m.label, m.note + ' · ' + word, appView.metrics[m.key], (e) => {
+      appView.metrics[m.key] = e.target.checked;
+      appRender();
+    }, 'metric'));
+  });
+  metrics.appendChild(mrow);
+  /* Чем получено каждое число — видно, а не только во всплывающей строке: словарь
+   * токенов и способ сжатия выбираются настройками запуска, переключить их
+   * странице нечем, и читателю важно знать это, не наводя мышь. */
+  appData.metrics.forEach((m) => {
+    metrics.appendChild(appEl('p', 'about', m.label + ' — ' + appUi.methodLabel + ' ' + m.method));
+  });
+  panel.appendChild(metrics);
+
+  const files = appEl('fieldset', 'files');
+  files.appendChild(appEl('legend', null, appUi.files));
+  const cats = appEl('div', 'row');
+  appData.categories.forEach((cat) => {
+    const idx = [];
+    appData.files.forEach((f, i) => { if (f.category === cat.key) idx.push(i); });
+    cats.appendChild(appBox(cat.label, appUi.all + ' · ' + cat.label, idx.every((i) => appView.files[i]),
+      (e) => {
+        idx.forEach((i) => { appView.files[i] = e.target.checked; });
+        appRender();
+      }, 'all'));
+  });
+  files.appendChild(cats);
+  files.appendChild(appTree());
+  panel.appendChild(files);
+
+  panel.appendChild(appLegend());
+}
+
+/* Приближённая клетка: пометка берётся из данных движка, а не выводится здесь из
+ * пути файла, — правило точности живёт там же, где считаются числа. У клетки
+ * файла это её собственное число, у итога — худшее из вошедших в него, иначе
+ * сумма обещала бы точность, которой нет у слагаемых. Возвращается описание
+ * метрики (её способ и идёт в подсказку клетки) либо ничего. */
+function appApprox(where, files, key) {
+  const marks = appData.approx[key];
+  if (marks === undefined) return null;
+  const row = where === 'now' ? marks.now : marks.rows;
+  const base = where === 'now' ? 0 : where * appData.files.length;
+  for (let i = 0; i < files.length; i++) {
+    if (row.charAt(base + files[i]) === '1') return appMetric[key];
+  }
+  return null;
+}
+
+/* Класс клетки собирается в одном месте: и пометка приближения, и пропуск
+ * («файла нет») — свойства самой клетки, а не её содержимого. */
+function appCellClass(first, miss, approx) {
+  return 'num' + (first ? ' g' : '') + (miss ? ' miss' : '') + (approx === null ? '' : ' approx');
+}
+
+// Разметка клетки строки-коммита: правила — в cellParts, здесь только узел.
+function appCell(cell, first, approx) {
+  const parts = cellParts(cell.value, cell.delta, '−');
+  const td = appEl('td', appCellClass(first, parts.miss, approx));
+  if (approx !== null) td.title = appUi.approxCell + approx.method;
+  if (parts.dir === null) td.textContent = parts.text;
+  else td.appendChild(appEl('span', 'delta ' + parts.dir, parts.text));
+  return td;
+}
+
+// Разметка клетки верхней строки: правила — в valueParts.
+function appValueCell(value, first, approx) {
+  const parts = valueParts(value);
+  const td = appEl('td', appCellClass(first, parts.miss, approx));
+  if (approx !== null) td.title = appUi.approxCell + approx.method;
+  td.textContent = parts.text;
+  return td;
+}
+
+/* Подпись коммита — той же разметкой, что в статической таблице: дата, тема,
+ * метка раздела журнала. Ширину колонки и обрезку длинной темы задаёт общая часть
+ * оформления, поэтому колонка не прыгает при переключении файлов. */
+function appCommit(row) {
+  const parts = commitParts(row, appData.report.showSha, row.href);
+  const name = parts.href ? appEl('a', 'subj', parts.subject) : appEl('span', 'subj', parts.subject);
+  if (parts.href) name.href = parts.href;
+  name.title = parts.title;
+  const mark = appEl('span', 'sect', parts.mark.text);
+  if (parts.mark.title) mark.title = parts.mark.title;
+
+  const clip = appEl('div', 'clip');
+  clip.appendChild(appEl('span', 'when', parts.when));
+  clip.appendChild(name);
+  clip.appendChild(mark);
+  const th = appEl('th', 'c-commit');
+  th.appendChild(clip);
+  return th;
+}
+
+function appSubHead(metrics) {
+  const tr = appEl('tr');
+  metrics.forEach((m, mi) => tr.appendChild(appEl('th', mi === 0 ? 'g' : '', m.label)));
+  return tr;
+}
+
+/* Состояния пустоты: когда чисел не будет вовсе, страница говорит об этом словами,
+ * а не сеткой без колонок. Файлы можно выключить все — тогда остаётся общий объём,
+ * и подсказка объясняет, почему колонок нет. */
+function appState(metricsCount, filesCount) {
+  const state = document.getElementById('state');
+  const text = metricsCount === 0 ? appUi.empty : (filesCount === 0 ? appUi.noFiles : '');
+  state.textContent = text;
+  state.hidden = text === '';
+  document.getElementById('shell').hidden = metricsCount === 0;
+}
+
+/* Шапка: строка групп (итог и файлы) и строка метрик под ней. Метрики повторяются
+ * на каждый файл, поэтому подшапка собирается один раз, а дальше её узлы
+ * переезжают в следующие — копий разметки не заводится. */
+function appHead(shown, files, metrics) {
+  const head = appEl('tr');
+  const commit = appEl('th', 'c-commit', appUi.commit);
+  commit.rowSpan = 2;
+  head.appendChild(commit);
+  const total = appEl('th', 'g', appUi.total);
+  total.colSpan = metrics.length;
+  head.appendChild(total);
+  files.forEach((i) => {
+    const th = appEl('th', 'g', appData.files[i].label);
+    th.colSpan = metrics.length;
+    head.appendChild(th);
+  });
+  const subs = appSubHead(shown);
+  files.forEach(() => {
+    const more = appSubHead(shown);
+    while (more.firstChild) subs.appendChild(more.firstChild);
+  });
+  const thead = appEl('thead');
+  thead.appendChild(head);
+  thead.appendChild(subs);
+  return thead;
+}
+
+/* Строка-коммит: подпись и числа. Дельты считает общий расчёт (`rowModel`) — тот
+ * же, что считает статическую таблицу; здесь только узлы. Пометка приближения —
+ * своя у каждой клетки: у итога по всем вошедшим файлам, у файла — по нему самому. */
+function appRow(r, metrics, files) {
+  const row = appData.rows[r];
+  const prev = r === 0 ? null : appData.rows[r - 1];
+  const model = rowModel(row.values, prev === null ? null : prev.values, metrics, appView.files);
+  const tr = appEl('tr');
+  tr.appendChild(appCommit(row));
+  model.total.forEach((cell, mi) => {
+    tr.appendChild(appCell(cell, mi === 0, appApprox(r, files, metrics[mi])));
+  });
+  model.files.forEach((cells, fi) => cells.forEach((cell, mi) => {
+    tr.appendChild(appCell(cell, mi === 0, appApprox(r, [files[fi]], metrics[mi])));
+  }));
+  return tr;
+}
+
+/* Тело: строки коммитов снизу вверх (свежие первыми) плюс верхняя строка «сейчас»
+ * с абсолютными размерами на HEAD. Дельты под ней сходятся с ней, поэтому она и
+ * стоит первой. */
+function appBody(metrics, files) {
+  const body = appEl('tbody');
+  for (let r = appData.rows.length - 1; r >= 0; r--) body.appendChild(appRow(r, metrics, files));
+
+  const now = appEl('tr', 'now');
+  now.appendChild(appEl('th', 'c-commit', appUi.now));
+  const nowCells = nowModel(appData.now, metrics, appView.files);
+  nowCells.total.forEach((v, mi) => now.appendChild(appValueCell(v, mi === 0,
+    appApprox('now', files, metrics[mi]))));
+  nowCells.files.forEach((cells, fi) => cells.forEach((v, mi) => {
+    now.appendChild(appValueCell(v, mi === 0, appApprox('now', [files[fi]], metrics[mi])));
+  }));
+  body.insertBefore(now, body.firstChild);
+  return body;
+}
+
+/* Сборка таблицы: что показывать (метрики и файлы, оставленные читателем) и куда
+ * это положить. Разметку шапки и строк строит глава таблицы, числа — общий расчёт:
+ * здесь остаётся только решение и вставка, своих чисел у сборки нет. */
+function appTable() {
+  const shown = appData.metrics.filter((m) => appView.metrics[m.key]);
+  const metrics = shown.map((m) => m.key);
+  const on = appView.files;
+  const files = [];
+  appData.files.forEach((f, i) => { if (on[i]) files.push(i); });
+
+  const table = document.getElementById('grid');
+  table.textContent = '';
+  appState(metrics.length, files.length);
+  if (metrics.length === 0) return;
+
+  table.appendChild(appHead(shown, files, metrics));
+  table.appendChild(appBody(metrics, files));
+  document.getElementById('note').textContent = appUi.note
+    .replace('{rows}', appData.rows.length)
+    .replace('{command}', appData.report.fixCommand);
+  appWrite();
+}
+
+/* Панель перерисовывается целиком, поэтому поле, стоящее под клавиатурой, после
+ * каждой пересборки возвращается на своё место: иначе переключение с Tab и Space
+ * требовало бы начинать обход панели заново. Место опознаётся порядковым номером
+ * поля — порядок полей панели от данных не зависит. */
+function appRender(keepNotice) {
+  const at = Array.from(document.querySelectorAll('#panel input')).indexOf(document.activeElement);
+  appPanel();
+  if (at >= 0) document.querySelectorAll('#panel input')[at].focus();
+  appTable();
+  /* Сообщение о ссылке переживает отрисовку, которая сама же им и вызвана, и
+   * гаснет от действия читателя: он его уже прочитал. */
+  if (keepNotice !== true) appNotice('');
+}
+
+/* Восстановление — до первой отрисовки: у того, кто открыл страницу впервые,
+ * разметка обязана быть умолчанием, а не чужим выбором. Ссылка старше памяти: это
+ * явный выбор отправителя, и пока читатель ничего не менял, она его собственный
+ * выбор не подменяет — в память её запись не идёт. Отказ ссылки — не пустая
+ * таблица, а сообщение: читателю видно и что произошло, и что показано вместо. */
+const appStart = appLinkUse();
+if (appStart === 'ours') appTransient = true;
+else if (appStart === 'refused') appForeign = true;
+if (appStart !== 'ours') {
+  const appSaved = appRead();
+  if (appSaved !== null) appApply(appSaved);
+}
+appRender(true);
+appStartup = false;
+appForeign = false;
+appTransient = false;
+
+/* Якорь сменился на открытой странице: выбор из нового адреса применяется тем же
+ * кодом, что и при открытии. Свой собственный адрес такого события не поднимает
+ * (`replaceState` его не вызывает), поэтому петли здесь нет. Отказ не трогает ни
+ * вид — читатель продолжает смотреть то, что смотрел, — ни адрес: его прислали
+ * читателю, и до первого его действия это не наше. */
+window.addEventListener('hashchange', () => {
+  const state = appLinkUse();
+  if (state === 'refused') appForeign = true;
+  appTransient = state === 'ours';
+  appRender(true);
+  appForeign = false;
+  appTransient = false;
+});
+</script>
+</body>
+</html>
