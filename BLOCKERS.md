@@ -659,3 +659,28 @@ references stayed the same after the fix.
   **For the user to decide:** (1), (2) or (3) — best together with N21, since both ask the same question from
   two sides: whether the frozen layer may move.
 
+- **N25. The report page's panel is not localized: three hardcoded Russian strings.** Measured 2026-09-16 while
+  planning subplan S5: `src/page/panel.js:9-11` builds the tooltip of every file checkbox out of literals —
+  `' (нет на HEAD)'`, `' · категория: '`, `'из настроек'` / `'по расширению'` — while every other caption of the
+  page (title, heading, category labels, metric notes) is picked by `cfg.locale` or read from the settings. The
+  tracker's map puts the file in S5, so translating them is the planned step; what has to be decided is whether
+  that is what is wanted, because the consequence is visible: a project with `"locale": "ru"` (both fixture
+  configs pin it, and this repository's own settings do) keeps a Russian report with English chrome inside it,
+  and this project's own tracked `docs/size-report.html` is that report.
+
+  No check reads the three strings (measured: `rg -n 'нет на HEAD|категория:|из настроек|по расширению'` outside
+  `src/` answers only unrelated assertion texts, and `test/parity.test.js:47` reads a built report but asserts
+  only `src="`, `<link `, `id="data"`, `<style>`), and no reference moves: the fixtures carry no hook or panel
+  word, and `fixtures/parity/artifact.sha256` is taken by the frozen copy (`legacyTool()`).
+
+  **Options and their price.** (1) **Translate them** (S5's step 6 as written): the repository meets its own
+  criterion, the chrome inside a Russian report becomes English, and nothing reddens. (2) **Move them into the
+  locale dictionaries** so a `locale: "ru"` report keeps Russian chrome: a source change — a constant becomes a
+  lookup in `appUi` — that is out of this work's scope by its own rule (literals only), and it grows every
+  dictionary by three keys instead of removing three literals. (3) **Leave them Russian and name them in the
+  allow-list** beside the `ru` dictionaries: cheapest, and the criterion then has a named exception for a file
+  that is S5's own.
+
+  **For the user to decide:** (1), (2) or (3). The subplan plans (1) and states that steps 1–5 do not depend on
+  the answer — step 6 is the only one that moves.
+

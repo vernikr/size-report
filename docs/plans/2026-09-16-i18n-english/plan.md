@@ -62,7 +62,7 @@ carry is **2 396 lines** in code, checks, tools and configs:
 | `templates/**` | 3 | 35 | the comments of the settings draft, the CI template, the note |
 | `.github/workflows/**` | 3 | 78 | the comments of the three workflows |
 | `package.json` | 1 | 1 | `description` — what the registry shows |
-| `AGENTS.md`, `BLOCKERS.md`, `README.md` | 3 | 10 | quotations of printed Russian, allowed by the allow-list |
+| `AGENTS.md`, `BLOCKERS.md`, `README.md` | 3 | 18 | quotations of printed Russian, allowed by the allow-list (re-measured 2026-09-16 while planning S5: `BLOCKERS.md` 14, `README.md` 4, `AGENTS.md` 0; the row said 10) |
 | `docs/size-report.html` | 1 | 349 | generated; turns English with the source of its texts, not by hand |
 
 Of these 2 396 lines only **10 are comments** (`src/` 3, `tools/` 6, `test/` 1 — leftovers of the
@@ -85,19 +85,43 @@ checks, `D*` — the declarative files, `G*` — the guard. Sums are the measure
 | S2 | `settings.md` | `src/config.js` (35), `src/project.js` (4), `src/init.js` (18) — what a settings file says when it is wrong, and what `--init` prints; follows S1's cause names and advice markers, and owns `outsideFix`, which S4 prints | 57 | **written 2026-09-16** |
 | S3 | `measurement.md` | `src/metrics.js` (20), `src/minify.js` (4), `src/strip.js` (1), `src/strip/guard.js` (6), `src/parse.js` (1), `src/optional.js` (1) — the sensor note, the two refusals of the measurement, the internal errors; **18 of the 33 lines are in scope**, 12 are the `ru` dictionary of `src/metrics.js` and 1 is a comment (`TODO.md`) | 18 | **written 2026-09-16** |
 | S4 | `diagnostics.md` | `src/git.js` (3), `src/history.js` (12), `src/check.js` (12), `src/doctor.js` (33), `src/explain.js` (24) — `check`, `explain`, `doctor`, the git boundary and the skip reasons. **`SKIP_WORDS` (`src/history.js:18`) is the only frozen literal of the runtime** (`BLOCKERS.md` N24) and has a step of its own, gated on that decision; everything else lands green without touching a reference | 84 (83 free + 1 gated) | **written 2026-09-16** |
-| S5 | `automation.md` | `src/hook.js` (40), `src/page/panel.js` (3), `bin/postinstall.js` (2) — the installed hook's text and its commit subject, the panel's service words | 45 | not started |
+| S5 | `automation.md` | `src/hook.js` (40), `src/page/panel.js` (3), `bin/postinstall.js` (2) — the installed hook's text and its commit subject, the panel's service words. The panel's three strings are **not localized** (`BLOCKERS.md` N25): a report whose `locale` is `ru` gets English chrome, and this project's own report is such a report | 45 | **written 2026-09-16** |
 | W1 | `tools.md` | the 12 instruments: `tools/refusals.js` (169), `parity-live.js` (35), `parity-freeze.js` (31), `run-tests.js` (25), `pack-check.js` (21), `check-standards.js` (21), `make-fixture.js` (17), `harness.js` (13), `yaml.js` (10), `docs-facts.js` (4), `page-harness.js` (3) | 349 | not started |
-| W2 | `sensors.md` | `tools/gates/**` (77) and the `why` of every entry in `tools/suites.js` (38) — **gate files: `Gate-Change:` trailer required** | 115 | not started |
+| W2 | `sensors.md` | `tools/gates/**` (77), the `why` of every entry in `tools/suites.js` (38), `.githooks/**` (4: `pre-commit` 2, `pre-push` 2) and the two baselines' `note` the sensors write (2) — **gate files: `Gate-Change:` trailer required** | 121 | not started |
 | W3 | `fixture-builders.md` | `tools/synthetic/note.js` (37), `content.js` (31), `history.js` (20), `repo.js` (1) — the fixture's note and subjects; **decides whether the frozen layer is re-taken** (`BLOCKERS.md` N21) | 89 | not started |
 | C1 | `tests-page.md` | the checks of the page and the contract (355 lines): `page-view` 72, `page-choice` 67, `module` 66, `page-tree` 55, `contract-data` 51, `contract-derived` 18, `guard` 11, `runner` 11, `api` 4 | 355 | not started |
 | C2 | `tests-cli.md` | the checks that drive the tool (739 lines): `hook` 113, `check` 84, `doctor` 83, `cli` 79, `minify` 75, `disk` 68, `tokens` 54, `release` 41, `templates` 33, `cli-paths` 31, `refusals-catalog` 26, `refusals` 25, `environment` 18, `crlf` 9 | 739 | not started |
 | C3 | `tests-guards.md` | the checks of the repository itself (226 lines): `gates-verify` 26, `gates-files` 26, `docs-commands` 23, `gates-metrics` 22, `suites` 16, `parity` 16, `frozen` 16, `gates-coverage` 16, `docs-pin` 14, `gates-dup` 13, `git-pins` 12, `docs-numbers` 12, `gates-deps` 8, `docs-paths` 6 | 226 | not started |
-| D1 | `configs.md` | `.github/workflows/**` (78), `templates/**` (35), `package.json` `description` (1) — the declarative files and what the registry shows | 114 | not started |
+| D1 | `configs.md` | `.github/workflows/**` (78), `templates/**` (35), `package.json` `description` (1), the declarative dotfiles (17: `.dependency-cruiser.cjs` 7, `eslint.metrics.config.js` 6, `.gitignore` 4) — the declarative files and what the registry shows; the last two are **gate files** and need the `Gate-Change:` trailer | 131 | not started |
 | G1 | `guard.md` | the check that holds the allow-list: a scan over the tree that reddens on a new Russian literal outside the named exceptions | — | not started |
 
 `AGENTS.md`, `BLOCKERS.md`, `README.md` and the built report are not a subplan of their own: the
-first three hold allowed quotations of printed output, and the report is regenerated by whichever
-subplan changes the texts it is built from (S1 first, since it owns the dictionaries).
+first three hold allowed quotations of printed output (measured today: 18 lines, `BLOCKERS.md` 14
+and `README.md` 4 — the row above said 10), and the report is regenerated by whichever subplan
+changes the texts it is built from (S1 first, since it owns the dictionaries).
+
+### Map correction — measured 2026-09-16 while planning S5
+
+The map's own total (2 396) is its first reading; the split below is today's, and it is exact.
+The instrument (unchanged) now answers **5 512 lines** outside `worklog/**`, against the 5 385 of
+the map above; this folder's own subplans and the notes they added to `BLOCKERS.md` are the growth.
+Two files the map did not name, found by grouping the instrument's own output:
+
+- **`.githooks/**`** (4 lines: `pre-commit` 2, `pre-push` 2) — the hooks that run the profiles;
+they are **gate files** (`tools/gates/gatefiles.js`), so they belong to W2 and need the trailer.
+- **The declarative dotfiles** (17 lines: `.dependency-cruiser.cjs` 7, `eslint.metrics.config.js` 6,
+  `.gitignore` 4) and **the two baselines' `note`** (2 lines, written by `tools/gates/dup.js:128`
+  and `tools/gates/coverage.js:81`, so W2's) — D1 and W2 respectively. The first two of the
+  dotfiles are gate files.
+
+With those two corrected the map is **complete** and the sum is exact: the instrument's 5 512 lines
+split into the allow-list — the frozen layer 2 602, the archived plans 15, `docs/plans/**` 165 →
+**2 782** — and everything else → **2 730**, held by the map's owners: `src/**` 351, `bin/**` 2,
+`tools/**` 387, `tools/gates/**` 77, `tools/synthetic/**` 89, `test/**` 1 320, `templates/**` 35,
+`.github/**` 78, `.githooks/**` 4, the declarative dotfiles and the baselines' `note` 19,
+`package.json` 1, the allowed quotations 18, the built report 349 (2 730 = 5 512 − 2 782). Every
+line the instrument names has an owner, and the rows above are gross of the 58 allow-listed
+dictionary lines inside `src/**`.
 
 ## Order
 
@@ -185,6 +209,10 @@ other's texts. The order is a choice (the reader who pays is first), not a depen
   and price: `BLOCKERS.md` N21.
 - **Releases.** A portion that changes a shipped literal changes the package's bytes. Release a
   PATCH per portion, or batch the releases and say so in the commits: `BLOCKERS.md` N20.
+- **The panel's chrome is not localized.** `src/page/panel.js:9-11` holds three Russian strings
+  hardcoded while every other caption of the page is picked by `cfg.locale`, so translating them
+  gives a `locale: "ru"` report English chrome. Options and price: `BLOCKERS.md` N25, owned by S5's
+  step 6.
 - **The `--json` contract carries Russian of its own.** Measured 2026-09-16 while planning S1: the
   skip words of `src/history.js` (`SKIP_WORDS`: `только таблица` 49 times and `без изменения
   объёма` 5 times inside `fixtures/parity/data.json`, twice in `fixtures/synthetic/golden.json`)
