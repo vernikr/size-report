@@ -35,6 +35,16 @@ Red first, three measurements: `REASON_WORD.report` back to Russian reddens `che
 `— no row needed: числа не сдвинулись…`; `FIX.flat` back reddens it on
 `предложена починка там, где починять нечего`.
 
+Which lines read nothing, measured rather than guessed: the counts line (`history: N commits, M rows,
+without a row K`), the `… and N more` tail, the `paths:` line and every label of `explainText`
+(`commit`, `the row is there`, `no row needed`, `columns touched`, `excluded by the settings`,
+`past the columns and the exceptions`) were put back to Russian together, and the **whole profile
+stayed green** (eight steps, `test:all` 175). The reader the tree does have here is the catalogue and
+the assertions on the `✗`/`✓ coverage` line and the `fix:` marker: those redden
+(`test/doctor.test.js:67`, `test/check.test.js:52`). So for step 3 the useful question is the same
+one asked this way — put the words back and see whether anything at all reddens, over the whole
+profile rather than one file.
+
 Sensors: `verify:fast` green (70 checks), the full `verify` green (eight steps, `test:all` 175,
 `pack:check` byte-identical tarball report, `parity:live`, `check:standards`), `SITES` 27,
 `PRINTED` 2/2/1/2/4, `CASES` 38 unchanged. No reference carries a message of this layer.
