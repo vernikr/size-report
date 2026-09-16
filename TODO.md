@@ -18,6 +18,18 @@ Opened 2026-09-16 with the string-translation work (`docs/plans/2026-09-16-i18n-
 
 ## Open
 
+- **`tools/docs-facts.js` — `usageCommands` mixes the help's continuation lines into the command
+  list.** Seen 2026-09-16 while translating the help (subplan S1, step 1). The derivation splits
+  `USAGE` on the `Commands:` marker, takes the section up to the first blank line and keeps the first
+  word of **every** line — including the indented continuation lines of an entry that wraps. Measured
+  on both sides of the translation: the list holds ten words either way — the six commands at the
+  same places in the same order, plus the first word of each of the four continuation lines (Russian
+  words before the translation, `of`, `coverage`, `on`, `commit` after it). So nothing behaves
+  differently today, but the list accepts four words that are not commands: a document calling
+  `of something` passes `test/docs-commands.test.js`'s "calls only what the tool knows" check. How it shows: add a call to `of` in `README.md` and the check stays green. Fixing it
+  means narrowing the derivation (two-space indent as the mark of an entry, or reading the section
+  through the same parser as `commandsAt`), which is a change of a check's behaviour rather than of
+  a literal — hence its own portion.
 - **`src/metrics.js:61-63` — the last Russian comment in `src/`.** Seen 2026-09-16 while measuring
   the measurement layer for subplan S3 (`docs/plans/2026-09-16-i18n-english/measurement.md`): the
   comment above `METRICS` explains why a metric declares `needsText`, and it is the only comment

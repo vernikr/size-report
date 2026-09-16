@@ -309,6 +309,6 @@ test('совет выполним рядом с пакетом и отказыв
 
   const help = runTool(engine, dir, ['--help']);
   assert.equal(help.code, 0, 'справка не ответила: ' + firstLine(help.stderr));
-  assert.match(help.stdout, new RegExp('Запуск: node ' + INSTALL_RE),
+  assert.match(help.stdout, new RegExp('Usage: node ' + INSTALL_RE),
     'справка не называет путь: ' + help.stdout.split('\n')[2]);
 });

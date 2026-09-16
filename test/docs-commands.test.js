@@ -33,7 +33,7 @@ import {
 /* Causes from the help: the engine prints them from the same registry, so the lines are parsed rather
  * than compared by eye. */
 function usageCauses() {
-  const block = USAGE.split('Причины отказа кодом 2')[1] || '';
+  const block = USAGE.split('Causes of a code-2 refusal')[1] || '';
   return block.split('\n').filter((l) => l.indexOf(': ') > 0).map((l) => {
     const m = l.trim().match(/^(.+?): (.+)$/);
     return [m[1], m[2].split(' · ')];

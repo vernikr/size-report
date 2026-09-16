@@ -132,7 +132,7 @@ export function looksLikePath(tok) {
 
 /* Commands and flags come from the tool's help: there is no second list and there must not be
  * one — the guard and the help would diverge in silence. */
-export const usageCommands = USAGE.split('\nКоманды:\n')[1].split('\n\n')[0]
+export const usageCommands = USAGE.split('\nCommands:\n')[1].split('\n\n')[0]
   .split('\n').map((l) => l.trim().split(/\s+/)[0]).filter((w) => w !== '');
 export const usageFlags = [...USAGE.matchAll(/--[a-z][a-z-]*/g)].map((m) => m[0]);
 
@@ -169,12 +169,20 @@ export function calledCommands() {
 /* The commands of the pinned revision's help: the file is read from git history rather than from
  * the tree, because that help is a different one. The section `Команды` of that file is a list of
  * string literals — Russian, because it is the help the tool prints — and the first word of each
- * literal is a command's name. */
+ * literal is a command's name.
+ *
+ * The pin points at a released revision, whose help is Russian until a release carries the English
+ * one (`BLOCKERS.md` N20 is the cadence), so **both** section names are read here and the Russian
+ * one goes only once the pin has moved past the rename: a reader that knows one spelling would go
+ * green on the old revision and red on the new — or worse, answer `null` and silently drop a
+ * promise. Only the *commands* are taken out of the section, and those names are ASCII in either
+ * language. */
 export function commandsAt(rev) {
   const src = gitIn(ROOT, ['show', rev + ':src/refusal.js']);
-  const section = src.split("'Команды:'")[1];
+  const section = src.split("'Команды:'")[1] || src.split("'Commands:'")[1];
   if (section === undefined) return null;
-  return [...section.split("'Режимы:'")[0].matchAll(/^\s*'\s+([a-z][a-z-]*)/gm)].map((m) => m[1]);
+  const head = section.split("'Режимы:'")[0].split("'Modes:'")[0];
+  return [...head.matchAll(/^\s*'\s+([a-z][a-z-]*)/gm)].map((m) => m[1]);
 }
 
 /* The suite runs as README names them: the command and how many checks it takes. Read as a table

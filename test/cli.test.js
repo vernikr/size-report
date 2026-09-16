@@ -30,7 +30,7 @@ test('--help отвечает справкой, кодом 0 и без наст�
   ['--init', '--write', '--data', '--json', '--config'].forEach((flag) => {
     assert.ok(res.stdout.indexOf(flag) >= 0, 'в справке нет режима ' + flag);
   });
-  assert.match(res.stdout, /Коды выхода/, 'справка не называет коды выхода');
+  assert.match(res.stdout, /Exit codes/, 'справка не называет коды выхода');
 });
 
 /* ---------- no settings ---------- */
