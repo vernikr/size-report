@@ -62,7 +62,7 @@ carry is **2 396 lines** in code, checks, tools and configs:
 | `templates/**` | 3 | 35 | the comments of the settings draft, the CI template, the note |
 | `.github/workflows/**` | 3 | 78 | the comments of the three workflows |
 | `package.json` | 1 | 1 | `description` — what the registry shows |
-| `AGENTS.md`, `BLOCKERS.md`, `README.md` | 3 | 18 | quotations of printed Russian, allowed by the allow-list (re-measured 2026-09-16 while planning S5: `BLOCKERS.md` 14, `README.md` 4, `AGENTS.md` 0; the row said 10) |
+| `AGENTS.md`, `BLOCKERS.md`, `README.md` | 3 | 18 | quotations of printed Russian, allowed by the allow-list (re-measured 2026-09-16 while planning S5: `BLOCKERS.md` 14, `README.md` 4, `AGENTS.md` 0; the row said 10). **Measured while planning C3: `README.md`'s four are not all quotations** — the code-2 row is parsed by `readmeCauses()` and compared with `CONFIG_CAUSES`, so it is a contract and S1's rename edits it; the other three move with S4's `!` note and S5's subject. Re-measure this cell once those steps land |
 | `docs/size-report.html` | 1 | 349 | generated; turns English with the source of its texts, not by hand |
 
 Of these 2 396 lines only **10 are comments** (`src/` 3, `tools/` 6, `test/` 1 — leftovers of the
@@ -91,7 +91,7 @@ checks, `D*` — the declarative files, `G*` — the guard. Sums are the measure
 | W3 | `fixture-builders.md` | `tools/synthetic/note.js` (37), `content.js` (31), `history.js` (20), `repo.js` (1) — the fixture's note and subjects; **decides whether the frozen layer is re-taken** (`BLOCKERS.md` N21) | 89 | not started |
 | C1 | `tests-page.md` | the checks of the page and the contract (355 lines, confirmed file by file): `page-view` 72, `page-choice` 67, `module` 66, `page-tree` 55, `contract-data` 51, `contract-derived` 18, `guard` 11, `runner` 11, `api` 4. **The first owner whose lines are read by two other subplans at once**, and one of those reads is `assert.equal(/стриппер/.test(res.stderr), false, …)` — a *negative* match that stops checking, green, the moment S3's sentence changes; `test/module.test.js:163` is a reader of the internal error that S3's plan counted as unread (corrected in `measurement.md`) | 355 | **written 2026-09-16** |
 | C2 | `tests-cli.md` | the checks that drive the tool (739 lines): `hook` 113, `check` 84, `doctor` 83, `cli` 79, `minify` 75, `disk` 68, `tokens` 54, `release` 41, `templates` 33, `cli-paths` 31, `refusals-catalog` 26, `refusals` 25, `environment` 18, `crlf` 9 | 739 | not started |
-| C3 | `tests-guards.md` | the checks of the repository itself (226 lines): `gates-verify` 26, `gates-files` 26, `docs-commands` 23, `gates-metrics` 22, `suites` 16, `parity` 16, `frozen` 16, `gates-coverage` 16, `docs-pin` 14, `gates-dup` 13, `git-pins` 12, `docs-numbers` 12, `gates-deps` 8, `docs-paths` 6 | 226 | not started |
+| C3 | `tests-guards.md` | the checks of the repository itself (226 lines, confirmed file by file): `gates-verify` 26, `gates-files` 26, `docs-commands` 23, `gates-metrics` 22, `suites` 16, `parity` 16, `frozen` 16, `gates-coverage` 16, `docs-pin` 14, `gates-dup` 13, `git-pins` 12, `docs-numbers` 12, `gates-deps` 8, `docs-paths` 6. **Six of them are gate files** (111 lines) and those commits carry the trailer; the eight assertion lines W2's steps move with their verdicts; **no negative match in this owner** (measured); one kept tolerance (`требовани|requirements?`, dead in the tree) named as its exception for G1; and the finding that `README.md`'s code table is a contract parsed by `readmeCauses()`, not a quotation | 226 | **written 2026-09-16** |
 | D1 | `configs.md` | `.github/workflows/**` (78), `templates/**` (35), `package.json` `description` (1), the declarative dotfiles (17: `.dependency-cruiser.cjs` 7, `eslint.metrics.config.js` 6, `.gitignore` 4) — the declarative files and what the registry shows; the last two are **gate files** and need the `Gate-Change:` trailer | 131 | not started |
 | G1 | `guard.md` | the check that holds the allow-list: a scan over the tree that reddens on a new Russian literal outside the named exceptions | — | not started |
 
@@ -125,7 +125,8 @@ dictionary lines inside `src/**`.
 
 ### What is left, measured 2026-09-16
 
-The rows below are unwritten. The numbers are the counter's, not a subtraction: the map's rows now
+The rows below are unwritten (C1–C3 are written: 355 + 739 + 226 = 1 320, which is the whole of
+`test/**`). The numbers are the counter's, not a subtraction: the map's rows now
 sum **exactly** to the instrument's reading — `src/**` 351 (of which the allow-listed dictionaries 57
 and one comment of 3), `bin/**` 2, the `tools/**` family 559 (W1 349 + W2 121 + W3 89), `test/**` 1 320
 (C1 355 + C2 739 + C3 226), D1 131, the allowed quotations 18, the built report 349 — and with the
@@ -134,11 +135,9 @@ reading. Written so far: S1–S5 293 (net of the dictionary lines), W1 349, W2 1
 
 | # | Subplan | Lines | Note |
 |---|---|---|---|
-| C2 | `tests-cli.md` | 739 | `hook` 113, `check` 84, `doctor` 83, `cli` 79, `minify` 75, `disk` 68, `tokens` 54, `release` 41, `templates` 33, `cli-paths` 31, `refusals-catalog` 26, `refusals` 25, `environment` 18, `crlf` 9 — the checks that drive the tool, and the readers S1–S5 named for their own texts. **Four negative matches over printed text**, three of them named by no plan (`test/check.test.js:184`, `:235`, `test/disk.test.js:219`) — see C1's rule, corrected in `surface.md` and `diagnostics.md` | 739 | **written 2026-09-16** |
-| C3 | `tests-guards.md` | 226 | `gates-verify` 26, `gates-files` 26, `docs-commands` 23, `gates-metrics` 22, `suites` 16, `parity` 16, `frozen` 16, `gates-coverage` 16, `docs-pin` 14, `gates-dup` 13, `git-pins` 12, `docs-numbers` 12, `gates-deps` 8, `docs-paths` 6 — including the eight assertion lines W2's steps move with their verdicts |
-| D1 | `configs.md` | 131 | `.github/workflows/**` 78, `templates/**` 35, `package.json` 1, the declarative dotfiles 17 — two of them gate files |
+| D1 | `configs.md` | 131 | `.github/workflows/**` 78, `templates/**` 35, `package.json` 1, the declarative dotfiles 17 — two of them gate files; its step edits the two workflow step names `test/release.test.js:62,66` reads (C2) |
 | W3 | `fixture-builders.md` | 89 | `tools/synthetic/**`; **decides whether the frozen layer is re-taken** (N21) |
-| G1 | `guard.md` | — | the guard itself does not exist yet, so it has no counter reading |
+| G1 | `guard.md` | — | the guard itself does not exist yet, so it has no counter reading; two exceptions to name: W1's `commandsAt` tolerance and C3's `требовани|requirements?` resolver |
 
 **The order has been respected, and is now decided once.** The table's row order has been followed
 without skipping a row: T0, S1, S2, S3, S4, S5, W1, W2, C1. The one place where this file contradicted
