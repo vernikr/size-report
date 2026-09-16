@@ -209,8 +209,8 @@ export function readHistory(root) {
 
 export function assertFullHistory(root) {
   if (git(root, ['rev-parse', '--is-shallow-repository']).trim() === 'true') {
-    refuse(EXIT.SHALLOW, 'история обрезана (shallow clone): таблица строится по всей истории коммитов.\n'
-      + '  локально: git fetch --unshallow\n'
-      + '  в CI: actions/checkout с fetch-depth: 0');
+    refuse(EXIT.SHALLOW, 'the history is truncated (shallow clone): the table is built over the whole history of commits.\n'
+      + '  locally: git fetch --unshallow\n'
+      + '  in CI: actions/checkout with fetch-depth: 0');
   }
 }

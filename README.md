@@ -703,7 +703,7 @@ engine gives, and by the same code as the engine's own calculation.
 
 **The order of edits:** code → `pnpm run sizes` → a commit with the table alone. The table is updated in a
 **commit of its own**, because a commit cannot have a row inside itself: update it together with the code
-and the tool warns (the text is quoted as the tool prints it: `! таблицу обновляли вместе с кодом: <sha>`)
+and the tool warns (the text is quoted as the tool prints it: `! the table was updated together with the code: <sha>`)
 and names the commit that dropped out.
 The `size` check rebuilds the table and compares it with the file on disk, so it catches a forgotten
 rebuild too. Dropping the report from git altogether is possible as well: the completeness check exists

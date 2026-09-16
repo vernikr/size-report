@@ -164,7 +164,7 @@ it), an edit (the file is on both sides with different content) and a deletion (
 tree does not). A column whose file lived in the history and was deleted before HEAD is empty on both sides —
 which is not a loss. The message itself no longer breaks on `tree.get(p)` when a path from the state is not found
 in the tree (in the old code that would have been a stack instead of an explanation), and it now names **both**
-sides (the tool prints in Russian): “в дереве `src/only-in-merge.js` 77d3e2f, в состоянии файла нет”.
+sides (as the tool prints it): “in the tree: `src/only-in-merge.js` 77d3e2f, in the state: the file is absent”.
 
 **What holds it** — `test/disk.test.js`, three checks, all of them on numbers and texts:
 

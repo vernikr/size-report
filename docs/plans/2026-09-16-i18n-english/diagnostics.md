@@ -154,14 +154,43 @@ frozen file through no path (`--json` and `--data` carry refusals of nothing, th
 doctor texts are not part of any reference, and the artifact leaves `skipped` out). So the steps
 below can be done in any order, and the frozen line waits for its decision.
 
-**Step 1 — the git boundary and the two disk violations** (`src/git.js`, the two `EXIT.VIOLATION`
-refusals and the `!` note of `src/history.js`, 11 lines). Joint edits: the `EXIT.SHALLOW` case and
+**Step 1 — the git boundary and the two disk violations — done 2026-09-16** (`src/git.js` 3 → **0**,
+`src/history.js` 12 → **1**, the one being `SKIP_WORDS` by N24; `tools/refusals.js` 70 → 66,
+`test/disk.test.js` 68 → 58, `test/cli-paths.test.js` 30 → 30 — its two regexes share their lines
+with Russian assertion messages, so the counter does not move there; `README.md` 3 → 2 and
+`BLOCKERS.md` 21 → 20 with the two quotations; `SITES` 27, `PRINTED` 2/2/1/2/4, `CASES` 38 and the
+check count unchanged). Every reader named above moved, none reddened late, and
+the reader the plan did not know is in the correction below.
+
+What the step was: `src/git.js`, the two `EXIT.VIOLATION`
+refusals and the `!` note of `src/history.js`, 11 lines. Joint edits: the `EXIT.SHALLOW` case and
 both `EXIT.VIOLATION` cases in `tools/refusals.js`, `test/disk.test.js:107,112,133,140,142,193,195,270,272`,
 `test/cli-paths.test.js:35,93,94`. Keep the shape of both violations: the path, the two bites of
 evidence, the sentence that names the class ("the edit was lost while state was carried"), and the
 fix — `test/disk.test.js` slices at `Разбор: git show HEAD:` and at the `починка` marker.
 **The `!` note has no reader at all** (measured: `rg -n 'обновляли вместе' src test tools` answers
 inside `src/history.js` alone), so its experiment is the grep, quoted in the commit.
+
+## Correction, measured 2026-09-16 while doing step 1 — a reader no grep for the note's own words finds
+
+The `!` note is printed on **healthy** runs, and a healthy line is read by `checkFix`
+(`test/refusals.test.js`), which runs the advice of a case and then requires that **none of that
+case's `must` phrases** appear in the answer any more. The first English wording ended
+"…update the table in a commit of its own", and `in a commit of its own` is the `must` phrase of
+the `size table diverged from the history` case — whose advice *is* this note's occasion: the
+rebuilt report was committed together with the code. The line reddened that case with
+`совет не починил состояние`. Reworded to "…update the table in a separate commit", which is also
+the `dup`-safe choice: the phrase belongs to `src/modes.js` (S1) and repeating it would be a clone.
+The lesson: for a note printed on success, the reader to look for is **the other cases' `must`
+phrases**, not the note's own words — `grep` over the text cannot see it, only the run can.
+
+Two smaller corrections. `BLOCKERS.md:167` is a reader the plan's table did not name: it is a claim
+about what the tool prints **now** ("it now names both sides"), so by `plan.md`'s rule it moved with
+the text in the same commit; the two reproductions at `BLOCKERS.md:148` and `:263-264` stay as they
+are, being records of what a reader saw *before* that fix (the `plan.md` allow-list names them
+"Quotes of old output in records"). And the comparison's text gained a colon — `in the tree: …`,
+`in the state: …` — where the Russian had none: the sides are easier to tell apart in English, and
+the shape (the path, both sides, the sentence that names the class, the advice line) is intact.
 
 **Step 2 — the coverage and the explanation** (`src/check.js`, `src/explain.js`, 36 lines, one
 commit, because `REASON_WORD` and `REASON_TEXT` are two spellings of one vocabulary: the coverage's

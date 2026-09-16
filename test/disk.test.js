@@ -104,12 +104,12 @@ function assertCatchesDiskEdit(dir, label) {
     'в выкладке «' + label + '» правка попала в статус git: файл выпал бы из сверки как грязный, и проверять нечего');
   const res = runFixtureWith(PACKAGE, dir, ['--json']);
   assert.notEqual(res.code, 0, 'сверка пропустила правку, которой нет в истории (' + label + ')');
-  assert.match(res.stderr, /правка есть только на диске/,
+  assert.match(res.stderr, /the edit exists on disk only/,
     'сверка отказалась по другой причине: ' + res.stderr.trim().split('\n')[0]);
 
   /* The refusal's advice is a command and has to work: `git checkout -- <path>` returns the file to
    * HEAD, and the same call answers zero afterwards. */
-  assert.match(res.stderr, /починка: закоммитьте правку или откатите её: git checkout -- /,
+  assert.match(res.stderr, /fix: commit the edit or roll it back: git checkout -- /,
     'совет не называет, как вернуть файл: ' + res.stderr.trim());
   gitIn(dir, ['checkout', '--', 'src/code.js']);
   const after = runFixtureWith(PACKAGE, dir, ['--json']);
@@ -130,16 +130,16 @@ test('потерянная правка merge-коммита ловится со
   const tool = engineWithoutMergePaths();
   const res = runTool(tool, dir, ['--config', reconfig(), '--json']);
   assert.notEqual(res.code, 0, 'потерянная правка merge-коммита прошла мимо сверки');
-  assert.match(res.stderr, /перенос состояния между коммитами пропустил правку/,
+  assert.match(res.stderr, /carrying the state between commits lost an edit/,
     'сверка отказалась по другой причине: ' + res.stderr.trim().split('\n')[0]);
 
   /* This refusal's advice is no repair command, and the text says so: the discrepancy lies in the
    * carrying of the state itself, and a rebuild will not change it. Both halves are checked: the
    * diagnostic command runs, while the rebuild does not remove the refusal — otherwise the advice's
    * text would be untrue. */
-  assert.match(res.stderr, /починка: пересборкой это не лечится/,
+  assert.match(res.stderr, /fix: a rebuild does not cure this/,
     'совет обещает то, чего пересборка не делает, или не назван:\n' + res.stderr.trim());
-  assert.match(res.stderr, /Разбор: git show HEAD:/,
+  assert.match(res.stderr, /See it with: git show HEAD:/,
     'совет не называет, чем это показать:\n' + res.stderr.trim());
   const shown = spawnSync('bash', ['-c', 'git show HEAD:src/code.js'], { cwd: dir, encoding: 'utf8' });
   assert.equal(shown.status, 0, 'совет зовёт git show на то, что git не показывает: '
@@ -190,9 +190,9 @@ test('потерянное создание файла ловится состо
 
   const res = runTool(engineWithoutMergePaths(), dir, ['--config', file, '--json']);
   assert.notEqual(res.code, 0, 'потерянное создание файла прошло мимо сверки');
-  assert.match(res.stderr, /в дереве src\/only-in-merge\.js/,
+  assert.match(res.stderr, /in the tree: src\/only-in-merge\.js/,
     'отказ не назвал сторону дерева: ' + res.stderr.trim().split('\n')[0]);
-  assert.match(res.stderr, /в состоянии файла нет/,
+  assert.match(res.stderr, /in the state: the file is absent/,
     'отказ не назвал сторону состояния: ' + res.stderr.trim().split('\n')[0]);
 });
 
@@ -216,7 +216,7 @@ test('файл, удалённый до HEAD, не роняет прогон и 
 
   const res = runSize(dir, ['--config', configWith('gone', [{ label: 'gone.js', paths: ['src/gone.js'] }]), '--json']);
   assert.equal(res.code, 0, 'история с удалённым файлом не собирается: ' + res.stderr.trim().split('\n')[0]);
-  assert.equal(/перенос состояния/.test(res.stderr), false,
+  assert.equal(/carrying the state/.test(res.stderr), false,
     'сверка приняла удалённый файл за потерянное состояние:\n' + res.stderr);
 
   const data = JSON.parse(res.stdout);
@@ -267,9 +267,9 @@ test('потерянное удаление файла ловится состо
 
   const res = runTool(engineWithoutMergePaths(), dir, ['--config', file, '--json']);
   assert.notEqual(res.code, 0, 'потерянное удаление прошло мимо сверки');
-  assert.match(res.stderr, /в дереве файла нет/,
+  assert.match(res.stderr, /in the tree: the file is absent/,
     'отказ не назвал сторону дерева: ' + res.stderr.trim().split('\n')[0]);
-  assert.match(res.stderr, /в состоянии src\/gone\.js/,
+  assert.match(res.stderr, /in the state: src\/gone\.js/,
     'отказ не назвал сторону состояния: ' + res.stderr.trim().split('\n')[0]);
 });
 

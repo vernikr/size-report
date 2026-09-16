@@ -252,7 +252,7 @@ export const CASES = [
     advice: [{ kind: 'run', text: 'git log --oneline', expect: 0 },
       { kind: 'run', text: 'git log --all', expect: 0 }] },
   { key: 'EXIT.SHALLOW', scenario: 'shallow', args: ['--config', '@config', '--write'], code: 3,
-    must: ['история обрезана (shallow clone)', 'git fetch --unshallow', 'fetch-depth: 0'],
+    must: ['the history is truncated (shallow clone)', 'git fetch --unshallow', 'fetch-depth: 0'],
     truth: 'названы обе починки: для себя и для CI',
     advice: [
       { kind: 'run', text: 'git fetch --unshallow', expect: 0, mustFix: true },
@@ -294,11 +294,11 @@ export const CASES = [
 
   /* Comparing with the tree needs a lost edit — `test/disk.test.js` guards it. */
   { key: 'EXIT.VIOLATION', coveredBy: 'test/disk.test.js',
-    must: ['перенос состояния между коммитами пропустил правку'],
+    must: ['carrying the state between commits lost an edit'],
     truth: 'сказано, что потерялась правка при переносе, и что пересборка тут ни при чём: разбор назван',
-    advice: [{ kind: 'coveredBy', file: 'test/disk.test.js', text: 'пересборкой это не лечится' }] },
+    advice: [{ kind: 'coveredBy', file: 'test/disk.test.js', text: 'a rebuild does not cure this' }] },
   { key: 'EXIT.VIOLATION', coveredBy: 'test/disk.test.js',
-    must: ['правка есть только на диске'],
+    must: ['the edit exists on disk only'],
     truth: 'сказано, что правка не потерялась, а не закоммичена, и как её вернуть',
     advice: [{ kind: 'coveredBy', file: 'test/disk.test.js', text: 'git checkout -- ' }] },
 

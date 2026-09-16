@@ -90,8 +90,8 @@ test('правка только на диске: код 1 и что с ней д
 
   const res = runFixture(dir, ['--data']);
   refusal(res, 1, 'правка, которой нет в истории');
-  assert.match(res.stderr, /правка есть только на диске/, 'отказ объясняет не то:\n' + res.stderr);
-  assert.match(res.stderr, /починка/, 'отказ не говорит, что делать:\n' + res.stderr);
+  assert.match(res.stderr, /the edit exists on disk only/, 'отказ объясняет не то:\n' + res.stderr);
+  assert.match(res.stderr, /fix/, 'отказ не говорит, что делать:\n' + res.stderr);
 });
 
 /* ---------- a run outside a repository ---------- */

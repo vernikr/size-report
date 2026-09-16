@@ -199,16 +199,16 @@ function assertMatchesDisk(state, cfg, root) {
     const inTree = p === undefined ? undefined : tree.get(p);
     const lost = s === null ? aliases.length > 0 : inTree !== s.sha;
     if (lost) {
-      refuse(EXIT.VIOLATION, 'состояние «' + col.label + '» на HEAD не совпало с деревом коммита (в дереве '
-        + (aliases.length === 0 ? 'файла нет'
+      refuse(EXIT.VIOLATION, 'the state of "' + col.label + '" at HEAD did not match the tree of the commit (in the tree: '
+        + (aliases.length === 0 ? 'the file is absent'
           : aliases.map((alias) => alias + ' ' + tree.get(alias).slice(0, 7)).join(', '))
-        + ', в состоянии ' + (s === null ? 'файла нет' : s.path + ' ' + s.sha.slice(0, 7))
-        + '): перенос состояния между коммитами пропустил правку'
+        + ', in the state: ' + (s === null ? 'the file is absent' : s.path + ' ' + s.sha.slice(0, 7))
+        + '): carrying the state between commits lost an edit'
         // Rebuilding is no fix here: the state comes from this very run, so no stale table is
         // involved in this disagreement. Hence the advice names not a fix command but the way to
         // show the thing.
-        + '\n  починка: пересборкой это не лечится — расхождение в самом переносе состояния,'
-        + ' а не в таблице. Разбор: git show HEAD:' + p);
+        + '\n  fix: a rebuild does not cure this — the discrepancy is in the carrying of the state itself,'
+        + ' not in the table. See it with: git show HEAD:' + p);
     }
     if (p !== undefined && !dirty.has(p) && clean.indexOf(p) < 0) clean.push(p);
   });
@@ -217,9 +217,9 @@ function assertMatchesDisk(state, cfg, root) {
   clean.forEach((p) => {
     if (onDisk.get(p) === tree.get(p)) return; // git counts the file as unmodified
     if (fs.readFileSync(path.join(root, p)).equals(diskForm(root, 'HEAD', p))) return; // line endings are not reversible
-    refuse(EXIT.VIOLATION, 'содержимое ' + p + ' на диске разошлось с HEAD (' + onDisk.get(p).slice(0, 7)
-      + ' вместо ' + tree.get(p).slice(0, 7) + '), хотя git не считает файл изменённым: правка есть только на диске'
-      + '\n  починка: закоммитьте правку или откатите её: git checkout -- ' + p);
+    refuse(EXIT.VIOLATION, 'the content of ' + p + ' on disk diverged from HEAD (' + onDisk.get(p).slice(0, 7)
+      + ' instead of ' + tree.get(p).slice(0, 7) + '), though git does not count the file as modified: the edit exists on disk only'
+      + '\n  fix: commit the edit or roll it back: git checkout -- ' + p);
   });
 }
 
@@ -228,8 +228,8 @@ export function build(cfg, root) {
   const measured = measureHistory(cfg, root);
   assertMatchesDisk(measured.state, cfg, root);
   if (measured.mixed.length > 0) {
-    console.error('! таблицу обновляли вместе с кодом: ' + measured.mixed.join(', ')
-      + ' — так строка коммита не может попасть в сам коммит; обновляйте таблицу отдельным коммитом.');
+    console.error('! the table was updated together with the code: ' + measured.mixed.join(', ')
+      + ' — that way the commit cannot carry a line about itself; update the table in a separate commit.');
   }
   return measured;
 }
