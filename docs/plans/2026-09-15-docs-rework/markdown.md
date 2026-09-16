@@ -518,9 +518,33 @@ files). The parts below are the order to work in; each is one commit.
   journal references → `worklog/archive/WORKLOG.md` §14/§20/§21/§25.5. **Addresses measured before and after:** 59
   `R-` addresses defined, 38 cited from five documents and the plans, none missing — nothing renumbered in this
   part.
-- [ ] **M16c–M16e `REFACTOR.md` remainder** — measured: **M16c §6 first half** and **M16d §6 second half** (the
-  release wave, 26 Russian lines but 51 700 characters — two parts), **M16e §7–§9** (wave 5, what is out of the
-  plan, what is established; 72 Russian lines, and the lines now stand at 126, 155, 191, 212). Wave 5 needs a real
+- [x] **M16c `REFACTOR.md` §6 first half** — done 2026-09-16. 21 added / 10 removed = **31 changed lines in one
+  file**; the eight rows held 14 387 Cyrillic characters, they hold **353** (cause names, printed texts, the
+  literal of a mutation), the file's Cyrillic 104 → 101 lines / 42 732 → 30 431 characters. **The boundary is a
+  list of names rather than a range:** rows stand in the order written, so the first half is `R-4.1`, `R-4.14`,
+  `R-4.15`, `R-4.16`, `R-4.13`, `R-4.17`, `R-4.18`, `R-4.19` (24 543 of §6's 73 000 characters), and the
+  remainder is the 16 rows `R-4.20` … `R-4.9`. **Three numbers in `R-4.18` had drifted from the code:** the
+  catalogue is **38** entries today (33 called by a run, 4 given to other checks, 1 uncheckable) and the place maps
+  hold **32** (**27** throws + **5** printed), where the row said 37 / 32 / 4 / 1 — and "which ones a run calls" is
+  not 32 either, since `test/refusals.test.js` runs every case carrying a scenario and verifies each refusal's
+  advice by executing it. **The translation itself introduced a defect and it is fixed:** I retold the printed text
+  and a cause name in English, while `src/config.js` prints “git не запустился: его нет в PATH (таблица собирается
+  по его истории, а смотрю я в …)” — the verbatim text is restored, the scenario was repeated live (`PATH` without
+  git in `/private/tmp/notarepo3` → code 2 with that text; the same directory with git on `PATH` → the other cause,
+  “git не видит здесь репозитория …”), and the claim about the code is corrected: the split follows **`ENOENT`**
+  against every other failure of git rather than a “status 128”. **§1 now carries the citation rule** the wave
+  leans on: a cause name, a printed refusal and a printed report line stay verbatim Russian (data the tool ships),
+  while a failure message of a check is retold in English (evidence about the check). Checked by code and run:
+  `CONFIG_CAUSES` is five groups and 25 causes and the help prints them from the same list (`CAUSE_LINES`),
+  `test/docs-commands.test.js` holds four checks including the search for a bare `refuse(EXIT.CONFIG`,
+  `test/docs-numbers.test.js` reads no time targets while `publishedRuns` reads README's table alone, `resolveCommit`
+  lives in `src/git.js` with `explain` as its only consumer and the cause `коммит вне истории` in the registry, and
+  the numbers of release 1.0.0 match `CHANGELOG.md` (2511 / 1597 / 1483 / 540, `code.js` 276 → 185). **References:**
+  52 distinct `R-` addresses are cited from outside the file and all resolve; nothing renumbered. No release — the
+  file is not in the tarball.
+- [ ] **M16d–M16e `REFACTOR.md` remainder** — measured: **M16d §6 second half** (the rows `R-4.20` … `R-4.9`, 16
+  rows after `R-4.19`) and **M16e §7–§9** (wave 5, what is out of the plan, what is established; 72 Russian lines,
+  and the lines now stand at 131, 166, 202, 223). Wave 5 needs a real
   check rather than a translation: `R-5.1` and `R-5.6` carry no done mark today, **`R-5.1` still names the
   `--page` mode**, which no longer exists, and §8's table of the audit's findings still cites the removed row
   numbers of the old waves. The subplan is not the place to close them — the rows are.
