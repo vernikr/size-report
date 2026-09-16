@@ -18,18 +18,18 @@ const SPLIT = 'process.stdout.write(Buffer.from([0xd0]));'
   + 'setTimeout(() => { process.stdout.write(Buffer.from([0xb9]));'
   + 'process.stdout.write("-конец\\n"); }, 30);';
 
-test('куски вывода склеиваются буферами: разорванный символ уцелел', async () => {
+test('output chunks are joined as buffers: a torn character survived', async () => {
   const res = await collectOutput(spawn(process.execPath, ['-e', SPLIT]));
-  assert.equal(res.code, 0, 'процесс завершился кодом ' + res.code + ': ' + res.stderr.trim());
+  assert.equal(res.code, 0, 'the process exited with code ' + res.code + ': ' + res.stderr.trim());
   assert.equal(res.stdout, 'й-конец\n',
-    'символ на границе кусков развалился: ' + JSON.stringify(res.stdout)
-      + ' — вывод склеивается как строки, а не как буферы');
+    'the character on the boundary between chunks fell apart: ' + JSON.stringify(res.stdout)
+      + ' — the output is joined as strings rather than as buffers');
 });
 
-test('чтение вывода отдаёт код, вывод и ошибки по отдельности', async () => {
+test('reading the output hands back the code, the output and the errors separately', async () => {
   const res = await collectOutput(spawn(process.execPath,
     ['-e', 'process.stdout.write("из вывода"); process.stderr.write("из ошибок"); process.exit(3)']));
-  assert.equal(res.code, 3, 'код выхода не тот');
-  assert.equal(res.stdout, 'из вывода', 'вывод потерян или перемешан с ошибками');
-  assert.equal(res.stderr, 'из ошибок', 'ошибки потеряны или перемешаны с выводом');
+  assert.equal(res.code, 3, 'the exit code is not the one');
+  assert.equal(res.stdout, 'из вывода', 'the output is lost or mixed with the errors');
+  assert.equal(res.stderr, 'из ошибок', 'the errors are lost or mixed with the output');
 });

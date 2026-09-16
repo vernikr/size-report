@@ -43,23 +43,23 @@ function withoutThread() {
   return import(path.join(dir, 'parse.js'));
 }
 
-test('разбор модуля идёт рабочим потоком, а не запуском', () => {
-  assert.equal(moduleError(SAMPLES[0]), null, 'модуль не разобрался');
-  assert.match(moduleError(SAMPLES[5]), /^SyntaxError/, 'битый модуль прошёл молча');
-  assert.equal(parseMode(), 'thread', 'разбор ушёл в запуск Node — ускорения нет');
+test('a module is parsed in a worker thread rather than by a run', () => {
+  assert.equal(moduleError(SAMPLES[0]), null, 'the module did not parse');
+  assert.match(moduleError(SAMPLES[5]), /^SyntaxError/, 'a broken module went through in silence');
+  assert.equal(parseMode(), 'thread', 'parsing fell back to a Node run — there is no speed-up');
 });
 
-test('оба пути разбора дают один и тот же вердикт', async () => {
+test('both paths of parsing give the same verdict', async () => {
   const fallback = await withoutThread();
   SAMPLES.forEach((text) => {
     assert.equal(moduleError(text), fallback.moduleError(text),
-      'разбор потоком и запуском разошлись на ' + JSON.stringify(text));
+      'parsing by thread and by run diverged on ' + JSON.stringify(text));
   });
-  assert.equal(parseMode(), 'thread', 'быстрый путь перестал быть потоком');
-  assert.equal(fallback.parseMode(), 'node', 'отступление не сработало: разбирал поток');
+  assert.equal(parseMode(), 'thread', 'the fast path stopped being a thread');
+  assert.equal(fallback.parseMode(), 'node', 'the fallback did not work: the thread did the parsing');
 });
 
-test('сотни разборов дешевле одного запуска Node', () => {
+test('hundreds of parses are cheaper than one Node run', () => {
   const started = performance.now();
   for (let i = 0; i < 300; i++) moduleError('export const a = ' + i + ';\n');
   const spent = performance.now() - started;
@@ -68,5 +68,5 @@ test('сотни разборов дешевле одного запуска Nod
   // The threshold is deliberately coarse: the check guards the order of the price, not the machine's
   // ticking.
   assert.ok(spent < 1000,
-    '300 разборов заняли ' + spent.toFixed(0) + ' мс — это похоже на запуск на каждый текст');
+    '300 parses took ' + spent.toFixed(0) + ' ms — that looks like a run per text');
 });

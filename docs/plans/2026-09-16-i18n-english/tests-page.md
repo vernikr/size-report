@@ -1,8 +1,15 @@
 # C1 — `tests-page`: the checks of the page and the contract
 
-Subplan of `plan.md` (T0). Owns nine checks, 355 lines measured — `page-view` 72, `page-choice` 67,
-`module` 66, `page-tree` 55, `contract-data` 51, `contract-derived` 18, `guard` 11, `runner` 11,
-`api` 4 — the tracker's row, confirmed file by file. Written 2026-09-16, not started.
+Subplan of `plan.md` (T0). Owns nine checks, 355 lines measured at planning time — `page-view` 72,
+`page-choice` 67, `module` 66, `page-tree` 55, `contract-data` 51, `contract-derived` 18, `guard` 11,
+`runner` 11, `api` 4. Written 2026-09-16, **step 0 and step 1 landed the same day**, and the re-measurement
+moved the baseline: the nine files answer **347**, not 355, because `test/module.test.js` reads **58**, not
+66 — the eight lines of section (2) went with their owners' steps (S1–S5, W1, W2), and sections (2) and (3)
+are English already: `/esbuild did not parse src\/view\.js/`, `/is not JavaScript/`,
+`remove this extension from minify.guard`, `give this extension a simplification in minify.ext`, the `--init`
+hint's regex `/pin them with a file of their own[^:]*: (.+)$/m`, the mutation read `/the stripper broke/`,
+and both negative matches now name `/stripper/` rather than a Russian word. The check counts are unchanged:
+44 over the nine files.
 
 **This is the first owner whose lines are read by two other subplans at once**, and it is the most
 dangerous kind of reading in the whole work: one of them stops checking without ever going red. The
@@ -20,12 +27,12 @@ done
 |---|---|---|
 | `test/page-view.test.js` | 72 | test names and assertion messages; the page's captions are read from the `ru` dictionary as **data** |
 | `test/page-choice.test.js` | 67 | the same, around the memory of the choice and the link |
-| `test/module.test.js` | 66 | the same, plus **five reads of other owners' texts** (below) |
+| `test/module.test.js` | 66 → **58** measured | the same, plus **five reads of other owners' texts** (below); the eight that left are those reads |
 | `test/page-tree.test.js` | 55 | the same, plus one read of the dictionary's data (`:128`) |
 | `test/contract-data.test.js` | 51 | the same, plus reads of the fixture's `golden.json`/`data.json` data |
 | `test/contract-derived.test.js` | 18 | the same |
-| `test/guard.test.js` | 11 | the same |
-| `test/runner.test.js` | 11 | the same |
+| `test/guard.test.js` | 11 → **1** | the same, done 2026-09-16 (step 1): the ten names and messages are English, and the sample `'export const a = `текст;\n'` stays — it is the fixture's own text |
+| `test/runner.test.js` | 11 → **5** | the same, done 2026-09-16 (step 1): six names and messages are English; the five that stay are the fixture's payload — the multi-byte letter and the two sentinels the child prints |
 | `test/api.test.js` | 4 | the same, around the frozen list of exported names (identifiers) |
 
 ## Read by another owner — three kinds, named line by line
@@ -95,8 +102,16 @@ data, untranslated.
    have landed by then, so those six lines are already English, and `test/module.test.js:120`, `:195`
    are already re-pointed (or the gap is found here rather than later). The counter's baseline for the
    nine files and the check counts per file go into the journal.
-1. **`test/runner.test.js` + `test/guard.test.js`** (11 + 11) — messages only. Red first: the measured
-   absence of a reader (grep), and `pnpm test` staying green with the counts unchanged.
+1. **`test/runner.test.js` + `test/guard.test.js` — done 2026-09-16**, 11 → **5** and 11 → **1**. Six
+   names and messages in the first, ten in the second. **Red first, one message at a time:** all nineteen
+   phrases went back to Russian on their own and `node --test test/runner.test.js test/guard.test.js`
+   stayed green — no reader of a test's words, measured rather than inherited. The six lines that stay are
+   **data**, and the experiment for the sharpest of them was made: replacing the payload letter `й` with an
+   ASCII one turns the check **red**, which is why it must stay — the split in that test is between the two
+   bytes of a multi-byte character, so an ASCII payload would leave the check green and proving nothing.
+   The two sentinels (`из вывода`/`из ошибок`) and `guard.test.js`'s sample `текст` are the fixture's own
+   text, written and compared by the same check. The counts are unchanged (2 and 3 checks), `pnpm test`
+   green, `pnpm run dup` green — 19 messages is exactly where a twin could appear, and none did.
 2. **`test/api.test.js` + `test/contract-derived.test.js`** (4 + 18). Red first: the frozen name list
    must stay byte for byte; translating **it** instead of the messages would redden
    `test/api.test.js` itself in the next run (`pnpm test` answers it), which is the experiment worth
