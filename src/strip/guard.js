@@ -43,7 +43,7 @@ export function assertCompilable(min, rev, p, src) {
   }
   // The reason comes from the parse the file actually was: blaming the other shape would
   // explain nothing.
-  throw new Error('стриппер испортил ' + p + ' на ' + rev.slice(0, 7) + ': '
+  throw new Error('the stripper broke ' + p + ' at ' + rev.slice(0, 7) + ': '
     + (shape ? asModule : asScript));
 }
 

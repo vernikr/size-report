@@ -262,7 +262,8 @@ export function measureBlob(name, blob, file, cfg, rev) {
   const metric = METRICS[name];
   if (metric.fromSize) return blob.size;
   if (blob.text === null) {
-    throw new Error('метрике «' + name + '» нужно содержимое ' + file + ' на ' + rev.slice(0, 7) + ', а оно не прочитано');
+    throw new Error('the metric "' + name + '" needs the content of ' + file + ' at '
+      + rev.slice(0, 7) + ', and it was not read');
   }
   return metric.measure(blob.text, file, cfg, rev);
 }

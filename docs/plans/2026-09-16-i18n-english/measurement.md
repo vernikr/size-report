@@ -168,14 +168,27 @@ which is why a stale quotation there reddens rather than passing quietly. And th
 refusal as its finding and never prints the fixture's commit subject, so the pattern was reading the
 refusal text alone.
 
-**Step 3 — the internal errors** (`src/minify.js:40`, `src/strip.js:54`, `src/strip/guard.js:46`,
-`src/metrics.js:265`). These are defect paths rather than messages: none of them is caught as a
-refusal, so a run that reaches one ends with `src/cli.js`'s `✗ <internal error>` and code 5, and
-`tools/harness.js`'s `refusal()` asserts there is no stack in a *refusal* only. **No reader exists
-for these four strings** — that is measured, not assumed: `rg -n "минификатор недоступен:|неизвестная стратегия|стриппер испортил|а оно не прочитано" src test tools` answers inside `src/` alone. The honest experiment here is therefore the grep itself, quoted in the commit, rather than a test that reddens.
+**Step 3 — the internal errors — done 2026-09-16** (`src/minify.js` 1 → 0, `src/strip.js` 1 → 0,
+`src/strip/guard.js` 1 → 0, `src/metrics.js` 16 → 15; commit
+`feat(i18n): translate the internal errors of the measurement`). The four became `the minifier is
+unavailable: <reason>`, `unknown minification strategy "<name>" (have: …)`, `the stripper broke <path>
+at <sha>: <reason>` and `the metric "<name>" needs the content of <file> at <sha>, and it was not
+read`. These are defect paths rather than messages: none is caught as a refusal, so a run that reaches
+one ends with `src/cli.js`'s `✗ <internal error>` and code 5, and `tools/harness.js`'s `refusal()`
+asserts there is no stack in a *refusal* only.
 
-**Wash-up.** The counter over the six files has to answer **exactly the named exceptions** — the 12
-dictionary lines and the 1 comment:
+**Readers — measured, and the plan's own claim was wrong for one of the four.** The plan said no reader
+exists for any of them and quoted a grep; the correction section below already found the first, and the
+step measured the rest:
+
+| String | Reader |
+|---|---|
+| `the stripper broke …` (`src/strip/guard.js`) | `test/module.test.js` 3 — «гард жив: сломанный стриппер не проходит молча», which mutates `src/strip/js.js` for real; measured: reddens with `текст отказа не называет причину` |
+| the same word in two **negative** matches (`test/module.test.js` 2 and 15) | they had to be re-pointed at `/stripper/`; measured: left in Russian they stay **green and vacuous** (the whole 175-check run is green either way) |
+| `the minifier is unavailable: …`, `unknown minification strategy …`, `the metric "…" needs the content of …` | **no reader at all** — measured by putting the three back into Russian and running the whole full suite: **175 checks green**. The grep agrees (`rg -n 'the minifier is unavailable:|unknown minification strategy|needs the content of' src test tools` answers inside `src/` alone) |
+
+**Wash-up — done 2026-09-16.** The counter over the six files answers **exactly the named
+exceptions** — the 12 dictionary lines and the 3 comment lines:
 
 ```bash
 rg -cP '[\p{Cyrillic}]' src/metrics.js src/minify.js src/strip.js src/strip/guard.js src/parse.js src/optional.js
@@ -187,8 +200,11 @@ dictionary lines and the comment" as if the comment were one line. It is **three
 final answer is **15**, and after step 1 the file reads **16** (12 dictionary + 3 comment + the
 internal error of step 3, still Russian at that point).
 
-Leave `ADVICE_LINE`'s tolerance alone if other subplans still print a Russian marker, and say so in
-the commit. No reflowing, no renaming of strategies or metrics, no "while I am here".
+`ADVICE_LINE`'s tolerance stays, for the same reason and one round closer: after step 2 the mark
+`починка: ` no longer exists in this layer, while S4 (`src/git.js`, `src/history.js`, `src/check.js`,
+`src/doctor.js`, `src/explain.js`) and S5 (`src/hook.js`) still print their markers, so narrowing the
+pattern now would redden the catalogue — it belongs to W1's step 8 (**N28**). No reflowing, no
+renaming of strategies or metrics, no "while I am here".
 
 ## What proves each step (the sensors that already exist)
 
@@ -221,10 +237,10 @@ the commit. No reflowing, no renaming of strategies or metrics, no "while I am h
 
 ## Acceptance
 
-- The counter over the six files answers **only** the named exceptions: the `ru` sides of the
-  dictionaries in `src/metrics.js` (12 lines) and the Russian comment at lines 61–63 (3 lines,
-  recorded in `TODO.md`) — 15 Cyrillic lines in that file and nothing in the other five. Every other
-  Cyrillic line of these files is gone.
+- The counter over the six files answers **only** the named exceptions — met 2026-09-16:
+  `src/metrics.js` **15** (the 12 `ru` dictionary lines and the comment at 61–63, recorded in
+  `TODO.md`) and **nothing** for `src/minify.js`, `src/strip.js`, `src/strip/guard.js`, `src/parse.js`
+  and `src/optional.js`. Every other Cyrillic line of these files is gone.
 - `pnpm run verify` green (fast after every commit, full before the portion is pushed).
 - **Behaviour provably untouched:** `SITES` and `PRINTED` unchanged (`test/refusals-catalog.test.js`);
   the public API list unchanged (`test/api.test.js`); the metric views' keys, labels and `accuracy`

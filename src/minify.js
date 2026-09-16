@@ -37,7 +37,7 @@ export function minifier() {
  * rather than two, and `sourcefile` for the reason inside a refusal. */
 export function minifyWithEsbuild(text, file, rev) {
   const { tool, why } = minifier();
-  if (tool === null) throw new Error('минификатор недоступен: ' + why);
+  if (tool === null) throw new Error('the minifier is unavailable: ' + why);
   const ext = path.extname(file).toLowerCase();
   try {
     return tool.transformSync(text, {

@@ -117,7 +117,7 @@ function moduleInJs(name, withType) {
   const res = runSize(dir, ['--write']);
   assert.equal(res.code, 0, 'проект с модулем в .js не собрался ('
     + name + '): ' + firstLine(res.stderr || res.stdout));
-  assert.equal(/стриппер/.test(res.stderr), false,
+  assert.equal(/stripper/.test(res.stderr), false,
     'отчёт собрался, но гард на чём-то споткнулся:\n' + res.stderr);
   assert.ok(fs.existsSync(path.join(dir, cfg.output)), 'таблица не написалась: ' + cfg.output);
 
@@ -160,7 +160,7 @@ test('гард жив: сломанный стриппер не проходит
     fs.writeFileSync(file, original.replace(from, to));
     const res = runTool(engine.target, dir, ['--write']);
     assert.notEqual(res.code, 0, 'сломанный стриппер прошёл молча — гард не стережёт');
-    assert.match(res.stderr, /стриппер испортил/, 'текст отказа не называет причину:\n' + res.stderr);
+    assert.match(res.stderr, /the stripper broke/, 'текст отказа не называет причину:\n' + res.stderr);
     assert.match(res.stderr, /greet\.js/, 'текст отказа не называет файл:\n' + res.stderr);
   } finally {
     fs.writeFileSync(file, original);
@@ -192,7 +192,7 @@ test('не JavaScript в графе — отказ с командой почи�
   const res = runSize(dir, ['--write']);
   assert.equal(res.code, 2, 'это графа настроек, а не дефект инструмента: '
     + firstLine(res.stderr || res.stdout));
-  assert.equal(/стриппер/.test(res.stderr), false,
+  assert.equal(/stripper/.test(res.stderr), false,
     'отказ обвиняет стриппер в том, чего тот не делал:\n' + res.stderr);
   assert.match(res.stderr, /esbuild did not parse src\/view\.js/,
     'отказ не называет ни файла, ни того, кто его не разобрал:\n' + res.stderr);

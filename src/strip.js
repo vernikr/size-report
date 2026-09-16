@@ -51,5 +51,5 @@ export function minifyForm(text, file, cfg) {
   if (how === 'strip-css') return stripLines(stripCss(text));
   if (how === 'json') return compactJson(text);
   if (how === 'strip-lines') return stripLines(text);
-  throw new Error('неизвестная стратегия минификации «' + how + '» (есть: ' + STRATEGIES.join(', ') + ')');
+  throw new Error('unknown minification strategy "' + how + '" (have: ' + STRATEGIES.join(', ') + ')');
 }
