@@ -572,11 +572,37 @@ files). The parts below are the order to work in; each is one commit.
   `N10` being struck-through closed notes). No release — the file is not in the tarball. **Recorded for the PLAN
   parts:** `PLAN.md` §8.5 still describes seven CI steps and a private project, §8.4 still speaks of an unpublished
   package.
-- [ ] **M16e `REFACTOR.md` §7–§9** (wave 5, what is out of the plan, what is established; 72 Russian lines,
-  and the lines now stand at 131, 166, 202, 223). Wave 5 needs a real
-  check rather than a translation: `R-5.1` and `R-5.6` carry no done mark today, **`R-5.1` still names the
-  `--page` mode**, which no longer exists, and §8's table of the audit's findings still cites the removed row
-  numbers of the old waves. The subplan is not the place to close them — the rows are.
+- [x] **M16e `REFACTOR.md` §7–§9** — done 2026-09-16, and **the file is English throughout**: `REFACTOR.md` is
+  closed (M16c + M16d + M16e). 94 added / 96 removed = **190 changed lines in one file** (252 lines, down from
+  254). **Cyrillic in the file is 16 lines and every one of them is a named quotation of tool data**: cause names
+  (`нет git`, `не git-репозиторий`, `коммит вне истории`, `причина отказа не объявлена`, `нечем звать инструмент`,
+  `файл не JavaScript`), the printed help sections (`Команды:`, `Режимы:`, `Причины отказа кодом 2`), the two
+  Russian words the changelog guard holds (`### Что изменится в числах`, the cell `Файл`), printed run lines
+  (“цель по времени не объявляется”, “ЦЕЛЬ НЕ ДОСТИГНУТА”), the mutation's stack, an old revision's refusal about
+  `tok`, and the `--init` hint. **Four claims were stale, and all were checked by code:** §7's opening named the
+  `--page` mode (the same class as R-0.2); `R-5.2` kept a budget story and pointed at a target table in §3 that
+  the abolished targets took away (R-5.8); `R-5.7` said CI calls `pnpm test:all` while CI today calls one command
+  (`pnpm run verify`), and the counts moved to 20 files / 72 of 177 fast and 38 files / 177 full; §8 called
+  `init/measure/render` commands and listed as absent what already exists (the report's auto-update by the hook,
+  the templates with their CI) or was decided otherwise (one token family, R-5.6). **The page's size is not a
+  constant, and the explanation given in M16c/M16d was wrong:** `pack:check` builds the page over the **frozen
+  fixture** (`BUNDLE`/`CONFIG` in `tools/harness.js`), so it moves with the tool's program and markup — 37 193 /
+  54 772 / 59 358 / 59 376 B before, **66 277 B** on 2026-09-16. The rule now stands once in §0's `pack:check` row,
+  `R-4.21`/`R-4.22`/`R-4.10` point there, and the five rows of the closed parts (`R-1.4`, `R-1.5`, `R-1.6`,
+  `R-1.7`, `R-2.7`) accept the page byte for byte without a number — the journal 0119 was corrected in the same
+  commit. **Two guard failures were caused by this pass and fixed in the document:** a bare “§0” on a line naming
+  `README.md` resolved to a README section (three times), and “requirement §8.2 of `module-design.md`” defeated the
+  guard's “name right after the reference” rule and fell to `requirements.md`; no guard was weakened. **Two
+  orphaned Russian rows of the removed budget table** were found in §5 under the paragraph saying the tables are
+  gone, and were deleted. Measured: `R-5.1` left **without a ✅** on purpose (one build per mode and a per-run
+  memory of blobs, but its acceptance compared times and R-5.8 took the baseline away); `R-5.3` confirmed by
+  `tools/parity-live.js` (a clone per environment, with the reason); `R-5.5`'s fixture table gives esbuild smaller
+  than strip in **4 of 10 columns**, equal in 6, never larger (totals 2511 / 1597 / 1483) and the `--init` draft
+  carries `minify`; `R-5.6`'s tokens re-measured on the fixture's `src/code.js` — **168** in `o200k_base`, **196**
+  in `cl100k_base` — while the old page-columns figure was replaced by a measurement (34 header cells with two
+  metrics, 23 with one, the choice written into the address); `R-5.8`'s budgets are gone from the code and
+  `test/docs-numbers.test.js` reads no seconds. 58 distinct `R-` addresses cited from outside resolve; nothing
+  renumbered. No release — the file is not in the tarball.
 - [ ] **M17 PLAN §1–§3** (21–165) — 111 Russian.
 - [ ] **M18 PLAN §4** (166–471) — 206 Russian: the target architecture, the load-bearing part.
 - [ ] **M19 PLAN §5, steps 0–2** (472–597) — 161 Russian.
