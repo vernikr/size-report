@@ -632,22 +632,29 @@ references stayed the same after the fix.
   surface is not frozen: `rg -c 'починка|Команды|Режимы|Коды выхода'` over `fixtures/**` answers nothing, so
   the help, the causes and the mode texts of S1 move no reference.
 
-  **The consequence.** A translation of `SKIP_WORDS` (subplan S4) reddens `test/parity.test.js` and
-  `pnpm run check:standards` on the spot, and the red is mechanical: the frozen answers are the very thing
-  being compared. It is the same class as N21 (the fixture builders), met from the shipped side rather than
-  from the generator's side.
+  **The consequence — measured more exactly 2026-09-16 while planning subplan S4, and corrected here.**
+  A translation of `SKIP_WORDS` reddens **`test/parity.test.js`** (the package's `--json` against
+  `fixtures/synthetic/golden.json`, byte for byte) and **`test/contract-data.test.js:47`** (`data.skipped`
+  against the same golden) — and with them the check that exists to tell "the standard moved" from "the
+  engine broke": `test/frozen.test.js` runs the **frozen copy** and requires its `--json` to equal that
+  golden, so the copy keeps matching while the package stops, which is exactly that red. `pnpm run
+  check:standards` stays **green**, though: both references are re-taken by the generators, and the
+  generators call the frozen copy (`legacyTool()` in `tools/parity-freeze.js` and `tools/make-fixture.js`),
+  not the package. `fixtures/parity/artifact.sha256` does not move either — the artifact deliberately
+  leaves the skipped list out (`NOT_IN_FILE = ['skipped']`, `src/page/build.js:92`). It is the same class
+  as N21 (the fixture builders), met from the shipped side rather than from the generator's side.
 
-  **Options and their price.** (1) Re-take both references: `golden.json`, `data.json` and the artifact hashes
-  change — the numbers keep their values; but a re-take is a statement about today's engine rather than about
-  the parity the references exist to prove, so it has to be one commit with the translation, and the worklog
-  entry has to say plainly that the numbers were re-measured rather than moved. (2) Move the three words into
-  the locale dictionaries (`src/locales.js`): they are printed text, so a dictionary is their proper home, and
-  with the fixtures pinning `locale: "ru"` the references keep the very bytes they hold today — the cheapest
-  way to stay honest, at the price of touching the source of the `--json` contract (its values and their
-  number do not change) and of adding a locale-keyed path where a constant stands today. (3) Leave
-  `SKIP_WORDS` Russian and name it in the allow-list beside the `ru` dictionary: the `--json` answer keeps one
-  Russian word per reason, and the criterion of the work has a named exception instead of a plan it cannot
-  afford.
+  **Options and their price.** (1) **Move the three words into the locale dictionaries**
+  (`src/locales.js`), picked by `cfg.locale`: the fixtures pin `"locale": "ru"`, so every frozen byte
+  stays as it is and **nothing reddens**; the price is a source change in `src/history.js` (a constant
+  becomes a lookup) and a behaviour change for a project that asks for `locale: "en"` — the English it
+  asked for. (2) **Translate `SKIP_WORDS` and re-take the expectations by hand:** the red moves into
+  `test/frozen.test.js`'s promise — the golden and the manifest's `legacy.goldenSha256` would have to be
+  edited, so the reference stops being the record of what that revision yields, and the generators cannot
+  pay that price because they take the standard with the frozen copy. (3) **Leave `SKIP_WORDS` Russian and
+  name it in the allow-list** beside the `ru` dictionaries: the cheapest, and the `--json`/`--data` answers
+  keep one Russian word per reason in every locale — the criterion of the work then has a named exception
+  instead of a plan it cannot afford.
 
   **For the user to decide:** (1), (2) or (3) — best together with N21, since both ask the same question from
   two sides: whether the frozen layer may move.
