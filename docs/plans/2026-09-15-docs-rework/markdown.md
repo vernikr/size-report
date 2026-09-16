@@ -365,8 +365,10 @@ files). The parts below are the order to work in; each is one commit.
   minifier** (HTML is stripped) and JSON is stripped too; esbuild and the tokenizers are **optional**
   dependencies reported as a lost sensor (code 4); and `tok` has **one** family today (`openai`), with the
   three-vendor table replaced by dictionary / length estimate / bytes, each marked.
-- [ ] **Carried into M17–M22, measured:** `PLAN.md`'s row "Три датчика v1: `raw`, `min`, `tok`; `gzip` не
-  поставляется" contradicts the code — gzip is in the registry (`src/metrics.js`) and ships with `src/`.
+- [x] **Settled at M22 — `PLAN.md`'s row that contradicted the code:** the row saying that `gzip` "is removed"
+  is gone from §11 with the whole section; §11 and §4.4 now say what the code does (the registry holds four
+  metrics and the package ships them, while the default set is `raw` + `min`), and the address of the
+  measurement is `src/metrics.js`. Nothing of the plan contradicts the code here any more.
 - [x] **M12 `docs/module-design.md` §8–§17** — 147 Russian lines → **342 changed lines in the document
   plus 37 lines of a `BLOCKERS.md` note = 379 in two files** (`worklog/0112`); the document went 497 → 517
   lines and its Cyrillic count went **147 → 0** — `module-design.md` is now wholly English, so the module is
@@ -583,8 +585,9 @@ files). The parts below are the order to work in; each is one commit.
   closed (M16c + M16d + M16e). 94 added / 96 removed = **190 changed lines in one file** (252 lines, down from
   254). **Cyrillic in the file is 16 lines and every one of them is a named quotation of tool data**: cause names
   (`нет git`, `не git-репозиторий`, `коммит вне истории`, `причина отказа не объявлена`, `нечем звать инструмент`,
-  `файл не JavaScript`), the printed help sections (`Команды:`, `Режимы:`, `Причины отказа кодом 2`), the two
-  Russian words the changelog guard holds (`### Что изменится в числах`, the cell `Файл`), printed run lines
+  `файл не JavaScript`), the printed help sections (`Команды:`, `Режимы:`, `Причины отказа кодом 2`), the three
+  words the changelog guard held then (`### Что изменится в числах`, the cell `Файл`, the total row's label
+  `ИТОГО` — all three read in English since M23 of this subplan), printed run lines
   (“цель по времени не объявляется”, “ЦЕЛЬ НЕ ДОСТИГНУТА”), the mutation's stack, an old revision's refusal about
   `tok`, and the `--init` hint. **Four claims were stale, and all were checked by code:** §7's opening named the
   `--page` mode (the same class as R-0.2); `R-5.2` kept a budget story and pointed at a target table in §3 that
@@ -863,9 +866,23 @@ files). The parts below are the order to work in; each is one commit.
   compares with a live run, so they cannot age in silence. The consumer's `sha256 863ce3e9…` is named as what that
   pass measured (`REFACTOR.md` R-4.19): the consumer's table is rebuilt by its own commits since then. Also
   measured: no `v0.x` tag exists, so `PLAN.md` §12's labels really are a plan rather than a history.
-- [ ] **M26 the plan files themselves** — 10 Russian lines in `docs/plans/**` (quotations of the
-  tool's own words). Last, because the subplan's own completion criterion
-  (`rg -l '[А-Яа-яЁё]' -g '*.md' -g '!worklog/**'` finds nothing) has to hold after it.
+- [x] **M26 the criterion, the whole-tree measurement and the plan files** — done 2026-09-16. The criterion is
+  rewritten below (its own section of this file): prose-free documents, one command, **named exceptions with
+  numbers** instead of the old "no Cyrillic in markdown", which could never hold — the frozen fixtures are
+  byte-compared and the §1 citation rule keeps printed output verbatim. **Measured over the whole tree outside
+  `worklog/**`: `rg -lP '[\p{Cyrillic}]' -g '*.md' -g '!worklog/**'` names 9 files and 132 lines** (the former
+  pattern — the Cyrillic-range one — gives exactly the same nine files and the same number of lines, but carries
+  Cyrillic itself, so it matches whatever carries it; the PCRE2 form does not). Per file: `fixtures/synthetic/README.md` 32 and
+  `fixtures/parity/README.md` 15 (frozen fixtures), `REFACTOR.md` 15, `CHANGELOG.md` 15 (13 of them data rows),
+  `BLOCKERS.md` 10, `README.md` 4, and the plan files 41 (`markdown.md` 37, `plan.md` 2, `comments.md` 2).
+  **Two stale claims were found by the same measurement and fixed:** the row about the changelog guard in
+  `REFACTOR.md` (R-4.16) still said in the present tense that the guard holds two Russian words, while it holds
+  three and reads them in English since M23 — corrected there and in this file's M16e record; and this file's
+  carried item about `PLAN.md`'s row that "`gzip` is removed" is closed: M22 rewrote §11 and §4.4 to what the code
+  does. **The plan files were walked line by line** and nothing in them turned out to be untranslated prose: every
+  line is a quotation (of the tool's output, of a guard's former Russian form, of the plan's own earlier wording,
+  of a note key) or a pattern of the measurement itself, and each is recognisable as one at its place. No release:
+  the plans are not in the tarball.
 
 ## Definition of done, per document
 
@@ -874,18 +891,30 @@ files). The parts below are the order to work in; each is one commit.
 - `pnpm run verify:fast` green; `pnpm run verify` green after `README.md`, `AGENTS.md`,
   `templates/README.md` and `PLAN.md` (the documents the guards read).
 - `wc -l` before/after and the deleted claims recorded in the worklog entry of that turn.
-- The whole subplan is done when
-  `rg -l '[А-Яа-яЁё]' -g '*.md' -g '!worklog/**' -g '!docs/size-report.html'` finds nothing.
-  **As written that cannot hold, and the measurement is here (2026-09-16):** three kinds of Russian text are
-  data rather than documentation. (1) **The frozen fixtures** — `fixtures/synthetic/README.md` (32 lines) and
-  `fixtures/parity/README.md` (15) are among the files `check:standards` compares byte for byte, so translating
-  them breaks the standards; they must leave the criterion. (2) **Quoted tool data inside translated documents** —
-  the §1 rule of `REFACTOR.md` keeps a cause name, a printed refusal and a printed report line verbatim Russian:
-  `REFACTOR.md` 16 lines now and `BLOCKERS.md` 10, each named at its place. (3) Other documents have their
-  quotations still to be named as this rework reaches them: `README.md` 4 lines, `CHANGELOG.md` **15 lines — 13 of
-  them the fixture's own data rows in the numbers tables and 2 named quotations of printed output** (the file was
-  closed at M25 on 2026-09-16),
-  the plan files — `markdown.md` 34, `plan.md` 3, `comments.md` 2 lines. **`PLAN.md` left this list on
-  2026-09-16: it is translated whole and holds zero Cyrillic lines.** M26 decides the wording of the criterion:
-  either it excludes the frozen fixtures and counts named quotations apart, or each quotation is listed. Left as
-  is, the criterion would forbid the very rule three passes were built on.
+- **The criterion of the whole subplan, as settled at M26** — the documents hold no **Russian prose**, and that is
+  checked by one command that carries no Cyrillic of its own and matches the tree without self-matching:
+  `rg -lP '[\p{Cyrillic}]' -g '*.md' -g '!worklog/**'`. After M26 it names **9 files and 132 lines**, and every
+  one of them falls into a named kind rather than being an oversight:
+  - **the four documents that quote the tool** — `REFACTOR.md` 15 lines, `BLOCKERS.md` 10, `README.md` 4, and
+    `CHANGELOG.md` 2 of its 15: cause names (`нет git`, `коммит вне истории`), printed refusals, printed help
+    sections (`Команды:`, `Режимы:`), printed run lines and the guards' former Russian forms. The rule is §1's:
+    an engine-printed line stays verbatim, while the check's text and the document are English.
+  - **the fixture's data** — the 13 other lines of `CHANGELOG.md` are the fixture's own file names in the numbers
+    tables (`заметки.md`), the same in every release;
+  - **the frozen fixtures** — `fixtures/synthetic/README.md` 32 lines and `fixtures/parity/README.md` 15: both are
+    among the files `pnpm run check:standards` compares **byte for byte**, so translating them breaks the standards
+    rather than the documentation. They leave the criterion, and the reason is a command (`check:standards`), not a
+    taste;
+  - **the plan files themselves** — `docs/plans/2026-09-15-docs-rework/`: `markdown.md` 37, `plan.md` 2,
+    `comments.md` 2 = 41 lines, each a quotation of the tool's words, of a guard's former Russian form or of the
+    plan's own earlier wording — plus this very criterion's pattern and the measurement commands, which carry the
+    Cyrillic class to be searchable at all. If a quotation is not recognisable as one at its place, that is a
+    defect to fix there rather than a line to translate.
+  **Outside `*.md` the same command finds more, and none of it is documentation:** the built report
+  (`docs/size-report.html`, 349 lines — the tool's own output), the fixtures' data (`fixtures/**/*.json`), and the
+  sources of the package and its checks (`src/`, `tools/`, `test/`), whose Russian is the tool's printed output,
+  the checks' expectations and the dictionaries — data, held as data by `tools/refusals.js` and `test/**.md`
+  comparisons. The criterion is about documents; a criterion that counted those would forbid the product to speak
+  Russian, which is not what this rework is about.
+  **`PLAN.md` holds zero Cyrillic lines since 2026-09-16** and does not appear in the list: the same for `AGENTS.md`,
+  `docs/requirements.md`, `docs/module-design.md` and `templates/README.md`.

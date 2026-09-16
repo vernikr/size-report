@@ -92,8 +92,16 @@ a prerequisite.
 
 ## Definition of done
 
-- No Russian prose left outside `worklog/**` and user-visible strings; checked with
-  `rg -l '[А-Яа-яЁё]' -g '*.md' -g '!worklog/**' -g '!docs/size-report.html'`.
+- No Russian **prose** left outside `worklog/**`; checked with
+  `rg -lP '[\p{Cyrillic}]' -g '*.md' -g '!worklog/**'` (PCRE2, so the pattern carries no Cyrillic and does not
+  match itself). After the `markdown.md` subplan was finished (M26, 2026-09-16) it names **9 files and 132 lines**,
+  and every one is a named exception rather than an oversight: the tool's printed output quoted by
+  `REFACTOR.md` (15), `BLOCKERS.md` (10), `README.md` (4) and `CHANGELOG.md` (2 of 15 — the other 13 are the
+  fixture's data rows in the numbers tables); the two frozen fixtures (`fixtures/synthetic/README.md` 32,
+  `fixtures/parity/README.md` 15), which `pnpm run check:standards` compares byte for byte; and the plan files
+  themselves (41 lines: quotations and this criterion's own pattern). The full list with per-file numbers is in
+  `markdown.md` under the criterion. Outside `*.md` the same command also finds the built report, the fixtures'
+  data and the package's sources — the product's own Russian, not documentation.
 - `pnpm run verify` green after every portion. `pnpm run verify:slow` cannot be green under this
   plan alone: its `cover` step is red for two measured reasons and going green needs a human
   decision — the coverage ratchet item under Open questions, `BLOCKERS.md` note N14.
