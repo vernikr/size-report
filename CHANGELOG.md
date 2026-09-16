@@ -261,35 +261,35 @@ Where the report lands in a fresh project: `docs/size-report.html`, and the dire
 
 ## 2.0.0 — 2026-09-15
 
-Один отчёт вместо двух, и он же появляется сам: форма отчёта сведена к одному
-файлу, а обновление — к одному решению (хук ставится сам).
+One report instead of two, and it appears on its own: the report's form is brought to one file, and its
+updating to one decision (the hook installs itself).
 
-- **Отчёт — один файл: самодостаточная страница `size-report.html`.** Данные,
-  оформление и программа лежат в нём же; внешних ссылок нет. Прежние две формы
-  (статическая таблица и рядом страница) убраны вместе с их кодом (`src/render.js`,
-  `src/artifact.css`): два вывода одной истории расходились бы молча, а выбрать,
-  какой верный, было бы нечем. Колонка движка — это файл, значит и отчёт — файл.
-- **Запись одна: `--write [файл]`** (прежняя `--page` убрана — это ломающее
-  изменение). Значение ключа пишет отчёт по названному пути (каталог создаётся сам)
-  и становится его же `output`: отчёт называет себя тем путём, по которому лежит.
-- **По умолчанию — `docs/size-report.html`**, если каталог `docs/` в проекте есть,
-  иначе в корне. Имя больше не выводится из настроек: файл это и есть отчёт.
-- **Хук ставится сам** — после постановки пакета (`bin/postinstall.js`) и при первом
-  запуске в проекте. Поэтому `docs/` с отчётом появляется первым же коммитом, без
-  ручного шага; ставится там, где это безопасно (обычный `.git/hooks`, нет чужого
-  хука, есть чем звать инструмент, не CI), и там же молчит, где нельзя.
-- Коммит отчёта виден в хуке как раньше: отдельным коммитом, только этим путём.
-  Отчёт остаётся **неподвижной точкой** — список пропущенных коммитов в файл не
-  идёт (он меняется от коммита самого отчёта), и хук не коммитит его бесконечно;
-  читателю этот список по-прежнему доступен: `--data`, `--json`, `size explain`.
+- **The report is one file: the self-contained page `size-report.html`.** Data, styling and the program lie
+  in it, and there are no external references. The former two forms (a static table and a page beside it)
+  are gone together with their code (`src/render.js`, `src/artifact.css`): two outputs of one history would
+  diverge in silence, and there would be nothing to tell which one is right. A column is a file, so the
+  report is a file too.
+- **One writing mode: `--write [file]`** (the former `--page` is removed — a breaking change). The value
+  names the path the report is written to (the directory is made by the writer) and becomes the run's own
+  `output`: the report calls itself by the path it lies at.
+- **By default `docs/size-report.html`** if the project has a `docs/` directory, otherwise in the root — and
+  the name changed from `size-table.html` to `size-report.html`. The address is one answer of the package
+  (`outputOf`) rather than a name taken from the settings, whose `output` key only overrides it.
+- **The hook installs itself** — after the package is installed (`bin/postinstall.js`) and on the first run
+  in the project. So `docs/` with the report appears with the very first commit, with no manual step; it
+  installs where that is safe (an ordinary `.git/hooks`, no one else's hook, something to call the tool
+  with, not CI) and keeps silent where it is not.
+- The report's commit is seen in the hook as before: a commit of its own, that path alone. The report stays
+  a **fixed point** — the list of skipped commits does not go into the file (it changes with the report's own
+  commit) and the hook does not commit it without end; the reader has that list as before: `--data`,
+  `--json`, `size explain`.
 
 ### What changes in the numbers
 
-**Ничего.** Измерение не тронуто: те же датчики, те же способы, те же колонки. Что
-меняется у потребителя — **форма файла и его путь**: `size` (проверка) на прежнем
-файле будет красным, пока отчёт не пересобран, а скрипты, звавшие `--page`,
-получат отказ с названным ключом. Таблица ниже та же, что у 1.3.1, до последней
-клетки.
+**Nothing.** The measurement is untouched: the same sensors, the same ways, the same columns. What changes
+in a consumer's project is **the file's form and its path**: `size` (the check) will be red on the former file
+until the report is rebuilt, and scripts that called `--page` get a refusal naming the key. The table below is
+the one of 1.3.1 to the last cell.
 
 | File | raw | min with strip | min with esbuild | tok |
 |---|---|---|---|---|
@@ -307,24 +307,24 @@ Where the report lands in a fresh project: `docs/size-report.html`, and the dire
 
 ## 1.3.1 — 2026-09-15
 
-Правка раскладки страницы: на широком экране панель выбора встаёт слева от таблицы.
+A fix of the page's layout: in a wide window the panel of choices stands to the left of the table.
 
-- **От 900 px панель — колонка слева от таблицы.** Метрики, дерево файлов и легенда
-  видны одновременно с числами: прокрутка нижних строк больше не уводит управление за
-  верх экрана, а таблица получает всё оставшееся по горизонтали (1060 px при окне
-  1440 против 1372 у прежней раскладки в одну колонку). Узкое окно раскладку снимает:
-  там столбцы снова идут друг под другом, как было.
-- Раскладка — сетка на `body` (`src/page/app.css`), а не обёртка в разметке: страница
-  собирается вклейкой глав, и форма страницы осталась в одном месте. Порог тот же,
-  что у адаптаций: между «широко» и «узко» нет промежутка без правил.
-- Ни поведение, ни артефакт, ни данные не тронуты — правка только в оформлении
-  страницы (`--page`); статический артефакт (`--write`) этот выпуск не касается.
+- **From 900 px the panel is a column left of the table.** The metrics, the file tree and the legend are seen
+  together with the numbers: scrolling the lower rows no longer takes the controls above the top edge, and the
+  table gets everything left horizontally (measured then: 1060 px in a 1440 window against 1372 for the former
+  one-column layout). A narrow window drops the layout: there the columns run one under another as before.
+- The layout is a grid on `body` (`src/page/app.css`) rather than a wrapper in the markup: the page is
+  assembled by pasting chapters, so the page's form stayed in one place. The threshold was the one of the
+  adaptations — 900 px for both halves then, with no gap left without rules; the overlap at exactly 900 px was
+  fixed in 2.1.0 by moving the narrow half to 899 px.
+- Neither behaviour, nor the artifact, nor the data is touched: the fix is in the page's styling alone
+  (`--page`), while the static artifact (`--write`) was built from `src/table.css` then and is none of this
+  release's business.
 
 ### What changes in the numbers
 
-**Ничего.** Этот выпуск не трогает ни измерение, ни форму отчёта: изменилась
-раскладка страницы, а числа считает тот же движок теми же датчиками. Таблица ниже та
-же, что у 1.3.0, до последней клетки.
+**Nothing.** This release touches neither the measurement nor the report's form: the page's layout changed,
+while the same engine counts with the same sensors. The table below is the one of 1.3.0 to the last cell.
 
 | File | raw | min with strip | min with esbuild | tok |
 |---|---|---|---|---|
@@ -342,45 +342,42 @@ Where the report lands in a fresh project: `docs/size-report.html`, and the dire
 
 ## 1.3.0 — 2026-09-15
 
-Выпуск выведенных настроек: чтобы получить отчёт, проект больше не обязан себя
-описывать.
+The release of derived settings: to get a report a project no longer has to describe itself.
 
-- **Файла настроек может не быть.** Их выводит сам инструмент — по проекту: колонками
-  крупнейшие файлы, по одному от каждого расширения (иначе отчёт состоял бы из одних
-  крупных `.md`, и ни один `.js` не попал бы под настоящее сжатие), журналом — первый
-  знакомый (`WORKLOG.md`, `CHANGELOG.md`, …), файлом отчёта — `docs/`, если каталог есть,
-  командой починки — объявленный скрипт `sizes`, а без него путь к установленному
-  пакету внутри проекта, ссылкой на коммит — адрес `origin` (GitHub или GitLab: у
-  остальных хозяев пусто, догадка вела бы не туда), метриками — `raw`, `min`, `tok`.
-  Команда починки и ссылка берутся готовыми, а не выдуманными: её цитируют подпись
-  отчёта и отказы, и зов скрипта, которого в проекте ещё нет, ответил бы «нет такого
-  скрипта» ровно там, где человеку нужна работающая команда.
-- **Всё, что колонкой быть не может или в неё не поместилось, названо в `skip`** (сам
-  отчёт, замки зависимостей, карты, собранное): поэтому первый же `size check` полон, а не
-  красный, — «пути мимо колонок» появляются от новых правок, а не от того, что проект ещё
-  не настраивали. Колонка — это файл: список путей колонки движок читает как её
-  переименования, поэтому «папка целиком» колонкой не бывает.
-- **О выведенных настройках сказано строкой** в stderr, с готовой командой `--init` —
-  она их закрепляет, и дальше их правят как обычные настройки. Закрепляется то же,
-  чем проект работает без файла (вывод поверх умолчаний), поэтому смена умолчаний в
-  новой версии пакета не поедет по уже настроенному проекту молча. Без закрепления
-  профиль выводится на каждом запуске: числа не «поехали», но повторить прежний замер
-  можно только закрепив его.
-- **Отказ остался у названного файла:** `--config <файл>`, которого нет, — код 2 с той же
-  починкой `--init <файл>` (опечатку в пути покрывать догадкой нельзя). У умолчательного
-  имени отказа нет вовсе; коды выхода ни в одном другом случае не изменились.
-- Номер **1.3.0** — по SemVer: появилась возможность, которой не было; схема данных
-  (`schema: 1`) та же.
+- **There may be no settings file.** The tool derives them from the project: the columns are the largest
+  files, one per extension (otherwise the report would consist of large `.md` files and no `.js` would come
+  under real compression — the sample was capped at twelve, and 2.3.0 replaced it with every tracked file);
+  the journal is the first familiar one (`WORKLOG.md`, `CHANGELOG.md`, …); the report file is `docs/` if that
+  directory exists; the fix command is the declared script `sizes`, and failing that the path to the package
+  installed inside the project; the commit link comes from the `origin` address (GitHub or GitLab — any third
+  host has none, a guess would lead elsewhere); the metrics are `raw`, `min`, `tok`. The fix command and the
+  link are taken ready-made rather than invented: the report's note and the refusals quote them, and a call to
+  a script the project does not have would answer "no such script" exactly where a working command is needed.
+- **Everything that cannot be a column, or did not fit into one, is named in `skip`** (the report itself,
+  dependency locks, maps, built output): that is why the very first `size check` is complete rather than red —
+  "paths outside the columns" appear from new edits, not from a project that has not been set up yet. A column
+  is a file: the engine reads a column's list of paths as its renames, so "a whole directory" is never a
+  column.
+- **The derived settings are announced by a line** in stderr, with the ready `--init` command — it pins them,
+  and from there they are edited like ordinary settings. What is pinned is what the project runs on without a
+  file (the derivation on top of the defaults), so a change of defaults in a new version of the package does
+  not ride silently over a project already set up. Without a pin the profile is derived on every run: the
+  numbers have not "moved", but a former measurement can be repeated only by pinning it.
+- **The refusal stayed with a named file:** `--config <file>` that does not exist is code 2 with the same
+  `--init <file>` fix (a typo in a path must not be covered by a guess). The default name has no refusal at all
+  in its absence; exit codes did not change in any other case.
+- The number **1.3.0** is by SemVer: a capability appeared that was not there before; the data schema
+  (`schema: 1`) is the same.
 
 ### What changes in the numbers
 
-**У кого настройки есть — ничего.** Этот выпуск не трогает ни форму отчёта, ни счёт:
-таблица ниже та же, что у 1.2.0.
+**For those who have settings — nothing.** This release touches neither the report's form nor the count: the
+table below is the one of 1.2.0.
 
-**У кого настроек нет** — числа появятся там, где был отказ (код 2): их даст выведенный
-профиль. Выведенное и закреплённое (`--init`) друг от друга не отличаются: файл — это тот
-же профиль, только записанный. Повторить замер можно только по закреплённому: без файла
-профиль выводится заново каждый запуск.
+**For those who have no settings** the numbers appear where a refusal used to be (code 2): the derived
+profile gives them. Derived and pinned (`--init`) differ in nothing from each other: the file is the same
+profile, only written down. A measurement can be repeated only by a pinned one: without a file the profile is
+derived anew on every run.
 
 | File | raw | min with strip | min with esbuild | tok |
 |---|---|---|---|---|
@@ -398,36 +395,35 @@ Where the report lands in a fresh project: `docs/size-report.html`, and the dire
 
 ## 1.2.0 — 2026-09-15
 
-Выпуск причины, а не измерения: проверка («таблица совпадает с историей?») теперь
-называет другой счёт, когда он есть, — и делает это всегда, а не только там, где
-всё сошлось. Нашлось это прогулкой по собственной инструкции (`WORKLOG.md` §54),
-починено по правилу «нарушение старше приближения» (`REFACTOR.md` R-4.23).
+The release of a cause rather than of a measurement: the check ("does the table match the history?") now names
+the other count when there is one — and does so always, not only where everything came together. It was found by
+walking our own instruction (`worklog/archive/WORKLOG.md` §54) and fixed by the rule "a violation is older than
+an approximation" (`REFACTOR.md` R-4.23).
 
-- **`size` и `size check` печатают заметку о датчике всегда.** Раньше заметка
-  печаталась только при благополучном вердикте: если отчёт собран с настоящим
-  минификатором, а прогон идёт без него (установка без необязательных
-  зависимостей, платформа без `esbuild`), числа честно расходились, а причины
-  «счёт другой» в выводе не было вовсе — читатель видел расхождение строки
-  подписи и ничего о том, откуда оно.
-- **Вердикт остаётся первым по важности.** Нарушение старше приближения — тот же
-  порядок, что у `size check` и `size doctor`: код **4** утверждал бы, что
-  расхождение объясняется датчиком, а этого никто не проверял (расхождение может
-  быть и правкой мимо отчёта). Поэтому ответ в этом случае — по-прежнему **код 1**
-  плюс заметка с починкой: кода выхода выпуск не меняет ни в одном случае.
-- Ни сборка отчёта, ни его форма, ни смысл настроек не тронуты. Остальное в этом
-  выпуске — не про поставку: выпуск по тегу из CI (R-4.24) и снятые цели по
-  времени у набора проверок (R-5.8) касаются репозитория пакета, а не того, что
-  устанавливают.
-- Номер **1.2.0** назван владельцем пакета; по строгому SemVer содержимое —
-  исправление (PATCH): новых возможностей в поставке нет.
+- **`size` and `size check` print the sensor's note always.** The note used to be printed only on a lucky
+  verdict: with the report built by a real minifier and the run going without it (an install without the optional
+  dependencies, a platform without `esbuild`) the numbers honestly diverged, while the cause "the count is
+  another" was absent from the output altogether — the reader saw a caption, a divergence, and nothing about
+  where it came from.
+- **The verdict stays first in importance.** A violation is older than an approximation — the same order as in
+  `size check` and `size doctor`: code **4** would claim that the sensor explains the divergence, and nobody
+  checked that (a divergence may also come from an edit past the report). So the answer in that case is still
+  **code 1** plus a note with the fix: the release changes no exit code in any case.
+- Neither the report's build, nor its form, nor the meaning of the settings is touched. The rest of this release
+  is not about what ships: the tag release from CI (R-4.24) and the time targets taken off the check suite
+  (R-5.8) concern the package's repository rather than what is installed.
+- The number **1.2.0** was named by the package's owner; under strict SemVer the content is a fix (PATCH): no
+  new capabilities ship.
 
 ### What changes in the numbers
 
-**Ничего.** Таблица ниже та же, что у 1.1.0 и 1.1.1, до последней клетки: этот
-выпуск меняет текст под расхождением, а не числа. Замер на фикстуре — тот же
-(16 коммитов, 10 колонок), доказано не словом: артефакт (22 112 Б), страница
-(59 376 Б) и оба замороженных эталона не переснимались, а `--json` и артефакт
-побайтово равны эталону на фикстуре и на живой истории проекта-потребителя.
+**Nothing.** The table below is the one of 1.1.0 and 1.1.1 to the last cell: this release changes the text under
+a divergence rather than the numbers. The measurement on the fixture is the same (16 commits, 10 columns), and it
+is a measurement rather than a word: the artifact is the same 22 112 B, and neither frozen standard was re-taken
+(`pnpm run check:standards` run on 2026-09-16: fixture 4 of 4 byte for byte, parity 3 of 3, the live bundle 149
+commits). The page measured 59 376 B then and travels with the tool's own program and markup, so its size moved
+since (66 277 B re-measured on 2026-09-16, `REFACTOR.md` §0). `--json` and the artifact are byte for byte equal
+to the standard on the fixture and on the live history of the consumer project.
 
 | File | raw | min with strip | min with esbuild | tok |
 |---|---|---|---|---|

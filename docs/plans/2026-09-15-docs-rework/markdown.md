@@ -828,10 +828,24 @@ files). The parts below are the order to work in; each is one commit.
   report address `docs/size-report.html` (`src/project.js:94`) and its directory made by the writer
   (`src/artifact.js:21`), README §6 naming `install-hook` and `pnpm.onlyBuiltDependencies`, and
   `templates/README.md` telling about the first report.
-- [ ] **M24 CHANGELOG 262–422** — 2.0.0 … 1.3.0. The framing "what changes in numbers" below the first
-  release is already English (the heading of every section was translated at M23).
-- [ ] **M25 CHANGELOG 423–666** — 1.2.0 … 1.0.0. The last release's file is the only one with the extra
-  sections `### Что вошло`, `### Исправлено` and `### Не входит в 1.0.0`.
+- [x] **M24 CHANGELOG 262–441** — done 2026-09-16 (the slicing's 422 fell in the middle of 1.2.0's
+  numbers section; the real boundary is 441, just before `## 1.1.1`). 98 added / 102 removed = **200 changed
+  lines in one file** of the 600 budget. Cyrillic in the file 260 → **161** lines, 10 of them the fixture's
+  data rows — **no prose is left in the part**. Passed: 2.0.0, 1.3.1, 1.3.0 and **1.2.0**. The diff holds not one
+  changed heading line and not one changed table row, so no address and no number moved; the guard needed no
+  edit this time (every numbers heading was translated at M23). **Four claims did not hold and are measured:**
+  2.0.0's "the name is no longer taken from the settings" — the name changed (`size-table.html` →
+  `size-report.html`, `outputOf` in both tags, the `docs/` fork dropped in 2.0.1) while the settings' `output`
+  still overrides (`src/config.js:18`); 1.3.1's threshold — both media queries were 900 px then, so exactly 900
+  matched both halves (fixed in 2.1.0), and the static artifact was built from `src/table.css` then
+  (`src/css.js`: `ARTIFACT_CSS + TABLE_CSS` against `PAGE_CSS`); 1.3.0's rule of columns — the largest file per
+  extension with a cap of twelve at v1.3.0 against every tracked file today (2.3.0), now said so; and 1.2.0's
+  page size — 59 376 B then, moving with the tool's own program (66 277 B on 2026-09-16, `REFACTOR.md` §0),
+  while the artifact stays 22 112 B and `pnpm run check:standards` re-took both standards today (fixture 4 of 4
+  byte for byte, 16 commits; parity 3 of 3; the live bundle 149 commits).
+- [ ] **M25 CHANGELOG 442–661** — 1.1.1 … 1.0.0. The last release's file is the only one with the extra
+  sections `### Что вошло` ("what came in"), `### Исправлено` ("what was fixed") and `### Не входит в 1.0.0`
+  ("what 1.0.0 leaves out") — three headings outside the guard's reach, to be translated as document text.
 - [ ] **M26 the plan files themselves** — 10 Russian lines in `docs/plans/**` (quotations of the
   tool's own words). Last, because the subplan's own completion criterion
   (`rg -l '[А-Яа-яЁё]' -g '*.md' -g '!worklog/**'` finds nothing) has to hold after it.
@@ -851,8 +865,8 @@ files). The parts below are the order to work in; each is one commit.
   them breaks the standards; they must leave the criterion. (2) **Quoted tool data inside translated documents** —
   the §1 rule of `REFACTOR.md` keeps a cause name, a printed refusal and a printed report line verbatim Russian:
   `REFACTOR.md` 16 lines now and `BLOCKERS.md` 10, each named at its place. (3) Other documents have their
-  quotations still to be named as this rework reaches them: `README.md` 4 lines, `CHANGELOG.md` 260 lines
-  (13 of them the fixture's own data rows in the numbers tables, part of the file not yet passed),
+  quotations still to be named as this rework reaches them: `README.md` 4 lines, `CHANGELOG.md` 161 lines
+  (10 of them the fixture's own data rows in the numbers tables, in the part not yet passed),
   the plan files — `markdown.md` 34, `plan.md` 3, `comments.md` 2 lines. **`PLAN.md` left this list on
   2026-09-16: it is translated whole and holds zero Cyrillic lines.** M26 decides the wording of the criterion:
   either it excludes the frozen fixtures and counts named quotations apart, or each quotation is listed. Left as
