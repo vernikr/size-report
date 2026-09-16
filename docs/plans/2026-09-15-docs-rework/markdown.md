@@ -710,7 +710,41 @@ files). The parts below are the order to work in; each is one commit.
   **Carried into the next passes:** steps 3–6 are still headed «Шаг N» while the citations outside say “step
   N”, so M20 turns those headings into `Step N`; `PLAN.md` §11 still promises that the `gzip` metric “is
   removed” while the registry holds it and the package ships it (§4.4, D4) — a claim for M22, address recorded.
-- [ ] **M20 PLAN §5, steps 3–6** (617–790) — 140 Russian.
+- [x] **M20 PLAN §5, steps 3–6** (617–776 today) — done 2026-09-16, and **§5 is English throughout**: its head
+  and all seven steps. 158 added / 171 removed = **329 changed lines in one file** at the 600 budget; the file
+  1162 → **1150** lines and Cyrillic in it 421 → **281**, none left in the range (the first Cyrillic line is
+  778 — §6, the neighbour). The four doc guards 8 of 8, `verify:fast` green (5 steps, 72 of 177).
+  `worklog/0125`. **Finished move compacted, not retold:** each step keeps its number, its promise, what it
+  left in the tree, how it is held today and what it did not finish; the per-pass narrative and the figures of
+  seconds (abolished 2026-09-15, R-5.8) went to the journal. **The headings now read `Step N`**, the form the
+  citations outside use (they said «Шаг N»), and the four labels the move was planned under (`v0.3.0` …
+  `v0.6.0`) are gone with them — the first release was **`1.0.0`** on 2026-09-14 (M19, `CHANGELOG.md`).
+  **Every claim re-measured, none carried over** (the dead session left the rewrite uncommitted, so the
+  numbers below are from a fresh reading on 2026-09-16): `MINIFY_ENGINES = ['strip', 'esbuild']` with `strip`
+  the default and JSX/TSX deliberately out of `MINIFY_LOADERS` (the `jsx`-setting reason is in the code) —
+  `src/metrics.js`, `src/minify.js`; `test/minify.test.js` **9** checks, `test/tokens.test.js` **7**,
+  `test/hook.test.js` **11**, `test/environment.test.js` **4**; `CHARS_PER_TOKEN = 3`; `doctor`'s order of
+  importance is the key order of `WEIGHT` → codes **2 → 3 → 1 → 4** (`EXIT` in `src/refusal.js`); the templates
+  are the three files the text names, held by `test/templates.test.js` (3 checks) and by `pack:check`; CI is
+  **one job running `pnpm run verify`**, and “the default is the full run” is the sentence `tools/suites.js`
+  carries in its header (the reasons for the fast set stand line by line); requirement §3.1 names **two engines
+  and the fallback**, §4.2 calls a change past the report **a violation**, §7.1–§7.3 hold every promise of the
+  hook (self-installation, plumbing, no loop by construction, the three switches), §8.2 requires a **MAJOR with
+  a migration** for a format change. On the consumer: its manifest reads
+  `"size-report": "github:vernikr/size-report#v1.2.0"` — **by a tag, not by a commit** as the Russian text
+  said — `tools/` is empty, `tests/size-table.js` is gone, and `tests/harness.js` runs the package's own
+  command as **wave 1**.
+  **Three guard reds of my own text, all fixed in the document and none by loosening a guard:** a bare `§10`
+  on a line whose nearest name was `README.md` (the guard read a citation of the README, which has no §10) —
+  the clause was moved to a line with no name; and the consumer's spec written as a lone code span ending in
+  `#v1.2.0` tripped the path guard (a trailing `.0` makes the last part look like a file name) — it is now
+  **quoted as the manifest line it is**, which is both exact and outside the path form. The wrapped-citation
+  reading added in M18a caught the first one, which is the class it was made for.
+  **Incoming references measured:** 35 lines outside the plan cite `§5` or a step of it (six documents: 27
+  “step N”, 12 “§5”); not one lost, the four blinded ones of M18a still stand, and the guard resolves every
+  `§`-reference of the six documents it holds (8 of 8). **Addresses carried forward:** §8.2 still plans the
+  move as `0.1.0`, a label that never existed (M21); §11 still promises the `gzip` metric “is removed” while
+  the registry holds it and the package ships it (§4.4, D4 — M22).
 - [ ] **M21 PLAN §6–§9** (857–1041) — 128 Russian (13 + 18 + 83 + 14 by section).
 - [ ] **M22 PLAN §10–§14** (1042–1230) — 153 Russian (82 + 9 + 11 + 39 + 12 by section). The plan of a
   finished move: what the steps settled is kept, the steps themselves go (the architecture is what is

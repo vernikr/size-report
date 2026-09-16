@@ -614,177 +614,164 @@ report itself **stayed in git** there, and the plan's expectation that it would 
 **Release:** done together with the rest of the move — the plan's own label for this step (`v0.2.0`) never
 existed, and the numbers of every release are in `CHANGELOG.md`.
 
-### Шаг 3. Настоящая минификация (v0.3.0)
+### Step 3. Real minification — ✅ done 2026-09-14
 
-**Сделано (2026-09-14, срез 1 — способ выбирается настройкой).** `min` перестал
-быть только снятием балласта: `minify.engine` — `strip` (умолчание: под ним сняты
-оба замороженных эталона, поэтому числа потребителя не могли поехать молча) или
-`esbuild` — настоящее сжатие JS/TS/CSS необязательной зависимостью, которая
-загружается лениво и синхронно и не роняет прогон, если её нет. Метрика стала
-честной по формату: способы и точность описаны в одном месте, названные форматы
-берутся из той же таблицы, по которой идёт замер, поэтому подпись не может
-разойтись с тем, что происходит; метрика со смешанными форматами объявлена
-приближённой целиком, а не выдаёт худшее за точное. Без минификатора прогон
-отдаёт **код 4** и говорит, чего не хватает, а числа остаются теми же, что у
-`strip` (побайтово с эталоном); файл, который минификатор не разобрал, — отказ
-кодом 2 с причиной и двумя выходами. Черновик `--init` ведёт новые проекты на
-сжатие. Цена названа: на фикстуре 44 клетки меньше и ни одной больше (−1 372 Б),
-на живой истории прогон 1,48 → 1,71 с (проход — `WORKLOG.md` §26, R-5.5).
+**The promise:** a second engine for `min` — `esbuild` for JS/TS/CSS, a minifier for markup, and stripping for
+formats the minifier cannot take — so that the settings choose the engine rather than the tool choosing one for
+everyone.
 
-**Осталось из шага 3:** минификатор разметки для HTML, решение по JSX/TSX (выход
-зависит от настройки `jsx` проекта) и пометка приближения **в каждой клетке**, а не
-по формату в подписи метрики (`fallback: true` в точке — форма данных §4.3);
-версия датчика в ключе кэша ждёт самого кэша (шаг 6).
+**What it gave.** `min` stopped being ballast-stripping alone: `minify.engine` is `strip` (the default, and
+the engine both frozen standards were taken under, which is why the consumer's numbers could not move in
+silence) or `esbuild`, a real minifier that travels as an **optional dependency**, loaded lazily but
+synchronously and never failing a run when it is absent. The metric became honest by format: the methods and
+the exactness are described in one place, and the list of formats comes from the same table the measurement
+uses, so a caption cannot part from what happens; a metric with mixed formats is declared approximate as a
+whole rather than passing the worst off as exact. With no minifier a run answers **code 4** and names what is
+missing, while the numbers stay those of `strip` (byte for byte with the standard); a file the minifier cannot
+parse is a refusal with code 2, a cause and two ways out. The `--init` draft leads a new project to
+compression. Both standards stayed unre-taken, and the price is named where it belongs: on the fixture's table
+compression is smaller than stripping in **4 columns of 10** and never larger, the totals `raw` / `strip` /
+`esbuild` = **2511 / 1597 / 1483** (`REFACTOR.md` §R-5.5) — a project that switches the engine on sees its
+numbers fall, and that is deliberate (`CHANGELOG.md` says by how much). `worklog/archive/WORKLOG.md` §26.
 
-**Делаем:** датчик `min` v2 — `esbuild` (JS/TS/CSS/JSON), минификатор разметки для
-HTML, упрощение для незнакомых форматов с пометкой `fallback`; `version` датчика
-меняется, кэш шага 1–2 не смешивается; `esbuild` — `optionalDependency`,
-подключаемый динамически; тесты на «переименование реально произошло» (имена
-переменных исчезли) и на воспроизводимость (одинаковый вход → одинаковое число от
-версии к версии).
+**What it settled and what it did not finish.** Two questions were settled rather than left open: markup gets
+**stripping alone** (`stripHtml` over the lines — comments and indentation, with the measure marked), since a
+real minifier for markup was not made (requirement §3.1 `requirements.md` names the two engines and the
+fallback); and **JSX/TSX are deliberately not measured** — the output depends on the project's `jsx` setting
+(`React.createElement` against `react/jsx-runtime`), and measuring someone else's configuration would be a
+number about nothing (`src/minify.js`). The per-cell mark of an approximation — the thing this step declared
+missing — was made later, in wave 2 of the cleaning (`REFACTOR.md` §R-2.7). The version of a sensor in the
+cache's key waits for the cache itself, which step 6 lists as not made.
 
-**Приёмка:** на фикстуре `min` меньше упрощённого там, где ожидается; для
-незнакомого расширения рядом с числом стоит пометка «приближение» и объяснение;
-с выключенным `esbuild` (подмена загрузчика в тесте) сборка не падает, а честно
-деградирует с кодом `4` в `check`.
+**Acceptance, in today's names:** on the fixture `min` under compression is smaller than the simplification
+where expected and never larger (`test/minify.test.js`, 9 checks, comparing the fixture's table with the one
+`CHANGELOG.md` carries); next to a number of an unfamiliar format stands the mark and the explanation (the
+`approx` row — per cell since R-2.7); and with the minifier switched off — the loader substituted in the check
+(`SIZE_REPORT_NO_OPTIONAL`) — a build does not fall over but degrades honestly with code 4 in `size check`.
 
-**В проекте:** числа `min` в новой таблице падают — это осознанное изменение,
-фиксируется в CHANGELOG пакета и в WORKLOG проекта.
+### Step 4. Tokens — ✅ done 2026-09-14
 
-**Выпуск:** `0.3.0`.
+**The promise:** a third metric, `tok`, counted with a real dictionary rather than by an estimate of length,
+with the dictionary travelling as an optional dependency and its family and encoding named in the settings.
 
-### Шаг 4. Токены (v0.4.0) — срезы 1–2 ✅ **сделано 2026-09-14**
+**What it gave.** `"tokens": {"family": "openai", "encoding": "o200k_base"}` — the dictionary comes as an
+optional dependency (`gpt-tokenizer`), loads lazily and synchronously, and its absence is not a failure: the
+count falls back to an estimate by length with a named coefficient, and the run answers **code 4**. Exactness
+is split by the rule of step 3: the method names the dictionary, the encoding and its version, `accuracy` says
+exact or approximate, and a format with no text (an image, a font, an archive) makes the whole metric
+approximate and names the cause; the caption is computed from the settings, so it cannot part from what
+happens. The `--init` draft leads a new project to tokens.
 
-**Сделано.** Метрика `tok` считает токены настоящим словарём, а не отношением:
-`"tokens": {"family": "openai", "encoding": "o200k_base"}` — словарь едет
-необязательной зависимостью (`gpt-tokenizer`), грузится лениво и синхронно, его
-отсутствие не падает: счёт идёт оценкой по длине с названным коэффициентом, а
-прогон отдаёт **код 4**. Точность разделена по правилу шага 3: способ метрики
-называет словарь, кодировку и версию, `accuracy` говорит «точный/приближённый», а
-формат без текста (картинка, шрифт, архив) делает метрику приближённой целиком и
-называет причину — подпись считается по настройкам, поэтому разойтись с тем, что
-происходит, не может. Черновик `--init` ведёт новые проекты на токены.
+**Two decisions were changed against what the plan had written, and deliberately:** (1) **one family —
+`openai`**, not three: `claude` and `deepseek` have no dictionary that could be called their own, and counting
+with someone else's while calling it a family would be a promise that does not hold; (2) **the encoding is
+chosen next to the family** (`o200k_base` / `cl100k_base`), because it is part of the number — the same file
+gives 168 tokens in one and 196 in the other (`REFACTOR.md` §R-5.6, `worklog/archive/WORKLOG.md` §27).
 
-**Два решения изменены против того, что было записано ниже, и это сделано
-осознанно:** (1) **семейство одно — `openai`**, а не три: у `claude` и `deepseek`
-нет словаря, который можно было бы назвать их собственным, а считать чужим
-словарём и называть это семейством — обещание, которого нет; (2) **кодировка
-выбирается рядом с семейством** (`o200k_base` / `cl100k_base`), потому что она
-часть числа: один и тот же файл даёт 168 токенов в одной и 196 в другой.
+**The exactness reached the cell.** The metric's caption speaks about the worst in the column while every cell
+speaks about its own number, and an approximate cell is marked with a dotted line and the method's caption.
+One rule counts both answers (`pointExact` in `src/metrics.js`), so they cannot part; the shape in the
+contract is a row of marks per metric — `approx`, a string of marks over the row's cells and one over “now” —
+which is why `--json` and the artifact stayed byte for byte. The choice of the dictionary's family lives **in
+the run's settings**, not on the page: precomputing every family would pay time for numbers nobody may ask
+about (§4.8.4 cancelled there, with the reason), and what follows for the report's texts is that each metric's
+method is visible as **text** rather than only in a tooltip — a reader knows the dictionary and its encoding
+while being unable to switch them. `worklog/archive/WORKLOG.md` §30, `REFACTOR.md` §R-2.7.
 
-**Числа приёмки** (фикстура): `code.js` — 735 Б `raw`, 276 упрощением, 185
-сжатием, 168 токенов (196 в `cl100k_base`); якорь словаря (`hello world` — 2
-токена) взят из документации, то есть проверка не круговая; байт на токен
-отличается по файлам в 2,5 раза. Без словаря — код 4 и подпись «оценка по длине:
-1 токен ≈ 3 знака». Проход — `WORKLOG.md` §27, цена по времени — `REFACTOR.md`
-R-5.6 и §3.
+**Acceptance numbers (the fixture, the same table `CHANGELOG.md` carries for `1.0.0`):** `code.js` — 735 B
+`raw`, 276 stripped, 185 compressed, 168 tokens (196 in `cl100k_base`); the dictionary's anchor (`hello
+world` — 2 tokens) is taken from the documentation, so the check is not circular (`test/tokens.test.js`, 7
+checks). With no dictionary — code 4 and the caption “an estimate by length: 1 token ≈ 3 characters”.
 
-**Срез 2 (2026-09-14).** Точность доехала до клетки: подпись метрики говорит про
-худшее в колонке, а каждая клетка — про своё число, и приближённая помечена
-пунктиром с подписью способа. Оба ответа считает одно правило (`pointExact` в
-`src/metrics.js`), поэтому разойтись не могут; форма контракта — ряд пометок
-`approx` по метрике (строка знаков по клеткам строк и строка по «сейчас»),
-отсюда и `--json` и артефакт остались байт в байт. Выбор семейства словаря
-решением этого среза **живёт в настройках запуска**, а не на странице: предвычислить
-все семейства — платить временем за числа, о которых могут и не спросить (§4.8.4
-отменено, причина — там же). Что от этого следует для текстов: способ каждой
-метрики виден на странице **текстом** (не только во всплывающей строке), поэтому
-читатель знает словарь и его кодировку, хотя и не может их переключить. Числа и
-время — `WORKLOG.md` §30, объём — `REFACTOR.md` R-2.7.
+**What the step did not finish:** families other than `openai` — and only with a dictionary of their own
+(otherwise it is an approximation under another name), which would add one more value to the `family` setting
+and one more dictionary's name to the method. The family switch on the page stays cancelled: it comes back
+only together with precomputation, that is with an honest answer to where the page takes its numbers from
+(§4.8.4).
 
-**Осталось из шага 4:** семейства кроме `openai` — но только со своим словарём
-(иначе это приближение с другим именем), и тогда у настройки появится ещё одно
-значение `family`, а способ — ещё одно название словаря. Выбор семейства на
-странице остаётся отменённым: он вернётся только вместе с предвычислением, то
-есть с честным ответом, откуда страница берёт числа (§4.8.4).
+### Step 5. Integration — wiring it into a project — ✅ done 2026-09-14
 
-**Выпуск:** `0.4.0`.
+**The promise:** the consumer project is wired in, templates for a new project are made, and the tool gains its
+commands — coverage (`check`), explanation (`explain`), diagnostics (`doctor`) and the self-refreshing hook.
 
-### Шаг 5. Интеграция (v0.5.0) — подключение к проекту ✅ **2026-09-14**
+**The consumer was wired in.** `safe-resets` takes the package from git — by a **tag** today: its
+`package.json` reads `"size-report": "github:vernikr/size-report#v1.2.0"` (the plan named a commit, and
+forty characters would have to be looked up by eye while a tag is constant — the pin in `README.md` leads to
+the tag of the current release and the guard ties it to `installSpec`, `REFACTOR.md` §R-4.13). The copies of the tool and of its checks are gone from the
+project (`tools/size-table.js`, `tests/size-table.js`), and the table is guarded by the package's own command,
+which the project's harness runs as one of its waves. The instruction was walked command by command, and two
+divergences with the live project were found (`worklog/archive/WORKLOG.md` §18); the step that needed a key
+left with the repository's privacy — it is public now and no key is needed (§8.4,
+`worklog/archive/WORKLOG.md` §44).
 
-**Подключение проекта-потребителя сделано.** `safe-resets` берёт пакет из git по
-коммиту (`github:vernikr/size-report#d63468d`), копии инструмента и его теста в
-нём больше нет (`tools/size-table.js`, `tests/size-table.js`), а таблицу стережёт
-шаг `size` в `test:all`; артефакт пересобран отдельным коммитом. Шаги по
-инструкции README и два расхождения с живым проектом (шаг доступа к пакету в CI и
-переезд с уже лежавшей копии) — `WORKLOG.md` §18; шаг с ключом оттуда с тех пор
-ушёл вместе с приватностью репозитория (§8.4, `WORKLOG.md` §44).
+**Templates were made** (`templates/`, `REFACTOR.md` §R-4.11): `size-report.config.json` (a draft of the
+settings), `ci.yml` (the check described: build the report, compare it with the disk, take two snapshots of
+the numbers — the ordinary one and one without the machine's git settings) and `README.md` (what goes where).
+A template block for `AGENTS.md` is deliberately absent, and will not appear: the requirements do not ask for
+such a file, and the tool does not invent a foreign repository's format — that is written in
+`templates/README.md`. The templates are held by the suite (`test/templates.test.js`) and shipped (held by
+`pnpm run pack:check` byte for byte).
 
-**Шаблоны для подключаемого проекта сделаны** (`templates/`, `REFACTOR.md`
-R-4.11): `size-report.config.json` (черновик настроек), `ci.yml` (описание
-проверки: сборка таблицы, сверка с диском, два снимка чисел — обычный и без
-настроек git) и `README.md` (куда что кладётся). Шаблона блока для `AGENTS.md`
-здесь нет и не будет: требования такого файла не просят, а формат чужого
-репозитория инструмент не выдумывает — записано в `templates/README.md`. Шаблоны
-под проверкой набора (`test/templates.test.js`) и в списке поставки (это стережёт
-`pnpm run pack:check`).
+**The commands were made.** `size check` is the coverage command and answers requirement §4.2
+`requirements.md` — a change that slipped past the report is a violation rather than silence — while the
+comparison of the report with the history is the mode without a flag; `size explain <sha>` lays out why a
+commit has no row (`REFACTOR.md` §R-4.12). `size doctor` answers the environment, the optional dependencies,
+the settings and the coverage in one reply (`worklog/archive/WORKLOG.md` §35), assembled from the very pieces
+the other commands use — the coverage block is exactly `size check`'s answer rather than a second calculation
+— with the exit code being the first by importance (2 → 3 → 1 → 4, `WEIGHT` in `src/doctor.js`) rather than
+“something was found”, and a sensor the settings are silent about is named unneeded and not loaded.
+`init`/`measure`/`render` never became words: the surface is the modes `--init`, `--write`, `--data` and the
+form `--json` (§4.7).
 
-**Полнота и объяснение сделаны** (`size check`, `size explain <sha>`,
-`REFACTOR.md` R-4.12): команда, ставшая словом, а не ключом, читается где угодно
-(`check` — это ещё и замена утраченному контролю «артефакт ↔ история»,
-требование §4.2). Остались `size doctor` и `install-hook`; `init`/`measure`/`render`
-пока ключи.
+**The hook was made** (`install-hook` / `uninstall-hook` / `hook-run`, `worklog/archive/WORKLOG.md` §36): the
+report rebuilds itself and, when it is tracked, lands as a commit of its own. **It installs itself** — after
+the package is installed and on the first run in a project (requirement §7.1 `requirements.md`), while where
+installing is unsafe it stays silent and the explicit command names the cause and hands over a ready line. The
+switches are `hooks.enabled: false`, the environment `SIZE_REPORT_NO_HOOK` (CI is such an environment) and
+`uninstall-hook`, which returns the project to what it was. There are **two** hook files — `post-commit` and
+`post-merge` — because git calls only the second for a merge (`post-commit` is not run for `git merge` at all,
+and that is a check on git 2.50 rather than a guess). The report's commit is assembled with plumbing
+(`hash-object` → a tree off HEAD with the report's path replaced → `commit-tree` → `update-ref`), so neither
+the index nor someone else's uncommitted work gets in, and a loop is impossible **by construction rather than
+by a flag**: the plumbing calls no hooks, and the report's own path gets no row, so a repeated rebuild yields
+the same bytes and there is no second commit to make (requirement §7.2 `requirements.md`). A refusal does not
+bring the commit down: the cause travels as one line and is visible in `size doctor` (requirements §7.3
+`requirements.md`). Acceptance: every exit code by its own scenario; the hook makes no commit other than the
+report's; a repeated run and a commit with nothing changed produce no second commit; a merge, a refusal, an
+uninstall and someone else's hooks each by their own scenario (`test/hook.test.js`, 11 checks).
 
-**Диагностика одним ответом сделана** (`size doctor`, `WORKLOG.md` §35): окружение,
-необязательные зависимости, настройки и покрытие — ответ собирается из тех же
-кусков, что и остальные команды (блок покрытия — это ровно ответ `size check`,
-а не второй расчёт), а код выхода — первый по важности (2 → 3 → 1 → 4), а не
-«что-то нашлось». Датчик, о котором настройки молчат, назван ненужным и не
-загружается. Последним оставался `size install-hook` — сделан ниже;
-`init`/`measure`/`render` пока ключи.
+**In the consumer:** the report job appears in CI. The rule “the report is not edited by hand” stays, with a
+stronger device behind it — the hook rebuilds it and commits it — while the plan's expectation that the report
+would **leave git** did not happen: the decision went the other way (`REFACTOR.md` §R-4.8).
 
-**Хук автообновления сделан** (`size install-hook` / `uninstall-hook` / `hook-run`,
-`WORKLOG.md` §36): отчёт пересобирается сам и, если он в git, ложится отдельным
-коммитом. Ставится только явной командой, снимается командой же; выключатели —
-`hooks.enabled: false` в настройках и окружения `CI` / `SIZE_REPORT_NO_HOOK`.
-Файлов два — `post-commit` и `post-merge`: на слияние git зовёт только второй
-(`post-commit` при `git merge` не выполняется вовсе), и это не догадка, а проверка
-на git 2.50. Коммит отчёта собирается плумбингом (`hash-object` → дерево от HEAD с
-подменённым путём отчёта → `commit-tree` → `update-ref`), поэтому в него не
-попадают ни индекс, ни чужая незакоммиченная работа, а зацикливание невозможно по
-устройству: `commit-tree` хуков не зовёт. Отказ инструмента коммит не роняет —
-причина едет одной строкой и видна в `size doctor`.
+### Step 6. Polish and 1.0.0 — ✅ released 2026-09-14
 
-**Приёмка:** каждый код выхода проверен отдельным сценарием; хук не создаёт
-коммитов, кроме коммита отчёта; повторный запуск и коммит без изменений не
-порождают второго; слияние, отказ, снятие и чужие хуки — своими сценариями
-(`test/hook.test.js`).
+**CI was made** (`.github/workflows/ci.yml`, §8.5, `worklog/archive/WORKLOG.md` §21): on every push and every
+pull request the checks run by themselves, with the same commands for anyone and without secrets — one job
+running `pnpm run verify`.
 
-**В проекте:** появляется джоб отчёта в CI (по желанию — артефакт), а правило
-«отчёт не правим руками» заменяется на «отчёт не в git, его не коммитим». Блок
-«здесь подключён size-report» в `AGENTS.md` в шаблоны не входит: требования его
-не просят.
+**The release was made** (`worklog/archive/WORKLOG.md` §40): version `1.0.0` in the manifest, `CHANGELOG.md`
+with the section “what changes in the numbers” (a measurement on the fixture, compared with the live run by
+`test/changelog.test.js`), the tag `v1.0.0` that the install example in `README.md` led to. `schema: 1` is
+frozen: it can be broken only by a MAJOR release with a migration (§8.2). Releases have gone on through the
+workflow of `REFACTOR.md` §R-4.24 since, and the package is at **2.4.0** today.
 
-**Выпуск:** `0.5.0`.
+**The suite was split into a fast and a full run** (`worklog/archive/WORKLOG.md` §41, `REFACTOR.md` §R-5.7):
+`pnpm test` is the fast one (**72 of 177** checks today) and `pnpm test:all` the full one (**177**), the
+default being the full run; the split is by cost rather than by alphabet, and two things hold it — the
+declaration (`test/suites.test.js`) and the measurement (`tools/run-tests.js`). **Time targets were abolished
+on 2026-09-15** (`REFACTOR.md` §R-5.8): a run prints its duration and the load of the window rather than
+comparing itself with a plan, so this step's figures of seconds are history.
 
-### Шаг 6. Полировка и 1.0.0 — `1.0.0` выпущен 2026-09-14
+**What remains of this step** (as items of their own, none of them changing numbers): the cache on disk; the
+profile on a repository of a couple of thousand commits (§6 promises a `bench` for it, and no such tool is in
+the tree); the three design documents `docs/ARCHITECTURE.md`, `docs/DATA-FORMAT.md`, `docs/METHODS.md` — today
+the role of every number is told in `README.md`; and the removal of the `gzip` metric, D4:
+open in §10, promised in §11. The licence file, once on this list, is in the package.
 
-**CI сделан** (`.github/workflows/ci.yml`, §8.5, `WORKLOG.md` §21): на каждый пуш и
-на каждый запрос правки проверки идут сами, одними и теми же командами у любого и
-без секретов.
-
-**Выпуск сделан** (`WORKLOG.md` §40): версия `1.0.0` в манифесте, `CHANGELOG.md` с
-разделом «Что изменится в числах» (замер на фикстуре, сверяется с живым прогоном —
-`test/changelog.test.js`), тег `v1.0.0`, на который ведёт пример установки в
-`README.md`. `schema: 1` заморожена: сломать её теперь можно только MAJOR-выпуском
-с миграцией (§8.2).
-
-**Набор проверок разделён на быстрый и полный** (`WORKLOG.md` §41, `REFACTOR.md`
-R-5.7): `pnpm test` — 56 проверок из 127 за **5–6,5 с** (каждая правка),
-`pnpm test:all` — все 127 за **22,6–29,7 с** по окнам (выкладка и CI); разделение по
-цене, умолчание — полный прогон, стерегут его объявление (`test/suites.test.js`) и
-сам замер (`tools/run-tests.js`).
-
-**Остаётся из этого шага** (отдельными проходами, ни один из них не меняет числа):
-кэш на диске; профиль на репозитории в пару тысяч коммитов; `docs/ARCHITECTURE.md`,
-`docs/DATA-FORMAT.md`, `docs/METHODS.md` — сегодня роль каждого числа описана в
-`README.md`; удаление метрики `gzip` (D4) и лицензионный файл (вопрос `PLAN.md` §10).
-
-**Приёмка:** полный прогон по истории safe-resets — в разумное время (замер и
-запись в README); данные всех датчиков детерминированы между двумя запусками и
-между двумя машинами (§6, `test/environment.test.js`).
-
-**Выпуск:** `1.0.0`, `schema: 1` заморожена.
+**Acceptance:** the full profile runs over the consumer's history — `pnpm run parity:live`, 95 rows × 27
+columns — and declares no time target (`REFACTOR.md` §R-5.8); the data of every sensor is deterministic between
+two runs and between two machines (§6, `test/environment.test.js`, 4 checks).
 
 ---
 
