@@ -81,7 +81,7 @@ checks, `D*` — the declarative files, `G*` — the guard. Sums are the measure
 |---|---|---|---|---|
 | T0 | `plan.md` | this tracker: the map, the allow-list, the criterion, the order | — | **written 2026-09-16** |
 | S1 | `surface.md` | `src/refusal.js` (46), `src/args.js` (26), `src/cli.js` (4), `src/modes.js` (13) — the help, the cause registry, the CLI refusals and what the modes print; `src/locales.js` (45) is named there as staying Russian (**default locale** = `BLOCKERS.md` N19, not decided) | 89 | **written 2026-09-16** |
-| S2 | `settings.md` | `src/config.js` (35), `src/project.js` (4), `src/init.js` (18) — what a settings file says when it is wrong, and what `--init` prints | 57 | not started |
+| S2 | `settings.md` | `src/config.js` (35), `src/project.js` (4), `src/init.js` (18) — what a settings file says when it is wrong, and what `--init` prints; follows S1's cause names and advice markers, and owns `outsideFix`, which S4 prints | 57 | **written 2026-09-16** |
 | S3 | `measurement.md` | `src/metrics.js` (20), `src/minify.js` (4), `src/strip.js` (1), `src/strip/guard.js` (6), `src/parse.js` (1), `src/optional.js` (1) — metric captions, the method and accuracy marks, the guard's verdicts | 33 | not started |
 | S4 | `diagnostics.md` | `src/git.js` (3), `src/history.js` (12), `src/check.js` (12), `src/doctor.js` (33), `src/explain.js` (24) — `check`, `explain`, `doctor` and the skip reasons; **`SKIP_WORDS` in `src/history.js` is frozen into both references** (`BLOCKERS.md` N24), so it depends on the N21 decision | 84 | not started |
 | S5 | `automation.md` | `src/hook.js` (40), `src/page/panel.js` (3), `bin/postinstall.js` (2) — the installed hook's text and its commit subject, the panel's service words | 45 | not started |
