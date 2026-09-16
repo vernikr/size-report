@@ -870,11 +870,13 @@ files). The parts below are the order to work in; each is one commit.
   rewritten below (its own section of this file): prose-free documents, one command, **named exceptions with
   numbers** instead of the old "no Cyrillic in markdown", which could never hold — the frozen fixtures are
   byte-compared and the §1 citation rule keeps printed output verbatim. **Measured over the whole tree outside
-  `worklog/**`: `rg -lP '[\p{Cyrillic}]' -g '*.md' -g '!worklog/**'` names 9 files and 132 lines** (the former
+  `worklog/**`: `rg -lP '[\p{Cyrillic}]' -g '*.md' -g '!worklog/**'` names 9 files and 133 lines** (the former
   pattern — the Cyrillic-range one — gives exactly the same nine files and the same number of lines, but carries
   Cyrillic itself, so it matches whatever carries it; the PCRE2 form does not). Per file: `fixtures/synthetic/README.md` 32 and
   `fixtures/parity/README.md` 15 (frozen fixtures), `REFACTOR.md` 15, `CHANGELOG.md` 15 (13 of them data rows),
-  `BLOCKERS.md` 10, `README.md` 4, and the plan files 41 (`markdown.md` 37, `plan.md` 2, `comments.md` 2).
+  `BLOCKERS.md` 10, `README.md` 4, and the plan files 42 (`markdown.md` 37, `plan.md` 2, `comments.md` 3).
+  That third line of `comments.md` is the quotation of the parse worker's printed fallback reason, added by the
+  leftover pass (commit 3636723) **after** this measurement — hence 132 at M26 against 133 for the same command now.
   **Two stale claims were found by the same measurement and fixed:** the row about the changelog guard in
   `REFACTOR.md` (R-4.16) still said in the present tense that the guard holds two Russian words, while it holds
   three and reads them in English since M23 — corrected there and in this file's M16e record; and this file's
@@ -893,7 +895,8 @@ files). The parts below are the order to work in; each is one commit.
 - `wc -l` before/after and the deleted claims recorded in the worklog entry of that turn.
 - **The criterion of the whole subplan, as settled at M26** — the documents hold no **Russian prose**, and that is
   checked by one command that carries no Cyrillic of its own and matches the tree without self-matching:
-  `rg -lP '[\p{Cyrillic}]' -g '*.md' -g '!worklog/**'`. After M26 it names **9 files and 132 lines**, and every
+  `rg -lP '[\p{Cyrillic}]' -g '*.md' -g '!worklog/**'`. It names **9 files and 133 lines** — **132** at M26,
+  where the plan-file group below counted one line fewer — and every
   one of them falls into a named kind rather than being an oversight:
   - **the four documents that quote the tool** — `REFACTOR.md` 15 lines, `BLOCKERS.md` 10, `README.md` 4, and
     `CHANGELOG.md` 2 of its 15: cause names (`нет git`, `коммит вне истории`), printed refusals, printed help
@@ -906,10 +909,15 @@ files). The parts below are the order to work in; each is one commit.
     rather than the documentation. They leave the criterion, and the reason is a command (`check:standards`), not a
     taste;
   - **the plan files themselves** — `docs/plans/2026-09-15-docs-rework/`: `markdown.md` 37, `plan.md` 2,
-    `comments.md` 2 = 41 lines, each a quotation of the tool's words, of a guard's former Russian form or of the
+    `comments.md` 3 = 42 lines, each a quotation of the tool's words, of a guard's former Russian form or of the
     plan's own earlier wording — plus this very criterion's pattern and the measurement commands, which carry the
-    Cyrillic class to be searchable at all. If a quotation is not recognisable as one at its place, that is a
-    defect to fix there rather than a line to translate.
+    Cyrillic class to be searchable at all. The third line of `comments.md` is the quotation of the parse worker's
+    printed fallback reason (`src/parse.js`), added by the leftover pass of commit 3636723: it is the only line this
+    count grew by after M26. If a quotation is not recognisable as one at its place, that is a defect to fix there
+    rather than a line to translate.
+  - **the kinds add up to the total** — 31 quotations (`REFACTOR.md` 15 + `BLOCKERS.md` 10 + `README.md` 4 +
+    `CHANGELOG.md` 2) + 13 data rows + 47 frozen (`fixtures/synthetic/README.md` 32 + `fixtures/parity/README.md`
+    15) + 42 plan lines = **133**, so no line stays without a reason and none is double-counted.
   **Outside `*.md` the same command finds more, and none of it is documentation:** the built report
   (`docs/size-report.html`, 349 lines — the tool's own output), the fixtures' data (`fixtures/**/*.json`), and the
   sources of the package and its checks (`src/`, `tools/`, `test/`), whose Russian is the tool's printed output,
