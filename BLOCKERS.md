@@ -835,3 +835,33 @@ references stayed the same after the fix.
   its way out of**: every other one was about a word reaching a reader, this one is about two implementations
   being the same tokens.
 
+- **N30. The counter's word agreement is Russian grammar: an English word prints `21 check`.** Found 2026-09-16
+  in W1's step 3, by the measurement the mission asked for rather than by reading.
+
+  **What was measured.** The helpers of `tools/run-tests.js` were taken out of the file's own text and run over
+  the counts that occur in practice: `1 check | 1 file`, `2 checks | 2 files`, `4 checks | 4 files`,
+  `5 checks | 5 files`, `11 checks | 11 files`, `70 checks | 70 files` — and `21 check | 21 file`. The same
+  defect waits at 31, 41, 51 … but not at 21 on every list: it shows up whenever a count ends in 1 above 20,
+  which for the number of checks is an ordinary day (`✓ fast run: 21 check, failures 0, …`).
+
+  **Why it is not a literal.** `plural(n, one, few, many)` branches on the last digit — `last === 1` gives the
+  singular form — and that is the Russian rule, where “21 проверка” is right. In English the singular is only
+  `n === 1`, so **no choice of the three words can be right for both 1 and 21**:
+  `('check', 'checks', 'checks')` prints `21 check`, and `('checks', 'checks', 'checks')` prints `1 checks`.
+  Measured both ways, not argued.
+
+  **The repair, one line.** `plural` returns the singular only for `n === 1` (the `few` branch stays in the
+  signature or goes with it — a decision for whoever writes it). It changes no number and no count: only the
+  word of a count ending in 1. The engines that would have to agree are the runner's two printed lines.
+
+  **The price of waiting.** Until then the instruments print `21 check` — wrong English in a message a
+  **developer reads on every run**, which is worse than the Russian it replaces because it looks like a typo
+  rather than a language choice. The price of the repair: one line of code in an instrument, i.e. a behaviour
+  change in wording, which is why it is recorded instead of taken. It can ride in the same commit as N29's
+  repair (1): both are one small code change in `tools/**`, both are debts created by this work, and both leave
+  the numbers alone.
+
+  **What is not part of it.** `sec()` and `load()` keep the decimal comma (`replace('.', ',')`) — that is
+  **N26**, a question of its own and still open; only the word-half of the comment at `tools/run-tests.js:40`
+  moved here, and the comment itself is prose left in place (`TODO.md`).
+

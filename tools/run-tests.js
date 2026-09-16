@@ -35,7 +35,7 @@ const argv = process.argv.slice(2);
 const mode = argv[0];
 const extra = argv.slice(1);
 const jobs = Number(process.env.SIZE_REPORT_TEST_JOBS || 0) || Math.max(1, os.cpus().length);
-const MODES = { fast: 'быстрый', full: 'полный' };
+const MODES = { fast: 'fast', full: 'full' };
 
 /* The numbers are Russian: a comma in the fraction and the right form of the word, or "1 проверок" beside "5 проверок"
  * reads as a broken counter. */
@@ -53,11 +53,11 @@ function plural(n, one, few, many) {
 }
 
 function checks(n) {
-  return n + ' ' + plural(n, 'проверка', 'проверки', 'проверок');
+  return n + ' ' + plural(n, 'check', 'checks', 'checks');
 }
 
 function files(n) {
-  return n + ' ' + plural(n, 'файл', 'файла', 'файлов');
+  return n + ' ' + plural(n, 'file', 'files', 'files');
 }
 
 function load() {
@@ -97,19 +97,19 @@ async function runAll(list, args, together) {
 
 function line(result) {
   return '  ' + (result.code === 0 ? '✓' : '✗') + ' ' + result.file.padEnd(28) + ' '
-    + checks(result.tests).padEnd(18) + ' ' + sec(result.seconds) + ' с';
+    + checks(result.tests).padEnd(18) + ' ' + sec(result.seconds) + ' s';
 }
 
 async function measure(all) {
-  console.log('замер каждого файла отдельно, по одному (' + files(all.length) + ', загрузка '
+  console.log('every file measured on its own, one at a time (' + files(all.length) + ', load '
     + load() + '):\n');
   const results = await runAll(all, extra, 1);
   results.slice().sort((a, b) => a.seconds - b.seconds).forEach((r) => {
     console.log('  ' + r.file.padEnd(28) + ' ' + checks(r.tests).padEnd(18) + ' '
-      + sec(r.seconds) + ' с' + (r.code === 0 ? '' : ' — ПРОВАЛ'));
+      + sec(r.seconds) + ' s' + (r.code === 0 ? '' : ' — FAILED'));
   });
-  console.log('\nокно замера — загрузка ' + load() + ', числа разных окон несравнимы.'
-    + ' Разделение объявлено признаком файла — `tools/suites.js`.');
+  console.log('\nthe measuring window — load ' + load() + ', numbers of different windows are not comparable.'
+    + ' The split is declared by a property of the file — `tools/suites.js`.');
   if (results.some((r) => r.code !== 0)) process.exitCode = 1;
 }
 
@@ -120,8 +120,8 @@ async function suite(name) {
   // nothing to count its checks with.
   const missing = list.filter((f) => !fs.existsSync(path.join(ROOT, f)));
   if (missing.length > 0) {
-    console.error('✗ в объявлении прогона назван файл, которого нет: ' + missing.join(', ')
-      + '\n  исправьте список в `tools/suites.js`');
+    console.error('✗ a file named in the run declaration is not there: ' + missing.join(', ')
+      + '\n  fix the list in `tools/suites.js`');
     process.exitCode = 2;
     return;
   }
@@ -131,13 +131,13 @@ async function suite(name) {
   /* The load is named by a measurement **on the way in** rather than on the way out: the run's pool is itself a noticeable
    * part of the load, and a number taken at the end would say more about the run than about the window. */
   const loadBefore = load();
-  console.log((name === 'fast' ? '▶ быстрый прогон' : '▶ полный прогон') + ': ' + files(list.length)
+  console.log((name === 'fast' ? '▶ fast run' : '▶ full run') + ': ' + files(list.length)
     + ', ' + checks(declared)
     + (name === 'fast'
-      ? ' из ' + total + ' — остальные ' + checks(total - declared) + ' в полном прогоне (`pnpm test:all`)'
-      : ' — весь набор (`pnpm test:all`)')
+      ? ' of ' + total + ' — the other ' + checks(total - declared) + ' are in the full run (`pnpm test:all`)'
+      : ' — the whole set (`pnpm test:all`)')
     + '.');
-  console.log('загрузка машины на входе ' + loadBefore + ', файлов разом '
+  console.log('machine load on the way in ' + loadBefore + ', files at once '
     + Math.min(jobs, list.length) + '\n');
 
   const started = Date.now();
@@ -151,22 +151,22 @@ async function suite(name) {
       return;
     }
     bad++;
-    console.error('\n✗ ' + r.file + ' (' + sec(r.seconds) + ' с, код ' + r.code + '):\n');
+    console.error('\n✗ ' + r.file + ' (' + sec(r.seconds) + ' s, code ' + r.code + '):\n');
     console.error(r.out.trimEnd() + '\n');
   });
 
   const tests = results.reduce((sum, r) => sum + r.tests, 0);
   if (tests !== declared) {
     bad++;
-    console.error('✗ ' + checks(tests) + ' отработало, а объявлено ' + checks(declared)
-      + ': файл не доехал до прогона или объявление устарело');
+    console.error('✗ ' + checks(tests) + ' ran while ' + checks(declared)
+      + ' were declared: a file did not reach the run or the declaration is stale');
   }
 
   // The duration is a measurement rather than a verdict: it is printed so that "expensive inside the fast run" is visible
   // to the eye, while the run does not turn red over it.
-  console.log('\n' + (bad === 0 ? '✓ ' : '✗ ') + MODES[name] + ' прогон: ' + checks(declared)
-    + ', провалов ' + bad + ', ' + sec(seconds) + ' с (загрузка при старте ' + loadBefore
-    + '; цель по времени не объявляется)');
+  console.log('\n' + (bad === 0 ? '✓ ' : '✗ ') + MODES[name] + ' run: ' + checks(declared)
+    + ', failures ' + bad + ', ' + sec(seconds) + ' s (load at the start ' + loadBefore
+    + '; no time target is declared)');
 
   if (bad > 0) process.exitCode = 1;
 }
@@ -174,8 +174,8 @@ async function suite(name) {
 if (['fast', 'full'].includes(mode)) await suite(mode);
 else if (mode === 'measure') await measure(testFiles());
 else {
-  console.error('Прогон не назван. Есть: `fast` (быстрый, то же, что `pnpm test`),'
-    + ' `full` (полный, `pnpm test:all`), `measure` (замерить длительность каждого файла).');
-  console.error('  например: node tools/run-tests.js fast');
+  console.error('No run was named. There are: `fast` (fast, the same as `pnpm test`),'
+    + ' `full` (full, `pnpm test:all`), `measure` (measure every file duration).');
+  console.error('  for example: node tools/run-tests.js fast');
   process.exitCode = 2;
 }

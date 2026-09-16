@@ -50,8 +50,8 @@ them) and `docs-facts.js` 4 → 3. Of the 235:
 - **4 are prose**, not literals — `tools/refusals.js:134`, `tools/run-tests.js:22,40`,
   `tools/docs-facts.js:170`;
 - **210 are this owner's own**; step 1 lands 10 of them and **three are blocked** (`BLOCKERS.md`
-  N29), step 2 lands 13, so **187 minus what N29 settles** is left for steps 3–8 and the twelve files
-  read **212** now (`tools/**` as a whole reads 415).
+  N29), step 2 lands 13 and step 3 lands 23, so **164 minus what N29 and N30 settle** is left for steps
+  4–8 and the twelve files read **189** now (`tools/**` as a whole reads 392).
 
 And the same measurement for step 8: `tools/refusals.js`'s 55 Cyrillic lines are `truth` **37** +
 `advice.why` **12** + the case `id`s **2** + the `uncatchable` prose **2** + `ADVICE_LINE` **1** +
@@ -209,10 +209,19 @@ No reader at all, measured:
    was run after the translation as its own question — translating two instruments could have made a
    **new** twin the way `firstDiff` did — and answered “новых клонов нет (клонов 10 …)”; the N29 pair
    is untouched by this step, and its three literals stay as they were.
-3. **`tools/run-tests.js`** — the verdicts and the three `plural` word-triples. Red first: translate
-   `MODES`' **keys** instead of its values → `node tools/run-tests.js fast` answers with the "run not
-   named" message; put the keys back and translate the values. The `sec()`/`load()` comma is **not**
-   touched (N26).
+3. **`tools/run-tests.js` — done 2026-09-16, 25 → 2** (the two left are the comments of the prose
+   pass). The verdicts (`▶ fast run`, the summary line, `— FAILED` in `measure`, the window line, the
+   stale-declaration pair, the “no run was named” pair) and the two word-triples of `checks`/`files`.
+   `MODES`' **keys are the CLI words** and stayed; only its values moved, and the red-first rule of the
+   plan was measured on the way: with `fast` translated the runner no longer takes its own name.
+   Measured, three ways: (a) returned to Russian whole, the **full** profile stayed green (175 checks) —
+   no check reads a word of this file, and `tools/gates/coverage.js:63` runs it for its exit code alone;
+   (b) the helpers were taken out of the file's own source text and run over real counts — `1 check`,
+   `2 checks`, `5 checks`, `11 checks`, `70 checks` correct, and **`21 check`** wrong, which is
+   `BLOCKERS.md` **N30** (the rule in `plural` is Russian grammar: no choice of three English words can
+   be right for both 1 and 21); (c) `node tools/run-tests.js nope` answers the English “No run was
+   named” and exits 2. `pnpm run dup` was asked its own question and answered no new twin. The
+   `sec()`/`load()` comma is **not** touched (N26).
 4. **`tools/check-standards.js` + `tools/pack-check.js` + `tools/parity-live.js`** — the verdicts.
    Red first: the exit code is the interface (`tools/gates/run.js`), so the experiment is
    `pnpm run check:standards` still answering 0 and `pack:check` still passing; the absence of a
@@ -262,7 +271,8 @@ W2's), so no step needs a `Gate-Change:` trailer.
 
 ## Acceptance
 
-- The counter over the twelve files answers **exactly 28**, and every one of them is named: the three
+- The counter over the twelve files answers **exactly 28** — and it does not move in step 3: the two lines
+  it leaves are two of the four prose comments below, already counted. Every one of the 28 is named: the three
   `firstDiff` literals of `tools/harness.js` (`BLOCKERS.md` N29 — they go if repair (1) is chosen, and
   then the number is 25), the 16
   lines of `manifestNote` (`parity-freeze.js:98-118`) and the 3 config values of the fixture
