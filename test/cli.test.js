@@ -176,7 +176,7 @@ test('незнакомый ключ, ключ без значения и лиш�
   // fall back to their defaults instead of the ones the person named.
   const noValue = runSize(dir, ['--config']);
   refusal(noValue, 2, 'ключ --config без значения');
-  assert.match(noValue.stderr, /«--config»/, 'отказ не называет ключ:\n' + noValue.stderr);
+  assert.match(noValue.stderr, /"--config"/, 'отказ не называет ключ:\n' + noValue.stderr);
 
   const force = runSize(dir, ['--force']);
   refusal(force, 2, 'ключ --force без --init');
@@ -186,17 +186,17 @@ test('незнакомый ключ, ключ без значения и лиш�
   // would name the wrong reason.
   const extra = runSize(dir, ['--write', 'a.html', 'b.html']);
   refusal(extra, 2, 'лишнее слово после ключа со значением');
-  assert.match(extra.stderr, /лишнее слово «b\.html»/, 'отказ назвал не то слово:\n' + extra.stderr);
+  assert.match(extra.stderr, /the extra word "b\.html"/, 'отказ назвал не то слово:\n' + extra.stderr);
 
   const stray = runSize(dir, ['check', 'extra']);
   refusal(stray, 2, 'лишнее слово у команды');
-  assert.match(stray.stderr, /«extra» лишний/, 'отказ назвал не причину:\n' + stray.stderr);
+  assert.match(stray.stderr, /"extra" is extra/, 'отказ назвал не причину:\n' + stray.stderr);
 
   // Lone dashes are no flags and do not slip past the parsing either.
   ['-', '--'].forEach((lonely) => {
     const res = runSize(dir, [lonely]);
     refusal(res, 2, 'одинокий ' + lonely);
-    assert.ok(res.stderr.indexOf('«' + lonely + '»') >= 0, 'отказ не называет ' + lonely + ':\n' + res.stderr);
+    assert.ok(res.stderr.indexOf('"' + lonely + '"') >= 0, 'отказ не называет ' + lonely + ':\n' + res.stderr);
   });
 
   // The other side: lawful calls stay lawful — a flag's value is not confused with a superfluous
@@ -227,7 +227,7 @@ test('два режима сразу и несовместимые ключи �
     for (let j = i + 1; j < modes.length; j++) {
       const res = runSize(dir, [modes[i], modes[j]]);
       refusal(res, 2, 'два режима: ' + modes[i] + ' ' + modes[j]);
-      assert.ok(res.stderr.indexOf('«' + modes[i] + '»') >= 0 && res.stderr.indexOf('«' + modes[j] + '»') >= 0,
+      assert.ok(res.stderr.indexOf('"' + modes[i] + '"') >= 0 && res.stderr.indexOf('"' + modes[j] + '"') >= 0,
         'отказ не называет оба режима:\n' + res.stderr);
       assert.ok(commandIn(res.stderr) !== null, 'в отказе нет команды починки:\n' + res.stderr);
     }
@@ -237,16 +237,16 @@ test('два режима сразу и несовместимые ключи �
   // than a command's answer: beside a mode it gets lost just as quietly.
   const dataAndWrite = runSize(dir, ['--json', '--write']);
   refusal(dataAndWrite, 2, '--json рядом с режимом');
-  assert.ok(dataAndWrite.stderr.indexOf('«--json»') >= 0 && dataAndWrite.stderr.indexOf('«--write»') >= 0,
+  assert.ok(dataAndWrite.stderr.indexOf('"--json"') >= 0 && dataAndWrite.stderr.indexOf('"--write"') >= 0,
     'отказ не называет оба ключа:\n' + dataAndWrite.stderr);
 
   // A command beside a mode, an answer that is no JSON, a draft file named in two ways.
   const cases = [
-    [['check', '--data'], /«check»/],
-    [['install-hook', '--json'], /нет ответа в JSON/],
-    [['--config', CONFIG, '--init', 'draft.json'], /«--init»/],
-    [['--write', '--write'], /дважды/],
-    [['--config', CONFIG, '--config', CONFIG], /дважды/]
+    [['check', '--data'], /"check"/],
+    [['install-hook', '--json'], /has no answer in JSON/],
+    [['--config', CONFIG, '--init', 'draft.json'], /"--init"/],
+    [['--write', '--write'], /twice/],
+    [['--config', CONFIG, '--config', CONFIG], /twice/]
   ];
   cases.forEach(([args, probe]) => {
     const res = runSize(dir, args);
@@ -286,7 +286,7 @@ test('--json отвечает ровно там, где у вызова есть
   ['--init', '--write', '--data'].forEach((mode) => {
     const res = runSize(dir, [mode, '--json']);
     refusal(res, 2, '--json рядом с режимом ' + mode);
-    assert.ok(res.stderr.indexOf('«--json»') >= 0 && res.stderr.indexOf('«' + mode + '»') >= 0,
+    assert.ok(res.stderr.indexOf('"--json"') >= 0 && res.stderr.indexOf('"' + mode + '"') >= 0,
       'отказ не называет оба виновника:\n' + res.stderr);
   });
 
@@ -294,7 +294,7 @@ test('--json отвечает ровно там, где у вызова есть
   ['install-hook', 'uninstall-hook', 'hook-run'].forEach((verb) => {
     const res = runSize(dir, [verb, '--json']);
     refusal(res, 2, '--json у команды ' + verb);
-    assert.match(res.stderr, /нет ответа в JSON/, 'отказ объясняет не то:\n' + res.stderr);
+    assert.match(res.stderr, /has no answer in JSON/, 'отказ объясняет не то:\n' + res.stderr);
   });
 
   // And no refused call touched the project: parsing happens before the tree is read.

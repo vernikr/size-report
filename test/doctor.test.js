@@ -265,6 +265,6 @@ test('doctor аргументов не принимает: лишнее слов
   const res = runSize(PLAIN, ['doctor', 'extra']);
   assert.equal(res.code, 2, 'лишнее слово у doctor не отказ: ' + firstLine(res.stdout + res.stderr));
   assert.equal(hasStack(res.stderr), false, 'отказ напечатал стек');
-  assert.match(res.stderr, /«extra» лишний/, 'отказ назвал не причину, а команду:\n' + res.stderr);
-  assert.match(res.stderr, /починка/, 'отказ не даёт готовой команды:\n' + res.stderr);
+  assert.match(res.stderr, /"extra" is extra/, 'отказ назвал не причину, а команду:\n' + res.stderr);
+  assert.match(res.stderr, /fix/, 'отказ не даёт готовой команды:\n' + res.stderr);
 });

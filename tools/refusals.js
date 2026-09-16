@@ -99,16 +99,22 @@ export const PRINTED = {
 export const PLACEHOLDER = '@';
 
 /* The sign of advice in the output: a marker and everything after it to the end of the line. The
- * markers are the words a refusal says "do this" with: `починка:`, `создайте его:`, `соберите её:`,
- * and for a truncated history `локально:` and `в CI:`. Advice is taken out of the output by them, so
- * new advice inside an existing refusal is visible to a check rather than to an eye alone: a case
- * that printed advice owes a declaration.
+ * markers are the words a refusal says "do this" with: `fix:`, `create it:`, `build it:`, and for a
+ * truncated history `locally:` and `in CI:`. Advice is taken out of the output by them, so new
+ * advice inside an existing refusal is visible to a check rather than to an eye alone: a case that
+ * printed advice owes a declaration.
+ *
+ * **The Russian markers stay while the modules still print them** (the string work translates a
+ * module at a time, `docs/plans/2026-09-16-i18n-english/`): the tolerance is a fact about the tree
+ * rather than a debt marker, and the subplan that translates the last module printing advice
+ * removes the Russian alternatives. The English ones carry a word boundary: without it the marker
+ * `fix` would be found inside `prefix:` and a message with no advice would look as if it had one.
  *
  * The border is said out loud: no marker, no line to check. So advice added without a marker has to
  * be written with one, and the advice of **non**-refusals (a successful `explain`, the `--init`
  * hint, `doctor` findings) never enters the catalogue: their own checks, named in the header of
  * `test/refusals.test.js`, hold them. */
-const ADVICE_LINE = /(?:починка|создайте его|соберите её|локально|в CI): (.+)$/;
+const ADVICE_LINE = /(?:починка|создайте его|соберите её|локально|в CI|\bfix|\bcreate it|\bbuild it|\blocally|\bin CI): (.+)$/;
 
 export function adviceOf(out) {
   return out.split('\n').map((l) => (l.match(ADVICE_LINE) || [])[1])
@@ -135,59 +141,59 @@ export function adviceOf(out) {
 
 export const CASES = [
   { key: 'незнакомый ключ', scenario: 'fixture', args: ['--wite'], code: 2,
-    must: ['незнакомый ключ «--wite»', '--help'],
+    must: ['unknown flag "--wite"', '--help'],
     truth: 'названо то слово, которое человек набрал, а не похожее, и есть команда',
     advice: [{ kind: 'run', args: ['--help'], expect: 0 }] },
   { key: 'повтор ключа', scenario: 'fixture', args: ['--config', '@config', '--write', '--write'], code: 2,
-    must: ['ключ «--write» назван дважды'],
+    must: ['the flag "--write" is named twice'],
     truth: 'назван именно повторённый ключ',
     advice: [{ kind: 'run', args: ['--help'], expect: 0 }] },
   { key: 'ключ без значения', scenario: 'fixture', args: ['--config'], code: 2,
-    must: ['у ключа «--config» нет значения', '--config <файл>'],
+    must: ['the flag "--config" has no value', '--config <file>'],
     truth: 'сказано, что не хватает значения, и как его задать',
-    advice: [{ kind: 'template', args: ['--config', '<файл>'] }] },
+    advice: [{ kind: 'template', args: ['--config', '<file>'] }] },
   { key: 'два режима сразу', scenario: 'fixture', args: ['--config', '@config', '--write', '--data'], code: 2,
-    must: ['два режима сразу: «--write» и «--data»', 'починка: '],
+    must: ['two modes at once: "--write" and "--data"', 'fix: '],
     truth: 'названы оба режима, потому что выбор из них — выбор человека',
     advice: [{ kind: 'run', args: ['--config', '@config', '--write'], expect: 0, inClone: true }] },
   { key: 'несовместимый ключ', scenario: 'fixture', args: ['--config', '@config', '--force'], code: 2,
-    must: ['«--force» работает только с «--init»', 'починка: '],
+    must: ['"--force" works only with "--init"', 'fix: '],
     truth: 'сказано, с чем ключ работает, и это верно',
     advice: [{ kind: 'run', args: ['--init', '--force'], expect: 0, inClone: true }] },
   { key: 'несовместимый ключ', scenario: 'fixture', args: ['--init', '@draft', '--config', '@config'], code: 2,
-    must: ['у «--init» свой файл', '«--config» называет настройки проекта'],
+    must: ['"--init" has a file of its own', '"--config" names the settings of the project'],
     truth: 'объяснена разница между двумя файлами, а не просто «нельзя»',
-    advice: [{ kind: 'template', args: ['--init', '<файл>'] }] },
+    advice: [{ kind: 'template', args: ['--init', '<file>'] }] },
   { key: 'лишнее слово', scenario: 'fixture', args: ['--config', '@config', '--write', 'out.html', 'extra'], code: 2,
-    must: ['лишнее слово «extra»', '«--write» принимает одно значение'],
+    must: ['the extra word "extra"', '"--write" takes one value'],
     truth: 'лишним названо слово человека, а не значение режима',
     advice: [{ kind: 'run', args: ['--config', '@config', '--write', 'out.html'], expect: 0, inClone: true }] },
   { key: 'лишнее слово', scenario: 'fixture', args: ['--config', '@config', 'check', 'extra'], code: 2,
-    must: ['команда «check» аргументов не принимает', '«extra» лишний'],
+    must: ['the command "check" takes no arguments', '"extra" is extra'],
     truth: 'виновато лишнее слово, и оно названо',
     advice: [{ kind: 'run', args: ['--config', '@config', 'check'], expect: 1, inClone: true }] },
   { key: 'лишнее слово', scenario: 'fixture', args: ['--config', '@config', 'explain', 'HEAD', 'HEAD~1'], code: 2,
-    must: ['«explain» принимает один коммит', 'починка: '],
+    must: ['"explain" takes one commit', 'fix: '],
     truth: 'сказано, что коммит один, а не «слишком много слов»',
-    advice: [{ kind: 'template', args: ['--config', '@config', 'explain', '<коммит>'] }] },
+    advice: [{ kind: 'template', args: ['--config', '@config', 'explain', '<commit>'] }] },
   { key: 'неизвестная команда', scenario: 'fixture', args: ['sizes'], code: 2,
-    must: ['неизвестная команда «sizes»', '--help'],
+    must: ['unknown command "sizes"', '--help'],
     truth: 'слово названо командой не зря: человек звал именно команду, и ему нужен их список',
     advice: [{ kind: 'run', args: ['--help'], expect: 0 }] },
   { key: 'команда и режим', scenario: 'fixture', args: ['--config', '@config', 'check', '--write'], code: 2,
-    must: ['команда «check» и режим «--write»', 'починка: '],
+    must: ['the command "check" and the mode "--write"', 'fix: '],
     truth: 'названы оба виновника: человек считает их одним и тем же, а они разное',
     advice: [{ kind: 'run', args: ['--config', '@config', 'check'], expect: 1 }] },
   { key: 'нет коммита', scenario: 'fixture', args: ['--config', '@config', 'explain'], code: 2,
-    must: ['команде «explain» нужен коммит', 'имя ревизии'],
+    must: ['the command "explain" needs a commit', 'a revision name'],
     truth: 'сказано, чем коммит можно назвать, а не только «нужен коммит»',
-    advice: [{ kind: 'template', args: ['--config', '@config', 'explain', '<коммит>'] }] },
+    advice: [{ kind: 'template', args: ['--config', '@config', 'explain', '<commit>'] }] },
   { key: 'нет ответа в JSON', scenario: 'fixture', args: ['--config', '@config', 'install-hook', '--json'], code: 2,
-    must: ['у команды «install-hook» нет ответа в JSON', 'починка: '],
+    must: ['the command "install-hook" has no answer in JSON', 'fix: '],
     truth: 'сказано, что ответа нет именно у этой команды',
     advice: [{ kind: 'run', args: ['--config', '@config', 'install-hook'], expect: 0, inClone: true }] },
   { key: 'два ответа сразу', scenario: 'fixture', args: ['--config', '@config', '--write', '--json'], code: 2,
-    must: ['«--json» и режим «--write»'],
+    must: ['"--json" and the mode "--write"'],
     truth: 'сказано, что «--json» — форма ответа, а режим — то же самое своими словами',
     advice: [{ kind: 'run', args: ['--config', '@config', '--write'], expect: 0, inClone: true }] },
 

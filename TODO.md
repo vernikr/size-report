@@ -30,6 +30,15 @@ Opened 2026-09-16 with the string-translation work (`docs/plans/2026-09-16-i18n-
   means narrowing the derivation (two-space indent as the mark of an entry, or reading the section
   through the same parser as `commandsAt`), which is a change of a check's behaviour rather than of
   a literal — hence its own portion.
+- **`tools/harness.js:272` — `commandIn` sees only an advice whose command carries a flag.** Seen
+  2026-09-16 while translating the grammar's messages (subplan S1, step 2). The regex is
+  `/node\s+(\S+)\s+(--\S+)/`, so an advice without a flag (`fix: node …/bin/size.js doctor`) reads as
+  "no command": measured on the function itself — `commandIn('✗ x\n  fix: node /p/bin/size.js doctor')`
+  is `null`, while the same line with `--init` answers `{ file, flag }`. Nothing is red today (every
+  advice the two assertions in `test/cli.test.js:172,232` speak of carries a flag), but a correct
+  flag-less advice would fail those assertions: the check reddens over good behaviour instead of
+  staying silent. Fixing means widening the derivation (a command whose second token is a word) —
+  a check's behaviour rather than a literal, hence a portion of its own.
 - **`src/metrics.js:61-63` — the last Russian comment in `src/`.** Seen 2026-09-16 while measuring
   the measurement layer for subplan S3 (`docs/plans/2026-09-16-i18n-english/measurement.md`): the
   comment above `METRICS` explains why a metric declares `needsText`, and it is the only comment

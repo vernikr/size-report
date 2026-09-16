@@ -129,10 +129,16 @@ still says `'Команды:'`, so the function gets **both** markers in this co
 is dropped only when the pin has moved past the rename (`BLOCKERS.md` N20 — the release cadence is
 the mission agent's decision, so the tolerant form may live for a while).
 
-**Step 2 — the grammar's refusal messages** (`src/args.js`, 12 messages + their advice tails).
-Joint edits: the `must` phrases of the eleven command-line cases in `tools/refusals.js`, the
-`ADVICE_LINE` regex (it gains the English markers, keeping the Russian ones), and the patterns of
-`test/cli.test.js:189,193,246,297`. The `SITES` counts do not change: no cause is renamed and no
+**Step 2 — the grammar's refusal messages** (`src/args.js`, 26 Cyrillic lines: **14 messages** — the
+plan said twelve, corrected here by counting them — and the twelve advice-tail lines). Joint edits:
+the `must` phrases of the **14 command-line case rows** in `tools/refusals.js` (eleven causes, two of
+them carrying three extra rows — `несовместимый ключ` twice, `лишнее слово` three times), the `ADVICE_LINE` regex (it
+gains the English markers, keeping the Russian ones; the English ones carry `\b`, or `fix` would be
+read inside `prefix:`), and the readers that name the messages — measured while doing it:
+`test/cli.test.js:179,189,193,199,230,240,245-249,289,297` (thirteen lines; the plan named four),
+`test/doctor.test.js:268,269` (a `must`-like regex **and** a bare `/починка/` reading the marker, neither
+named by the plan) and the two `template` shapes of `tools/refusals.js` (`<файл>`/`<коммит>` →
+`<file>`/`<commit>`), because `verifyAdvice` compares the declared shape with the printed advice. The `SITES` counts do not change: no cause is renamed and no
 site is added.
 
 **Step 3 — the cause registry** (`CONFIG_CAUSES` in `src/refusal.js`: five group names, 22 cause
