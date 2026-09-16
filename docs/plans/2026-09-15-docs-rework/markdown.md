@@ -542,8 +542,37 @@ files). The parts below are the order to work in; each is one commit.
   the numbers of release 1.0.0 match `CHANGELOG.md` (2511 / 1597 / 1483 / 540, `code.js` 276 → 185). **References:**
   52 distinct `R-` addresses are cited from outside the file and all resolve; nothing renumbered. No release — the
   file is not in the tarball.
-- [ ] **M16d–M16e `REFACTOR.md` remainder** — measured: **M16d §6 second half** (the rows `R-4.20` … `R-4.9`, 16
-  rows after `R-4.19`) and **M16e §7–§9** (wave 5, what is out of the plan, what is established; 72 Russian lines,
+- [x] **M16d `REFACTOR.md` §6 second half** — done 2026-09-16, and §6 is closed whole with M16c. 16 added / 16
+  removed = **32 changed lines in one file**; the 16 rows held 16 936 Cyrillic characters, they hold **89** (cause
+  names, printed texts, the hint line, the heading of the changelog section), the file's Cyrillic 30 431 → 13 584
+  characters. **Five claims were overtaken by work of the same day, not by drift.** (1) `R-4.20`'s “what was
+  confirmed” was true for three of its four items on the day and none of the three holds now: the manifest no
+  longer carries `private`, the package is published as `@vernikr/size-report` (2.4.0 today; `2fe0915` moved the
+  name into the owner's scope and added `LICENSE`), and CI runs **one** command (`pnpm run verify`) rather than
+  seven steps — all restated with dates, and the price named still stands (the bare name belongs to a foreign
+  package, 1.0.2). (2) `R-4.7` and `R-4.8` taught the form `npx size-report`, which `R-4.21` replaced with a path
+  inside the project; both rows now say so instead of teaching a stale call. (3) `R-4.23` named `src/cli.js` for
+  the `verdict`/`note` helpers — they live in **`src/modes.js`** today. **A number of the acceptance is not a
+  constant:** `pack:check` builds the report over this repository, so its size travels with the tree — 37 193 B in
+  `R-4.10`, 59 358 B in the rows of 2026-09-14, 59 376 B in `R-4.23`, **66 277 B** measured 2026-09-16; in this
+  half the stale sizes were replaced by the promise plus a dated measurement, and **five rows of the closed parts
+  still call it a constant** — `R-1.4`, `R-1.5`, `R-1.6`, `R-1.7`, `R-2.7` — to be fixed in M16e. **The guard
+  caught a defect of this pass itself:** the quoted stack in `R-4.6` named `src/greet.js` as a code span and
+  `test/docs-paths.test.js` went red (the file belonged to the fresh project of that run) — fixed in the document,
+  not in the guard. Checked by code and run: `invocation()` asking the tree first (`R-4.21`); 43 advice entries (21
+  `run`, 4 `template`, 12 `manual`, 6 given to another check) with `mustFix: true` five times (`R-4.22`);
+  `release.yml` 102 lines / `test/release.test.js` 137 / `tools/yaml.js` 134 today, `registry-url` absent and
+  required absent (`R-4.24`); the five fixture cases re-read in `test/check.test.js` and the consumer's answer
+  reproduced from the frozen bundle — 149 commits, 95 rows, 54 skipped, **20 unknown paths**, code 1, while the
+  live consumer directory answers 22 (`R-4.12`); the bundle 803 581 B and `check-standards` printing “HEAD and the
+  branch `main` on `bd6ef9d`, 149 commits” (`R-4.10`); 31 sources and 3 templates in the tarball, templates 11 783 B
+  (`R-4.11`); the wiring section at eight steps (`R-4.2`); README saying 72 of 177 and 177 with the count guarded
+  (`R-4.3`); `files` naming six entries including `LICENSE` (`R-4.9`). **References:** 55 distinct `R-` addresses
+  cited from outside the file, none unresolved, nothing renumbered; every cited `BLOCKERS.md` key resolves (`N2` and
+  `N10` being struck-through closed notes). No release — the file is not in the tarball. **Recorded for the PLAN
+  parts:** `PLAN.md` §8.5 still describes seven CI steps and a private project, §8.4 still speaks of an unpublished
+  package.
+- [ ] **M16e `REFACTOR.md` §7–§9** (wave 5, what is out of the plan, what is established; 72 Russian lines,
   and the lines now stand at 131, 166, 202, 223). Wave 5 needs a real
   check rather than a translation: `R-5.1` and `R-5.6` carry no done mark today, **`R-5.1` still names the
   `--page` mode**, which no longer exists, and §8's table of the audit's findings still cites the removed row
