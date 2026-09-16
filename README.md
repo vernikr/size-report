@@ -789,8 +789,8 @@ scripts — "Ignored build scripts"; it can be allowed with `pnpm.onlyBuiltDepen
 command above takes them away. It installs only where that is safe — an ordinary hooks directory, no hook of
 someone else's, something to call the tool with — and stays silent where it is not. After every commit and
 merge the report is rebuilt: the `docs` directory and `size-report.html` are created if they are not there
-yet, and a report **tracked** by git lands as a commit of its own signed `chore(report): отчёт пересобран
-после <sha>` (the signature is quoted as the hook writes it, like every other line of the tool's output in
+yet, and a report **tracked** by git lands as a commit of its own signed `chore(report): report rebuilt
+after <sha>` (the signature is quoted as the hook writes it, like every other line of the tool's output in
 this document). Only the report's path is committed: the tree comes from HEAD with that one path replaced, so
 neither someone's index nor uncommitted work can enter the commit.
 

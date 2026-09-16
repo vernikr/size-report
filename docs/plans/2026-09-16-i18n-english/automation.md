@@ -1,7 +1,8 @@
 # S5 — `automation`: the installed hook and the panel's chrome
 
 Subplan of `plan.md` (T0). Owns `src/hook.js`, `src/page/panel.js`, `bin/postinstall.js`.
-Written 2026-09-16, not started. The last subplan of the runtime layer, and the only one whose
+Written 2026-09-16; steps 1–5 and the post-install half of step 6 landed 2026-09-16, and the panel's three
+lines (`src/page/panel.js`) are the one step left, waiting on the N25 decision. The last subplan of the runtime layer, and the only one whose
 text lands **outside the repository**: the hook writes its own body into `.git/hooks/post-commit`
 of someone else's project, and its commit subject into that project's history.
 
@@ -157,35 +158,64 @@ and does not appear here.
 - the post-install note: `· size-report: hook installed (…) — the report refreshes after every
   commit; remove: size uninstall-hook`.
 
-## Steps — one commit each, red first
+## Steps — one commit each, red first0. **Re-measure before starting — done 2026-09-16.** After S1–S4 the counter over the three files
+   reads `src/hook.js` 40, `src/page/panel.js` 3, `bin/postinstall.js` 2 — **45**, the row's own number to
+   the line. The `refuseCause` calls of group `хук` were already English (S1's step 3), exactly as predicted.
+1. **The hook file's comments — done 2026-09-16** (114–117; the mark line and three comments, with
+   `MARK` itself untouched — `test/hook.test.js:136` still reads `size-report` out of the written
+   file). Red first: delete `size-report` from `MARK` alone → `test/hook.test.js:136` goes red; put it back.
+2. **Install/uninstall output — done 2026-09-16** (177–180, 190–198, 242, 252) together with
+   `test/hook.test.js:151` (`/установлен/` → `/already installed/`). The JSON fragment
+   `"hooks": {"enabled": false}` and the commands survived verbatim, so `:152` (`/hooks.*enabled/`)
+   and the uninstall cases kept passing untouched. Red first: line 177 back to Russian reddens `:151`.
+3. **The three refusals — done 2026-09-16** (154–158, 162–164, 170–172, 246–247) with the `fix: `
+   marker and the four catalogue cases in `tools/refusals.js` in the same commit. The cause names were
+   **not** part of this step (S1's, already English), and `SITES` still reads 4 sites. Red first: a
+   catalogue `must` phrase back to Russian reddens `test/refusals.test.js`
+   (`«hook / foreign hook»: в отказе нет «уже есть и поставлен не этим инструментом»`).
+4. **The commit subject — done 2026-09-16**: `chore(report): report rebuilt after <sha>` (421) with
+   `test/hook.test.js:191`, `:254` and `README.md:792-793`. Red first, measured: the subject back to
+   Russian reddens both assertions (`expected: 'chore(report): report rebuilt after 8cbb71a'` against
+   `actual: 'chore(report): отчёт пересобран после 8cbb71a'`) — and that is all it does: no reference
+   moves (`fixtures/**` still clean, `artifact.sha256` still `1bdb27e1…`, `check:standards`,
+   `parity:live` and `pack:check` green with the 66 277-byte report byte-identical). The fixtures carry
+   no hook word at all (`rg -c 'хук|hook' fixtures/*` answers nothing), and the report of *this*
+   repository is built from the locale dictionary, so the page's bytes change only by the row of the
+   next commit.
+   One consequence worth naming: the repository's own `post-commit` hook calls the **attached copy**
+   (`node_modules/@vernikr/size-report`, 2.4.0), so this project's report commits keep the old Russian
+   subject until a release ships this literal — a fact about N20's cadence, not about the tree.
+5. **The state records — done 2026-09-16** (344, 354, 370, 373, 380, 409, 418, 425, 428) with
+   `test/hook.test.js:323` (`/HEAD отделён/` → `/detached HEAD/`). `:295` and `:308` kept passing
+   untouched, as the plan said, because they match identifiers (`CI`, `hooks.enabled`);
+   `PRINTED['src/hook.js']` stayed 4 (the four `'✗ ` marks were not touched). Red first: the `why`
+   back to Russian reddens the test that reads it.
+6. **The post-install note — done 2026-09-16** (41–42): `· size-report: hook installed (…) — the
+   report refreshes after every commit; remove it: size uninstall-hook`. No reader, measured.
+   **The panel's chrome (9–11) is the one step left, and it waits on N25** — a decision rather than a
+   translation: translating these three literals makes the chrome inside a `locale: "ru"` report
+   English, and this repository's own tracked report is such a report. The step is neither done nor
+   dropped here; the options and their price are in `BLOCKERS.md` N25.
 
-0. **Re-measure before starting.** S1 lands first, so the causes of group `хук` and the marker
-   family are already English in `src/hook.js`; take the counter's baseline for the three files and
-   write it into the step's journal entry. The expectation is 45 lines minus the Russian that S1
-   removed from the three `refuseCause` calls — a measurement, not a guess.
-1. **The hook file's comments** (114–117). Red first: delete `size-report` from `MARK` alone →
-   `test/hook.test.js:136` goes red; put it back. Green after: the file's shape is English, the
-   mark is untouched, `test/hook.test.js` passes.
-2. **Install/uninstall output** (177–180, 190–198, 242, 252) together with
-   `test/hook.test.js:151`. Red first: translate line 177 without touching the assertion → red at
-   `:151`; land both.
-3. **The three refusals** (154–158, 162–164, 170–172, 246–247) with the `fix: ` marker and the four
-   catalogue cases in `tools/refusals.js` in the same commit. Red first: swap the marker to `fix: `
-   without the catalogue → `adviceOf` returns nothing and the catalogue's advice assertion goes
-   red; then move both sides. The cause names are **not** part of this step (S1's, already English),
-   and the `SITES` counts must read 4 before and after.
-4. **The commit subject** (421) with `test/hook.test.js:191`, `:254` and `README.md:792-793`. Red
-   first: change the subject alone → both assertions red (`test/hook.test.js` compares the string
-   exactly). The README sentence keeps quoting what the hook writes.
-5. **The state records** (344, 354, 370, 373, 380, 409, 418, 425, 428) with
-   `test/hook.test.js:323`. Red first: translate `'HEAD отделён (rebase, cherry-pick, bisect)'`
-   without `:323` → red; `:295` and `:308` keep passing because they match identifiers
-   (`CI`, `hooks.enabled`). `PRINTED['src/hook.js']` stays 4: the four `'✗ ` marks are untouched.
-6. **The panel's chrome** (9–11) and **the post-install note** (41–42) — one commit, two files, no
-   reader: the only `red` available is the counter, which is why both are placed after every step
-   whose text a check reads. The repository's own `docs/size-report.html` changes in this step (the
-   tooltip text of every file box) and lands as the hook's own report commit — the second commit a
-   portion always ends with.
+**Outcome of steps 1–5, measured 2026-09-16.** The counter over the two files answers nothing
+(`src/hook.js` 40 → 0, `bin/postinstall.js` 2 → 0); `tools/refusals.js` 61 → 55, `test/hook.test.js`
+111 → 109, and `README.md` now reads **0** — its last two Cyrillic lines were this subject, which makes
+it the first document of the repository with no Russian at all. `SITES` 4 and
+`PRINTED['src/hook.js']` 4 unmoved, the state keys untouched, `MARK` still `# size-report: hook`.
+
+**The readers are proved the other way round here, and that is stronger.** The full profile was green
+*after* every literal of the two files had been translated, and only four assertions were moved
+(`test/hook.test.js:151,191,254,323`), four catalogue cases and the README quotation. Any other
+reader would still be asserting the old Russian and would have reddened; it did not. So the hook
+file's comments, both install/uninstall blocks (apart from `:151`), the `why` phrases (apart from
+`:323`), the `✓`/`✗` notes and the post-install note have no reader at all — the same conclusion the
+greps in the reader list gave, now confirmed by a green run rather than by a search.
+
+**N28 after this step.** No module of `src/**` prints a Russian advice marker any more: the markers
+that remain are `tools/gates/dup.js:139` and `tools/gates/coverage.js:93` (`соберите её: `), which
+belong to W2 and which `ADVICE_LINE`'s extractor never reads. So the condition N28 named — "no module
+prints a Russian marker" — now holds for the runtime, and narrowing `ADVICE_LINE` is W1's step 8 to
+do, not this subplan's.
 
 **Why the tree is green between the commits.** Each group that a machine reads lands in the same
 commit as its reader (steps 2, 3, 4, 5); every other group has no reader at all (measured above),

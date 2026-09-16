@@ -45,6 +45,6 @@ function gitRootOf(start) {
 const root = projectRoot();
 const files = root === null ? null : autoInstall(root, null);
 if (files !== null && process.env.SIZE_REPORT_QUIET !== '1') {
-  console.error('· size-report: хук поставлен (' + files.join(', ') + ') — отчёт обновляется после'
-    + ' каждого коммита; снять: size uninstall-hook');
+  console.error('· size-report: hook installed (' + files.join(', ') + ') — the report refreshes after'
+    + ' every commit; remove it: size uninstall-hook');
 }

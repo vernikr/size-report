@@ -111,10 +111,10 @@ function runLine(entry) {
  * without an install) the hook exits silently — noise after every commit would be worse than no automation. */
 function script(entry) {
   return '#!/bin/sh\n'
-    + MARK + ': обновление отчёта после коммита.\n'
-    + '# Ставится и снимается командами `size install-hook` / `size uninstall-hook`;\n'
-    + '# правки в этом файле не сохранятся — команда перезаписывает его целиком.\n'
-    + '# Коммитов хук сам не делает: пересборка и коммит отчёта — в `size hook-run`.\n'
+    + MARK + ': the report is refreshed after a commit.\n'
+    + '# Installed and removed by the commands `size install-hook` / `size uninstall-hook`;\n'
+    + '# edits in this file do not survive — the command overwrites it whole.\n'
+    + '# The hook makes no commits of its own: the rebuild and the commit of the report are in `size hook-run`.\n'
     + 'command -v node >/dev/null 2>&1 || exit 0\n'
     + '[ -f ' + entry.quoted + ' ] || exit 0\n'
     + 'exec node ' + entry.quoted + ' hook-run\n';
@@ -151,33 +151,33 @@ export function installHook(root, cfg) {
     // The advice names the very installation the README teaches — the git link pinned to this release, so that the advice
     // cannot drift from the release the documentation describes.
     const spec = installSpec();
-    refuseCause('no way to invoke the tool', 'не нашлось чем звать инструмент: хук без него молчал бы'
-      + ' после каждого коммита.\n'
-      + '  починка: поставьте пакет зависимостью проекта'
-      + (spec === null ? '' : ' (так, как он ставится в этот проект: pnpm add -D ' + spec + ')')
-      + ' и повторите установку');
+    refuseCause('no way to invoke the tool', 'nothing to call the tool with: without it the hook would stay silent'
+      + ' after every commit.\n'
+      + '  fix: install the package as a dependency of the project'
+      + (spec === null ? '' : ' (the way it is installed in this project: pnpm add -D ' + spec + ')')
+      + ' and repeat the installation');
   }
   const hooks = hooksDir(root);
   if (hooks.custom) {
-    refuseCause('foreign core.hooksPath', 'в проекте задан core.hooksPath (' + hooks.dir + '): этот каталог может лежать'
-      + ' в другом репозитории, и править его инструмент не станет.\n'
-      + '  починка: впишите в свой хук строку «' + runLine(entry) + '»');
+    refuseCause('foreign core.hooksPath', 'the project sets core.hooksPath (' + hooks.dir + '): that directory may lie'
+      + ' in another repository, and the tool will not edit it.\n'
+      + '  fix: write the line "' + runLine(entry) + '" into your own hook');
   }
   const files = HOOKS.map((name) => path.join(hooks.dir, name));
   const rels = files.map((f) => path.relative(root, f));
   files.forEach((file, i) => {
     if (fs.existsSync(file) && !isOurs(file)) {
-      refuseCause('foreign hook', 'хук ' + rels[i] + ' уже есть и поставлен не этим инструментом (в нём нет метки).\n'
-        + '  починка: позовите инструмент из своего хука строкой «' + runLine(entry) + '»'
-        + ' — перезаписи чужого файла нет намеренно');
+      refuseCause('foreign hook', 'the hook ' + rels[i] + ' is already there and was not put there by this tool (it carries no mark).\n'
+        + '  fix: call the tool from your own hook with the line "' + runLine(entry) + '"'
+        + ' — the tool deliberately does not rewrite what it did not write');
     }
   });
   if (files.every(isOurs)) {
     return { code: EXIT.OK, lines: [
-      '· хук уже установлен: ' + rels.join(', '),
-      '  автоматика работает после каждого коммита и слияния',
-      '  выключить, не снимая: «"hooks": {"enabled": false}» в файле настроек',
-      '  снять: ' + cliCommand('uninstall-hook')
+      '· the hook is already installed: ' + rels.join(', '),
+      '  the automation works after every commit and merge',
+      '  to switch it off without removing it: "hooks": {"enabled": false} in the settings file',
+      '  to remove it: ' + cliCommand('uninstall-hook')
     ] };
   }
   fs.mkdirSync(hooks.dir, { recursive: true });
@@ -187,15 +187,15 @@ export function installHook(root, cfg) {
   });
 
   const lines = [
-    '✓ хук: ' + rels.join(', '),
-    '  после каждого коммита и слияния пересобирает ' + cfg.output
-      + ' и, если этот файл в git, кладёт его отдельным коммитом',
-    '  сам он коммитит только отчёт: индекс и ваша незакоммиченная работа не тронуты',
-    '  выключить, не снимая: «"hooks": {"enabled": false}» в файле настроек',
-    '  снять: ' + cliCommand('uninstall-hook')
+    '✓ hook: ' + rels.join(', '),
+    '  after every commit and merge it rebuilds ' + cfg.output
+      + ' and, if that file is in git, lands it as a commit of its own',
+    '  it commits nothing but the report: the index and your uncommitted work are untouched',
+    '  to switch it off without removing it: "hooks": {"enabled": false} in the settings file',
+    '  to remove it: ' + cliCommand('uninstall-hook')
   ];
   if (cfg.hooks.enabled === false) {
-    lines.push('! сейчас автоматика выключена настройкой hooks.enabled — хук будет молчать');
+    lines.push('! the automation is switched off by the hooks.enabled setting right now — the hook will stay silent');
   }
   return { code: EXIT.OK, lines: lines };
 }
@@ -239,17 +239,17 @@ export function uninstallHook(root) {
   const rels = files.map((f) => path.relative(root, f));
   const present = files.filter((f) => fs.existsSync(f));
   if (present.length === 0) {
-    return { code: EXIT.OK, lines: ['· хук не установлен: ' + rels.join(', ')] };
+    return { code: EXIT.OK, lines: ['· the hook is not installed: ' + rels.join(', ')] };
   }
   present.forEach((file) => {
     if (!isOurs(file)) {
-      refuseCause('foreign hook', 'хук ' + path.relative(root, file) + ' поставлен не этим инструментом — не трогаю.\n'
-        + '  починка: уберите из него строку с «hook-run», если она там есть');
+      refuseCause('foreign hook', 'the hook ' + path.relative(root, file) + ' was not put there by this tool — I leave it alone.\n'
+        + '  fix: take the line with "hook-run" out of it, if it is there');
     }
   });
   present.forEach((file) => fs.rmSync(file));
   fs.rmSync(stateDir(root), { recursive: true, force: true });
-  return { code: EXIT.OK, lines: ['✓ хук снят: ' + rels.join(', ') + ' (проект ведёт себя как до установки)'] };
+  return { code: EXIT.OK, lines: ['✓ hook removed: ' + rels.join(', ') + ' (the project behaves as it did before the install)'] };
 }
 
 /* The lock: two hooks at once (a commit from two terminals, say) must not rebuild one file. A lock with a live owner means
@@ -341,7 +341,7 @@ export function hookRun(root, configFile) {
   if (process.env.CI || process.env[NO_HOOK]) {
     return record(root, {
       result: 'skipped',
-      why: 'окружение без автообновления (' + (process.env.CI ? 'CI' : NO_HOOK) + ')'
+      why: 'an environment without auto-updating (' + (process.env.CI ? 'CI' : NO_HOOK) + ')'
     });
   }
   const head = gitTry(root, ['rev-parse', 'HEAD']);
@@ -351,7 +351,7 @@ export function hookRun(root, configFile) {
     return record(root, {
       result: 'skipped',
       head: sha,
-      why: 'обновление уже идёт (замок ' + path.relative(root, lock.file) + ')'
+      why: 'a rebuild is already running (lock ' + path.relative(root, lock.file) + ')'
     });
   }
   try {
@@ -367,17 +367,17 @@ function runLocked(root, configFile, sha) {
     cfg = loadConfig(configFile, root);
   } catch (e) {
     if (!(e instanceof Refusal)) throw e;
-    return record(root, { result: 'skipped', head: sha, why: 'настройки нечитаемы: ' + e.message });
+    return record(root, { result: 'skipped', head: sha, why: 'the settings cannot be read: ' + e.message });
   }
   if (cfg.hooks.enabled === false) {
-    return record(root, { result: 'skipped', head: sha, report: cfg.output, why: 'выключено настройкой hooks.enabled' });
+    return record(root, { result: 'skipped', head: sha, report: cfg.output, why: 'switched off by the hooks.enabled setting' });
   }
   /* A detached HEAD means rebase, cherry-pick and bisect: committing into such a state is not allowed (the record would
    * land on no branch), and nobody is there to rebuild the report from an intermediate state. It does not hinder a merge:
    * `post-merge` comes once the merge commit has been created. */
   const branch = gitTry(root, ['symbolic-ref', '-q', 'HEAD']).stdout.trim();
   if (branch === '') {
-    return record(root, { result: 'skipped', head: sha, report: cfg.output, why: 'HEAD отделён (rebase, cherry-pick, bisect)' });
+    return record(root, { result: 'skipped', head: sha, report: cfg.output, why: 'detached HEAD (rebase, cherry-pick, bisect)' });
   }
 
   let out;
@@ -392,7 +392,7 @@ function runLocked(root, configFile, sha) {
       return record(root, { result: 'refused', head: sha, report: cfg.output, why: e.message }, '✗ size-report: ' + e.message.split('\n')[0]);
     }
     return record(root, { result: 'failed', head: sha, report: cfg.output, why: String(e.message) },
-      '✗ size-report: внутренняя ошибка: ' + e.stack);
+      '✗ size-report: internal error: ' + e.stack);
   }
 
   return storeReport(root, cfg, branch, sha, out.file);
@@ -406,7 +406,7 @@ function storeReport(root, cfg, branch, head, file) {
       result: 'rebuilt',
       head: head,
       report: cfg.output,
-      why: 'отчёт не отслеживается git: пересобран, коммита нет'
+      why: 'the report is not tracked by git: rebuilt, no commit'
     });
   }
   const diff = gitTry(root, ['diff', '--quiet', 'HEAD', '--', rel]);
@@ -418,12 +418,12 @@ function storeReport(root, cfg, branch, head, file) {
       '✗ size-report: git diff -- ' + rel + ': ' + diff.stderr.trim());
   }
 
-  const message = 'chore(report): отчёт пересобран после ' + head.slice(0, 7);
+  const message = 'chore(report): report rebuilt after ' + head.slice(0, 7);
   const commit = commitReport(root, { rel: rel, file: file, message: message, branch: branch, head: head });
   if (!commit.ok) {
     return record(root, { result: 'refused', head: head, report: cfg.output, why: commit.why },
-      '✗ size-report: коммит отчёта не прошёл: ' + commit.why);
+      '✗ size-report: the report commit did not go through: ' + commit.why);
   }
   return record(root, { result: 'committed', head: head, report: cfg.output, commit: commit.sha },
-    '✓ size-report: ' + cfg.output + ' пересобран и закоммичен (' + commit.sha + ')');
+    '✓ size-report: ' + cfg.output + ' rebuilt and committed (' + commit.sha + ')');
 }

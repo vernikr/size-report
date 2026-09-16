@@ -261,24 +261,24 @@ export const CASES = [
     ] },
 
   { key: 'foreign hook', scenario: 'foreign-hook', args: ['--config', '@config', 'install-hook'], code: 2,
-    must: ['уже есть и поставлен не этим инструментом', 'перезаписи чужого файла нет намеренно'],
+    must: ['is already there and was not put there by this tool', 'the tool deliberately does not rewrite what it did not write'],
     truth: 'объяснено, почему инструмент не перезаписывает, и что сделать вместо этого',
     advice: [{ kind: 'coveredBy', file: 'test/hook.test.js', text: 'hook-run' }] },
   { key: 'foreign hook', scenario: 'foreign-hook', args: ['--config', '@config', 'uninstall-hook'], code: 2,
-    must: ['поставлен не этим инструментом — не трогаю', 'починка: '],
+    must: ['was not put there by this tool — I leave it alone', 'fix: '],
     truth: 'сказано, что снятие тоже не трогает чужое',
-    advice: [{ kind: 'manual', text: 'уберите из него строку с «hook-run»',
+    advice: [{ kind: 'manual', text: 'take the line with "hook-run" out of it',
       why: 'правка чужого хука — за человеком: инструмент его намеренно не трогает, а совет говорит, что оттуда убрать' }] },
   { key: 'foreign core.hooksPath', scenario: 'hooks-path', args: ['--config', '@config', 'install-hook'], code: 2,
-    must: ['задан core.hooksPath', 'починка: '],
+    must: ['the project sets core.hooksPath', 'fix: '],
     truth: 'назван каталог из настроек и причина, по которой в него не лезут',
     advice: [{ kind: 'coveredBy', file: 'test/hook.test.js', text: 'hook-run' }] },
   { key: 'no way to invoke the tool', scenario: 'src-copy', args: ['--config', '@config', 'install-hook'], code: 2,
-    must: ['не нашлось чем звать инструмент', 'поставьте пакет зависимостью'],
+    must: ['nothing to call the tool with', 'install the package as a dependency'],
     truth: 'сказано, что хук ставить нечем (а не «хук будет молчать»: его ещё нет)',
     // The advice names an install inside the project rather than the package name: a call by the
     // name goes to the registry, which serves a revision the project never pinned.
-    advice: [{ kind: 'manual', text: 'поставьте пакет зависимостью проекта',
+    advice: [{ kind: 'manual', text: 'install the package as a dependency of the project',
       why: 'установка — сеть и чужой проект: исполняет её человек, а проверено то, что можно — совет называет ссылку из манифеста, а не имя из реестра' }] },
 
   /* The parse guard and the minifier need a commit of their own in a clone — `test/module.test.js`

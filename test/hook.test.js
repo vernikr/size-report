@@ -148,7 +148,7 @@ test('хук ставится сам при первом запуске, а ст
   // The explicit installation says what a person needs: it is already there, here is what switches
   // it off, here is how it is removed.
   const again = install(dir);
-  assert.match(again.stdout, /установлен/, 'установка не сказала, что хук уже стоит');
+  assert.match(again.stdout, /already installed/, 'установка не сказала, что хук уже стоит');
   assert.match(again.stdout, /hooks.*enabled/, 'установка не сказала, чем выключается автоматика');
   assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '', 'повторная установка оставила грязь');
 });
@@ -188,7 +188,7 @@ test('правка кода даёт пересобранный отчёт от�
   commit(dir, 'feat: правка кода', ['src/code.js']);
   const parent = gitIn(dir, ['rev-parse', 'HEAD^']).trim();
 
-  assert.deepEqual(subjects(dir, 2), ['chore(report): отчёт пересобран после ' + parent.slice(0, 7),
+  assert.deepEqual(subjects(dir, 2), ['chore(report): report rebuilt after ' + parent.slice(0, 7),
     'feat: правка кода'], 'отчёт не лёг отдельным коммитом сразу после коммита кода');
   assert.deepEqual(gitIn(dir, ['show', '--name-only', '--format=', 'HEAD']).trim().split('\n'), [REPORT],
     'в коммите отчёта оказалось что-то кроме отчёта');
@@ -251,7 +251,7 @@ test('на слиянии хук ведёт себя как на любом ко
   assert.equal(gitIn(dir, ['rev-list', '--parents', '-n1', merge]).trim().split(' ').length, 3,
     'слияние не создало merge-коммит: проверять нечего');
 
-  assert.equal(subjects(dir, 1)[0], 'chore(report): отчёт пересобран после ' + merge.slice(0, 7),
+  assert.equal(subjects(dir, 1)[0], 'chore(report): report rebuilt after ' + merge.slice(0, 7),
     'после слияния отчёт не пересобрался отдельным коммитом');
   assert.deepEqual(gitIn(dir, ['show', '--name-only', '--format=', 'HEAD']).trim().split('\n'), [REPORT],
     'в коммит отчёта после слияния попало что-то кроме отчёта');
@@ -320,7 +320,7 @@ test('хук молчит в CI, по выключателю и на отдел�
   const detached = runSize(dir, ['--config', CONFIG, 'hook-run']);
   assert.equal(detached.code, 0);
   assert.equal(fs.readFileSync(path.join(dir, REPORT), 'utf8'), report, 'на отделённом HEAD отчёт пересобран');
-  assert.match(hookState(dir).why, /HEAD отделён/, 'отделённый HEAD назван не своей причиной');
+  assert.match(hookState(dir).why, /detached HEAD/, 'отделённый HEAD назван не своей причиной');
 });
 
 test('отказ инструмента не роняет коммит, а причина видна в диагностике', () => {

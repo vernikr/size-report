@@ -706,6 +706,13 @@ references stayed the same after the fix.
   configs pin it, and this repository's own settings do) keeps a Russian report with English chrome inside it,
   and this project's own tracked `docs/size-report.html` is that report.
 
+  **Status 2026-09-16: this decision is now the only thing keeping S5 open.** Steps 1–5 and the
+  post-install note of step 6 landed (`src/hook.js` 40 → 0, `bin/postinstall.js` 2 → 0) and left exactly
+  these three lines Russian, since translating them is the one step whose consequence a person sees.
+  Nothing else of the runtime layer waits for a decision: the counter over the three files answers
+  `src/page/panel.js` 3 and nothing else, and N28's condition (no module prints a Russian advice marker)
+  already holds for `src/**`.
+
   No check reads the three strings (measured: `rg -n 'нет на HEAD|категория:|из настроек|по расширению'` outside
   `src/` answers only unrelated assertion texts, and `test/parity.test.js:47` reads a built report but asserts
   only `src="`, `<link `, `id="data"`, `<style>`), and no reference moves: the fixtures carry no hook or panel
