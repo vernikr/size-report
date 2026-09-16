@@ -801,7 +801,37 @@ references stayed the same after the fix.
   returns nothing for it.
 
   **The price of deferring.** While four owners still print the Russian markers, a translated module
-  could print one again and the extractor would accept it without the catalogue noticing the
-  difference — acceptable while the tolerance is a fact about the tree, and the reason the narrowing is
+  could print one again and the extractor would accept it without the catalogue noticing  the difference — acceptable while the tolerance is a fact about the tree, and the reason the narrowing is
   the last step of the instrument's own work rather than of the runtime's.
+
+- **N29. Three literals of `tools/harness.js` cannot be translated while `tools/parity-live.js` keeps its copy
+  of the same function — the pair is a clone the baseline accepts.** Found 2026-09-16 in W1's step 1, and it is
+  not a sensor to be talked out of its verdict: `dup` counts token sequences, `dup-baseline.json` holds the
+  fingerprints of the accepted clones, and a translated string is a different token — so the *same* twin appears
+  as a **new** clone. Measured, three ways: with the file Russian, `pnpm run dup` answers “новых клонов нет
+  (клонов 10 … в базе 15 отпечатков)”; with it English, “новых клонов 4”, both between `harness.js:254` and
+  `parity-live.js:74`; and with everything English *except* `firstDiff`'s three string literals, green again.
+
+  **What the three literals are.** The two lines of `return 'строка ' + (i + 1) + …` and the tail
+  `'различие в байтах при одинаковых строках (переводы строк или кодировка)'` (`tools/harness.js:259-263`).
+  Both `tools/harness.js` and `tools/parity-live.js` carry a `firstDiff` of their own; the copy in
+  `parity-live.js` is the only reason the shared one cannot be reworded, and **two other consumers already take
+  the shared one** (`tools/check-standards.js:27`, `test/parity.test.js:16`, `test/crlf.test.js:14`). So the
+  duplicate is redundant by the repository's own usage rather than by taste.
+
+  **Two repairs, and their prices.** (1) **Remove the copy** — `tools/parity-live.js` drops its `firstDiff` and
+  takes the shared one beside `collectOutput, gitIn` it already imports from `tools/harness.js`: ~13 lines
+  deleted, no behaviour changed, the clone disappears and W1's step 4 stops facing the same wall (translating the
+  copy there would land in this blocker again). The price: it is a code change, not a translation, in the file of **another
+  step of the same subplan** — so it needs the mission agent's word, and it must be its own commit with an
+  English message saying why (the sensor's own verdict line asks for exactly this: “чинить код (вынести общее),
+  а не базу”). (2) **Leave the twin and the three literals Russian**, as this portion does: three lines of a
+  developer-facing message in an instrument that ships nothing, recorded in the tracker's allow-list as an
+  exception with its reason. The price: the acceptance of W1 ends at 28 Cyrillic lines instead of 25, one of them
+  a place where a translator would have written English, and step 4 inherits the same decision for
+  `parity-live.js`'s copy — which (2) does not resolve.
+
+  **For the user to decide:** (1) or (2). It is the first blocker of this campaign that a **literal cannot buy
+  its way out of**: every other one was about a word reaching a reader, this one is about two implementations
+  being the same tokens.
 

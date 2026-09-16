@@ -42,7 +42,7 @@ export const MAX_BUF = 256 * 1024 * 1024;
 /* The tools under check: the engine's package and the frozen copy both fixtures were taken with. The copy carries an
  * environment of its own — the one the fixture was taken in, `core.quotePath=false`: the copy predates the pin the
  * engine sets for itself, so under a machine's default settings it would reproduce with a line missing. */
-export const PACKAGE = { name: 'движок пакета', file: PACKAGE_BIN, env: null };
+export const PACKAGE = { name: 'the package engine', file: PACKAGE_BIN, env: null };
 
 /* The frozen copy of the implementation, with which both fixtures were taken, does not lie in the tree: it is a rarely
  * needed past rather than a working copy of the package, and the place for such a past is the history, from where its
@@ -60,13 +60,14 @@ export function legacyTool() {
   const added = gitIn(ROOT, ['log', '--diff-filter=A', '--format=%H', '--', LEGACY_PATH])
     .split('\n').filter((line) => line !== '')[0];
   if (added === undefined) {
-    throw new Error('в истории нет ' + LEGACY_PATH + ': копию, с которой снят эталон, взять неоткуда');
+    throw new Error('the history has no ' + LEGACY_PATH
+      + ': the copy the reference was taken with is nowhere to be had');
   }
   const bytes = execFileSync('git', gitArgv(['-C', ROOT, 'show', added + ':' + LEGACY_PATH]),
     { maxBuffer: MAX_BUF, env: gitEnv() });
   const want = JSON.parse(fs.readFileSync(path.join(PARITY, 'manifest.json'), 'utf8')).tool.sha256;
-  assert.equal(sha256(bytes), want, 'копия из истории (' + added.slice(0, 7) + ') разошлась с тем,'
-    + ' какой её записало происхождение эталона: сверять было бы нечего');
+  assert.equal(sha256(bytes), want, 'the copy from the history (' + added.slice(0, 7) + ') diverged from'
+    + ' the one recorded by the origin of the reference: there would be nothing left to compare');
   legacyFile = path.join(tempDir('legacy'), 'size-table.cjs');
   fs.writeFileSync(legacyFile, bytes);
   return legacyFile;
@@ -74,7 +75,7 @@ export function legacyTool() {
 
 export function frozenTarget() {
   return {
-    name: 'замороженная копия реализации',
+    name: 'the frozen copy of the implementation',
     file: legacyTool(),
     env: gitConfig({ 'core.quotePath': 'false' })
   };
@@ -158,16 +159,16 @@ export function gitBare(args, opts) {
  * than hand back "code null". */
 export function requireTarget(target) {
   assert.ok(fs.existsSync(target.file),
-    'нет ' + path.relative(ROOT, target.file) + ' — проверять нечего');
+    'there is no ' + path.relative(ROOT, target.file) + ' — nothing to check');
 }
 
 /* A refusal has to explain itself: the exit code from the table, a message with text and without a stack. */
 export function refusal(res, code, what) {
-  assert.equal(res.code, code, what + ': ожидался код ' + code + ', получен ' + res.code
+  assert.equal(res.code, code, what + ': expected code ' + code + ', got ' + res.code
     + ' — ' + firstLine(res.stderr));
   assert.equal(hasStack(res.stderr + res.stdout), false,
-    what + ': отказ напечатал стек вместо сообщения:\n' + res.stderr);
-  assert.notEqual(res.stderr.trim(), '', what + ': отказ ничего не объяснил');
+    what + ': the refusal printed a stack instead of a message:\n' + res.stderr);
+  assert.notEqual(res.stderr.trim(), '', what + ': the refusal explained nothing');
 }
 
 /* Running a command the way a user sees it: `node <file> …`.
@@ -185,7 +186,7 @@ export function runTool(target, dir, args, env) {
 
 // A run of the engine's package, which needs neither the frozen copy nor the fixture.
 export function runSize(dir, args, env) {
-  return runTool({ name: 'движок пакета', file: PACKAGE_BIN, env: null }, dir, args, env);
+  return runTool({ name: 'the package engine', file: PACKAGE_BIN, env: null }, dir, args, env);
 }
 
 // The same run, but with the fixture's settings — what most checks read.

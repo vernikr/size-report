@@ -2,7 +2,8 @@
 
 Subplan of `plan.md` (T0). Owns the instruments outside `tools/gates/**`: 11 files, 349 measured
 lines, plus the fixture builders folded in on 2026-09-16 (W3: their one remaining line, the other 88
-being the reference's data and allow-listed by N21). Written 2026-09-16, not started. These are the
+being the reference's data and allow-listed by N21). Written 2026-09-16; **step 0 (re-measure) and
+step 1 (`tools/harness.js`) done 2026-09-16**, the re-measured baseline standing below. These are the
 texts a **developer** reads — a profile run, a re-taken reference, a pack check, a catalogue — not
 the tool's interface, so the reason of the work here is the second reader named in T0: an agent
 reads a verdict as the whole report of a failure.
@@ -38,6 +39,25 @@ decision keeps Russian — and every file under `tools/**` is named by
 one of W1 or W2: **no hole in this owner**. `tools/gate-probe.js` and `tools/gates/common.js`
 were measured too and carry no Cyrillic at all.
 
+**Step 0, re-measured 2026-09-16 after S1–S5 — this owner's real baseline.** The twelve files sum to
+**235**, not the 350 of the planning table, and the difference is exactly what S1–S5 moved:
+`tools/refusals.js` 169 → 55 (the cause names, the `must` phrases and the marker family went with
+them) and `docs-facts.js` 4 → 3. Of the 235:
+
+- **21 stay by rule** — `manifestNote` 16 and the fixture's config values 3 (N21, permanent),
+  and the two section names of `tools/docs-facts.js` (the pin still points at a Russian help;
+  N20's release moves it);
+- **4 are prose**, not literals — `tools/refusals.js:134`, `tools/run-tests.js:22,40`,
+  `tools/docs-facts.js:170`;
+- **210 are this owner's own**; step 1 lands 10 of them and **three are blocked** (`BLOCKERS.md`
+  N29), so **200 minus what N29 settles** is left for steps 2–8 and the twelve files read **225** now
+  (`tools/**` as a whole reads 428).
+
+And the same measurement for step 8: `tools/refusals.js`'s 55 Cyrillic lines are `truth` **37** +
+`advice.why` **12** + the case `id`s **2** + the `uncatchable` prose **2** + `ADVICE_LINE` **1** +
+one comment **1**, and **not one `must` phrase carries Cyrillic any more** — the catalogue half of
+the tolerance is spent.
+
 ## What is Russian, group by group — and who a group belongs to
 
 **1. `tools/refusals.js`** — the catalogue of refusals, and the one file of this owner that other
@@ -69,7 +89,7 @@ is the exit code"), and no test reads these words (measured: `test/gates-*.test.
 experiment; and `:56`/`:60` — `plural(n, 'проверка', 'проверки', 'проверок')`, three literals of one
 counter, and `:43`/`:64` — a decimal **comma** made by code rather than by a literal (N26).
 
-**3. `tools/harness.js`** (13) — two **names** (`PACKAGE.name = 'движок пакета'` at 45 and 188,
+**3. `tools/harness.js`** (13, **done 2026-09-16**) — two **names** (`PACKAGE.name = 'движок пакета'` at 45 and 188,
 `'замороженная копия реализации'` at 77) and the assertion messages of the shared helpers. The
 names are printed in reports and are duplicated outside this owner — `test/refusals.test.js:169`
 builds its own tool object with the same name, and `test/parity.test.js`'s three test names say
@@ -105,7 +125,7 @@ around them (`parity-freeze.js:205-211`, `make-fixture.js:197-206`) are W1's and
 | `<файл>` and `<коммит>` in the `template` shapes (`:146-184`) | Placeholders **of the printed advice**, whose literals are S1's (`src/args.js:39,92,129,133`, `src/config.js:144`, `src/refusal.js:101,117`) and whose `must` phrases are the catalogue's. They move with S1's step 2, not here. |
 | The cause names (`SITES` keys) and every `must` phrase | The owner of the printed text, per the table above. |
 | Six comments (prose, not literals): `tools/refusals.js` 3, `tools/run-tests.js` 2 (`:22` quotes a command with a Russian test-name pattern, `:40` explains the Russian numbers), `tools/docs-facts.js` 1 (`:170`) | Leftovers of the prose pass, out of this work's scope by definition. `TODO.md` (like S3's `src/metrics.js:61-63`). The `docs-facts.js` one is the exception: step 5 aligns its wording if the tolerance is chosen, since the comment would otherwise claim the wrong thing — prose, no behaviour. |
-| The sensors' own advice markers (`tools/gates/dup.js:1`, `tools/gates/coverage.js:1`) | W2's texts, and never parsed by `adviceOf` (the extractor reads the *tool's* output). Measured, so that narrowing the regex in step 7 cannot surprise anyone. |
+| The sensors' own advice markers (`tools/gates/dup.js:139`, `tools/gates/coverage.js:93` — measured 2026-09-16; the `:1` of the first writing of this plan was a guess) | W2's texts, and never parsed by `adviceOf` (the extractor reads the *tool's* output). Measured, so that narrowing the regex in step 7 cannot surprise anyone — and measured for step 8 too: these two are the **only** Russian advice markers left in the repository, so the `src/**` half of its condition holds by measurement rather than by assumption. |
 
 **New open question — N26 (`BLOCKERS.md`): the numbers stay Russian while the words turn English.**
 `tools/run-tests.js:43` and `:64` format a duration with `.replace('.', ',')`, and `tools/gates/run.js:111,114` (W2) do the same, so a translated profile prints "total 12,2 s". A comma is
@@ -153,17 +173,27 @@ No reader at all, measured:
 
 ## Steps — one commit each, red first
 
-0. **Re-measure before starting.** By the map's order S1–S5 have landed: the cause names, the
+0. **Re-measure before starting — done 2026-09-16.** S1–S5 have landed: the cause names, the
    `must` phrases and the marker family of `tools/refusals.js` are English, and
-   `tools/docs-facts.js:135` already carries the English section name. Take the counter's baseline
-   for the twelve files and write it into the journal — the expectation is **331 of this owner's own**
-   (349 measured plus the 1 folded in, minus the 19 lines of the fixture-writing steps that N21's
-   decision keeps Russian, minus whatever S1's
-   joint edit moved), and it is a measurement rather than a guess.
-1. **`tools/harness.js`** — the two names and the messages. Red first: none is read by a check
-   (measured), so the experiment is the counter plus `pnpm test` staying green; the names' two
-   duplicates (`test/refusals.test.js:169`, `test/parity.test.js`'s test names) are left to C1/C2 and
-   said so in the commit body.
+   `tools/docs-facts.js:135` already carries the English section name. Measured: **235** over the
+   twelve files, 210 of them this owner's own, and step 8's inventory (see the scope section): the
+   planning figure of 331 was the pre-S1–S5 reading, and the plan's own `advice.why` count of 40 is
+   **12** by measurement — so the numbers below are the counter's, not the plan's.
+1. **`tools/harness.js` — done 2026-09-16, 13 → 3** (the three are `BLOCKERS.md` N29). The two names
+   (`the package engine`, `the frozen copy of the implementation`) and the messages of `legacyTool`,
+   `requireTarget`, `refusal` and `runSize`. Red first, and it was worth the full profile: the file was
+   returned to Russian **whole** and the full run stayed green — 175 checks, 0 failures — which is the
+   measurement that no machine reads any of these words, and (with `test/parity.test.js` and
+   `test/frozen.test.js` inside that run) that the names reach no compared artifact. The names'
+   duplicates (`test/refusals.test.js:169`, `test/parity.test.js:29,37,63`) were left to C1/C2 and the
+   commit says so: a check cannot see the drift, `pnpm run dup` is what watches a token twin.
+   **The measurement that closed the step is also what stopped three of its literals:** the `dup`
+   sensor reads the same pair — `firstDiff` here and its copy in `tools/parity-live.js:74` — as a
+   clone the baseline accepts, and a translated string is a different token, so rewording it makes
+   the twin **new**. Measured: English file → “новых клонов 4”; everything English except these three
+   literals → green. Repair (1) — remove `parity-live.js`'s redundant copy, which two other consumers
+   already take from this file — is a code change and waits for the mission agent, so the three stay
+   Russian and the step is closed with a named hole rather than hidden one.
 2. **`tools/yaml.js` + `tools/page-harness.js`** — thrown and assertion messages. Red first: make a
    template violate the subset and watch the message a person now reads (English) while
    `test/templates.test.js` stays green — the message is what the check prints, not what it matches.
@@ -182,8 +212,12 @@ No reader at all, measured:
    red arrives by itself on the release that moves the pin past S1's rename (N20). So the step
    **adds** the English name, keeps the Russian one with its reason in the comment, and is the one
    allowed exception of this owner, named in the tracker's allow-list (the guard that would have enumerated
-   it is withdrawn, `BLOCKERS.md` N27; the alternative — a structural parse of the help instead of a
-   section name — is a code change, not this plan's).
+   it is withdrawn, `BLOCKERS.md` N27;   the alternative — a structural parse of the help instead of a section name — is a code change, not this plan's).
+   **Corrected by measurement 2026-09-16:** `tools/docs-facts.js` reads **3** Cyrillic lines, not 4,
+   and `commandsAt:182,184` already carries **both** spellings (`'Команды:'` or `'Commands:'`,
+   `'Режимы:'` or `'Modes:'`) — S1's joint edit brought the English half in. So the code half of this
+   step is **already done**; what is left of it is the comment above (`:170`), which is prose, and
+   the two Russian names stay until N20's release moves the pin past the rename.
 6. **`tools/parity-freeze.js` + `tools/make-fixture.js`** — the console lines only. Red first: the
    allow-list's own evidence — the string of `make-fixture.js:56` stands in the frozen
    `fixtures/synthetic/config.json` (measured, 1 line), so translating it reddens `test/frozen.test.js`
@@ -192,13 +226,18 @@ No reader at all, measured:
    of the merge the fixture builder expects to conflict (`:74`). Red first: the counter, plus
    `pnpm run check:standards` staying green — the message is written into no fixture file (measured:
    it is thrown only when the build goes wrong), so the honest experiment is the grep rather than a
-   red check.
-8. **`tools/refusals.js`** — the catalogue's own prose (`truth` 37, `advice.why` 40, the reason
-   lines, the header comments), then, in the same step or its own, the **narrowing of
-   `ADVICE_LINE`**. Red first: put `починка: ` back into one refusal's text → after the narrowing
-   `adviceOf` returns nothing for it and the catalogue's advice assertion goes red. The condition
-   for narrowing is measured, not assumed: no refusal in `src/**` prints a Russian marker, and the
-   sensors' markers (`tools/gates/dup.js`, `coverage.js`) are never parsed by the extractor.
+   red check.8. **`tools/refusals.js`** — the catalogue's own prose, **measured 2026-09-16 as `truth` 37,
+   `advice.why` 12, the case `id`s 2, the `uncatchable` prose 2 and the header comment 1** (55 in
+   all; the plan's `advice.why` 40 and its silence about the `id`s are both corrected here — the two
+   Cyrillic `id`s, `покрытие неполно` and `приближение вместо точного счёта`, are read only inside
+   the checks' own failure messages, `test/refusals.test.js:301` and
+   `test/refusals-catalog.test.js:94,104,107,113,116,126,130`, and no assertion matches their text),
+   then, in the same step or its own, the **narrowing of `ADVICE_LINE`**. Red first: put `починка: `
+   back into one refusal's text → after the narrowing `adviceOf` returns nothing for it and the
+   catalogue's advice assertion goes red. The condition for narrowing is measured, not assumed: no
+   refusal in `src/**` prints a Russian marker, and the sensors' markers are never parsed by the
+   extractor — the only two Russian markers left in the repository are W2's
+   (`tools/gates/dup.js:139`, `coverage.js:93`, measured above).
 
 **Why the tree is green between the commits.** Every instrument here talks through its **exit code**
 to the profile runner, and no test reads a verdict (both measured above), so a step can land alone;
@@ -211,9 +250,13 @@ W2's), so no step needs a `Gate-Change:` trailer.
 
 ## Acceptance
 
-- The counter over the twelve files answers **only** the named exceptions — the 19 fixture-writing
-  lines of steps 5 and 6 (measured: `parity-freeze.js:98-118` 16, `make-fixture.js:56,57,64` 3, permanent
-  since N21 was decided) and the six comments, minus the two that step 5/its journal record as prose:
+- The counter over the twelve files answers **exactly 28**, and every one of them is named: the three
+  `firstDiff` literals of `tools/harness.js` (`BLOCKERS.md` N29 — they go if repair (1) is chosen, and
+  then the number is 25), the 16
+  lines of `manifestNote` (`parity-freeze.js:98-118`) and the 3 config values of the fixture
+  (`make-fixture.js:56,57,64`), permanent since N21 was decided; the 2 section names of
+  `docs-facts.js`, which N20's release moves; and the 4 prose comments (`refusals.js:134`,
+  `run-tests.js:22,40`, `docs-facts.js:170`). The command:
   `rg -cP '[\p{Cyrillic}]' tools/refusals.js tools/parity-live.js tools/parity-freeze.js tools/run-tests.js tools/pack-check.js tools/check-standards.js tools/make-fixture.js tools/harness.js tools/yaml.js tools/docs-facts.js tools/page-harness.js tools/synthetic/repo.js`.
 - The counts and the keys are untouched — `test/refusals-catalog.test.js` says so, and it is the
   sensor that would catch a renamed cause or a lost `✗ `.
