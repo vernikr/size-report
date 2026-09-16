@@ -231,7 +231,7 @@ export const CASES = [
     advice: [{ kind: 'manual', text: 'install git (https://git-scm.com)',
       why: 'установка программы — действие вне проекта: git в этой среде есть, а убирать его значило бы убирать то, чем живёт сам набор' }] },
   { key: 'config already exists', scenario: 'draft-twice', args: ['--init', '@draft'], code: 2,
-    must: ['конфиг уже есть', 'перезапишите черновиком: ', '--force'],
+    must: ['config already exists', 'overwrite it with a draft: ', '--force'],
     truth: 'сказано и как править, и как перезаписать — потому что решает человек',
     // The advice names the very file under discussion: the draft in @draft already exists, and it is
     // `--force` that overwrites it.

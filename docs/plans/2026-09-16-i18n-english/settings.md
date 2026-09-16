@@ -126,13 +126,23 @@ step. What step 1 moves in that check is the two places where the shared phrase 
 Keep the prefix-and-tail shape (`<settings file> <path>: <what is wrong>` + `fix: <what to edit>`):
 two tests slice at a fixed length, and a reader's eye uses the same seam.
 
-**Step 2 — `src/init.js`.** The nine draft lines, the `config already there` refusal with its
-advice, and the `!` note of `noteNoColumns` (a note, not a refusal — the mark and the code must keep
-saying the same thing, which `tools/refusals.js`'s `PRINTED` map counts). Joint edits: the
-`конфиг уже есть` case in `tools/refusals.js` (`must` names `перезапишите черновиком: ` and
-`--force`); `test/cli.test.js:137-140` reads the draft's columns, not the text. Do **not** reflow the
-lines: `draftLines` returns a list read as a whole, and the two continuation lines (`          `)
-keep their own indentation.
+**Step 2 — `src/init.js` — done 2026-09-16** (`src/init.js` 18 → 0, `tools/refusals.js` 78 → 77;
+commit `feat(i18n): translate what the settings draft says`). The nine draft lines, the
+`config already exists` refusal with its advice, and the `!` note of `noteNoColumns` (a note, not a
+refusal — the mark and the code must keep saying the same thing, which `tools/refusals.js`'s
+`PRINTED` map counts). Joint edit: the `config already exists` case in `tools/refusals.js`
+(`must` names `overwrite it with a draft: ` and `--force`); `test/cli.test.js:137-140` reads the
+draft's columns, not the text. Do **not** reflow the lines: `draftLines` returns a list read as a
+whole, and the two continuation lines (`          `) keep their own indentation.
+
+**Measured, and it shortens the reader list for this step:** of the nine draft lines and the `!`
+note nothing reads the words at all — putting four of them back into Russian (the `columns:` line,
+the `min` metric, the note's first line, the `!` mark kept) left `pnpm run verify:fast` green (70
+checks), and the catalogue's `--init` advice in an empty directory reads only code 0 and the absence
+of a refusal. The one reader is the catalogue case, and it reddens alone: with `src/init.js`'s
+refusal text put back to Russian while the catalogue stayed English,
+`test/refusals.test.js` answered «settings and the project / config already exists»: в отказе нет
+«config already exists».
 
 **Step 3 — `src/project.js`.** `derivedSummary` and the `--init` hint of `derivedLines`. Joint
 edits: `test/cli.test.js:45,69` and `test/module.test.js:258,284` (the hint's regex is the second

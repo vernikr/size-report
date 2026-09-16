@@ -49,6 +49,24 @@ Opened 2026-09-16 with the string-translation work (`docs/plans/2026-09-16-i18n-
   phrase appears in the registry alone, now as the English `no such commit`). Fixing it means
   matching the message's own words or the other cause's sentence — a check's behaviour rather than a
   literal, hence a portion of its own.
+- **`src/init.js` — nothing reads what the settings draft prints.** Seen 2026-09-16 while
+  translating it (subplan S2, step 2), and it is a measurement rather than an impression: putting
+  four of the draft's lines back into Russian (the `columns:` line, the `min` metric, the `!` note's
+  first line) left `pnpm run verify:fast` green, 70 checks. The catalogue's `--init` advice in an
+  empty directory checks code 0 and the absence of a refusal, never the words, and no check reads the
+  draft's stdout at all — so the draft's shape (one line per fact, `:` after each label, the `!` mark
+  rather than `✗`) is held by nothing but an eye. The refusal of the same file **is** held
+  (`config already exists`, `tools/refusals.js`). How it shows: drop the `journal:` line or turn the
+  `!` into a `✗` and every check stays as it was. Fixing means a check of its own (the draft's lines
+  for a project with and without a `package.json`, and that the mark and the code say the same thing)
+  — a check rather than a literal, hence a portion of its own.
+- **`tools/refusals.js:134` — the `template` doc comment names Russian placeholders.** Seen
+  2026-09-16 while translating the settings draft (subplan S2, step 2): it reads "a shape with a
+  substitution (`<файл>`, `<коммит>` — Russian, as the advice prints it)", while the shapes have been
+  `<file>`/`<commit>` since S1's step 2 (measured: `rg -n "'<" tools/refusals.js` finds `<file>` and
+  `<commit>` only). How it shows: a reader of the catalogue is told a Russian placeholder is the
+  convention when the printed text has none. It is prose rather than a literal, so the translation
+  work leaves it alone; fixing it is one comment, in a portion of its own.
 - **`src/metrics.js:61-63` — the last Russian comment in `src/`.** Seen 2026-09-16 while measuring
   the measurement layer for subplan S3 (`docs/plans/2026-09-16-i18n-english/measurement.md`): the
   comment above `METRICS` explains why a metric declares `needsText`, and it is the only comment

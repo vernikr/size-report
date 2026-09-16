@@ -21,20 +21,20 @@ function draftLines(root, target, cfg) {
   const hasPkg = fs.existsSync(path.join(root, 'package.json'));
   const manager = packageManager(root);
   return [
-    '✓ настройки выведены из проекта и закреплены: ' + path.relative(root, target),
-    '  колонок: ' + cfg.columns.length + ' (' + cfg.columns.map((c) => c.label).slice(0, 6).join(', ')
+    '✓ settings derived from the project and pinned: ' + path.relative(root, target),
+    '  columns: ' + cfg.columns.length + ' (' + cfg.columns.map((c) => c.label).slice(0, 6).join(', ')
       + (cfg.columns.length > 6 ? ', …' : '') + ')',
-    '  исключено путей: ' + cfg.skip.length + ' (сам отчёт, замки зависимостей, карты, собранное)',
-    '  метрика min: настоящее сжатие (esbuild); без него — честное упрощение и код 4',
-    '  метрика tok: словарь o200k_base (gpt-tokenizer); без него — оценка по длине и код 4',
-    '  журнал: ' + (cfg.journal === null ? 'не найден — ссылки строк будут без разделов' : cfg.journal.path),
-    '  дальше: правьте колонки и метрики — какие файлы важны, знает только проект',
+    '  paths skipped: ' + cfg.skip.length + ' (the report itself, dependency locks, maps, build output)',
+    '  metric min: real compression (esbuild); without it — an honest simplification and code 4',
+    '  metric tok: the o200k_base dictionary (gpt-tokenizer); without it — an estimate by length and code 4',
+    '  journal: ' + (cfg.journal === null ? 'not found — row links will carry no sections' : cfg.journal.path),
+    '  next: edit the columns and the metrics — which files matter is known by the project alone',
     '          ' + (hasPkg
-      ? 'добавьте в package.json "sizes": "size --write" — тогда отчёт будет звать '
-        + manager + ' run sizes (проверка — без --write)'
-      : 'запуск: ' + cfg.fixCommand + ' (проверка — без --write)'),
-    '          ' + (hasPkg ? 'добавьте ' + manager + ' run test:sizes в CI' : 'добавьте проверку в CI')
-      + '; проверка — команда пакета, своих файлов в проект она не приносит'
+      ? 'add "sizes": "size --write" to package.json — then the report will be built by '
+        + manager + ' run sizes (the check — without --write)'
+      : 'run: ' + cfg.fixCommand + ' (the check — without --write)'),
+    '          ' + (hasPkg ? 'add ' + manager + ' run test:sizes to CI' : 'add the check to CI')
+      + '; the check is the package\'s command, it brings no files of its own into the project'
   ];
 }
 
@@ -43,10 +43,10 @@ function draftLines(root, target, cfg) {
  * refusal catalogue counts a cross as a refusal and a note as not one). */
 function noteNoColumns(root, target, cfg) {
   if (cfg.columns.length > 0) return;
-  console.error('! в проекте не нашлось путей, которые можно взять колонками'
-    + ' (история пуста или в ней нет знакомых расширений): черновик записан без колонок'
-    + '\n  впишите их руками в ' + path.relative(root, target)
-    + ' — без колонок проверка настроек скажет «no columns are given (columns)»');
+  console.error('! no paths in the project could be taken as columns'
+    + ' (the history is empty or holds no familiar extensions): the draft is written without columns'
+    + '\n  write them by hand into ' + path.relative(root, target)
+    + ' — without columns the settings check will say "no columns are given (columns)"');
 }
 
 export function initMode(root, file, force) {
@@ -55,8 +55,8 @@ export function initMode(root, file, force) {
     // The advice names the very file in question: `--init --force` without a file would overwrite the
     // default name with a draft rather than the file the person named.
     const name = file === undefined || file === null ? CONFIG_NAME : advicePath(file);
-    refuseCause('config already exists', 'конфиг уже есть: ' + target
-      + '\n  починка: правьте его или перезапишите черновиком: ' + cliCommand('--init ' + name + ' --force'));
+    refuseCause('config already exists', 'config already exists: ' + target
+      + '\n  fix: edit it or overwrite it with a draft: ' + cliCommand('--init ' + name + ' --force'));
   }
   // What is pinned is the very thing the project runs on without a file (the project's derivation on
   // top of the defaults), and it has to pass the same check the run will apply: the path in a refusal
