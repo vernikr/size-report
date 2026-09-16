@@ -141,7 +141,7 @@ test('нарушение, которого в дереве нет, датчик 
   try {
     const res = probe('metrics', ['--paths', file]);
     assert.equal(res.code, 1, 'новое нарушение не покрасило датчик:\n' + res.out);
-    assert.match(res.out, /новых нарушений 1/, 'датчик не назвал число новых нарушений:\n' + res.out);
+    assert.match(res.out, /new violations 1/, 'датчик не назвал число новых нарушений:\n' + res.out);
   } finally {
     fs.rmSync(SCRATCH, { recursive: true, force: true });
   }

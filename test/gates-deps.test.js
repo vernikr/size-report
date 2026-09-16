@@ -45,7 +45,7 @@ function expectVerdict(name, files, code, rule) {
 test('связка из двух модулей зелёная', () => {
   const res = verdictOf('linked', { 'src/a.js': A, 'src/b.js': B });
   assert.equal(res.code, 0, 'исправная связка покрашена:\n' + res.out);
-  assert.match(res.out, /находок нет/, 'датчик не сказал про чистый граф:\n' + res.out);
+  assert.match(res.out, /no findings/, 'датчик не сказал про чистый граф:\n' + res.out);
 });
 
 test('кольцо связей красит прогон', () => {

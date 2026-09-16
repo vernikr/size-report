@@ -34,7 +34,7 @@ const res = run('pnpm', ['exec', 'eslint', '--config', 'eslint.metrics.config.js
   '--suppressions-location', baselineName, '--pass-on-unpruned-suppressions',
   '--format', 'json', '--output-file', rel(report)].concat(paths));
 if (res.error || !fs.existsSync(report)) {
-  bad('metrics: линтер не отработал (' + (res.error ? res.error.message : 'нет отчёта')
+  bad('metrics: the linter did not run (' + (res.error ? res.error.message : 'no report')
     + ')\n' + indent((res.stderr || '').trim()));
   process.exit();
 }
@@ -60,13 +60,13 @@ Object.keys(suppressions).sort().forEach((file) => {
 });
 
 if (found.length > 0) {
-  bad('metrics: новых нарушений ' + found.length + ' (в базе ' + inBaseline
-    + ' на ' + baselineFiles + ' файлах)');
+  bad('metrics: new violations ' + found.length + ' (the baseline holds ' + inBaseline
+    + ' in ' + baselineFiles + ' files)');
   found.slice(0, 30).forEach((f) => {
     console.error('    ' + f.file + ':' + f.line + '  ' + f.rule + '  ' + f.message);
   });
-  if (found.length > 30) console.error('    … всего новых нарушений: ' + found.length);
-  console.error('    чинить код, а не датчик; порог или базу меняет человек');
+  if (found.length > 30) console.error('    … new violations in all: ' + found.length);
+  console.error('    fix the code, not the sensor; a threshold or a baseline is changed by a person');
 } else {
-  ok('metrics: новых нарушений нет (в базе ' + inBaseline + ' на ' + baselineFiles + ' файлах)');
+  ok('metrics: no new violations (the baseline holds ' + inBaseline + ' in ' + baselineFiles + ' files)');
 }

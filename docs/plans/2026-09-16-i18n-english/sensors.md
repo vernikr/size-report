@@ -19,8 +19,8 @@ rg -cP '[\p{Cyrillic}]' tools/suites.js dup-baseline.json coverage-baseline.json
 | `tools/gates/dup.js` | 20 | the sensor's verdicts, its advice lines, and the baseline's `note` (128–129) |
 | `tools/gates/coverage.js` | 18 | the verdicts, the regression lines, the advice, and the baseline's `note` (81–84) |
 | `tools/gates/gatefiles.js` | 7 | the guard's verdicts (94, 98–99, 103, 110, 117) |
-| `tools/gates/metrics.js` | 6 | two verdicts and the advice line (37, 63–71) |
-| `tools/gates/deps.js` | 5 | the verdicts and the "for information" line (26, 47, 51, 53, 56) |
+| `tools/gates/metrics.js` | 6 | two verdicts, the refusal of a failed run, the overflow line and the advice (37, 63–71) — **done 2026-09-16, 6 → 0** |
+| `tools/gates/deps.js` | 5 | the verdicts, the refusal of a failed run, the advice and the "for information" line (26, 47, 51, 53, 56) — **done 2026-09-16, 5 → 0** |
 | `tools/gates/common.js` | **0** | measured: the shared harness carries no Russian at all |
 | `tools/suites.js` | 38 | the `why` of every entry in `FAST` and `SLOW`, and the unknown-run error (98) |
 | `.githooks/pre-commit` | 2 | the "pnpm is not on PATH" message and how to reinstall the hooks |
@@ -49,8 +49,8 @@ different from W1, and the list is exact:
 | `'dup: новых клонов N (…)'` (`dup.js:197`) | `test/gates-dup.test.js:72` (`/новых клонов 1/`) |
 | `'dup: базы нет (…)'` (`dup.js:139`) | `test/gates-dup.test.js:88` (`/базы нет/`) |
 | `'<файл> — <метрика>: было X, стало Y'` and `'не в базе'` (`coverage.js:115-116`) | `test/gates-coverage.test.js:49`, `:63` |
-| `'deps: находок нет (…)'` (`deps.js:53`) | `test/gates-deps.test.js:48` (`/находок нет/`) |
-| `'metrics: новых нарушений N (…)'` (`metrics.js:63`) | `test/gates-metrics.test.js:144` (`/новых нарушений 1/`) |
+| `'deps: находок нет (…)'` (`deps.js:53`) | `test/gates-deps.test.js:48` (`/находок нет/`) — **moved 2026-09-16 to `'deps: no findings (…)'` / `/no findings/`** |
+| `'metrics: новых нарушений N (…)'` (`metrics.js:63`) | `test/gates-metrics.test.js:144` (`/новых нарушений 1/`) — **moved 2026-09-16 to `'metrics: new violations N (…)'` / `/new violations 1/`** |
 
 Seven verdicts, seven readers, and each goes red the moment one of the two sides moves alone. The
 rest of every sensor — the "fix the code, not the sensor" advice lines, the "…for information"
@@ -134,6 +134,27 @@ not a mark). The `commit-msg` hook answers at once; the `pre-push` hook re-reads
 2. **`tools/gates/deps.js` and `tools/gates/metrics.js`** — their verdicts and advice, with the two
    probe reads (`test/gates-deps.test.js:48`, `test/gates-metrics.test.js:144`) in the same commit.
    Red first: translate `'deps: находок нет (…)'` alone → the probe goes red in the same run.
+
+   **Done 2026-09-16 — `tools/gates/deps.js` 5 → 0 and `tools/gates/metrics.js` 6 → 0, with their two
+   readers in the same commit.** The five of `deps.js`: the refusal of a failed run (`'deps: the
+   analysis did not happen (…)'`, `'no report'`), the findings verdict (`'deps: findings N (M modules,
+   K relations)'`), the advice (`'fix the relations, not the rule'`), the green verdict (`'deps: no
+   findings (…)'`) and the "for information" line (`'  — for information: '`); the six of `metrics.js`:
+   the failed run (`'metrics: the linter did not run (…)'`), the red verdict (`'metrics: new violations
+   N (the baseline holds X in Y files)'`), the overflow line (`'    … new violations in all: N'`), the
+   advice (`'fix the code, not the sensor; a threshold or a baseline is changed by a person'`) and the
+   green verdict (`'metrics: no new violations (…)'`). The two probe lines moved with them
+   (`test/gates-deps.test.js:48` → `/no findings/`, `test/gates-metrics.test.js:144` → `/new
+   violations 1/`). **Red first, one literal at a time, all ten** (a script that puts each one back to
+   Russian alone and runs the whole probe file): only the two green/red verdicts redden their probe —
+   `RED ← deps: the green verdict`, `RED ← metrics: the red verdict` — while the refusal, the findings
+   verdict, both advice lines, the overflow line, the for-information line and `metrics`' green verdict
+   leave the run **green**, which is the measurement of "no reader" rather than a guess. Neither probe
+   has a negative match (`assert.equal(/…/.test(out), false)`) over this text — measured: the two files
+   hold none at all — so nothing could go empty instead of red here; that hazard is C1's and C2's.
+   Thresholds, `GATE_FILES`, the baselines and the profile split are untouched, and both sensors answer
+   on this repository as before: `✓ deps: no findings (113 modules, 472 relations)`,
+   `✓ metrics: no new violations (the baseline holds 0 in 0 files)`.
 3. **`tools/gates/dup.js`** — the verdicts, the advice, the baseline's `note`, and the two probe
    reads (`test/gates-dup.test.js:72`, `:88`) with the baseline itself re-taken by
    `pnpm run baseline:dup` (the note is written by the script, never by hand). Red first: translate

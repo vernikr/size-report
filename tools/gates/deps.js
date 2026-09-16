@@ -23,7 +23,7 @@ const argv = ['exec', 'depcruise'].concat(paths)
   .concat(args.flags['--known'] ? ['--ignore-known', args.flags['--known']] : []);
 const res = run('pnpm', argv);
 if (res.error || !fs.existsSync(report)) {
-  bad('deps: разбор связей не состоялся (' + (res.error ? res.error.message : 'нет отчёта')
+  bad('deps: the analysis did not happen (' + (res.error ? res.error.message : 'no report')
     + ')\n' + indent((res.stderr || '').trim()));
   process.exit();
 }
@@ -44,14 +44,14 @@ writeReport('deps.json', { schema: 1, modules: modules, dependencies: deps, viol
 
 const errors = found.filter((v) => v.severity === 'error');
 if (errors.length > 0) {
-  bad('deps: находок ' + errors.length + ' (' + modules + ' модулей, ' + deps + ' связей)');
+  bad('deps: findings ' + errors.length + ' (' + modules + ' modules, ' + deps + ' relations)');
   errors.forEach((v) => {
     console.error('    ' + v.rule + ': ' + v.from + (v.to === '' ? '' : ' → ' + v.to));
   });
-  console.error('    чинить связи, а не правило');
+  console.error('    fix the relations, not the rule');
 } else {
-  ok('deps: находок нет (' + modules + ' модулей, ' + deps + ' связей)');
+  ok('deps: no findings (' + modules + ' modules, ' + deps + ' relations)');
 }
 found.filter((v) => v.severity !== 'error').forEach((v) => {
-  console.log('  — к сведению: ' + v.rule + ': ' + v.from + ' → ' + v.to);
+  console.log('  — for information: ' + v.rule + ': ' + v.from + ' → ' + v.to);
 });
