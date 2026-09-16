@@ -23,6 +23,12 @@ longer true; compacting first would hide which claim was dropped.
   holds is deleted and named in the worklog entry.
 - **One document per commit**, `docs: <file> — English and actual`, because the guards read
   these files and the diff has to stay readable.
+- **A number carries its window.** A measurement goes into the worklog entry with the window it
+  was taken in (line counts, Cyrillic counts, counts of keys/addresses), and the commit body
+  repeats only counts of lines and checks. A duration is not written into a commit body at all:
+  time targets are abolished (`REFACTOR.md` §R-5.8) and the numbers of different windows are
+  incomparable (§5) — a duration of a run whose output nobody saw is a claim that cannot be
+  re-checked after the fact (learned on M18, journal `0122`).
 
 ## Readers that must be edited in the same commit as the document
 
