@@ -168,11 +168,26 @@ with it. Joint edits in `tools/refusals.js`: the cases `id: 'нет файла �
 `id: 'таблица разошлась с историей'` — their ids and the `must` phrases quoting these lines.
 `PRINTED` counts are unchanged (the marks did not move).
 
-**Step 5 — the wash-up for the four files.** Remove the transitional tolerance from `ADVICE_LINE`
-only if every module that prints advice has been translated (otherwise leave it and say so in the
-commit: the tolerance is not a debt marker, it is a fact about the tree until the last subplan).
-Run the counter: `rg -cP '[\p{Cyrillic}]' src/refusal.js src/args.js src/cli.js src/modes.js` must
-answer nothing. Fix nothing else: no "while I am here" edits, no reflowing, no renaming.
+**Step 5 — the wash-up for the four files — one half done, one half deferred 2026-09-16.**
+
+The counter half is satisfied, measured: `rg -cP '[\p{Cyrillic}]' src/refusal.js src/args.js
+src/cli.js src/modes.js` answers nothing (0/0/0/0 after steps 1–4).
+
+The `ADVICE_LINE` half **cannot be done here**, and the reason is measured rather than assumed: the
+extractor's Russian alternatives are still what other modules print. Measured 2026-09-16 with
+`rg -n 'починка|создайте его|соберите её|локально:|в CI:' src tools bin` — `src/config.js` 4 +
+`создайте его` 1 (S2), `src/init.js` 1 (S2), `src/strip/guard.js` 1 and `src/minify.js` 1 (S3),
+`src/git.js` 2 (`локально:`, `в CI:`) + `src/history.js` 2 + `src/check.js` 1 + `src/doctor.js` 1 +
+`src/explain.js` 4 (S4), `src/hook.js` 4 (S5); outside `src/**` only `tools/gates/dup.js` and
+`coverage.js` (W2), and those two are **never parsed by the extractor** (W1's step 8 says so with its
+own measurement). So the condition of the removal is exactly: **no `src/**` module prints a Russian
+marker** — that is S2, S3, S4 and S5 done — and the removal itself belongs to **W1's step 8**, which
+owns `tools/refusals.js`; `docs/plans/2026-09-16-i18n-english/tools.md` already names the red-first
+experiment for it (put `починка: ` back into one refusal's text after the narrowing and the
+catalogue's advice assertion goes red). The deferral and the condition are recorded in `BLOCKERS.md`
+N28, and the tracker's S1 row says the subplan is done with this step deferred.
+
+Fix nothing else: no "while I am here" edits, no reflowing, no renaming.
 
 ## What proves each step (the sensors that already exist)
 

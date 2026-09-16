@@ -770,3 +770,31 @@ references stayed the same after the fix.
   exception is unreadable at a glance and hides the reason inside the pattern, while a list of paths and reasons
   is what a person can check by eye — which is the whole point of a guard that exists to be trusted.
 
+- **N28. S1's wash-up (`ADVICE_LINE`) is deferred: the Russian markers are still printed.** Deferred
+  2026-09-16 at the end of subplan S1 (`docs/plans/2026-09-16-i18n-english/surface.md`, step 5) — not
+  dropped, and with its condition measured rather than guessed.
+
+  **What S1 has already done.** The counter half of the wash-up holds: `rg -cP '[\p{Cyrillic}]'
+  src/refusal.js src/args.js src/cli.js src/modes.js` answers nothing. The help, the cause registry,
+  the grammar's messages and everything the modes print are English.
+
+  **Why the `ADVICE_LINE` half waits.** The transitional tolerance in `tools/refusals.js:117` accepts
+  Russian markers beside the English ones, and the Russian ones are still what other modules print.
+  Measured 2026-09-16 (`rg -n 'починка|создайте его|соберите её|локально:|в CI:' src tools bin`):
+  `src/config.js` 4 plus `создайте его` 1 and `src/init.js` 1 (**S2**), `src/strip/guard.js` 1 and
+  `src/minify.js` 1 (**S3**), `src/git.js` 2 plus `src/history.js` 2, `src/check.js` 1,
+  `src/doctor.js` 1 and `src/explain.js` 4 (**S4**), `src/hook.js` 4 (**S5**). Outside `src/**` the
+  markers appear only in `tools/gates/dup.js` and `coverage.js` (W2), and those two are never parsed
+  by the extractor — W1's own measurement, `tools.md` step 8.
+
+  **The condition, exact.** The narrowing may land when **no `src/**` module prints a Russian
+  marker** — that is S2, S3, S4 and S5 finished — and it belongs to **W1's step 8**, which owns
+  `tools/refusals.js`. The red-first experiment is written there already: put `починка: ` back into one
+  refusal's text after the narrowing and the catalogue's advice assertion goes red, because `adviceOf`
+  returns nothing for it.
+
+  **The price of deferring.** While four owners still print the Russian markers, a translated module
+  could print one again and the extractor would accept it without the catalogue noticing the
+  difference — acceptable while the tolerance is a fact about the tree, and the reason the narrowing is
+  the last step of the instrument's own work rather than of the runtime's.
+
