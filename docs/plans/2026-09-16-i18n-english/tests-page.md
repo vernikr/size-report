@@ -28,8 +28,8 @@ done
 | `test/page-view.test.js` | 72 | test names and assertion messages; the page's captions are read from the `ru` dictionary as **data** |
 | `test/page-choice.test.js` | 67 | the same, around the memory of the choice and the link |
 | `test/module.test.js` | 66 → **58** measured | the same, plus **five reads of other owners' texts** (below); the eight that left are those reads |
-| `test/page-tree.test.js` | 55 | the same, plus one read of the dictionary's data (`:128`) |
-| `test/contract-data.test.js` | 51 | the same, plus reads of the fixture's `golden.json`/`data.json` data |
+| `test/page-tree.test.js` | 55 → **1** | the same, done 2026-09-16 (step 4): fifty-four names and messages are English; what stays is the dictionary read at `:128` (`/не измеряется: /`, `appUi.notMeasuredRule`'s value in the `ru` dictionary) |
+| `test/contract-data.test.js` | 51 → **1** | the same, done 2026-09-16 (step 3): fifty names and messages are English, the N24 message at `:47` included — what stays is `f.label === 'заметки.md'`, the fixture's own file label |
 | `test/contract-derived.test.js` | 18 → **1** | the same, done 2026-09-16 (step 2): seventeen names and messages are English; the one that stays is `['fixture: удаление файла']` — the fixture's frozen commit subject, pinned in `fixtures/synthetic/golden.json:468` |
 | `test/guard.test.js` | 11 → **1** | the same, done 2026-09-16 (step 1): the ten names and messages are English, and the sample `'export const a = `текст;\n'` stays — it is the fixture's own text |
 | `test/runner.test.js` | 11 → **5** | the same, done 2026-09-16 (step 1): six names and messages are English; the five that stay are the fixture's payload — the multi-byte letter and the two sentinels the child prints |
@@ -124,12 +124,19 @@ data, untranslated.
    **a pin on the frozen copy**, not a stale expectation — the distinction the mission asked to state.
    No negative match over Cyrillic text in either file (measured), the counts are unchanged (1 and 5 checks),
    and `dup` is green over twenty-two fresh messages.
-3. **`test/contract-data.test.js`** (51). Red first: `:47` is N24's gated line and is **not** touched;
-   the step proves it by staying green while the messages around it change, and by
-   `test/parity.test.js`'s byte-wise comparison continuing to pass.
-4. **`test/page-tree.test.js`** (55). Red first: `:128`'s regex reads the dictionary; translate it
-   into English as a "tidy-up" and the check reddens against the Russian data it asserts — the
-   experiment that shows the data side of this file.
+3. **`test/contract-data.test.js` — done 2026-09-16, 51 → 1.** Fifty names and messages. Red first, one
+   phrase at a time: all fifty went back to Russian on their own and the check stayed green — no reader
+   of a check's words. The two data sides were proved by experiment rather than asserted:
+   **`f.label === 'заметки.md'`** is the fixture's own label, and translating it reddens the check; and
+   **N24's line** (`:47`) carries a message that is C1's while the values it compares are the gated ones —
+   translating the **source** of those values (`SKIP_WORDS` in `src/history.js`) reddens this check *and*
+   `test/parity.test.js` in the same run, which is N24's documented price re-measured live, while the
+   message change keeps both green.
+4. **`test/page-tree.test.js` — done 2026-09-16, 55 → 1.** Fifty-four names and messages, with the
+   dictionary read left in place. Red first: putting the phrase back to Russian left the check green for
+   every message, while translating `:128`'s regex into the English dictionary value (`/not measured: /`)
+   reddens it against the Russian data the report actually carries — the experiment that shows the data
+   side of this file.
 5. **`test/page-choice.test.js`** (67) — the five `ui.<key>` comparisons stay as they are, the messages
    around them are translated.
 6. **`test/page-view.test.js`** (72) — same shape, with the metric caption at `:223`.

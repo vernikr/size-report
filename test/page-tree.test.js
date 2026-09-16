@@ -40,11 +40,11 @@ function foldersMatchPaths(doc) {
   const expected = [...new Set(paths.map((p) => p.split('/').slice(0, -1).join('/')))]
     .filter((d) => d !== '').sort();
   assert.deepEqual(dirs(doc).map((b) => b.textContent.replace(/\/\d+(\/\d+)?$/, '')).sort(), expected,
-    'папки дерева разошлись с путями файлов проекта');
-  assert.equal(leaves(doc).length, data.files.length, 'в дереве не все измеряемые файлы');
+    'the tree’s folders diverged from the project’s file paths');
+  assert.equal(leaves(doc).length, data.files.length, 'the tree does not hold every measurable file');
   data.files.forEach((f) => assert.ok(leaves(doc)
     .some((b) => b.querySelector('input').title.indexOf(where(f)) === 0),
-  'в дереве нет файла ' + where(f)));
+  'the tree has no file ' + where(f)));
 }
 
 /* A folder's three states: all its files on — checked; some — the third state; none — the folder
@@ -52,21 +52,21 @@ function foldersMatchPaths(doc) {
 function folderStates(doc) {
   const leafOf = (prefix) => dirBox(doc, prefix).closest('li')
     .querySelector('.box:not(.dir):not(.plain) input');
-  assert.equal(dirInput(doc, 'src/').checked, true, 'папка не отмечена вместе со своими файлами');
+  assert.equal(dirInput(doc, 'src/').checked, true, 'the folder is not checked together with its files');
   toggleBox(doc, leafOf('src/'), false);
   assert.equal(dirInput(doc, 'src/').indeterminate, true,
-    'папка с частью выключенных файлов не показала третье состояние');
-  assert.equal(dirInput(doc, 'src/').checked, false, 'частично выключенная папка отмечена как целая');
+    'a folder with some files switched off did not show the third state');
+  assert.equal(dirInput(doc, 'src/').checked, false, 'a partly switched-off folder is checked as a whole one');
   toggleBox(doc, dirInput(doc, 'src/'), true);
-  assert.equal(dirInput(doc, 'src/').indeterminate, false, 'третье состояние осталось после включения всех файлов');
+  assert.equal(dirInput(doc, 'src/').indeterminate, false, 'the third state remained after every file was switched on');
 
-  assert.equal(dirInput(doc, 'notes/').checked, true, 'папка с единственным файлом не отмечена вместе с ним');
+  assert.equal(dirInput(doc, 'notes/').checked, true, 'a folder with a single file is not checked together with it');
   toggleBox(doc, leafOf('notes/'), false);
   assert.equal(dirInput(doc, 'notes/').indeterminate, false,
-    'папка без включённых файлов показана как частичная');
-  assert.equal(dirInput(doc, 'notes/').checked, false, 'папка без включённых файлов осталась отмеченной');
+    'a folder with no files switched on is shown as partial');
+  assert.equal(dirInput(doc, 'notes/').checked, false, 'a folder with no files switched on stayed checked');
   toggleBox(doc, dirInput(doc, 'notes/'), true);
-  assert.equal(dirInput(doc, 'notes/').checked, true, 'включение папки не включило её файл');
+  assert.equal(dirInput(doc, 'notes/').checked, true, 'switching the folder on did not switch its file on');
 }
 
 /* A folder's switch takes the whole subtree with it: exactly its files and their columns leave
@@ -75,31 +75,31 @@ function folderStates(doc) {
 function subtreeAndCategories(doc) {
   const inSrc = [];
   data.files.forEach((f, i) => { if (where(f).indexOf('src/') === 0) inSrc.push(i); });
-  assert.ok(inSrc.length > 1, 'в фикстуре нет папки с несколькими файлами');
+  assert.ok(inSrc.length > 1, 'the fixture has no folder with several files');
 
   const all = allOn();
   const rawOf = (on) => pageMath.totalsOf(data.now, ['raw'], on).raw;
   assert.equal(dirBox(doc, 'src/').querySelector('.n').textContent, String(inSrc.length),
-    'счётчик файлов у папки не тот');
-  assert.equal(nowTotal(doc), valueParts(rawOf(all)).text, 'итог до выключения папки не тот');
+    'the folder’s file counter is not the one');
+  assert.equal(nowTotal(doc), valueParts(rawOf(all)).text, 'the total before the folder was switched off is not the one');
   toggleBox(doc, dirInput(doc, 'src/'), false);
   const off = all.map((_on, i) => inSrc.indexOf(i) < 0);
-  assert.equal(nowTotal(doc), valueParts(rawOf(off)).text, 'выключение папки не убрало её файлы из итога');
+  assert.equal(nowTotal(doc), valueParts(rawOf(off)).text, 'switching the folder off did not take its files out of the total');
   assert.equal(nowCells(doc), (off.filter(Boolean).length + 1) * data.metrics.length,
-    'выключение папки не убрало её колонки');
+    'switching the folder off did not take its columns away');
 
   const chore = [...doc.querySelectorAll('#panel .row .box.all')]
     .find((b) => b.textContent === data.categories.find((c) => c.key === 'chore').label);
-  assert.notEqual(chore, undefined, 'в панели нет быстрой кнопки категории');
+  assert.notEqual(chore, undefined, 'the panel has no quick button for the category');
   toggleBox(doc, chore.querySelector('input'), false);
   assert.equal(dirInput(doc, 'data/').checked, false,
-    'выключение категории не отразилось на папке с её файлами');
-  assert.equal(dirInput(doc, 'docs/').checked, true, 'выключение категории выключило чужие файлы');
+    'switching the category off did not show on the folder holding its files');
+  assert.equal(dirInput(doc, 'docs/').checked, true, 'switching the category off switched off files of others');
   toggleBox(doc, chore.querySelector('input'), true);
-  assert.equal(dirInput(doc, 'data/').checked, true, 'включение категории не вернуло её файлы');
+  assert.equal(dirInput(doc, 'data/').checked, true, 'switching the category on did not bring its files back');
 }
 
-test('дерево файлов: папки по путям, три состояния и всё поддерево', () => {
+test('the file tree: folders by the paths, three states and the whole subtree', () => {
   const doc = openPage().window.document;
   foldersMatchPaths(doc);
   folderStates(doc);
@@ -112,20 +112,20 @@ test('дерево файлов: папки по путям, три состоя
  * the engine as a mark: "such a file cannot be a column" is the package's rule, "not in the set of
  * columns" is the project's choice. A folder of mixed content counts a share: how many of how
  * many are in the report. */
-test('дерево показывает все файлы проекта, а вне отчёта — со снятой галочкой', () => {
+test('the tree shows every file of the project, and those outside the report with the box off', () => {
   const doc = openPage().window.document;
   const others = notMeasured();
-  assert.ok(others.length > 0, 'в фикстуре нет ни одного файла вне колонок — проверять нечего');
-  assert.equal(plains(doc).length, others.length, 'в дереве не все файлы проекта');
+  assert.ok(others.length > 0, 'the fixture has no file outside the columns — there is nothing to check');
+  assert.equal(plains(doc).length, others.length, 'the tree does not hold every file of the project');
   others.forEach((entry) => assert.ok(plains(doc).some((b) => b.title.indexOf(entry.path + ' · ') === 0),
-    'в дереве нет файла проекта ' + entry.path));
+    'the tree has no project file ' + entry.path));
   plains(doc).forEach((b) => {
     const input = b.querySelector('input');
-    assert.notEqual(input, null, 'у файла вне отчёта нет галочки: строка выбилась из ряда');
+    assert.notEqual(input, null, 'a file outside the report has no box: the row fell out of the series');
     assert.equal(input.disabled, true,
-      'галочку файла вне отчёта можно переключить: переключать нечего, а вид обещает обратное');
-    assert.equal(input.checked, false, 'галочка файла вне отчёта отмечена');
-    assert.match(b.title, /не измеряется: /, 'подпись не говорит, почему файла нет в отчёте');
+      'the box of a file outside the report can be toggled: there is nothing to toggle, while the look promises otherwise');
+    assert.equal(input.checked, false, 'the box of a file outside the report is checked');
+    assert.match(b.title, /не измеряется: /, 'the tooltip does not say why the file is not in the report');
   });
 
   /* Two reasons are two answers: the report itself cannot be a column, while an ordinary text file
@@ -133,24 +133,24 @@ test('дерево показывает все файлы проекта, а в�
    * something in the settings needs fixing. */
   const at = (path) => plains(doc).find((b) => b.title.indexOf(path + ' · ') === 0);
   const artifact = others.find((e) => e.path === data.report.artifact);
-  assert.equal(artifact.why, 'rule', 'у самого отчёта причина не та: ' + JSON.stringify(artifact));
+  assert.equal(artifact.why, 'rule', 'the report itself has the wrong reason: ' + JSON.stringify(artifact));
   const choosable = others.find((e) => e.why === 'choice');
-  assert.notEqual(choosable, undefined, 'в фикстуре нет файла, который мог бы быть колонкой');
+  assert.notEqual(choosable, undefined, 'the fixture has no file that could be a column');
   assert.notEqual(at(choosable.path).title, at(artifact.path).title,
-    'две разные причины вне отчёта названы одними словами');
+    'two different reasons outside the report are named with the same words');
 
   /* A folder of mixed content: both a share in its counter and a box only for what is
    * measurable. */
   const inside = (p) => p.indexOf('docs/') === 0;
   const inDocs = others.filter((e) => inside(e.path)).length;
   const measuredDocs = data.files.filter((f) => inside(where(f))).length;
-  assert.ok(measuredDocs > 0 && inDocs > 0, 'в фикстуре нет папки со смешанным составом');
+  assert.ok(measuredDocs > 0 && inDocs > 0, 'the fixture has no folder of mixed content');
   assert.equal(dirBox(doc, 'docs/').querySelector('.n').textContent,
     measuredDocs + '/' + (measuredDocs + inDocs),
-    'счётчик папки не сказал, сколько её файлов осталось вне отчёта');
+    'the folder’s counter did not say how many of its files stayed outside the report');
   toggleBox(doc, dirInput(doc, 'docs/'), false);
   assert.equal(nowCells(doc), (data.files.length - measuredDocs + 1) * data.metrics.length,
-    'галочка папки увела из таблицы не только её измеряемые файлы');
+    'the folder’s box took more out of the table than its measurable files');
 
 
 });
@@ -163,17 +163,17 @@ test('дерево показывает все файлы проекта, а в�
  * The set of "folders with nothing to measure" is computed from the data rather than read off the
  * markup: otherwise the check would confirm itself and miss a folder marked unavailable for no
  * reason. */
-test('папки вне отчёта — со снятой галочкой и после тех, что в отчёте', () => {
+test('folders outside the report come with the box off and after those inside it', () => {
   const doc = openPage().window.document;
   const measured = data.files.map(where);
   const empty = [...new Set(data.catalog.map((e) => e.path.split('/').slice(0, -1).join('/')))]
     .filter((d) => d !== '' && !measured.some((p) => p.indexOf(d + '/') === 0)).sort();
   const plain = [...doc.querySelectorAll('#panel .box.dir.plain')];
   assert.deepEqual(plain.map((b) => b.querySelector('span').textContent.replace(/\/$/, '')).sort(),
-    empty, 'недоступные папки разошлись с теми, где измерять нечего');
+    empty, 'the unavailable folders diverged from those where there is nothing to measure');
   plain.forEach((b) => {
-    assert.equal(b.querySelector('input').disabled, true, 'галочка папки вне отчёта переключается');
-    assert.equal(b.querySelector('input').checked, false, 'папка вне отчёта отмечена галочкой');
+    assert.equal(b.querySelector('input').disabled, true, 'the box of a folder outside the report can be toggled');
+    assert.equal(b.querySelector('input').checked, false, 'a folder outside the report is checked');
   });
 
   [...doc.querySelectorAll('#panel ul.tree')].forEach((ul) => {
@@ -184,7 +184,7 @@ test('папки вне отчёта — со снятой галочкой и �
     const outside = rows.indexOf(false);
     if (outside >= 0) {
       assert.equal(rows.slice(outside).indexOf(true), -1,
-        'строка отчёта стоит после строк, которых в нём нет');
+        'a row of the report stands after rows it does not hold');
     }
   });
 });
@@ -193,7 +193,7 @@ test('папки вне отчёта — со снятой галочкой и �
  * responsible for what is counted, the folder's mark for what is visible. So folding and the
  * memory of it are checked where it shows that the table has not moved and that the tree comes back
  * folded on the next visit — in a tree of any length that is the only way to reach its middle. */
-test('папку дерева можно сложить, и сложенное помнится на следующем заходе', () => {
+test('a folder of the tree can be folded, and the fold is remembered on the next visit', () => {
   const dom = openPage();
   const doc = dom.window.document;
   const fold = (d, prefix) => dirBox(d, prefix).closest('li').querySelector(':scope > .fold');
@@ -203,16 +203,16 @@ test('папку дерева можно сложить, и сложенное �
 
   fold(doc, 'src/').dispatchEvent(new dom.window.Event('click'));
   assert.equal(row(doc, 'src/').classList.contains('folded'), true,
-    'строка папки не помечена сложенной: поддерево не спрятать оформлением');
+    'the folder’s row is not marked folded: the subtree cannot be hidden by styling');
   assert.equal(dirInput(doc, 'src/').checked, true,
-    'складывание папки поменяло её выбор: знак отвечает за вид, а галочка — за числа');
-  assert.equal(nowCells(doc), before, 'складывание папки убрало числа из таблицы');
-  assert.equal(fold(doc, 'src/').textContent, '▸', 'знак сложенной папки не сказал, что она сложена');
+    'folding the folder changed its choice: the mark is for the look, the box for the numbers');
+  assert.equal(nowCells(doc), before, 'folding the folder took numbers out of the table');
+  assert.equal(fold(doc, 'src/').textContent, '▸', 'the mark of a folded folder did not say it is folded');
   /* Folding is pure appearance: the table stays the very same markup afterwards rather than being
    * assembled again. Otherwise every click on the mark would count all rows and columns, and a tree
    * with a long history would answer with a visible delay. */
   assert.equal(doc.querySelector('#grid tbody tr'), table,
-    'клик по знаку пересобрал таблицу: складывание считает числа, которых не меняет');
+    'a click on the mark reassembled the table: folding counts numbers it does not change');
 
   /* Memory: the next visit opens with the same folded tree and the full choice. Folding has a key
    * of its own — otherwise it would travel into the link, and a link is sent for the numbers
@@ -220,15 +220,15 @@ test('папку дерева можно сложить, и сложенное �
   const seed = stored(dom);
   const next = openPage(seed).window.document;
   assert.equal(fold(next, 'src/').textContent, '▸',
-    'сложенная папка разложилась на следующем заходе');
+    'a folded folder unfolded on the next visit');
   assert.equal(row(next, 'src/').classList.contains('folded'), true,
-    'память помнит знак, но не саму сложенность');
-  assert.equal(fold(next, 'data/').textContent, '▾', 'чужая папка сложилась вместе с этой');
+    'the memory keeps the mark but not the fold itself');
+  assert.equal(fold(next, 'data/').textContent, '▾', 'another folder folded together with this one');
   assert.deepEqual([...next.querySelectorAll('#panel input')].filter((b) => !b.checked && !b.disabled), [],
-    'память сложенного унесла с собой выключенные файлы');
-  assert.deepEqual(Object.keys(seed).length, 1, 'запись о дереве легла не туда: ' + JSON.stringify(seed));
+    'the memory of the fold carried the switched-off files away with it');
+  assert.deepEqual(Object.keys(seed).length, 1, 'the record about the tree landed in the wrong place: ' + JSON.stringify(seed));
   assert.ok(Object.keys(seed)[0].indexOf(':tree') > 0,
-    'складывание легло в запись выбора: ' + Object.keys(seed)[0]);
+    'the fold landed in the record of the choice: ' + Object.keys(seed)[0]);
 });
 
 /* jsdom does not lay the page out, so its elements always scroll by zero and writing to
@@ -247,7 +247,7 @@ function scrollMemory(dom) {
  * (how far they got): a rebuild has to bring it back, while the field under the keyboard must not
  * drag the list towards itself. Both the panel's scroll and the list's are checked: in a wide
  * window the panel scrolls, in a narrow one the list. */
-test('прокрутка панели и списка файлов переживает пересборку', () => {
+test('the scroll of the panel and of the file list survives a rebuild', () => {
   const dom = openPage();
   const doc = dom.window.document;
   scrollMemory(dom);
@@ -259,7 +259,7 @@ test('прокрутка панели и списка файлов пережи�
   toggleBox(doc, fileBox(doc, 'src/code.js'), false);
 
   assert.equal(panel.scrollTop, 137,
-    'пересборка панели вернула её прокрутку к началу: нижние метрики снова искать заново');
+    'the panel’s rebuild brought its scroll back to the top: the lower metrics have to be hunted again');
   assert.equal(list().scrollTop, 48,
-    'пересборка вернула список файлов к началу: до нижних файлов дерева не добраться');
+    'the rebuild brought the file list back to the top: the lower files of the tree are out of reach');
 });
