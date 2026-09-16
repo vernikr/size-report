@@ -159,12 +159,15 @@ test('ссылки на разделы ведут в существующие р
         const before = line.slice(0, m.index);
         // The nearest document name: right after the reference ("§4.3 `module-design.md`") or before it
         // ("`PLAN.md` §5"). With no name it is a reference to a section of the requirements — that is
-        // how they are referred to ("requirement §4.2").
+        // how they are referred to ("requirement §4.2"). The word is read in both languages: the
+        // documents are translated one by one, and a reference the check stops resolving would pass in
+        // silence (measured: the same broken "§11.20 requirements" is caught while the line says
+        // "требования" and slips through once it is English).
         const after = line.slice(m.index + m[0].length).match(/^\s*`?([\w.-]+\.md)`?/);
         const named = (after && sections[after[1]] !== undefined && after[1])
           || [...before.matchAll(/`?([\w.-]+\.md)`?/g)].reverse().map((n) => n[1])
             .find((n) => sections[n] !== undefined)
-          || (/(?:требовани|требований)/.test(line) ? 'requirements.md' : null);
+          || (/(?:требовани|requirements?)/.test(line) ? 'requirements.md' : null);
         // A reference with no document name is a § of the journal or of a plan, and there is nothing to
         // resolve it against: anyone is free to plan and number as they like. Silence is more honest
         // than a guess here.

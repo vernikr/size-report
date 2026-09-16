@@ -1,116 +1,111 @@
-# Архитектурный проект: выделение «учёта объёма» в отдельный модуль
+# The module's design: volume accounting as a package of its own
 
-> Рабочее имя модуля в этом документе — **size-report** (условное, можно поменять).
-> Документ проектирует, как вынести инструмент учёта роста объёма кода и документов
-> из текущего проекта (плагина Figma) в отдельный переносимый модуль, и включает
-> новые требования:
+> Written when the tool was carved out of the Figma plugin project into a package of its own
+> (`@vernikr/size-report`; the working name of this document, **size-report**, is the one that stuck).
+> The move is done — what still binds are the architecture (§0, §3) and the invariants (§2), while the
+> steps belong to the journal. Three requirements came with the move and are in the module today:
 >
-> - настоящая минификация (переименование переменных в 1–2 символа, esbuild);
-> - токенизация, приближенная к реальности, с выбором семейства моделей
->   (DeepSeek / ChatGPT / Claude);
-> - интерактивная страница: переключатели метрик (raw/tok/min), левая панель
->   с деревом файлов и чекбоксами, быстрые кнопки по категориям
->   (документация / служебные / ресурсы); выключенная сущность не участвует в сумме.
+> - real minification (names shortened to one or two characters, by esbuild);
+> - tokens close to reality, with the model family chosen;
+> - an interactive page: metric switches (raw/min/tok), a panel with the file tree and checkboxes,
+>   quick buttons by category (docs / chore / assets); what is switched off is out of the sum.
 
 ---
 
-## 0. Резюме решения (TL;DR)
+## 0. The decision in short
 
-1. **Что выносим.** Весь «движок» учёта объёма (чтение git-истории, замеры,
-   минификация, токенизация, генерация отчёта) превращается в **отдельный
-   npm-пакет**, который ничего не знает о конкретном проекте. В самом проекте
-   остаётся только **файл настроек** этого модуля.
-2. **Главный архитектурный сдвиг.** Сейчас отчёт — это заранее собранный
-   статичный HTML (таблица уже «зашита» в файл). Новые требования
-   (переключатели, дерево файлов, чекбоксы) делают отчёт **интерактивным**.
-   Поэтому движок перестаёт «рисовать» таблицу и начинает выдавать **данные**,
-   а отчёт становится тонкой программой, которая рисует таблицу сама, прямо в
-   браузере, поверх встроенных данных.
-3. **Замеры становятся «модульными».** «Сырой размер», «минифицированный» и
-   «токены» — это три взаимозаменяемых «датчика», каждый со своей начинкой
-   (минификатор — esbuild и аналоги; токенизатор — своя реализация на семейство
-   моделей). Новый датчик добавляется без правки ядра.
-4. **Файлы находятся сами, но человек может вмешаться.** Движок сам находит все
-   файлы проекта, сам раскладывает их по категориям; у пользователя на странице —
-   дерево с чекбоксами, чтобы точечно включать/выключать файлы, и быстрые кнопки
-   по категориям. Выключенное не участвует ни в таблице, ни в сумме.
-5. **Отчёт не кладётся в git.** Он генерируется локально и открывается двойным
-   щелчком без сервера. Обновляется автоматически при каждом коммите, с защитой
-   от зацикливания.
+1. **What leaves.** The whole engine — reading the git history, measuring, minifying, counting tokens,
+   building the report — becomes **a package of its own** that knows nothing about a concrete project. The
+   project keeps the **settings file** — and may keep none at all: with no file the settings are derived
+   from the project itself, and `--init` writes the derived ones out.
+2. **The architectural shift.** A report used to be static HTML with the table already baked in. The new
+   requirements (switches, a file tree, checkboxes) make it **interactive**, so the engine stops drawing the
+   table and starts emitting **data**, while the report becomes a small program that draws the table itself,
+   in the browser, over the data embedded in it. The same layer is printable (`--data`): that is what an
+   agent reads instead of the picture.
+3. **Measuring becomes modular.** Raw size, the size without ballast and tokens are interchangeable
+   **sensors**, each with its own innards (the minifier esbuild where real compression is wanted; a tokenizer
+   per model family). The registry holds four of them — `raw`, `min`, `tok` and `gzip` — the settings choose
+   from the registry, and a new sensor is an entry in it rather than an edit to the core. A sensor that has
+   lost an optional dependency is reported as degraded (exit code 4) instead of passing an approximation off
+   as an exact number.
+4. **Files are found, but a person can intervene.** The engine finds the project's files itself and sorts
+   them into four categories (`code`, `docs`, `chore`, `assets`); the page offers the tree with checkboxes
+   and quick buttons by category. What is switched off is out of the table and out of the sum, and a file
+   that cannot be a column is excluded with a stated reason.
+5. **The report enters no commit by itself.** It is built locally and opens by double-click without a
+   server, and it refreshes after every commit and merge with no loop possible by construction. Whether the
+   file is tracked by git is the project's decision: untracked, a rebuild leaves the history alone;
+   tracked, the hook commits it as a commit of its own.
 
 ---
 
-## 1. Граница: что остаётся в проекте, что уходит в модуль
+## 1. The boundary: what stays in the project, what leaves for the module
 
-Проводим жёсткую границу между «продуктом» (плагином Figma) и «инструментом»
-(учётом объёма). Сейчас они переплетены: инструмент лежит файлом внутри проекта
-и знает его файлы поимённо.
+A hard boundary is drawn between the product (the Figma plugin) and the tool (volume accounting), which used
+to be interwoven: the tool lay inside the project as one file and knew its files by name.
 
-| Остаётся в проекте (плагин) | Уходит в модуль |
+| Stays in the project | Leaves for the module |
 |---|---|
-| Файлы продукта: исходники плагина, разметка интерфейса, манифест, документация — они **входные данные** для замера | Весь код замера: чтение истории git, метрики, минификатор, токенизатор, кэш |
-| **Файл настроек модуля** (какие файлы следить, какие категории, какое семейство моделей, куда писать отчёт) | Генерация отчёта (интерактивная страница) |
-| Пара строк в описании проекта (команды запуска) | Тесты модуля (они едут вместе с модулем, не копируются) |
-| Строка в `.gitignore`, исключающая отчёт | Схема настроек, документация для ИИ-агентов, шаблоны CI |
+| The product's files: the plugin's sources, interface markup, manifest, documentation — they are the **input** of the measure | All the measuring code: reading the git history, the metrics, the minifier, the tokenizer |
+| The module's **settings file** (which files to watch, which categories, which model family, where to write the report) — optional, since with none the settings are derived from the project | Building the report (the interactive page) |
+| A couple of lines in the project's description (the calls) | The module's tests: they live and run in the module's own repository, are not copied into the project and do not travel in the package |
+| A line in `.gitignore`, or the report getting tracked | The settings draft, the note for a consumer, the CI description (the three files of `templates/`) |
 
-**Принцип:** «механика никогда не копируется в проект». Проект знает про модуль
-ровно три вещи: зависимость в списке пакетов, файл настроек, команда запуска.
-
----
-
-## 2. Инварианты, которые переносим без изменений
-
-В текущей реализации есть решения, которые не надо пересматривать — они
-переезжают как контракт модуля:
-
-1. **Источник правды — git.** Размеры берутся из версий файлов, зафиксированных
-   в истории, а не из рабочей папки. Отчёт не зависит от того, что открыто в
-   редакторе.
-2. **Пересборка из всей истории, а не дозапись.** Отчёт всегда собирается заново
-   по полной истории — это самовосстанавливается и идемпотентно.
-3. **Чтение версий файлов пакетами.** Один-два обращения к git на всю историю,
-   а не по одному на каждый файл. «Сырой» размер берётся из размера объекта git
-   без чтения содержимого — это дешевле.
-4. **Кэш по содержимому.** Версия файла с одинаковым содержимым не замеряется
-   повторно.
-5. **Строка-коммит не может описывать сам коммит.** Коммиты, которые меняют
-   только отчёт, строки не получают (иначе была бы «само-ссылка»).
-6. **Полнота истории.** На «обрезанном» клоне модуль не должен молча строить
-   короткую таблицу — он обязан сообщить о неполноте и подсказать, как её
-   восполнить.
+**The principle:** the mechanics is never copied into the project. The project knows three things about the
+module: the dependency in its package list, the optional settings file, and the call.
 
 ---
 
-## 3. Ключевой сдвиг: «данные» и «отображение» разделяются
+## 2. The invariants that move unchanged
 
-Сейчас генератор сразу собирает готовый HTML: таблица, суммы и дельты считаются
-на этапе сборки и «застывают» в файле.
+The implementation holds decisions that need no review — they move as the module's contract:
 
-Новые требования (переключатели метрик, чекбоксы файлов, пересчёт суммы на лету)
-означают, что **суммы и дельты должны считаться в момент просмотра**, а не на
-этапе сборки. Отсюда — чёткое разделение:
+1. **The source of truth is git.** Sizes come from the versions fixed in the history rather than from the
+   working directory, so the report does not depend on what an editor has open. A working tree that differs
+   from the history is a finding rather than a source of numbers.
+2. **Every rebuild goes over the whole history instead of appending.** The report is always assembled anew —
+   which makes it self-healing and idempotent.
+3. **Reading is batched.** One run on a three-commit history makes ten git calls (`log`, `ls-files`,
+   `ls-tree`, two `rev-parse`, three `cat-file`, `hash-object`, `status`) — and the same ten for three files
+   as for ninety, measured: the count does not grow with the number of files. The raw size comes from the
+   object's header, without reading the content.
+4. **The same content is measured once.** The cache is per run and keyed by the blob's sha: identical
+   requests and identical blobs are asked for once, and nothing is kept between runs.
+5. **A commit's row cannot describe that commit.** A commit that changed only the report gets no row (the row
+   would be a self-reference), and neither does a commit that moved no number.
+6. **The history's completeness.** On a truncated clone the module must not quietly build a short table: it
+   refuses (exit code 3) and names the fix (`git fetch --unshallow`, or `fetch-depth: 0` in CI).
+
+---
+
+## 3. The key shift: data and display are separated
+
+The old generator assembled ready HTML: the table, the sums and the deltas were counted at build time and
+froze in the file. The new requirements (metric switches, file checkboxes, a sum recounted on the fly) mean
+that **sums and deltas are counted at view time** — which is where the split comes from:
 
 ```
-        ДВИЖОК (сборка)                    ОТЧЁТ (просмотр)
-  ┌───────────────────────────┐    ┌──────────────────────────────┐
-  │ git-история               │    │  интерактивная страница      │
-  │   ↓                       │    │  (данные + программа)        │
-  │ реестр файлов + категории │    │                              │
-  │   ↓                       │    │  · дерево файлов + чекбоксы  │
-  │ замеры (raw / min / tok)  │───▶│  · переключатели метрик      │
-  │   ↓                       │    │  · пересчёт суммы на лету    │
-  │ данные (JSON)             │    │  · дельты и «сейчас»         │
-  └───────────────────────────┘    └──────────────────────────────┘
+        ENGINE (build time)                  REPORT (view time)
+  ┌──────────────────────────┐      ┌──────────────────────────┐
+  │ the git history          │      │ the interactive page     │
+  │   ↓                      │      │ (data + program)         │
+  │ files and categories     │      │                          │
+  │   ↓                      │      │ · file tree + checkboxes │
+  │ measures (raw/min/tok)   │─────▶│ · metric switches        │
+  │   ↓                      │      │ · the sum recounted live │
+  │ data (JSON)              │      │ · deltas and "now"       │
+  └──────────────────────────┘      └──────────────────────────┘
 ```
 
-- **Движок** выдаёт *абсолютные* значения на каждый файл в каждой точке истории
-  (он не решает, что показывать, и не считает «итого» по выбранному набору).
-- **Отчёт** — это самодостаточный файл: внутри лежат данные (JSON) и небольшая
-  программа, которая рисует таблицу, дерево и пересчитывает суммы в зависимости
-  от того, что включил пользователь.
+- **The engine** emits *absolute* values per file and per point of history: it does not decide what to show
+  and does not count a total over a chosen set. The totals named in its own text answer (the state at
+  `HEAD`) are a fixed view rather than a sum over a choice.
+- **The report** is one self-contained file: inside lie the data (JSON) and a small program that draws the
+  table and the tree, and recounts the sums from what the reader switched on.
 
-Выгода: любые будущие «настройки просмотра» (новые фильтры, группировки) — это
-правка программы отчёта, а не движка. Движок остаётся стабильным.
+The gain: any future view setting (new filters, groupings) is an edit to the report's program rather than to
+the engine, which stays stable.
 
 ---
 

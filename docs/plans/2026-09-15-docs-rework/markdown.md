@@ -307,19 +307,50 @@ files). The parts below are the order to work in; each is one commit.
   the minifier chosen per extension, the method mark beside the number) — nothing cited §14, so no
   incoming reference moved. One internal reference was broken and is fixed: §3.2 pointed at "§8" for
   compressed size, where §8 is about showing versus restraining — gzip lives in §12.
-- [ ] **M11 `docs/module-design.md` §0–§7** — **split by measurement**: §0–§3 (lines 1–116) are 82
-  Russian lines (≈172 changed) and §4–§7 (117–341) are 137 Russian lines (≈288 changed); the plan's
-  own "209" for the whole part measures as 219. Each half is a pass of its own — together with M10's
-  233 they would exceed the 600-line budget. A `§`-reference target as well (`REFACTOR.md` and
-  `PLAN.md` cite §8.2, §3 and others), so its numbering stays.
-- [ ] **M12 `docs/module-design.md` §8–§17** (342–558) — 147 Russian (measured). A document about the
-  move, so it is compacted hard: architecture and invariants stay, the retelling goes.
-- [ ] **Carried into M17–M22, measured:** the documentation guard resolves an unnamed `§N` reference to
-  the requirements by the **Russian** word `требовани(й)` (`test/docs-commands.test.js`). While `PLAN.md`
-  is Russian that holds; after its translation the seven unnamed references there (§4.3, §11.2, §7.3,
-  §4.2 twice, §12, §3.3, §7.2, §8) would stop resolving and the guard would weaken **in silence** — the
-  word needs the English `requirement` added in the same commit as that translation. The three
-  references that name `requirements.md` explicitly hold on their own.
+- [x] **M11a `docs/module-design.md` §0–§3** — 82 Russian lines → **173 changed lines in the document
+  plus 7 in the guard = 180 in two files** (`worklog/0110`); no Cyrillic left in the part (the file went
+  from 366 Cyrillic lines to 284). **The guard was tested by experiment, three answers.** (1) The numbers
+  are what it holds: renaming `### 8.2.` to `### 8.9.` reddens it with **four** named references (`PLAN.md`
+  ×3, `REFACTOR.md` ×1) — and the first attempt at that experiment proved nothing because the section
+  headings of this document are level **3** while the pattern expected level 2, a correction found by the
+  form in the code. (2) The target's words mean nothing to it: the same number with an English heading
+  stays green. (3) **The danger recorded in M10 is real and measured:** with the line reading «§11.2
+  требований» a broken «§11.20» is caught, and the same broken number under the word `requirements`
+  **passes in silence** — so `test/docs-commands.test.js` now reads the word in **both languages**, and the
+  same English-worded broken reference reddens again. The file is no gate file (`GATE_FILES` holds only
+  `test/gates-*.test.js`), so no trailer was needed. **Incoming references measured before and after:**
+  `PLAN.md` (§8.2 three times, §8.4, §3, §2) and `REFACTOR.md` (§8.2, §8.4), all by explicit name — no
+  number touched, boundaries only shifted down the file (0 → 15, 1 → 43, 2 → 60, 3 → 82, 4 → 112); the four
+  doc guards are green, 8 of 8. **Ten claims were wrong or stale, each checked by code or measurement:** the
+  settings file is optional (derived from the project, `--init` pins it); the registry holds **four**
+  sensors, `gzip` included, and an unknown name is rejected against the same registry; a lost optional
+  dependency is a **degraded sensor with code 4**, not a quiet approximation; the model family today is one
+  (`openai`, `gpt-tokenizer`, `o200k_base`/`cl100k_base`), not three vendors; there are **four** categories
+  (`code`, `docs`, `chore`, `assets`); the report enters no commit by the tool's own action and tracking is
+  the project's decision; the module's tests do not travel in the package (`files` = `bin`, `src`,
+  `templates`, `README.md`, `CHANGELOG.md`, `LICENSE`); no JSON schema ships (`templates/` = the config
+  draft, the note, `ci.yml`); the git calls are **ten per run, and the same ten for 3 files as for 90**
+  (measured with `GIT_TRACE=1`: `log`, `ls-files`, `ls-tree`, 2 × `rev-parse`, 3 × `cat-file`,
+  `hash-object`, `status`) rather than "one or two"; and the content cache is per run, keyed by sha, with no
+  on-disk `.size-report/cache/` anywhere in the tree. §2.1, §2.2, §2.5, §2.6 and §3 were checked and kept
+  (the engine emits absolute values, the page counts sums — the contract of `src/data.js`; the engine's own
+  text totals are a fixed view, added as a caveat).
+- [ ] **M11b `docs/module-design.md` §4–§7** — 137 Russian lines (≈288 changed): the bigger half, and
+  invariants to check rather than retell, so it is a pass of its own. Numbers stay — the document is a
+  `§`-reference target.
+- [ ] **Carried into M17–M22, measured:** `PLAN.md`'s row "Три датчика v1: `raw`, `min`, `tok`; `gzip` не
+  поставляется" contradicts the code — gzip is in the registry (`src/metrics.js`) and ships with `src/`.
+- [ ] **M12 `docs/module-design.md` §8–§17** (lines 337–552 now, 147 Russian, measured) — a document about
+  the move, so it is compacted hard: architecture and invariants stay, the retelling goes.
+- [x] **Done at M11a — the guard's language dependence:** an unnamed `§N` reference is resolved to the
+  requirements by a word, and the word is now read in **both languages** (`test/docs-commands.test.js`),
+  so the seven unnamed references in `PLAN.md` (§4.3, §11.2, §7.3, §4.2 twice, §12, §3.3, §7.2, §8) stay
+  checked after its translation. Measured before the fix: a broken «§11.20» under the word `требования`
+  reddens, and the same number under `requirements` passed **in silence**.
+- [ ] **Possible but not done, measured:** making that check independent of wording altogether means
+  classifying the 95 unnamed `§N` references that today resolve nowhere **by design** (a document citing
+  its own sections, addresses of plans and journals) — a blind replacement of the rule would redden the
+  tree on them.
 - [ ] **M13 `BLOCKERS.md` B1–B3** (18–208) — 128 Russian. Per item: these three are closed, so
   what stays is the class of defect and the witness — the story belongs to the journal, and the
   journal is not this subplan's scope.
