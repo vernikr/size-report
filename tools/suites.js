@@ -28,49 +28,49 @@ export const TEST_DIR = path.join(ROOT, 'test');
 
 /* The fast run: `pnpm test`. Every entry carries the reason it is here. */
 export const FAST = [
-  { file: 'test/api.test.js', why: 'публичный API заморожен списком: любая правка движка обязана его не тронуть' },
-  { file: 'test/refusals-catalog.test.js', why: 'каталог отказов против исходников: читает файлы и считает места отказа, инструмент не запускает ни разу' },
-  { file: 'test/runner.test.js', why: 'чтение вывода процесса: куски склеиваются буферами — чистая функция, без git и без запусков' },
-  { file: 'test/docs-paths.test.js', why: 'пути документации против дерева и таблицы файлов: правится в каждом проходе, значит и проверяться должен в каждом' },
-  { file: 'test/docs-commands.test.js', why: 'зовы, причины отказа и адреса разделов против справки: то же обещание документации' },
-  { file: 'test/docs-numbers.test.js', why: 'числа проверок против факта: документ стареет молча, если его не читать каждый раз' },
-  { file: 'test/docs-pin.test.js', why: 'пин установки против справки закреплённой ревизии: путь, по которому ставится пакет' },
-  { file: 'test/git-pins.test.js', why: 'граница вызова git: читает исходники и историю, инструмент не запускает' },
-  { file: 'test/templates.test.js', why: 'шаблоны для чужого проекта: черновик настроек и описание проверки целиком — на свежем маленьком репозитории' },
-  { file: 'test/guard.test.js', why: 'разбор модуля: идёт в рабочем потоке, сотни разборов в одном процессе — запусков нет вовсе' },
+  { file: 'test/api.test.js', why: 'the public API is frozen as a list: any change to the engine has to leave it untouched' },
+  { file: 'test/refusals-catalog.test.js', why: 'the refusal catalogue against the sources: it reads files and counts refusal sites, and never runs the tool' },
+  { file: 'test/runner.test.js', why: 'reading the output of a process: the pieces are glued by buffers — a pure function, with no git and no runs' },
+  { file: 'test/docs-paths.test.js', why: 'the paths named by the documentation against the tree and the files table: it is edited in every pass, so it has to be checked in every pass' },
+  { file: 'test/docs-commands.test.js', why: 'the calls, the refusal reasons and the section anchors against the help: the same promise of the documentation' },
+  { file: 'test/docs-numbers.test.js', why: 'the check counts against the fact: a document ages in silence unless it is read every time' },
+  { file: 'test/docs-pin.test.js', why: 'the install pin against the help of the pinned revision: the path by which the package is installed' },
+  { file: 'test/git-pins.test.js', why: 'the boundary of the git call: it reads sources and history, and does not run the tool' },
+  { file: 'test/templates.test.js', why: 'templates for a project of someone else: the settings draft and the description of a check in full — on a fresh small repository' },
+  { file: 'test/guard.test.js', why: 'module parsing: it runs in a worker thread, hundreds of parses in one process — no runs at all' },
 
-  { file: 'test/parity.test.js', why: 'паритет с эталоном: главное обещание переноса — числа байт в байт, а отчёт собирается и проходит свой контроль; прогоны кэшированы и идут на общей фикстуре' },
-  { file: 'test/frozen.test.js', why: 'замороженная копия: та ли ревизия и воспроизводит ли она эталон — различитель «поехал эталон» и «сломался движок»' },
-  { file: 'test/contract-data.test.js', why: 'контракт данных: числа против эталона и состав полей — считает в памяти, инструмент зовёт один раз' },
-  { file: 'test/contract-derived.test.js', why: 'производные против чисел артефакта: итоги и дельты считает вычислительная часть из файла, инструмент зовёт один раз' },
-  { file: 'test/page-view.test.js', why: 'собранная страница в настоящем DOM: вклейка программы, пустота, оформление, переключение — сборок две, обе на общей фикстуре' },
-  { file: 'test/page-tree.test.js', why: 'дерево файлов панели в настоящем DOM: папки по путям проекта, поддерево, прокрутка при пересборке — сборка страницы одна, на общей фикстуре' },
-  { file: 'test/page-choice.test.js', why: 'память выбора и ссылка в настоящем DOM: перезаходы и смены адреса — считает в памяти, сборка страницы одна' },
-  { file: 'test/suites.test.js', why: 'сторож самого разделения: читает объявление и исходники, ничего не запускает' },
-  { file: 'test/gates-verify.test.js', why: 'сторож профиля проверок: читает `run.js`, рабочие процессы и хуки — запусков инструмента нет, только три зова за списком шагов' }
+  { file: 'test/parity.test.js', why: 'parity with the reference: the main promise of the transfer — the byte counts match, and the report is assembled and passes its own check; the runs are cached and share one fixture' },
+  { file: 'test/frozen.test.js', why: 'the frozen copy: whether the revision is the one and whether it reproduces the reference — the distinguisher between "the reference moved" and "the engine broke"' },
+  { file: 'test/contract-data.test.js', why: 'the data contract: the numbers against the reference and the set of fields — it counts in memory and calls the tool once' },
+  { file: 'test/contract-derived.test.js', why: 'the derived values against the artifact\'s numbers: the computational part counts the totals and the deltas from a file, and calls the tool once' },
+  { file: 'test/page-view.test.js', why: 'the assembled page in a real DOM: the program pasted in, emptiness, the layout, switching — two assemblies, both on the shared fixture' },
+  { file: 'test/page-tree.test.js', why: 'the panel\'s file tree in a real DOM: folders by the project\'s paths, a subtree, scrolling on a rebuild — one page assembly, on the shared fixture' },
+  { file: 'test/page-choice.test.js', why: 'the memory of a choice and the link in a real DOM: revisits and address changes — it counts in memory, one page assembly' },
+  { file: 'test/suites.test.js', why: 'the guard of the split itself: it reads the declaration and the sources, and runs nothing' },
+  { file: 'test/gates-verify.test.js', why: 'the guard of the check profile: it reads `run.js`, the workflows and the hooks — no tool runs, only three calls for the step list' }
 ];
 
 /* The full run: `pnpm test:all`. Everything missing from `FAST`, plus a reason for the costliest ones — why they are here
  * rather than in the fast run. */
 export const SLOW = [
-  { file: 'test/cli-paths.test.js', why: 'куда инструмент пишет: на каждый случай свой клон и свой `--write` — без записи не проверить' },
-  { file: 'test/crlf.test.js', why: 'выкладка с CRLF: сверка с рабочим деревом на клоне с чужой настройкой переводов строк' },
-  { file: 'test/environment.test.js', why: 'герметичность вывода: тот же набор в четырёх чужих окружениях — по клону и прогону на каждое' },
-  { file: 'test/check.test.js', why: 'полнота и объяснение на коммитах фикстуры: девять проверок, каждая — прогон команды' },
-  { file: 'test/minify.test.js', why: 'настоящее сжатие: числа на всей истории против упрощения, плюс шов отсутствия минификатора' },
-  { file: 'test/tokens.test.js', why: 'токены: счёт словарём против оценки на всей истории, кодировка как часть числа' },
-  { file: 'test/refusals.test.js', why: 'отказы инструмента: тридцать три запуска, по процессу на отказ, плюс свои клоны (чужой хук, обрезанная история, ветка мимо отчёта) — цена здесь в запусках, а не в объёме' },
-  { file: 'test/module.test.js', why: 'модуль в `.js` и гард разбора: шесть сборок на диске и прогон на каждой — гард доказан мутацией, а не словом' },
-  { file: 'test/disk.test.js', why: 'сверка с рабочим деревом и три вида потери: по клону на случай, каждый случай — правка на диске' },
-  { file: 'test/doctor.test.js', why: 'диагностика на семи состояниях проекта: по прогону инструмента на состояние и на проверку' },
-  { file: 'test/cli.test.js', why: 'разбор аргументов и отказы: перебор сочетаний режимов, ключей и слов — каждый случай отдельным процессом' },
-  { file: 'test/hook.test.js', why: 'хук автообновления на свежем клоне: настоящие коммиты, слияние, отказы и снятие — самая дорогая проверка набора' },
-  { file: 'test/release.test.js', why: 'выпуск из CI: читает описание рабочего процесса текстом — ни git, ни инструмент не запускает' },
-  { file: 'test/gates-metrics.test.js', why: 'проба датчика раздувания: шесть линтерных прогонов и обрезка базы — процесс на каждую пробу, иначе проба не доказывает код возврата' },
-  { file: 'test/gates-dup.test.js', why: 'проба датчика дублей: своё дерево копий и прогон jscpd на каждый вердикт (снятие базы, живущий клон, новая копия, переносимость базы, отсутствие базы)' },
-  { file: 'test/gates-deps.test.js', why: 'проба датчика связей: четыре прогона разборщика на своих маленьких графах — по графу на класс находки' },
-  { file: 'test/gates-coverage.test.js', why: 'проба датчика покрытия: вердикты по готовым отчётам плюс сверка базы с деревом — прогонов набора нет, но каждая проба это процесс' },
-  { file: 'test/gates-files.test.js', why: 'проба защиты гейт-файлов: свой временный репозиторий, коммиты и аменд — цена в git, а не в объёме' }
+  { file: 'test/cli-paths.test.js', why: 'where the tool writes: every case has its own clone and its own `--write` — without writing there is nothing to check' },
+  { file: 'test/crlf.test.js', why: 'a checkout with CRLF: a comparison with the working tree on a clone carrying someone else\'s line-ending setting' },
+  { file: 'test/environment.test.js', why: 'the hermeticity of the output: the same set in four environments of someone else — a clone and a run for each' },
+  { file: 'test/check.test.js', why: 'completeness and explanation on the fixture\'s commits: nine checks, each one a run of the command' },
+  { file: 'test/minify.test.js', why: 'real minification: numbers over the whole history against a simplification, plus the seam where the minifier is absent' },
+  { file: 'test/tokens.test.js', why: 'tokens: a count by dictionary against an estimate over the whole history, with the encoding as part of the number' },
+  { file: 'test/refusals.test.js', why: 'the refusals of the tool: thirty-three runs, one process per refusal, plus clones of its own (a hook of someone else, a truncated history, a branch past the report) — the cost here is in runs, not in size' },
+  { file: 'test/module.test.js', why: 'a module in `.js` and the parsing guard: six assemblies on disk and a run on each one — the guard is proved by mutation rather than by a word' },
+  { file: 'test/disk.test.js', why: 'a comparison with the working tree and three kinds of loss: a clone per case, each case an edit on disk' },
+  { file: 'test/doctor.test.js', why: 'diagnostics on seven states of a project: a run of the tool per state and per check' },
+  { file: 'test/cli.test.js', why: 'argument parsing and refusals: a sweep over combinations of modes, keys and words — each case in a process of its own' },
+  { file: 'test/hook.test.js', why: 'the auto-update hook on a fresh clone: real commits, a merge, refusals and the removal — the costliest check of the set' },
+  { file: 'test/release.test.js', why: 'a release from CI: it reads the workflow description as text — it runs neither git nor the tool' },
+  { file: 'test/gates-metrics.test.js', why: 'the bloat sensor\'s probe: six linter runs and a truncation of the baseline — a process per probe, otherwise the probe would not prove the exit code' },
+  { file: 'test/gates-dup.test.js', why: 'the duplication sensor\'s probe: a tree of copies of its own and a jscpd run per verdict (taking the baseline away, a living clone, a new copy, the portability of the baseline, no baseline)' },
+  { file: 'test/gates-deps.test.js', why: 'the relations sensor\'s probe: four runs of the parser over small graphs of its own — a graph per class of finding' },
+  { file: 'test/gates-coverage.test.js', why: 'the coverage sensor\'s probe: verdicts over ready reports plus a check of the baseline against the tree — no suite runs, but every probe is a process' },
+  { file: 'test/gates-files.test.js', why: 'the gate-file guard\'s probe: a temporary repository of its own, commits and an amend — the cost is in git, not in size' }
 ];
 
 /* The suite's files: what lies in `test/` and ends with `.test.js`. The list comes from disk rather than from the
@@ -95,5 +95,5 @@ export function checksIn(file) {
 export function filesOf(mode) {
   if (mode === 'fast') return FAST.map((e) => e.file);
   if (mode === 'full') return testFiles();
-  throw new Error('неизвестный прогон «' + mode + '» (есть: fast, full)');
+  throw new Error('unknown run “' + mode + '” (there are: fast, full)');
 }

@@ -22,7 +22,7 @@ rg -cP '[\p{Cyrillic}]' tools/suites.js dup-baseline.json coverage-baseline.json
 | `tools/gates/metrics.js` | 6 | two verdicts, the refusal of a failed run, the overflow line and the advice (37, 63–71) — **done 2026-09-16, 6 → 0** |
 | `tools/gates/deps.js` | 5 | the verdicts, the refusal of a failed run, the advice and the "for information" line (26, 47, 51, 53, 56) — **done 2026-09-16, 5 → 0** |
 | `tools/gates/common.js` | **0** | measured: the shared harness carries no Russian at all |
-| `tools/suites.js` | 38 | the `why` of every entry in `FAST` and `SLOW`, and the unknown-run error (98) |
+| `tools/suites.js` | 38 | the `why` of every entry in `FAST` and `SLOW`, and the unknown-run error (98) — **done 2026-09-16, 38 → 0** |
 | `.githooks/pre-commit` | 2 | the "pnpm is not on PATH" message and how to reinstall the hooks |
 | `.githooks/pre-push` | 2 | the same message, and the "no `origin/main`" notice about the range |
 | `dup-baseline.json`, `coverage-baseline.json` | 2 | the `note` the sensors write into them |
@@ -223,9 +223,18 @@ not a mark). The `commit-msg` hook answers at once; the `pre-push` hook re-reads
    `✓ gatefiles: the commit can be made (5 files, gate files 2)`, and
    `node tools/gates/gatefiles.js --range origin/main` answered with the English range verdict — the
    two places a person meets this sensor's words.
-6. **`tools/suites.js`** — the `why` of every entry and the unknown-run error. Red first: rename the
-   **field** `why` instead of its text → `test/suites.test.js:51` red ("в полном прогоне файл без
-   названной причины"), which proves the field is what the guard reads; then the values.
+6. **`tools/suites.js` — done 2026-09-16, 38 → 0.** The thirty-seven `why` texts (19 in `FAST`, 18 in
+   `SLOW`) and the unknown-run error (`unknown run “…” (there are: fast, full)`). **Red first, one reason
+   at a time:** every one of the 38 went back to Russian on its own, and the probe stayed **green for all
+   thirty-eight** — the measurement of "no reader of the text". What the guard really reads was measured
+   the same way and proved with two experiments of its own: a reason shorter than thirty characters reddens
+   it, and the field renamed from `why` to `reason` reddens it. So the guard holds the **presence, the
+   field's name and the size** of a reason, not its wording. **Keys and protocol were not touched:** the
+   `file` fields and the profile names `fast`/`full` stand as they were (measured: the file lists are
+   identical to `HEAD`, 19 + 18 entries), the `why` of every entry is still longer than thirty characters,
+   and `--list` prints the same commands as before (`fast` five lines, `full` eight, `slow` ten — the same
+   counts W2's step 1 recorded, and `run.js` was not touched either). The runs are the same size: 70 checks
+   in the fast run, 175 in the full one.
 7. **`.githooks/pre-commit` and `.githooks/pre-push`** — the four messages. Red first: rewrite the
    **call** (`pnpm run verify:fast` → anything else) → `test/gates-verify.test.js:142-143` red; the
    words around the call are free. This step is the one where the trailer's own subject is met: the
