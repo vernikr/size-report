@@ -493,11 +493,37 @@ files). The parts below are the order to work in; each is one commit.
   resolve, and the only renumbering is the duplicate row (that address is cited by no one outside the file).
   **The numbers in §0 were read from the frozen manifests rather than trusted:** the fixture artifact 22 112 B and
   `sha256 5c0c73e4…`, the live parity 225 673 B, `sha256 1bdb27e14bac…`, 95 × 27.
-- [ ] **M16b–M16e `REFACTOR.md` remainder** — measured above: **M16b §4–§5** (waves 2–3, 63 Russian lines),
-  **M16c §6 first half**, **M16d §6 second half** (the release wave, 26 Russian lines but 51 700 characters — two
-  parts), **M16e §7–§9** (wave 5, what is out of the plan, what is established; 72 Russian lines). Wave 5 needs a
-  real check rather than a translation: `R-5.1` and `R-5.6` carry no done mark today, and **`R-5.1` still names
-  the `--page` mode**, which no longer exists. The subplan is not the place to close them — the rows are.
+- [x] **M16b `REFACTOR.md` §4–§5 (waves 2–3)** — done 2026-09-16 (63 Russian lines of the 217). 40 added / 68
+  removed = **108 changed lines in one file**; the file's Cyrillic 166 → 104 lines, and the part's own lines are
+  English except one name of printed output, named as a quote. **The two timing tables are gone, and that is the
+  compaction the plan asked for rather than a loss:** the file itself records that time targets were abolished on
+  2026-09-15 (R-5.8), so the 4-row table and the 19-row budget table were history rather than obligations — and
+  nothing reads them (measured: `publishedRuns` in `tools/docs-facts.js` reads README's table alone, so no guard
+  leans on REFACTOR's numbers). What the measurements established is kept as rules: a run costs what its most
+  expensive file costs rather than the sum, the load at the entry of a run says more than a number at its end, a
+  new file's cost is taken by a paired run, and numbers of different windows are incomparable. **Three claims were
+  wrong.** R-2.2 described `src/artifact.css` as a layer of its own — **there is no such file**: `src/css.js` reads
+  two (`src/table.css` 34 lines, `src/page/app.css` 234) and the package holds exactly two files of styling, with
+  two hex colours between them (the artifact's eight lines were folded into the shared file). R-2.7 put the dotted
+  cell (`td.approx`) in `src/page/app.css` — it lives in **`src/table.css`**. R-3.5 said four helpers had stayed in
+  `tools/parity-live.js` — **two of them (`MAX_BUF`, `sha256`) are gone from it**; what remains is `parseArgs`,
+  `runCli` (already leaning on the harness's `collectOutput`) and `firstDiff`. **One row was broken across two
+  lines** (R-3.4), so its tail rendered as a paragraph — mended. **Everything else checked out against the code:**
+  `pointExact` exported by `src/metrics.js` and used by `src/history.js`; the per-cell marks in `src/data.js` with
+  “a metric with no mark does not appear in the report”; `group` in `src/derived.js` and no `appGroup` left; the
+  three states of a folder in `src/page/panel.js`; the passport and the record by names in `src/page/state.js`;
+  `min(30vh, 320px)` in the page's styling; `readRun`, `sharedClone('plain')`/`sharedClone('crlf')`, no helper
+  copies in `test/` and `on('data')` only in `tools/harness.js`. Files that moved were re-anchored rather than
+  silently kept: `test/contract.test.js` → `test/page-choice.test.js` and `test/contract-derived.test.js`, and the
+  journal references → `worklog/archive/WORKLOG.md` §14/§20/§21/§25.5. **Addresses measured before and after:** 59
+  `R-` addresses defined, 38 cited from five documents and the plans, none missing — nothing renumbered in this
+  part.
+- [ ] **M16c–M16e `REFACTOR.md` remainder** — measured: **M16c §6 first half** and **M16d §6 second half** (the
+  release wave, 26 Russian lines but 51 700 characters — two parts), **M16e §7–§9** (wave 5, what is out of the
+  plan, what is established; 72 Russian lines, and the lines now stand at 126, 155, 191, 212). Wave 5 needs a real
+  check rather than a translation: `R-5.1` and `R-5.6` carry no done mark today, **`R-5.1` still names the
+  `--page` mode**, which no longer exists, and §8's table of the audit's findings still cites the removed row
+  numbers of the old waves. The subplan is not the place to close them — the rows are.
 - [ ] **M17 PLAN §1–§3** (21–165) — 111 Russian.
 - [ ] **M18 PLAN §4** (166–471) — 206 Russian: the target architecture, the load-bearing part.
 - [ ] **M19 PLAN §5, steps 0–2** (472–597) — 161 Russian.
