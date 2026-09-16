@@ -466,8 +466,38 @@ files). The parts below are the order to work in; each is one commit.
   `padding-line-between-statements`. N18's reference to the journal is corrected to `worklog/archive/WORKLOG.md`
   §36 (the old root path no longer exists). No fix suggested by the notes was carried out, and no new guard was
   added — the note about a key-uniqueness guard stays a note.
-- [ ] **M16 `REFACTOR.md`** — 269 lines, 217 Russian: the log of the finished waves, so it is
-  compacted into "what the wave established" rather than rewritten sentence by sentence.
+- [x] **M16a `REFACTOR.md` head, §0–§3** — done 2026-09-16 (56 Russian lines of the 217). 58 added / 56
+  removed = **114 changed lines in one file**; the file's Cyrillic 217 → 166 lines, and the part's own lines are
+  English except three names of printed tool output, each named as a quote. **The part is measured rather than
+  guessed, and the splitting is the measurement's:** the file has 269 lines but 125 000 characters — a table row
+  is a whole item with its evidence, so line counts say nothing about the work. Per section (Cyrillic lines /
+  characters): head §0 §1 §2 §3 — 56 / 25 700; **M16b §4–§5** (waves 2–3) — 63 / 29 000; **M16c §6 first half**
+  (R-4.1–R-4.16) and **M16d §6 second half** (R-4.13, R-4.17–R-4.24, R-4.2–R-4.12) — 26 / **51 700** together,
+  which is why §6 is two parts; **M16e §7–§9** (wave 5, what is out of the plan, what is established) — 72 /
+  21 400. **Two addresses were wrong and both are fixed.** The table held **two rows numbered `R-1.4`** — the git
+  boundary (cited as `R-1.4` by `BLOCKERS.md` §N10, so it keeps the number) and the stale-texts item, which is now
+  **`R-1.8`** and closed by measurement; the row's own claim checked out: `rg 'size-table\.js' src/` finds nothing,
+  and the "thin legacy path" is a command today (`size check`, R-4.12) rather than a legacy path. The other false
+  rows: **the wiring row named `--page` and five commands** while the instruction has eight steps naming install,
+  `--write`, `--init`, `sizes`, `test:sizes`, `check`, `doctor`, `install-hook` — and **`--page` does not exist at
+  all** (measured: code 2, unknown key; the modes are `--init`, `--write`, `--data`, `--json`), so **R-0.2** now
+  says the report's path is given to `--write [file]` and the directory is created by itself (`--write
+  .report/deep/out.html` → code 0). **The linter row over-stated the severities:** the four borrowed rules are
+  warnings while `indent` and `no-multi-spaces` are the errors (read from `eslint.config.js`), and only the last
+  one catches the gluing the item existed for. **The parsing row named code that has moved:** `parseArgs` and
+  `ANSWER_COMMANDS` live in `src/args.js` today (split out of `src/cli.js`), and the `checkArgs` the row mentions
+  no longer exists — the parser raises the refusals itself. Journal references were re-anchored to `worklog/**`
+  (the root `WORKLOG.md` moved to the archive in the first pass of this work). **Incoming references measured
+  before the edit and unchanged after:** 51 citations of 34 distinct `R-` addresses from `CHANGELOG.md`,
+  `PLAN.md`, `README.md`, `BLOCKERS.md`, `tools/docs-facts.js` and the subplans; all 58 addresses the file defines
+  resolve, and the only renumbering is the duplicate row (that address is cited by no one outside the file).
+  **The numbers in §0 were read from the frozen manifests rather than trusted:** the fixture artifact 22 112 B and
+  `sha256 5c0c73e4…`, the live parity 225 673 B, `sha256 1bdb27e14bac…`, 95 × 27.
+- [ ] **M16b–M16e `REFACTOR.md` remainder** — measured above: **M16b §4–§5** (waves 2–3, 63 Russian lines),
+  **M16c §6 first half**, **M16d §6 second half** (the release wave, 26 Russian lines but 51 700 characters — two
+  parts), **M16e §7–§9** (wave 5, what is out of the plan, what is established; 72 Russian lines). Wave 5 needs a
+  real check rather than a translation: `R-5.1` and `R-5.6` carry no done mark today, and **`R-5.1` still names
+  the `--page` mode**, which no longer exists. The subplan is not the place to close them — the rows are.
 - [ ] **M17 PLAN §1–§3** (21–165) — 111 Russian.
 - [ ] **M18 PLAN §4** (166–471) — 206 Russian: the target architecture, the load-bearing part.
 - [ ] **M19 PLAN §5, steps 0–2** (472–597) — 161 Russian.
