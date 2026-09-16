@@ -1,7 +1,8 @@
 # W1 — `tools`: the repository's instruments
 
-Subplan of `plan.md` (T0). Owns the instruments outside `tools/gates/**` and
-`tools/synthetic/**`: 11 files, 349 measured lines. Written 2026-09-16, not started. These are the
+Subplan of `plan.md` (T0). Owns the instruments outside `tools/gates/**`: 11 files, 349 measured
+lines, plus the fixture builders folded in on 2026-09-16 (W3: their one remaining line, the other 88
+being the reference's data and allow-listed by N21). Written 2026-09-16, not started. These are the
 texts a **developer** reads — a profile run, a re-taken reference, a pack check, a catalogue — not
 the tool's interface, so the reason of the work here is the second reader named in T0: an agent
 reads a verdict as the whole report of a failure.
@@ -18,7 +19,7 @@ git ls-files tools | while read -r f; do printf '%5s %s\n' "$(rg -cP '[\p{Cyrill
 |---|---|---|
 | `tools/refusals.js` | 169 | **W1** |
 | `tools/suites.js` | 38 | W2 |
-| `tools/synthetic/*` (4 files) | 89 | W3 |
+| `tools/synthetic/*` (4 files) | 89 | **folded into W1** 2026-09-16: 88 lines are the fixture's own data (allow-listed, N21), 1 is this owner's (`repo.js:74`) |
 | `tools/parity-live.js` | 35 | **W1** |
 | `tools/parity-freeze.js` | 31 | **W1** |
 | `tools/run-tests.js` | 25 | **W1** |
@@ -32,9 +33,9 @@ git ls-files tools | while read -r f; do printf '%5s %s\n' "$(rg -cP '[\p{Cyrill
 | `tools/page-harness.js` | 3 | **W1** |
 | `tools/gate-probe.js`, `tools/gates/common.js` | 0 | — |
 
-The eleven W1 files sum to **349** — **330 of this owner's own** and the 19 fixture-writing lines N21's
+The twelve W1 files sum to **350** — **331 of this owner's own** and the 19 fixture-writing lines N21's
 decision keeps Russian — and every file under `tools/**` is named by
-one of W1, W2 or W3: **no hole in this owner**. `tools/gate-probe.js` and `tools/gates/common.js`
+one of W1 or W2: **no hole in this owner**. `tools/gate-probe.js` and `tools/gates/common.js`
 were measured too and carry no Cyrillic at all.
 
 ## What is Russian, group by group — and who a group belongs to
@@ -118,7 +119,7 @@ four call sites).
 |---|---|---|
 | The cause names, the `must` phrases, the `починка: `-family markers **of the tool's refusals** | S1–S5 | Already English when W1 starts; W1 does not revisit them, and the `SITES`/`PRINTED` counts must read the same before and after. |
 | `tools/docs-facts.js:135` — the working tree's section split | S1's step 1 | Joint: S1 renames the help's section, so this split is edited **in that commit** or `usageCommands` throws (`USAGE.split(...)[1]` of an absent name) and every docs guard goes red. |
-| `fixtureNote` (`tools/make-fixture.js:233`) and the fixture's README text | W3 (`tools/synthetic/note.js`) | The text is W3's, the call is here; W1 never touches the note itself. |
+| `fixtureNote` (`tools/make-fixture.js:233`) and the fixture's README text | allow-listed (N21); the builders were folded into W1 on 2026-09-16 | The note is the fixture's own data (`tools/synthetic/note.js`) and stays Russian with the references; only its **call** stands in this owner's file, and W1 never touches the text itself. |
 | `tools/suites.js` (38) and `tools/gates/**` (77) | W2 | Not one line of them is edited here. Step labels exist twice (`tools/suites.js`, `tools/gates/run.js:38-39`) and no guard compares them (measured) — a drift risk worth W2's attention, named here because it was found here. |
 | `test/refusals.test.js`, `test/refusals-catalog.test.js`, `test/runner.test.js` and the other checks' own Russian | C1–C3 | W1 edits no assertion message; the two checks read this owner's data (`ADVICE_LINE`, the markers) and are named as readers below. |
 
@@ -155,8 +156,9 @@ No reader at all, measured:
 0. **Re-measure before starting.** By the map's order S1–S5 have landed: the cause names, the
    `must` phrases and the marker family of `tools/refusals.js` are English, and
    `tools/docs-facts.js:135` already carries the English section name. Take the counter's baseline
-   for the eleven files and write it into the journal — the expectation is **330 of this owner's own**
-   (349 measured, minus the 19 lines of step 7 that N21's decision keeps Russian, minus whatever S1's
+   for the twelve files and write it into the journal — the expectation is **331 of this owner's own**
+   (349 measured plus the 1 folded in, minus the 19 lines of the fixture-writing steps that N21's
+   decision keeps Russian, minus whatever S1's
    joint edit moved), and it is a measurement rather than a guess.
 1. **`tools/harness.js`** — the two names and the messages. Red first: none is read by a check
    (measured), so the experiment is the counter plus `pnpm test` staying green; the names' two
@@ -185,7 +187,12 @@ No reader at all, measured:
    allow-list's own evidence — the string of `make-fixture.js:56` stands in the frozen
    `fixtures/synthetic/config.json` (measured, 1 line), so translating it reddens `test/frozen.test.js`
    on the next re-take; the step proves the two writing functions are untouched by staying green.
-7. **`tools/refusals.js`** — the catalogue's own prose (`truth` 37, `advice.why` 40, the reason
+7. **`tools/synthetic/repo.js`** (the line W3 left, folded here on 2026-09-16) — the thrown message
+   of the merge the fixture builder expects to conflict (`:74`). Red first: the counter, plus
+   `pnpm run check:standards` staying green — the message is written into no fixture file (measured:
+   it is thrown only when the build goes wrong), so the honest experiment is the grep rather than a
+   red check.
+8. **`tools/refusals.js`** — the catalogue's own prose (`truth` 37, `advice.why` 40, the reason
    lines, the header comments), then, in the same step or its own, the **narrowing of
    `ADVICE_LINE`**. Red first: put `починка: ` back into one refusal's text → after the narrowing
    `adviceOf` returns nothing for it and the catalogue's advice assertion goes red. The condition
@@ -203,10 +210,10 @@ W2's), so no step needs a `Gate-Change:` trailer.
 
 ## Acceptance
 
-- The counter over the eleven files answers **only** the named exceptions — the 19 fixture-writing
+- The counter over the twelve files answers **only** the named exceptions — the 19 fixture-writing
   lines of steps 5 and 6 (measured: `parity-freeze.js:98-118` 16, `make-fixture.js:56,57,64` 3, permanent
   since N21 was decided) and the six comments, minus the two that step 5/its journal record as prose:
-  `rg -cP '[\p{Cyrillic}]' tools/refusals.js tools/parity-live.js tools/parity-freeze.js tools/run-tests.js tools/pack-check.js tools/check-standards.js tools/make-fixture.js tools/harness.js tools/yaml.js tools/docs-facts.js tools/page-harness.js`.
+  `rg -cP '[\p{Cyrillic}]' tools/refusals.js tools/parity-live.js tools/parity-freeze.js tools/run-tests.js tools/pack-check.js tools/check-standards.js tools/make-fixture.js tools/harness.js tools/yaml.js tools/docs-facts.js tools/page-harness.js tools/synthetic/repo.js`.
 - The counts and the keys are untouched — `test/refusals-catalog.test.js` says so, and it is the
   sensor that would catch a renamed cause or a lost `✗ `.
 - The instruments still answer 0: `pnpm run check:standards`, `pnpm run pack:check`,

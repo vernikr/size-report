@@ -25,7 +25,15 @@ Under the tracker's instrument:
 rg -cP '[\p{Cyrillic}]' src/git.js src/history.js src/check.js src/explain.js src/doctor.js
 ```
 
-## The frozen literal: `SKIP_WORDS` (this is `BLOCKERS.md` N24, and no decision is taken here)
+## The frozen literal: `SKIP_WORDS` — `BLOCKERS.md` N24, **decided 2026-09-16: the words stay Russian**
+
+**The decision, taken by the mission agent after this plan was written: option 3.** The three words
+stay Russian and are named in the allow-list, on the same ground as N21 — the references stay
+Russian, and the alternative that would edit `src/history.js` is a change of behaviour rather than
+of a literal. Consequences: the gated step 4 below is **dropped**, the line is an exception of this
+owner for the guard `G1` beside the `ru` dictionaries, and the reversibility with its price is
+recorded in `BLOCKERS.md` (N24: moving the three words into `src/locales.js` stays possible and would
+redden nothing, since the fixtures pin `locale: "ru"`).
 
 Measured 2026-09-16, because it decides the order of this subplan:
 
@@ -60,13 +68,14 @@ Measured 2026-09-16, because it decides the order of this subplan:
    and the `--json`/`--data` answers keep one Russian word per reason in every locale — the mission's
    criterion then carries a named exception instead of a plan it cannot afford.
 
-**Until that decision, the line is not touched**, and it is the reason this subplan's steps come in
-the order below: everything else in S4 lands green without it, so the tree never goes red between
+**Chosen: option 3.** The line is not touched, and it is the reason this subplan's steps come in the
+order below: everything else in S4 lands green without it, so the tree never goes red between
 commits.
 
 ## What stays Russian here, and why
 
-- `SKIP_WORDS` — until N24 is decided (above), named as an exception.
+- `SKIP_WORDS` — **decided 2026-09-16 to stay** (above), named as an exception: the frozen answers
+  keep one Russian word per reason, and the decision is reversible at a recorded price.
 - The **dictionary's** words that these files print but do not own: the artifact's legend
   (`src/locales.js:67`, «Строки не получают коммиты…» — the one place in `docs/size-report.html`
   whose Cyrillic matches these files' vocabulary) is data, not a message of `check` or `doctor`.
@@ -132,13 +141,14 @@ and must be re-pointed in the same commit, while a negative match over **allow-l
 `test/tokens.test.js:113`) stays a real check because the data does not move. C1 found the same kind of
 reader in its own file (`test/module.test.js:120,195`), and the full inventory is in `tests-cli.md`.
 
-## Order of work — three steps, one gated step and a wash-up
+## Order of work — three steps and a wash-up (the fourth is dropped by N24's answer)
 
 Budget and habits as in S1–S3: ≤ 600 lines and ≤ 10 files per commit, `pnpm run verify:fast` green
 before each, the counter per file before and after, one red-first experiment quoted per step.
 
 **The rule that keeps the tree green between commits:** the only frozen literal here is
-`SKIP_WORDS`, and it is **not** in any of the first three steps; everything else of S4 reaches a
+`SKIP_WORDS`, and it is **not** in any of the three steps (nor in the wash-up, since the words
+stay); everything else of S4 reaches a
 frozen file through no path (`--json` and `--data` carry refusals of nothing, the coverage and
 doctor texts are not part of any reference, and the artifact leaves `skipped` out). So the steps
 below can be done in any order, and the frozen line waits for its decision.
@@ -168,18 +178,17 @@ settings (`закрепите их файлом: `) **distinct** from S2's phras
 (`закрепить их файлом (…): `) — `pnpm run dup` is the guard of that distinction, and the answer to a
 red is a re-wording, not a baseline.
 
-**Step 4 — `SKIP_WORDS`, gated by N24.** Do not start it before the mission agent decides. Three
-outcomes, each with its own commit shape: (1) the words move into the locale dictionaries — a source
-change, recorded in `BLOCKERS.md` and committed with the reason, and the counter of `src/history.js`
-then reaches zero; (2) the words are translated and the expectations re-taken — the commit carries
-the edited `golden.json`, `data.json` and both manifests, the red-first experiment is
-`test/parity.test.js` plus `test/contract-data.test.js:47`, and the commit body says plainly that the
-reference stopped being reproducible by the frozen copy for that field; (3) the words stay and are
-named in the allow-list — the commit is this subplan's wash-up and `src/history.js` keeps exactly one
-Russian literal.
+**Step 4 — `SKIP_WORDS`. Dropped by the decision of 2026-09-16.** What would have been its three
+outcomes is kept here as the record of the choice: (1) the words move into the locale dictionaries —
+a source change, not a translation, and the counter of `src/history.js` would then reach zero;
+(2) the words are translated and the expectations re-taken by hand — the commit would carry edited
+`golden.json`, `data.json` and both manifests, and would have to say that the reference stopped being
+reproducible by the frozen copy for that field; (3) **chosen** — the words stay and are named in the
+allow-list, so `src/history.js` keeps exactly one Russian literal and `test/frozen.test.js` keeps its
+meaning.
 
-**Wash-up.** The counter over the five files answers the named exceptions only — `SKIP_WORDS` at
-`src/history.js:18` (unless step 4 removed it) and nothing else:
+**Wash-up.** The counter over the five files answers the named exception only — `SKIP_WORDS` at
+`src/history.js:18` (N24 decided: it stays) and nothing else:
 
 ```bash
 rg -cP '[\p{Cyrillic}]' src/git.js src/history.js src/check.js src/explain.js src/doctor.js
@@ -217,12 +226,12 @@ no renames of reason keys or fields, no "while I am here".
 - step 3: change the verdict line's opening → `test/doctor.test.js` reddens on `/покрытие:/` or on the
   dependency note (`/не спрашивается/`); move a `✗` mark → `test/refusals-catalog.test.js` reddens on
   the `PRINTED` map, which is the proof that the marks are counted rather than decorative;
-- step 4: the three outcomes each have their own experiment, named above.
+- step 4: dropped by N24's answer; were it ever reopened, each outcome's experiment is named above.
 
 ## Acceptance
 
-- The counter over the five files answers **only** the named exceptions: `SKIP_WORDS` at
-  `src/history.js:18` (or nothing, if N24 is decided as (1) or (2)).
+- The counter over the five files answers **only** the named exception: `SKIP_WORDS` at
+  `src/history.js:18` (N24 decided 2026-09-16 as "the words stay").
 - `pnpm run verify` green (fast after every commit, full before the portion is pushed) — and for
   steps 1–3 the full profile is green **without touching a reference**, which is the whole point of
   the order.
@@ -237,7 +246,8 @@ no renames of reason keys or fields, no "while I am here".
 
 ## Out of scope of this subplan
 
-- `SKIP_WORDS` before its decision (N24), and the `ru` dictionaries (N19).
+- `SKIP_WORDS` and the `ru` dictionaries (N24 decided 2026-09-16, N19 open): the first is out of
+  this subplan's work and in the allow-list, the second's keys are data.
 - The cause **registry** and the catalogue's `SITES` names: S1's step 3.
 - `outsideFix` and `derivedSummary`: S2's words, printed here.
 - The hook's texts, its commit subject and its own diagostics (`src/hook.js`, S5); the printed

@@ -678,8 +678,18 @@ references stayed the same after the fix.
   keep one Russian word per reason in every locale — the criterion of the work then has a named exception
   instead of a plan it cannot afford.
 
-  **For the user to decide:** (1), (2) or (3) — best together with N21, since both ask the same question from
-  two sides: whether the frozen layer may move.
+  **Decided 2026-09-16 by the mission agent: option (3) — `SKIP_WORDS` stays Russian and is named in the
+  allow-list** (`docs/plans/2026-09-16-i18n-english/plan.md`), on the same ground as N21: the references stay
+  Russian, and option (1) would be a change of **behaviour** rather than of a literal — `src/history.js`'s
+  constant would become a lookup by `cfg.locale`, so a project asking for `locale: "en"` would start seeing
+  English skip words it does not see today. No reference moves, S4's gated step is dropped
+  (`diagnostics.md`), and the line is an exception of that owner's for the guard `G1` beside the `ru`
+  dictionaries. **The decision is reversible and its price is small, which is why it is worth naming:**
+  option (1) reddens nothing (the fixtures pin `"locale": "ru"`, so every frozen byte stays), and the whole
+  change is one constant in `src/history.js` plus the three words in `src/locales.js` — a fix-sized edit of
+  some ten lines, decided once `en` becomes the default locale (N19) or when someone asks for English skip
+  words in earnest. Until then the shipped answer keeps one Russian word per reason, and that is a named
+  exception rather than an oversight.
 
 - **N25. The report page's panel is not localized: three hardcoded Russian strings.** Measured 2026-09-16 while
   planning subplan S5: `src/page/panel.js:9-11` builds the tooltip of every file checkbox out of literals —
