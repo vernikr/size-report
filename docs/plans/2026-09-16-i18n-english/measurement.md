@@ -137,14 +137,36 @@ collision to know about: the pattern `/the minifier is unavailable/` matches **b
 (`src/metrics.js`) and the internal error of `src/minify.js:40`, and it did the same in Russian — so
 that check never told the two apart.
 
-**Step 2 — the two refusals of the measurement** (`src/minify.js`, `src/strip/guard.js`,
-`src/parse.js`'s fallback reason). One commit, because the guard's message embeds the parse worker's
-reason: translating one without the other would leave a Russian fragment inside an English sentence.
-Joint edits: the two cases in `tools/refusals.js`, `test/module.test.js:205,218,223`,
-`test/doctor.test.js:208`, and `test/minify.test.js:236` (only the sentence, not the JSON example).
-Keep each refusal's shape: the cause, then `fix: <what to edit>`, with the settings keys quoted as
-they are written in a file (`minify.ext`, `minify.guard`) — `test/templates.test.js` and
-`tools/docs-facts.js`'s `usageFlags` are the reason a key's spelling is never paraphrased.
+**Step 2 — the two refusals of the measurement — done 2026-09-16** (`src/minify.js` 4 → 1,
+`src/strip/guard.js` 6 → 1, `src/parse.js` 1 → 0; commit
+`feat(i18n): translate the two refusals of the measurement`). The minifier's refusal became
+`esbuild did not parse <file> at <sha>: <reason>` with `fix: the extension lied about its content or
+the minifier is older than the syntax; give this extension a simplification in minify.ext (for
+example {".ts": "strip-lines"})`, and the guard's `the file <path> is not JavaScript: its source text
+parses neither as a script nor as a module, so the stripper is not to blame, while <ext> stands in
+minify.guard: <reason>` with `fix: remove this extension from minify.guard or give it minify.ext — for
+example { ".js": "strip-lines" }`. The parse worker's fallback reason became `the module does not
+parse`. Joint edits: the two catalogue cases, `test/module.test.js:197,205,218,223` and
+`test/doctor.test.js:208`. Each refusal keeps its shape (the cause, then `fix: <what to edit>`) and the
+settings keys stay spelled as a file spells them (`minify.ext`, `minify.guard`).
+
+**Measured, string by string** (each put back into Russian alone):
+
+| Put back | What reddens |
+|---|---|
+| the minifier's sentence | `test/module.test.js` 13 — «отказ не называет ни файла, ни того, кто его не разобрал». **`test/minify.test.js:236` stays green**, measured: that check is anchored on the JSON example (`{".js": "strip-lines"}`) and on `"engine": "strip"` being absent, not on the sentence — so the plan's expectation for it was wrong |
+| the guard's sentence | `test/doctor.test.js` 7 («ответ не назвал причину») and `test/module.test.js` 15 («отказ не называет настоящую причину») |
+| the advice quoted in `test/module.test.js:223` | `test/refusals-catalog.test.js` 4 — «совет отдан другой проверке, а она его не исполняет», which is how a `coveredBy` case's advice is held |
+| the parse worker's fallback reason | **nothing** — 20 checks green over `test/module.test.js`, `test/guard.test.js` and `test/doctor.test.js`: it shows only on the Node `--check` path and lands inside a sentence whose opening words are what a check reads |
+
+**A fact about the catalogue worth keeping:** the `must` phrases of a `coveredBy` case are never
+executed — `verify()` in `test/refusals.test.js` returns early for those, so `must: ['is not
+JavaScript']` is documentation and the named file is the reader that holds the text. The advice of
+such a case *is* executed, but as a string search in the named file (`test/refusals-catalog.test.js`),
+which is why a stale quotation there reddens rather than passing quietly. And the plan's worry about
+`test/doctor.test.js:208`'s "three sources" resolves by measurement to one: `doctor` prints the
+refusal as its finding and never prints the fixture's commit subject, so the pattern was reading the
+refusal text alone.
 
 **Step 3 — the internal errors** (`src/minify.js:40`, `src/strip.js:54`, `src/strip/guard.js:46`,
 `src/metrics.js:265`). These are defect paths rather than messages: none of them is caught as a

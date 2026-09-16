@@ -205,7 +205,7 @@ test('файл, которого измерение не разбирает: к�
   const res = runSize(dir, ['--config', file, 'doctor']);
   assert.equal(res.code, 2, 'неразобранный файл обработан как обрезанная история: '
     + firstLine(res.stdout + res.stderr));
-  assert.match(res.stdout, /не JavaScript/, 'ответ не назвал причину:\n' + res.stdout);
+  assert.match(res.stdout, /is not JavaScript/, 'ответ не назвал причину:\n' + res.stdout);
   assert.equal(res.stdout.indexOf('--unshallow'), -1,
     'починка отправляет докачивать историю, которой дело не касается:\n' + res.stdout);
 

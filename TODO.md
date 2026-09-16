@@ -65,6 +65,15 @@ Opened 2026-09-16 with the string-translation work (`docs/plans/2026-09-16-i18n-
   `!` into a `✗` and every check stays as it was. Fixing means a check of its own (the draft's lines
   for a project with and without a `package.json`, and that the mark and the code say the same thing)
   — a check rather than a literal, hence a portion of its own.
+- **`src/parse.js:129` — a comment that states the opposite of the code beside it.** Seen
+  2026-09-16 while translating the measurement layer (subplan S3, step 2): the comment above the parse
+  worker's fallback reason reads "The fallback reason travels into a printed refusal, so it is Russian
+  like the rest of the output", while the literal right below it is English since that step
+  (`'the module does not parse'`). How it shows: a reader is told the language of the line by a comment
+  that argues for the other one. It is prose rather than a literal, so the string work leaves it alone
+  (`AGENTS.md`'s frame) and records it here; the literal it explains moved because the reason lands in a
+  refusal that became English. Fix it in a portion of its own (one comment, no code) — comfortably in
+  the same pass as the `tools/refusals.js:134` comment below.
 - **`tools/refusals.js:134` — the `template` doc comment names Russian placeholders.** Seen
   2026-09-16 while translating the settings draft (subplan S2, step 2): it reads "a shape with a
   substitution (`<файл>`, `<коммит>` — Russian, as the advice prints it)", while the shapes have been

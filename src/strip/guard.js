@@ -35,11 +35,11 @@ export function assertCompilable(min, rev, p, src) {
   if (asModule === null) return;
   const shape = MODULE_EXT.indexOf(path.extname(p).toLowerCase()) >= 0 || MODULE_MARK.test(min);
   if (src !== undefined && scriptError(src, p) !== null && moduleError(src) !== null) {
-    refuseCause('file is not JavaScript', 'файл ' + p + ' — не JavaScript: его исходный текст не'
-      + ' разбирается ни как скрипт, ни как модуль, так что дело не в стриптере, а '
-      + path.extname(p) + ' стоит в minify.guard: ' + (shape ? asModule : asScript) + '\n'
-      + '  починка: уберите это расширение из minify.guard или задайте для него '
-      + 'minify.ext — например { "' + path.extname(p).toLowerCase() + '": "strip-lines" }');
+    refuseCause('file is not JavaScript', 'the file ' + p + ' is not JavaScript: its source text parses'
+      + ' neither as a script nor as a module, so the stripper is not to blame, while '
+      + path.extname(p) + ' stands in minify.guard: ' + (shape ? asModule : asScript) + '\n'
+      + '  fix: remove this extension from minify.guard or give it '
+      + 'minify.ext — for example { "' + path.extname(p).toLowerCase() + '": "strip-lines" }');
   }
   // The reason comes from the parse the file actually was: blaming the other shape would
   // explain nothing.

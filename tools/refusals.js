@@ -284,13 +284,13 @@ export const CASES = [
   /* The parse guard and the minifier need a commit of their own in a clone — `test/module.test.js`
    * guards them, carrying the same case to the end. */
   { key: 'file is not JavaScript', coveredBy: 'test/module.test.js',
-    must: ['не JavaScript'],
+    must: ['is not JavaScript'],
     truth: 'сказано, что дело в исходном тексте, а не в стриптере, и что правится',
-    advice: [{ kind: 'coveredBy', file: 'test/module.test.js', text: 'уберите это расширение из minify.guard' }] },
+    advice: [{ kind: 'coveredBy', file: 'test/module.test.js', text: 'remove this extension from minify.guard' }] },
   { key: 'minifier did not parse', coveredBy: 'test/module.test.js',
-    must: ['esbuild не разобрал'],
+    must: ['esbuild did not parse'],
     truth: 'назван и файл, и минификатор, и выход, который этой причине и отвечает: расширение под упрощение, а не смена минификатора (та передала бы файл гарду)',
-    advice: [{ kind: 'coveredBy', file: 'test/module.test.js', text: 'задайте этому расширению упрощение в minify.ext' }] },
+    advice: [{ kind: 'coveredBy', file: 'test/module.test.js', text: 'give this extension a simplification in minify.ext' }] },
 
   /* Comparing with the tree needs a lost edit — `test/disk.test.js` guards it. */
   { key: 'EXIT.VIOLATION', coveredBy: 'test/disk.test.js',

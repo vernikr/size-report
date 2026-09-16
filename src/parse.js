@@ -127,7 +127,7 @@ function onNodeCheck(text) {
     const lines = String((e && e.stderr) || (e && e.message) || e).split('\n')
       .map((l) => l.trim()).filter((l) => l !== '');
     // The fallback reason travels into a printed refusal, so it is Russian like the rest of the output.
-    return lines.find((l) => /^\w*Error\b/.test(l)) || lines[0] || 'модуль не разбирается';
+    return lines.find((l) => /^\w*Error\b/.test(l)) || lines[0] || 'the module does not parse';
   } finally {
     fs.rmSync(tmp, { force: true });
   }

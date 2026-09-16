@@ -194,7 +194,7 @@ test('не JavaScript в графе — отказ с командой почи�
     + firstLine(res.stderr || res.stdout));
   assert.equal(/стриппер/.test(res.stderr), false,
     'отказ обвиняет стриппер в том, чего тот не делал:\n' + res.stderr);
-  assert.match(res.stderr, /esbuild не разобрал src\/view\.js/,
+  assert.match(res.stderr, /esbuild did not parse src\/view\.js/,
     'отказ не называет ни файла, ни того, кто его не разобрал:\n' + res.stderr);
   assert.match(res.stderr, /minify\.ext/, 'отказ не называет, что править:\n' + res.stderr);
   assert.equal(hasStack(res.stderr), false, 'отказ напечатал стек:\n' + res.stderr);
@@ -202,7 +202,7 @@ test('не JavaScript в графе — отказ с командой почи�
   /* The refusal's advice is a settings edit, and it is checked by a run rather than by the word: the
    * same edit in a copy of the project gives a build. A copy rather than the project itself: below, a
    * second cause is taken from the same state, and the edit would wipe it. */
-  assert.ok(res.stderr.indexOf('задайте этому расширению упрощение в minify.ext') >= 0,
+  assert.ok(res.stderr.indexOf('give this extension a simplification in minify.ext') >= 0,
     'отказ не называет выход, который работает:\n' + res.stderr);
   const fixed = path.join(tmp, 'jsx-fixed');
   fs.cpSync(dir, fixed, { recursive: true });
@@ -215,12 +215,12 @@ test('не JavaScript в графе — отказ с командой почи�
   const guarded = runSize(dir, ['--write']);
   assert.equal(guarded.code, 2, 'способ из настроек не назвал настоящую причину: '
     + firstLine(guarded.stderr || guarded.stdout));
-  assert.match(guarded.stderr, /не JavaScript/, 'отказ не называет настоящую причину:\n' + guarded.stderr);
+  assert.match(guarded.stderr, /is not JavaScript/, 'отказ не называет настоящую причину:\n' + guarded.stderr);
   assert.match(guarded.stderr, /minify\.guard/, 'отказ не называет, что править:\n' + guarded.stderr);
   assert.equal(hasStack(guarded.stderr), false, 'отказ напечатал стек:\n' + guarded.stderr);
 
   // And the same advice of the second refusal — by a run too: `minify.ext` works here as well.
-  assert.ok(guarded.stderr.indexOf('уберите это расширение из minify.guard') >= 0,
+  assert.ok(guarded.stderr.indexOf('remove this extension from minify.guard') >= 0,
     'отказ не называет выход, который работает:\n' + guarded.stderr);
   const fixedGuard = path.join(tmp, 'jsx-fixed-guard');
   fs.cpSync(dir, fixedGuard, { recursive: true });
