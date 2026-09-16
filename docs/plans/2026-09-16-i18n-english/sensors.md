@@ -219,8 +219,8 @@ not a mark). The `commit-msg` hook answers at once; the `pre-push` hook re-reads
    `GATE_FILES` list, the `TRAILER` pattern and `hasTrailer`'s twelve-character reason — the strings
    that decide whether a commit is a gate-file commit stay as they were, so this step reached no
    behaviour. Measured on the step's own commit: the hook printed
-   `✓ gatefiles: gate files 3, the Gate-Change: trailer is there` and
-   `✓ gatefiles: the commit can be made (7 files, gate files 3)`, and
+   `✓ gatefiles: gate files 2, the Gate-Change: trailer is there` and
+   `✓ gatefiles: the commit can be made (5 files, gate files 2)`, and
    `node tools/gates/gatefiles.js --range origin/main` answered with the English range verdict — the
    two places a person meets this sensor's words.
 6. **`tools/suites.js`** — the `why` of every entry and the unknown-run error. Red first: rename the

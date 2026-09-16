@@ -22,7 +22,8 @@ of "no reader". No negative match over this text: the probe carries no `assert.e
 `GATE_FILES` list, the `TRAILER` pattern, `hasTrailer`'s twelve-character reason — were not touched; only
 words a person reads moved. That distinction matters here more than anywhere else in W2, because this
 sensor's verdict is printed on every commit, including its own: the hook answered
-`✓ gatefiles: gate files 3, the Gate-Change: trailer is there` for this commit, and
+`✓ gatefiles: gate files 2, the Gate-Change: trailer is there` and
+`✓ gatefiles: the commit can be made (5 files, gate files 2)` for this commit, and
 `node tools/gates/gatefiles.js --range origin/main` answered `✓ gatefiles: across origin/main..HEAD there are
 0 commits, none of them touched a gate file without the trailer` (this portion is not committed yet, so the
 range is empty — the pre-push hook will re-read it over the two commits that land).
