@@ -441,34 +441,30 @@ to the standard on the fixture and on the live history of the consumer project.
 
 ## 1.1.1 — 2026-09-15
 
-Выпуск имени, а не измерения: пакет переехал в область владельца
-(`@vernikr/size-report`) — имя `size-report` в реестре занято чужим пакетом, и
-опубликоваться под ним было нельзя (`PLAN.md` §10). Заодно в поставку вошёл файл
-лицензии, которого манифест обещал, а в дереве не было.
+The release of a name rather than of a measurement: the package moved into the owner's scope
+(`@vernikr/size-report`) — the name `size-report` is taken in the registry by someone else's package, so publishing
+under it was impossible (`PLAN.md` §10). Along with that the license file entered the tarball: the manifest named a
+license while the tree had none.
 
-- **Имя пакета — `@vernikr/size-report`.** `bin` остался `size`, установка —
-  `pnpm add -D @vernikr/size-report`, зов — `pnpm exec size`.
-- Тот же выпуск закрывает три правки после 1.1.0: совет отказа проверяется
-  исполнением, а не на слово (`REFACTOR.md` R-4.22), якорь фикстуры выведен из
-  дерева в историю (R-1.5, R-3.4) и числа переименования в `PLAN.md` §10 сверены
-  с фактом.
-- **Имя инструмента в данных (`--data`) совпадает с именем пакета** — оно же
-  входит в паспорт отчёта, от которого зависят ключ памяти страницы и якорь
-  ссылки. Поэтому у отчёта, пересобранного этим выпуском, **сохранённый выбор
-  читателя в браузере не подхватится один раз**: запись прошлого выпуска лежит
-  под другим ключом. Числа и разметка от этого не меняются, а первый читатель и
-  так видит умолчание.
-- В поставку добавлен `LICENSE` (MIT) — манифест называл лицензию, а файла в
-  тарболле не было.
+- **The package's name is `@vernikr/size-report`.** `bin` stayed `size`, the install is
+  `pnpm add -D @vernikr/size-report`, the call is `pnpm exec size`.
+- The same release closes three fixes after 1.1.0: the advice of a refusal is checked by execution rather than by
+  word (`REFACTOR.md` R-4.22), the fixture's anchor moved out of the tree into the history (R-1.5, R-3.4), and the
+  numbers of the rename in `PLAN.md` §10 were checked against the fact.
+- **The tool's name in the data (`--data`) equals the package's name** — and it also enters the report's passport,
+  on which the page's memory key and the link's anchor depend. So a report rebuilt by this release **loses the
+  reader's saved choice in the browser once**: the former release's record lies under another key. The numbers and
+  the markup do not change with that, and a first-time reader sees the default anyway.
+- `LICENSE` (MIT) was added to the tarball — the manifest named a license while the file was not there.
 
 ### What changes in the numbers
 
-**Ничего.** Это не обещание, а замер: таблица ниже снята выпуском 1.1.1 и
-совпадает с таблицей 1.1.0 до последней клетки — измерение этот выпуск не трогает
-вовсе, а правки лежат в имени пакета, текстах отказов и выводе якоря фикстуры.
-Доказано не словом: вывод `--json` и артефакт побайтово равны замороженному
-эталону на фикстуре и на живой истории проекта-потребителя, а его закоммиченная
-таблица пересобирается в те же байты (`sha256 863ce3e9…`).
+**Nothing.** This is not a promise but a measurement: the table below was taken by the 1.1.1 release and matches the
+table of 1.1.0 to the last cell — the measurement is untouched by this release, while its fixes lie in the package's
+name, the texts of refusals and how the fixture's anchor is printed. Shown rather than said: the output of `--json`
+and the artifact are byte for byte equal to the frozen standard on the fixture and on the live history of the
+consumer project, and the consumer's committed table was rebuilt by that release into the same bytes
+(`sha256 863ce3e9…`, `REFACTOR.md` R-4.19); since then it is rebuilt by the consumer's own commits.
 
 | File | raw | min with strip | min with esbuild | tok |
 |---|---|---|---|---|
@@ -484,48 +480,39 @@ to the standard on the fixture and on the live history of the consumer project.
 | WORKLOG.md | 446 | 439 | 439 | 101 |
 | **TOTAL** | **2511** | **1597** | **1483** | **540** |
 
-Разрезы те же, что у 1.0.0 и 1.1.0, и читаются так же: `raw` — размер объекта
-git; `min` со `strip` — упрощение, под которым снят эталон паритета; `min` со
-`esbuild` — то, что даёт настоящий минификатор (`minify.engine`); `tok` — словарь
-`o200k_base` с `gpt-tokenizer 4.0.0`. У проекта прежние настройки означают
-`strip`, поэтому обновление «само» чисел не меняет. gzip в выпуск по-прежнему не
-входит (`PLAN.md` §10, D4).
+The slices are the ones of 1.0.0 below and read the same way; a project's former settings mean `strip`, so an
+update changes no number on its own, and gzip still does not ship (`PLAN.md` §10, D4).
 
 ## 1.1.0 — 2026-09-15
 
-Первый выпуск после 1.0.0, и в нём **ни одной правки измерения** — только то, что
-нашлось живыми прогонами после выпуска, все в ответах инструмента человеку.
+The first release after 1.0.0, and it holds **not a single fix of the measurement** — only what live runs found
+after the release, all of it in the tool's answers to a person.
 
-- `explain` понимает то, чем коммиты зовут на самом деле: `HEAD`, ветку, тег,
-  `HEAD~1`, полный и короткий sha. Раньше имя ревизии выглядело как несуществующий
-  коммит («в истории нет коммита «HEAD»») — то есть отказ называл не ту причину.
-  Коммит вне истории отчёта теперь отдельная причина с названным sha.
-- У отказов появился **каталог и сторож** (`tools/refusals.js`): по строке на
-  каждый отказ с кодом выхода и обязательными фразами, карты мест отказа держат
-  числа, а две проверки делят обе половины обещания — одна вызывает отказ, другая
-  требует у каждого места пункт каталога. Новый отказ не может появиться без
-  проверки. Заодно исправлены шесть мест, где текст врал или молчал о починке, и
-  появилась одна новая причина: **`нет git`** — раньше «git не запустился» и
-  «здесь нет репозитория» назывались одним текстом с оговоркой «или», то есть не
-  назывались вовсе.
-- Проверка настроек отвергает колонку, у которой путь — не непустая строка
-  (`"paths": [123]`): раньше такая колонка ни с чем не совпадала, а отчёт отдавал
-  нули **за успех**.
-- `--init` в каталоге без знакомых расширений больше не печатает «✗» при коде
-  выхода 0: знак и код говорили разное.
-- **Репозиторий пакета стал публичным**, поэтому установка не требует ни ключа,
-  ни токена, ни шага в CI: `github:` pnpm разрешает в архив `codeload.github.com`
-  по HTTPS (`WORKLOG.md` §44).
+- `explain` understands what commits are actually called: `HEAD`, a branch, a tag, `HEAD~1`, a full and a short
+  sha. A revision name used to be taken for a nonexistent commit — the refusal said “в истории нет коммита «HEAD»”
+  (the tool prints in Russian), that is, it named the wrong cause. A commit outside the report's history is now a
+  cause of its own, with the sha named.
+- The refusals got a **catalogue and a guard** (`tools/refusals.js`): a line per refusal with its exit code and
+  obligatory phrases, maps of the places of refusal holding the counts, and two checks splitting both halves of
+  the promise — one calls the refusal, the other demands a catalogue entry for every place. A new refusal cannot
+  appear without a check. Along the way six places were fixed where the text lied or was silent about the fix, and
+  one new cause appeared: **`нет git`** — “git did not start” and “there is no repository here” used to be one
+  text with an “or” in it, which is to say they were not named at all.
+- The settings check refuses a column whose path is not a non-empty string (`"paths": [123]`): such a column used
+  to match nothing while the report produced zeroes **as a success**.
+- `--init` in a directory without familiar extensions no longer prints “✗” while exiting with code 0: the sign and
+  the code said different things.
+- **The package's repository became public**, so an install needs neither a key nor a token nor a step in CI: pnpm
+  resolves `github:` into the `codeload.github.com` archive over HTTPS (`worklog/archive/WORKLOG.md` §44).
 
 ### What changes in the numbers
 
-**Ничего.** Это не обещание, а замер: таблица ниже снята выпуском 1.1.0 и совпадает
-с таблицей 1.0.0 до последней клетки — метрики, настройки по умолчанию и датчики те
-же, а правки этого выпуска лежат в текстах отказов, разборе аргументов командной
-строки и проверке настроек, куда измерение не заходит. Доказано не словом: вывод
-`--json` и артефакт побайтово равны замороженному эталону на фикстуре и на живой
-истории проекта-потребителя, а его закоммиченная таблица (211 КБ) тем же выпуском
-пересобирается в те же байты (`sha256 863ce3e9…`).
+**Nothing.** This is not a promise but a measurement: the table below was taken by the 1.1.0 release and matches the
+table of 1.0.0 to the last cell — the metrics, the default settings and the sensors are the same, while the fixes of
+this release lie in the texts of refusals, the parsing of the command line and the settings check, which the
+measurement never enters. Shown rather than said: the output of `--json` and the artifact are byte for byte equal to
+the frozen standard on the fixture and on the live history of the consumer project, and the consumer's committed
+table (211 KB) was rebuilt by the same release into the same bytes (`sha256 863ce3e9…`, `REFACTOR.md` R-4.19).
 
 | File | raw | min with strip | min with esbuild | tok |
 |---|---|---|---|---|
@@ -541,32 +528,26 @@ git; `min` со `strip` — упрощение, под которым снят �
 | WORKLOG.md | 446 | 439 | 439 | 101 |
 | **TOTAL** | **2511** | **1597** | **1483** | **540** |
 
-Разрезы те же, что у 1.0.0, и читаются так же: `raw` — размер объекта git (ни от
-чего, кроме него, не зависит); `min` со `strip` — умолчание, под которым снят
-эталон паритета; `min` со `esbuild` — то, что даёт настоящий минификатор, если его
-включить (`minify.engine`); `tok` — словарь `o200k_base` с `gpt-tokenizer 4.0.0`.
-У проекта прежние настройки означают `strip`, поэтому обновление «само» чисел не
-меняет; способ `esbuild` остаётся осознанным решением того, кто его включает.
-gzip в выпуск по-прежнему не входит (`PLAN.md` §10, D4).
+The slices are the ones of 1.0.0 below and read the same way; a project's former settings mean `strip`, so an update
+changes no number on its own, while the way `esbuild` stays a deliberate decision of whoever switches it on; gzip
+still does not ship (`PLAN.md` §10, D4).
 
 ## 1.0.0 — 2026-09-14
 
-Первый выпуск: инструмент вынесен из проекта-потребителя в отдельный пакет
-(`PLAN.md` §5, шаги 0–5) — раньше он жил копией внутри чужого репозитория. Выпусков
-до него не было: версия в манифесте стояла `0.0.0`, а работа шла внутри этого
-репозитория (`WORKLOG.md`, `REFACTOR.md`, `PLAN.md`); номера `0.1.0`–`0.5.0` в
-`PLAN.md` §12 — план выпусков, а не их история.
+The first release: the tool was moved out of the consumer project into a package of its own (`PLAN.md` §5, steps
+0–5) — before that it lived as a copy inside someone else's repository. There were no releases before it: the
+manifest's version stood at `0.0.0` while the work went on inside that repository (`worklog/archive/WORKLOG.md`,
+`REFACTOR.md`, `PLAN.md`), and the numbers `0.1.0`–`0.5.0` in `PLAN.md` §12 are a plan of releases rather than their
+history (measured: no such tag exists).
 
-Версия `1.0.0` — не про объём изменений, а про заморозку: `schema: 1` данных этой
-версией объявлена стабильной, и сломать её теперь можно только MAJOR-выпуском с
-миграцией. Версия инструмента попадает в данные (`tool.version`), версии
-минификатора и словаря — в способ получения числа, поэтому «числа этого выпуска» —
-это числа с `esbuild 0.28.2` и `gpt-tokenizer 4.0.0` в тех разрезах, где они
-задействованы.
+The version `1.0.0` is about a freeze rather than about the volume of changes: `schema: 1` of the data was declared
+stable by this version, so it can be broken only by a MAJOR with a migration. The tool's version enters the data
+(`tool.version`), the versions of the minifier and the dictionary enter the way a number is obtained, so “the numbers
+of this release” are numbers with `esbuild 0.28.2` and `gpt-tokenizer 4.0.0` in the slices where they are at work.
 
 ### What changes in the numbers
 
-Замер на фикстуре, состояние на HEAD (`now`), метрики `raw`, `min`, `tok`, словарь
+A measurement on the fixture, the state at HEAD (`now`), the metrics `raw`, `min`, `tok`, the dictionary
 `o200k_base`:
 
 | File | raw | min with strip | min with esbuild | tok |
@@ -583,80 +564,78 @@ gzip в выпуск по-прежнему не входит (`PLAN.md` §10, D4
 | WORKLOG.md | 446 | 439 | 439 | 101 |
 | **TOTAL** | **2511** | **1597** | **1483** | **540** |
 
-- **У проекта с прежними настройками не поедет ничего.** Существующие конфиги
-  `minify.engine` не задают, а умолчание — `strip`: те же комментарии и отступы, те
-  же имена, те же байты, что у инструмента до этого выпуска. Это доказано не словом:
-  вывод `--json` и собранный артефакт совпадают побайтово с замороженным эталоном —
-  на фикстуре и на живой истории проекта-потребителя (`fixtures/synthetic/`,
-  `fixtures/parity/`, проверки `test/parity.test.js`, `test/frozen.test.js`).
-- **`raw` не зависит ни от чего, кроме объекта git**: это его размер, содержимое
-  файла для этой метрики не читается вовсе. Ни настройки, ни способ минификации, ни
-  версия инструмента на него не влияют.
-- **`min` со `esbuild` меньше**, чем со `strip`, и это единственное, что меняет
-  числа, если включить настоящее сжатие: имена сокращены, пробелы убраны. На фикстуре
-  итог 1597 → **1483** (−7 %), по файлам — **−33 %** на `code.js` (276 → 185) и
-  **−22 %** на `style.css` (55 → 43). Для форматов, которых минификатор не берёт
-  (`.md`, `.txt`, `.toml`, `.json`), число то же, что со `strip`: 303, 60, 299, 69.
-  Именно поэтому метрика помечена приближением **целиком**: точность колонки
-  считается по худшей клетке, а не по большинству (пометка стоит и у отдельной
-  клетки — `test/minify.test.js`). Способ `esbuild` ставит `--init` новым проектам;
-  перевод существующего проекта на него — осознанное решение, а не побочный эффект
-  обновления.
-- **`tok` — число новое, сравнивать его не с чем**: метрики не было у прежнего
-  инструмента, это не «изменилось», а «появилось». Точный счёт словарём даёт на
-  фикстуре **540**; та же фикстура без словаря считается оценкой по длине
-  (1 токен ≈ 3 знака) и даёт **583** — число другое, поэтому оно помечено
-  приближением, а прогон отдаёт **код 4**, а не зелёный успех
-  (`SIZE_REPORT_NO_OPTIONAL` воспроизводит установку без необязательных
-  зависимостей).
-- **Без `esbuild`** `min` отступает к `strip`: те же 1597, с пометкой приближения и
-  кодом 4. Числа от этого не ломаются, но и не выдаются за сжатие.
-- **`gzip` в 1.0.0 не поставляется**: метрики нет ни в черновике настроек, ни в
-  документации; в реестре она пока принимается, а её удаление — `PLAN.md` §10 (D4),
-  изменение поведения, а не перенос.
-- **Окружение машины на числа не влияет — и это тоже изменение**, относительно
-  инструмента до этого выпуска: он читал пути и переводы строк так, как настроена
-  машина, и на установке Git «по умолчанию» либо давал неверные числа, либо падал
-  вовсе (`BLOCKERS.md` §B1, §B2, §N10). Теперь вывод одинаков в любой среде, и это
-  доказывается прогоном с погашенными настройками машины (`GIT_CONFIG_GLOBAL=/dev/null`).
+- **A project with former settings moves nowhere.** Existing configs do not set `minify.engine`, and the default
+  is `strip`: the same comments and indentation, the same names, the same bytes as the tool before this release.
+  Shown rather than said: the output of `--json` and the built artifact are byte for byte equal to the frozen
+  standard — on the fixture and on the live history of the consumer project (`fixtures/synthetic/`, `fixtures/parity/`,
+  the checks `test/parity.test.js`, `test/frozen.test.js`; re-taken on 2026-09-16 by `pnpm run check:standards`:
+  fixture 4 of 4 byte for byte, parity 3 of 3).
+- **`raw` depends on the git object and nothing else**: it is its size, and the file's content is not read for this
+  metric at all. Neither the settings, nor the way of minification, nor the tool's version affect it.
+- **`min` with `esbuild` is smaller** than with `strip`, and that is the only thing that changes numbers if real
+  compression is switched on: names shortened, spaces gone. On the fixture the total goes 1597 → **1483** (−7 %),
+  and by file **−33 %** on `code.js` (276 → 185) and **−22 %** on `style.css` (55 → 43). For the formats the
+  minifier does not take (`.md`, `.txt`, `.toml`, `.json`) the number is the one of `strip`: 303, 60, 299, 69. That
+  is why the metric is marked as an approximation **throughout**: a column's accuracy is counted by its worst cell
+  rather than by the majority (a separate cell carries the mark too — `test/minify.test.js`). The way `esbuild` is
+  what `--init` gives new projects; moving an existing project onto it is a deliberate decision rather than a side
+  effect of an update.
+- **`tok` is a new number with nothing to compare it to**: the former tool had no such metric, so this is “appeared”
+  rather than “changed”. The exact count by the dictionary gives **540** on the fixture; the same fixture without the
+  dictionary is counted by an estimate from the length (1 token ≈ 3 characters) and gives **583** — a different
+  number, which is why it carries the approximation mark, and the run returns **code 4** rather than a green
+  success (`SIZE_REPORT_NO_OPTIONAL` reproduces an install without the optional dependencies). Both numbers were
+  re-measured live on 2026-09-16.
+- **Without `esbuild`** `min` steps back to `strip`: the same 1597, with the approximation mark and code 4. The
+  numbers do not break with that, but neither are they passed off as compression.
+- **`gzip` does not ship in 1.0.0**: the metric is neither in the settings draft nor in the documentation; the
+  registry still accepts it, and removing it is `PLAN.md` §10 (D4) — a change of behaviour rather than a move. The
+  registry holds it today as well (four metrics: `raw`, `min`, `tok`, `gzip`), while the settings draft names three
+  and the default set is `raw` and `min` (`PLAN.md` §4.4, §11).
+- **The machine's environment does not affect the numbers — and that too is a change** against the tool before this
+  release: it read paths and line endings the way the machine is set up, and on a default Git install it either gave
+  wrong numbers or fell over altogether (`BLOCKERS.md` §B1, §B2, §N10). Now the output is the same in any
+  environment, which a run with the machine's settings switched off proves (`GIT_CONFIG_GLOBAL=/dev/null`).
 
-### Что вошло
+### What came in
 
-- Три метрики: `raw` (размер объекта git), `min` (в двух способах — снятие балласта
-  и настоящее сжатие через `esbuild`), `tok` (токены выбранного словаря). Числа
-  абсолютные, производные (дельты, суммы, фильтры) считает страница.
-- Интерактивный отчёт: дерево файлов, категории, переключение метрик, память выбора
-  между открытиями и передача выбора ссылкой; страница — один самодостаточный файл,
-  открывается с диска без сети.
-- Команды: сборка отчёта, сверка с историей (`size check`), объяснение пропущенной
-  строки (`size explain <sha>`), диагностика (`size doctor`), установка и снятие
-  хука автообновления отчёта, `--init` с черновиком настроек.
-- Шаблоны для подключаемого проекта: черновик настроек и описание проверки для CI.
-- Сторожа, которыми проверяется не код, а обещания: паритет с замороженным эталоном,
-  живая история, работа из собранного пака, утверждения документации, закрепления
-  настроек git на границе вызова.
+- Three metrics: `raw` (the size of the git object), `min` (in two ways — stripping the ballast and real compression
+  through `esbuild`), `tok` (the tokens of the chosen dictionary). The numbers are absolute; the derived ones
+  (deltas, sums, filters) are counted by the page.
+- The interactive report: a tree of files, categories, metric switches, the choice remembered between visits and
+  handed over as a link; the page is one self-contained file and opens from disk without a network.
+- The commands: building the report, checking it against the history (`size check`), explaining a missing row
+  (`size explain <sha>`), diagnostics (`size doctor`), installing and removing the hook that updates the report,
+  `--init` with a draft of settings.
+- Templates for a project being connected: a draft of settings and a description of the check for CI.
+- Guards that check promises rather than code: parity with the frozen standard, the live history, work from the
+  built tarball, the claims of the documentation, and the pinning of git's settings at the boundary of a call.
 
-### Исправлено
+### What was fixed
 
-- Молчание при опечатках и в несовместимых сочетаниях ключей: неизвестное слово,
-  лишнее слово, два режима сразу, ключ без значения и `--json` там, где ответа в
-  JSON нет, — теперь отказ с названным виновником и готовой командой, а не код 0 с
-  чужой работой.
-- Колонка, чей файл жил в истории и был удалён до HEAD, роняла прогон с бессмысленным
-  текстом отказа; выбор пути перестал зависеть от настроек переименований
-  (`BLOCKERS.md` §B3, §N8).
-- Зависимость чисел от окружения машины (`BLOCKERS.md` §B1, §B2, §N10).
+- Silence on typos and on incompatible combinations of keys: an unknown word, a stray word, two modes at once, a key
+  without a value, and `--json` where there is no JSON answer — now a refusal naming the culprit and a ready command,
+  rather than code 0 with someone else's work done.
+- A column whose file lived in the history and was deleted before HEAD brought the run down with a meaningless
+  refusal text; the choice of a path stopped depending on the settings of renames (`BLOCKERS.md` §B3, §N8).
+- The dependence of the numbers on the machine's environment (`BLOCKERS.md` §B1, §B2, §N10).
 
-### Не входит в 1.0.0
+### Not in 1.0.0
 
-- `docs/METHODS.md`, `docs/DATA-FORMAT.md`, `docs/ARCHITECTURE.md` — документация
-  пакета из `PLAN.md` §8.3; сегодня роль каждого числа описана в `README.md`.
-- Кэш замеров, разделение быстрого и медленного наборов проверок, профиль на истории
-  в пару тысяч коммитов — `PLAN.md` §5, шаг 6.
-- Удаление метрики `gzip` из реестра (`PLAN.md` §10, D4) и лицензионный файл
-  (открытый вопрос §10).
-- Поставка `dist/app.js` (пре-собранная программа отчёта) и публикация в npm:
-  установка идёт git-зависимостью из публичного репозитория (публичным он стал
-  2026-09-14, `WORKLOG.md` §44), а в npm пакет не опубликован — `PLAN.md` §8.4.
-- Минификация разметки (HTML), JSX/TSX и другие семейства токенизаторов, кроме
-  `openai`: у них нет своего словаря, а считать чужим — выдавать догадку за число.
+- `docs/METHODS.md`, `docs/DATA-FORMAT.md`, `docs/ARCHITECTURE.md` — the package's documentation from `PLAN.md`
+  §8.3; the role of every number is described in `README.md` today.
+- The cache of measurements, the split of the checks into a fast and a slow set, a profile on a history of a couple
+  of thousand commits — `PLAN.md` §5, step 6. Of the three, the split arrived on 2026-09-14 (`REFACTOR.md` R-5.7:
+  `pnpm test` is the fast run, 72 checks of 177, and the full profile the whole set); the cache and the profile on a
+  big history did not (**still open** in `PLAN.md` §9).
+- Removing the `gzip` metric from the registry (`PLAN.md` §10, D4) and a license file (an open question of §10 — the
+  file arrived in 1.1.1).
+- Shipping `dist/app.js` (the pre-built program of the report) and publishing to npm: the install goes by a git
+  dependency from the public repository (it became public on 2026-09-14, `worklog/archive/WORKLOG.md` §44), and the
+  package was **not published** to npm then — `PLAN.md` §8.4. Both have moved since: the package is
+  `@vernikr/size-report` on npm (2.4.0 measured on 2026-09-16) and is released by a tag from CI, while the consumer
+  still installs by a git reference (`"size-report": "github:vernikr/size-report#v1.2.0"` in its manifest), and
+  `dist/app.js` still does not ship (it is not among the manifest's `files`).
+- Minification of markup (HTML), JSX/TSX and tokenizer families other than `openai`: they have no dictionary of their
+  own, and counting by someone else's would pass a guess off as a number. Holds today: one family in
+  `src/tokens.js`, and JSX/TSX deliberately outside the table of loaders.

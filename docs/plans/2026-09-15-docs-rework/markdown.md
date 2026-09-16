@@ -843,9 +843,26 @@ files). The parts below are the order to work in; each is one commit.
   page size — 59 376 B then, moving with the tool's own program (66 277 B on 2026-09-16, `REFACTOR.md` §0),
   while the artifact stays 22 112 B and `pnpm run check:standards` re-took both standards today (fixture 4 of 4
   byte for byte, 16 commits; parity 3 of 3; the live bundle 149 commits).
-- [ ] **M25 CHANGELOG 442–661** — 1.1.1 … 1.0.0. The last release's file is the only one with the extra
-  sections `### Что вошло` ("what came in"), `### Исправлено` ("what was fixed") and `### Не входит в 1.0.0`
-  ("what 1.0.0 leaves out") — three headings outside the guard's reach, to be translated as document text.
+- [x] **M25 CHANGELOG 442–661** — done 2026-09-16, and with it the file is closed. 136 added / 157 removed =
+  **293 changed lines in one file** of the 600 budget; Cyrillic in `CHANGELOG.md` 161 → **15 lines: 13 of them the
+  fixture's own data rows in the numbers tables and 2 named quotations of printed output** (`в истории нет коммита
+  «HEAD»`, the cause name `нет git`) — no prose left. The three headings outside the guard's reach were translated
+  as document text (`What came in`, `What was fixed`, `Not in 1.0.0`) and nobody outside the file names them
+  (measured). No release line and no table row changed, so no address and no number moved; the guard needed no edit.
+  Passed: 1.1.1, 1.1.0, 1.0.0. Since `CHANGELOG.md` is one of the six documents the guards read (`DOCS` in
+  `tools/docs-facts.js`), the **full profile was run, not only the fast one: 8 steps, 74,1 s, green whole**.
+  **Three items of 1.0.0's "not in 1.0.0" list have moved on and are now named where they landed:** the fast/full
+  split of the checks arrived on 2026-09-14 (`REFACTOR.md` R-5.7), while the cache and a profile on a big history
+  are **still open** (`PLAN.md` §9); the license file arrived in 1.1.1; and the package **was not published to npm**
+  then, while today it is `@vernikr/size-report` on npm (2.4.0 measured 2026-09-16), released by a tag from CI,
+  with the consumer still installing by git reference (`github:vernikr/size-report#v1.2.0` in its manifest) and
+  `dist/app.js` still not shipped. **The remaining numbers were re-measured, not carried over:** the fixture with
+  the dictionary counts `tok` 540 (exact, code 0) and without it 583 (estimate by length, code 4) — a live run on
+  a clone of the fixture; the artifact stays 22 112 B and `pnpm run check:standards` re-took both standards today;
+  the `min` deltas of the release table (1597 → 1483, `code.js` 276 → 185, `style.css` 55 → 43) are what the guard
+  compares with a live run, so they cannot age in silence. The consumer's `sha256 863ce3e9…` is named as what that
+  pass measured (`REFACTOR.md` R-4.19): the consumer's table is rebuilt by its own commits since then. Also
+  measured: no `v0.x` tag exists, so `PLAN.md` §12's labels really are a plan rather than a history.
 - [ ] **M26 the plan files themselves** — 10 Russian lines in `docs/plans/**` (quotations of the
   tool's own words). Last, because the subplan's own completion criterion
   (`rg -l '[А-Яа-яЁё]' -g '*.md' -g '!worklog/**'` finds nothing) has to hold after it.
@@ -865,8 +882,9 @@ files). The parts below are the order to work in; each is one commit.
   them breaks the standards; they must leave the criterion. (2) **Quoted tool data inside translated documents** —
   the §1 rule of `REFACTOR.md` keeps a cause name, a printed refusal and a printed report line verbatim Russian:
   `REFACTOR.md` 16 lines now and `BLOCKERS.md` 10, each named at its place. (3) Other documents have their
-  quotations still to be named as this rework reaches them: `README.md` 4 lines, `CHANGELOG.md` 161 lines
-  (10 of them the fixture's own data rows in the numbers tables, in the part not yet passed),
+  quotations still to be named as this rework reaches them: `README.md` 4 lines, `CHANGELOG.md` **15 lines — 13 of
+  them the fixture's own data rows in the numbers tables and 2 named quotations of printed output** (the file was
+  closed at M25 on 2026-09-16),
   the plan files — `markdown.md` 34, `plan.md` 3, `comments.md` 2 lines. **`PLAN.md` left this list on
   2026-09-16: it is translated whole and holds zero Cyrillic lines.** M26 decides the wording of the criterion:
   either it excludes the frozen fixtures and counts named quotations apart, or each quotation is listed. Left as
