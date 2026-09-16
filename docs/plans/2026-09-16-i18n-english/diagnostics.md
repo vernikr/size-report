@@ -229,14 +229,28 @@ Joint edits: the three commit refusals and the `покрытие неполно`
 One reader of this step that the plan did not name is in the correction below: a negative match
 that had gone **empty** at S1's step 3 and now reads the sibling answer's phrase.
 
-**Step 3 — the diagnostics** (`src/doctor.js`, 33 lines). Joint edits: `test/doctor.test.js` (the
+**Step 3 — the diagnostics — done 2026-09-16** (`src/doctor.js` 33 → **0**; `test/doctor.test.js`
+82 → 82 — both its assertions read phrases that share their lines with Russian messages — and
+`test/hook.test.js` 113 → 111; `tools/refusals.js` 61 → 61, since no catalogue case prints a text of
+this file). The step itself: `src/doctor.js`, 33 lines. Joint edits: `test/doctor.test.js` (the
 list above), `test/hook.test.js:313,315`. Keep the shape of `doctorText`: one verdict line, the
 indented blocks in order, the findings and their fixes each on its own line, and the marks
 (`✓`, `✗`, `!`, `—`) where they are — `PRINTED` counts the `✗` marks per source file, and a mark
 moved or doubled turns `test/refusals-catalog.test.js` red. Keep the fix line of the derived
-settings (`закрепите их файлом: `) **distinct** from S2's phrasing in `src/project.js`
-(`закрепить их файлом (…): `) — `pnpm run dup` is the guard of that distinction, and the answer to a
-red is a re-wording, not a baseline.
+settings **distinct** from S2's phrasing in `src/project.js` (`pin them with a file of their own
+(…): `): the doctors' is `make them a file of their own: ` — the Russian pair was an imperative
+against an infinitive, and `pnpm run dup` is the guard of that distinction (a re-wording answers a
+red, never a baseline).
+
+What this step measured about its own readers, and it is the strongest reading of the four
+subplans: doctor.js was **put back to Russian with only the four literals that have readers left in
+English** (both dependency notes, the `— unreadable` settings tail and the two hook findings), and
+the **whole profile stayed green** — eight steps, `test:all` 175. So the verdict line, the whole
+environment block, the pins line, the settings labels, the `columns, metrics` tail, the
+`dependencies`/`hook` labels, `present`/`absent`, every word of `hookLine`, all six `HOOK_RESULT`
+words, `UNREADABLE`, the finding about coverage that was not counted and the new fix wording have
+**no reader in the tree at all**. Those four readers are named in the table above and confirmed one
+by one (below).
 
 **Step 4 — `SKIP_WORDS`. Dropped by the decision of 2026-09-16.** What would have been its three
 outcomes is kept here as the record of the choice: (1) the words move into the locale dictionaries —
@@ -247,13 +261,21 @@ reproducible by the frozen copy for that field; (3) **chosen** — the words sta
 allow-list, so `src/history.js` keeps exactly one Russian literal and `test/frozen.test.js` keeps its
 meaning.
 
-**Wash-up.** The counter over the five files answers the named exception only — `SKIP_WORDS` at
-`src/history.js:18` (N24 decided: it stays) and nothing else:
+**Wash-up — done 2026-09-16.** The counter over the five files answers the named exception only —
+`SKIP_WORDS` at `src/history.js:18` (N24 decided: it stays) and nothing else:
 
 ```bash
 rg -cP '[\p{Cyrillic}]' src/git.js src/history.js src/check.js src/explain.js src/doctor.js
-# expected: src/history.js:1 (the skip words) and nothing for the other four
+# measured: src/history.js:1 (the skip words) and nothing for the other four
 ```
+
+**S4 is closed.** Steps 1–3 landed, step 4 was dropped by N24, and the wash-up answers the one named
+exception. Two things it hands to the next subplans: S5 is now the only module of `src/**` that
+prints a Russian advice marker (`src/hook.js:156,164,171,247` — `починка: `), so **N28's condition
+is one subplan away** (`ADVICE_LINE`'s tolerance was deliberately *not* narrowed here: that is W1's
+step 8), and the remaining Cyrillic of `src/**` is exactly the four named exceptions —
+`src/locales.js` and the `ru` sides of `src/metrics.js` (data, N19/N24's ground), the comment at
+`src/metrics.js:61-63` and the three words of `src/page/panel.js` (N25, S5's decision).
 
 Leave `ADVICE_LINE`'s tolerance alone if other subplans still print a Russian marker. No reflowing,
 no renames of reason keys or fields, no "while I am here".
@@ -283,9 +305,14 @@ no renames of reason keys or fields, no "while I am here".
 - step 2: change a `REASON_WORD` alone → `test/check.test.js:72` reddens (`/только таблица 1/`);
   change `REASON_TEXT`'s `flat` sentence alone → `test/check.test.js:101` reddens; drop the
   `починка: не требуется` wording → `:103` reddens;
-- step 3: change the verdict line's opening → `test/doctor.test.js` reddens on `/покрытие:/` or on the
-  dependency note (`/не спрашивается/`); move a `✗` mark → `test/refusals-catalog.test.js` reddens on
-  the `PRINTED` map, which is the proof that the marks are counted rather than decorative;
+- step 3: **measured 2026-09-16** — the `— unreadable` tail back to Russian reddens
+  `test/doctor.test.js:133` (`ответ умолчал, что настроек нет`), and the notes are not a pair here:
+  the reader sits on the **tokens** note (`:261`), while the run stayed green with the *minify* note
+  still Russian in the same pass, so only the grep names that one; the two hook findings back to
+  Russian redden `test/hook.test.js:314,349` (both read the finding's own word through `/hook/`);
+  and moving the `✗` mark to `✕` reddens `test/refusals-catalog.test.js` on
+  `число отказов со знаком «✗» разошлось с картой PRINTED` — the proof that the marks are counted
+  rather than decorative;
 - step 4: dropped by N24's answer; were it ever reopened, each outcome's experiment is named above.
 
 ## Acceptance

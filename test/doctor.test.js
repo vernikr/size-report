@@ -130,7 +130,7 @@ test('нечитаемые настройки: код 2, причина назв
   assert.equal(res.code, 2, 'нечитаемые настройки обработаны не как отказ: '
     + firstLine(res.stdout + res.stderr));
   assert.match(res.stdout, /unknown metric/, 'ответ не назвал причину:\n' + res.stdout);
-  assert.match(res.stdout, /нечитаемы/, 'ответ умолчал, что настроек нет:\n' + res.stdout);
+  assert.match(res.stdout, /unreadable/, 'ответ умолчал, что настроек нет:\n' + res.stdout);
 
   const rep = JSON.parse(runSize(PLAIN, ['--config', bad, 'doctor', '--json']).stdout);
   assert.equal(rep.ok, false, 'на нечитаемых настройках ответ объявлен благополучным');
@@ -258,7 +258,7 @@ test('датчик, о котором настройки молчат, назв�
   const rep = JSON.parse(runSize(PLAIN, ['--config', CONFIG, 'doctor', '--json']).stdout);
   const tokens = rep.dependencies.find((d) => d.name === 'gpt-tokenizer');
   assert.equal(tokens.present, null, 'словарь спрошен там, где метрика его не просила');
-  assert.match(tokens.note, /не спрашивается/, 'молчание о датчике не объяснено: ' + tokens.note);
+  assert.match(tokens.note, /not asked for/, 'молчание о датчике не объяснено: ' + tokens.note);
 });
 
 test('doctor аргументов не принимает: лишнее слово — отказ, а не пропуск', () => {

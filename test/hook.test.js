@@ -311,7 +311,7 @@ test('хук молчит в CI, по выключателю и на отдел�
   const doc = JSON.parse(runSize(dir, ['--config', CONFIG, 'doctor', '--json']).stdout);
   assert.equal(doc.hooks.installed, true, 'диагностика не видит установленный хук');
   assert.equal(doc.hooks.enabled, false, 'диагностика не видит выключатель');
-  assert.ok(doc.findings.some((f) => f.level === 'action' && /хук/.test(f.what)),
+  assert.ok(doc.findings.some((f) => f.level === 'action' && /hook/.test(f.what)),
     'диагностика молчит о выключенном хуке: ' + JSON.stringify(doc.findings));
 
   cfg.hooks = { enabled: true };
@@ -346,7 +346,7 @@ test('отказ инструмента не роняет коммит, а пр�
 
   const doc = JSON.parse(runSize(dir, ['--config', CONFIG, 'doctor', '--json']).stdout);
   assert.equal(doc.hooks.last.result, 'refused', 'диагностика не видит отказа хука');
-  assert.ok(doc.findings.some((f) => f.level === 'action' && /хук/.test(f.what)),
+  assert.ok(doc.findings.some((f) => f.level === 'action' && /hook/.test(f.what)),
     'диагностика не называет сломанный хук делом: ' + JSON.stringify(doc.findings));
 });
 

@@ -55,7 +55,7 @@ function environment(root) {
  * in the report: `test/tokens.test.js`). An unwanted sensor is named unneeded rather than unknown — it does
  * not affect accuracy, and that is the answer; "unknown" stays for the case where the settings are unreadable
  * and there is nobody to ask. */
-const UNREADABLE = 'неизвестно: настройки нечитаемы';
+const UNREADABLE = 'unknown: the settings cannot be read';
 
 /* Asked — ask the loader; not asked — say so in words and do not pay for it. */
 function entry(asked, name, metric, load, note) {
@@ -69,9 +69,9 @@ function dependencies(cfg) {
   const asksTokens = cfg === null ? null : cfg.metrics.indexOf('tok') >= 0;
   return [
     entry(asksMinify, 'esbuild', 'min', () => minifier(),
-      asksMinify === null ? UNREADABLE : 'не спрашивается: «minify» считает снятием балласта'),
+      asksMinify === null ? UNREADABLE : 'not asked for: "minify" counts by stripping'),
     entry(asksTokens, 'gpt-tokenizer', 'tok', () => tokenizer(cfg.tokens),
-      asksTokens === null ? UNREADABLE : 'не спрашивается: метрики ' + cfg.metrics.join(' '))
+      asksTokens === null ? UNREADABLE : 'not asked for: the metrics are ' + cfg.metrics.join(' '))
   ];
 }
 
@@ -94,7 +94,7 @@ function readConfig(root, configFile) {
         columns: cfg.columns.length, metrics: cfg.metrics
       },
       findings: derived
-        ? [{ level: 'note', what: derivedSummary(cfg), fix: 'закрепите их файлом: ' + cliCommand('--init') }]
+        ? [{ level: 'note', what: derivedSummary(cfg), fix: 'make them a file of their own: ' + cliCommand('--init') }]
         : [],
       troubles: []
     };
@@ -117,15 +117,15 @@ function hookFindings(hooks) {
   if (hooks.enabled === false) {
     found.push({
       level: 'action',
-      what: 'хук установлен, но автоматика выключена настройкой hooks.enabled: отчёт обновляется руками',
-      fix: 'верните «"hooks": {"enabled": true}» в файл настроек или снимите хук: ' + cliCommand('uninstall-hook')
+      what: 'the hook is installed, but the automation is switched off by the setting hooks.enabled: the report is updated by hand',
+      fix: 'put "hooks": {"enabled": true} back in the settings file, or take the hook off: ' + cliCommand('uninstall-hook')
     });
   }
   if (hooks.last !== null && HOOK_BAD.indexOf(hooks.last.result) >= 0) {
     found.push({
       level: 'action',
-      what: 'хук: последний запуск не пересобрал отчёт — ' + hooks.last.why,
-      fix: 'починьте то, на что жалуется причина, и пересоберите отчёт: ' + cliCommand('--write')
+      what: 'hook: the last run did not rebuild the report — ' + hooks.last.why,
+      fix: 'fix what the reason complains about and rebuild the report: ' + cliCommand('--write')
     });
   }
   return found;
@@ -143,7 +143,7 @@ function readCoverage(cfg, root, configFile) {
       report: null,
       findings: [{
         level: 'note',
-        what: 'покрытие не считалось: настройки нечитаемы — почините их и спросите снова'
+        what: 'coverage was not counted: the settings cannot be read — fix them and ask again'
       }],
       troubles: []
     };
@@ -214,12 +214,12 @@ export function doctor(root, configFile) {
 /* The outcome of the hook's last run in words: it tells a person what happened after a commit without looking
  * into `.git`. */
 const HOOK_RESULT = {
-  committed: 'отчёт пересобран и закоммичен',
-  rebuilt: 'отчёт пересобран без коммита',
-  unchanged: 'менять было нечего',
-  refused: 'отказ',
-  failed: 'ошибка',
-  skipped: 'пропущен'
+  committed: 'the report was rebuilt and committed',
+  rebuilt: 'the report was rebuilt without a commit',
+  unchanged: 'there was nothing to change',
+  refused: 'a refusal',
+  failed: 'an error',
+  skipped: 'skipped'
 };
 // The outcomes that call for action: a refusal by the tool and its own error.
 const HOOK_BAD = ['refused', 'failed'];
@@ -238,13 +238,13 @@ function hooksReport(root, cfg) {
 }
 
 function hookLine(hooks) {
-  if (!hooks.installed) return 'не установлен (ставится командой ' + cliCommand('install-hook') + ')';
+  if (!hooks.installed) return 'not installed (installed with the command ' + cliCommand('install-hook') + ')';
   const last = hooks.last === null
-    ? 'ещё не запускался'
-    : 'последний запуск ' + hooks.last.at + ' — ' + (HOOK_RESULT[hooks.last.result] || hooks.last.result)
+    ? 'it has not run yet'
+    : 'the last run ' + hooks.last.at + ' — ' + (HOOK_RESULT[hooks.last.result] || hooks.last.result)
       + (hooks.last.commit ? ' (' + hooks.last.commit + ')' : '')
       + (hooks.last.why ? ': ' + hooks.last.why.split('\n')[0] : '');
-  return hooks.files.join(', ') + (hooks.enabled === false ? ' (выключен настройкой)' : '') + '; ' + last;
+  return hooks.files.join(', ') + (hooks.enabled === false ? ' (switched off by the settings)' : '') + '; ' + last;
 }
 
 /* The text for a person. Coverage is printed by `coverageText` — the same one `size check` uses: two answers
@@ -252,26 +252,26 @@ function hookLine(hooks) {
 export function doctorText(rep) {
   const env = rep.environment;
   const lines = [];
-  lines.push((rep.ok ? '✓ ' : '✗ ') + rep.tool.name + ' ' + rep.tool.version + ': диагностика ' + env.root);
-  lines.push('  окружение: Node ' + env.node + ', ' + env.platform + ', '
-    + (env.git === null ? 'git недоступен' : env.git)
-    + (env.shallow === null ? '' : env.shallow ? ', история обрезана' : ', история полная'));
+  lines.push((rep.ok ? '✓ ' : '✗ ') + rep.tool.name + ' ' + rep.tool.version + ': diagnostics for ' + env.root);
+  lines.push('  environment: Node ' + env.node + ', ' + env.platform + ', '
+    + (env.git === null ? 'git is unavailable' : env.git)
+    + (env.shallow === null ? '' : env.shallow ? ', the history is truncated' : ', the history is complete'));
   // The pins are a mechanism rather than decoration: the engine sets them itself at the call boundary, so the
   // machine's settings do not reach the numbers (guarded by `test/environment.test.js`).
-  lines.push('  git читается с закреплениями: ' + env.pins.join(', ') + '; локаль ' + env.locale
-    + ' (настройки машины на числа не влияют)');
-  lines.push('  настройки: ' + (rep.config.ok
-    ? (rep.config.derived ? 'выводятся из проекта (файла нет)' : rep.config.file)
-      + ' — ' + rep.config.columns + ' колонок, метрики ' + rep.config.metrics.join(' ')
-    : rep.config.file + ' — нечитаемы'));
-  lines.push('  зависимости: ' + rep.dependencies.map((d) => d.name
-    + (d.present === null ? ' — ' + d.note : d.present ? ' ' + d.version + ' есть' : ' нет')
+  lines.push('  git is read with the pins: ' + env.pins.join(', ') + '; locale ' + env.locale
+    + ' (the settings of the machine do not reach the numbers)');
+  lines.push('  settings: ' + (rep.config.ok
+    ? (rep.config.derived ? 'derived from the project (no file)' : rep.config.file)
+      + ' — ' + rep.config.columns + ' columns, metrics ' + rep.config.metrics.join(' ')
+    : rep.config.file + ' — unreadable'));
+  lines.push('  dependencies: ' + rep.dependencies.map((d) => d.name
+    + (d.present === null ? ' — ' + d.note : d.present ? ' ' + d.version + ' present' : ' absent')
     + ' (' + d.metric + ')').join(', '));
-  lines.push('  хук: ' + hookLine(rep.hooks));
+  lines.push('  hook: ' + hookLine(rep.hooks));
   if (rep.coverage) lines.push(coverageText(rep.coverage));
   rep.findings.forEach((f) => {
     lines.push((f.level === 'action' ? '✗ ' : '· ') + f.what);
-    if (f.fix) lines.push('  починка: ' + f.fix);
+    if (f.fix) lines.push('  fix: ' + f.fix);
   });
   return lines.join('\n');
 }
