@@ -25,8 +25,8 @@ done
 
 | File | Lines | What the Russian is |
 |---|---|---|
-| `test/page-view.test.js` | 72 | test names and assertion messages; the page's captions are read from the `ru` dictionary as **data** |
-| `test/page-choice.test.js` | 67 | the same, around the memory of the choice and the link |
+| `test/page-view.test.js` | 72 → **1** | test names and assertion messages; the page's captions are read from the `ru` dictionary as **data** — done 2026-09-16 (step 6): seventy-one names and messages are English, while `f.label === 'заметки.md'` (the fixture's own label) stays |
+| `test/page-choice.test.js` | 67 → **1** | the same, done 2026-09-16 (step 5): sixty-six names and messages are English; what stays is `'{ это не JSON'`, the payload of the broken record the page is fed |
 | `test/module.test.js` | 66 → **58** measured | the same, plus **five reads of other owners' texts** (below); the eight that left are those reads |
 | `test/page-tree.test.js` | 55 → **1** | the same, done 2026-09-16 (step 4): fifty-four names and messages are English; what stays is the dictionary read at `:128` (`/не измеряется: /`, `appUi.notMeasuredRule`'s value in the `ru` dictionary) |
 | `test/contract-data.test.js` | 51 → **1** | the same, done 2026-09-16 (step 3): fifty names and messages are English, the N24 message at `:47` included — what stays is `f.label === 'заметки.md'`, the fixture's own file label |
@@ -137,9 +137,18 @@ data, untranslated.
    every message, while translating `:128`'s regex into the English dictionary value (`/not measured: /`)
    reddens it against the Russian data the report actually carries — the experiment that shows the data
    side of this file.
-5. **`test/page-choice.test.js`** (67) — the five `ui.<key>` comparisons stay as they are, the messages
-   around them are translated.
-6. **`test/page-view.test.js`** (72) — same shape, with the metric caption at `:223`.
+5. **`test/page-choice.test.js` — done 2026-09-16, 67 → 1.** Sixty-six names and messages. Red first, one
+   phrase at a time: all of them went back to Russian on their own and the check stayed green. The
+   `ui.<key>` comparisons were left alone and their nature was **measured rather than assumed**: `ui` is
+   parsed from the page's own embedded `<script id="ui">`, so a change in the locale dictionary moves
+   **both** sides and the check stays green — the comparison is self-consistent, which is the strongest
+   form of "this is data". The payload `'{ это не JSON'` was measured the same way: an ASCII payload leaves
+   the check green, so its Cyrillic is incidental and it stays as the fixture's own record.
+6. **`test/page-view.test.js` — done 2026-09-16, 72 → 1.** Seventy-one names and messages, with the same
+   self-consistent dictionary reads (`ui.empty`, `ui.noFiles`) left in place. Red first: every message
+   green on its own. The data side of this file was proved by experiment: translating the fixture's label
+   `'заметки.md'` reddens the check, while changing the dictionary value keeps it green — the same two
+   shapes as in steps 3 and 5.
 7. **`test/module.test.js`** (66) — only its own names and messages; the five joint lines are other
    owners' and already moved.
 8. **The verification commit** (no translation of its own, or folded into step 7): the three reads that
