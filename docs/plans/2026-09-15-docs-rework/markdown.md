@@ -386,9 +386,10 @@ files). The parts below are the order to work in; each is one commit.
   turned from open questions into **settled** ones with each answer's home, and §17's gzip row now says what the
   registry holds. **Three promises true only with a code change went to `BLOCKERS.md` as note N17** (the schema,
   the migration, the block written into a project's instructions), each with the file, the place and the evidence.
-- [ ] **Carried to M13–M15 (`BLOCKERS.md`):** the note keys are out of order and two of them are N11, and the
-  file now also holds **N17** — the three promises of `docs/module-design.md` §9 and §13 that need a decision
-  rather than a documentation edit.
+- [ ] **Carried to M14–M15 (`BLOCKERS.md`):** the note keys are out of order and two of them are N11, and the
+  file also holds **N17** — the three promises of `docs/module-design.md` §9 and §13 that need a decision
+  rather than a documentation edit. Measured at M13: the two N11 notes are the journal decision and the
+  whitespace one, and no shipped document cites `§N11` (see the M15 entry for the quoted keys).
 - [x] **Done at M11a — the guard's language dependence:** an unnamed `§N` reference is resolved to the
   requirements by a word, and the word is now read in **both languages** (`test/docs-commands.test.js`),
   so the seven unnamed references in `PLAN.md` (§4.3, §11.2, §7.3, §4.2 twice, §12, §3.3, §7.2, §8) stay
@@ -407,17 +408,26 @@ files). The parts below are the order to work in; each is one commit.
   `'Причины отказа кодом 2'` in the commands check. Documents quote that output as data, so translating
   documentation cannot touch them; only a change of the tool's printed language would. Recorded so that the
   coupling is not discovered by an accident later.
-- [ ] **M13 `BLOCKERS.md` B1–B3** (18–208) — 128 Russian. Per item: these three are closed, so
-  what stays is the class of defect and the witness — the story belongs to the journal, and the
-  journal is not this subplan's scope.
+- [x] **M13 `BLOCKERS.md` preamble and B1–B3** (18–208) — done 2026-09-16 (128 Russian). 130 added / 154
+  removed = **284 changed lines in one file**; Cyrillic in the file 450 → 317 lines, and of the 5 lines left in
+  this part every one is quoted tool output, named as such. **The preamble's rule was false and is measured:**
+  "every entry has a reproduction, a consequence and a suggested fix" — six entries of twenty-one have a
+  reproduction (B1, B2, B3, N8, N13, N16), and the very next heading calls the rest notes, not blockers; the rule
+  now splits by kind of entry. **B2's witness named the wrong file** (`test/parity.test.js` instead of
+  `test/crlf.test.js` + `test/disk.test.js`) — the other two notes' mechanisms, witnesses and reproductions
+  checked out against the code, and both reproductions were re-measured live (B1: 14 rows today, 13 before the
+  fix; B3: code 0, `gone.js` empty at HEAD and 13 B at the commit where the file existed). The two Russian
+  check names B1 quoted were replaced by what they assert, so the document does not pin a wording that lives in
+  the checks.
 - [ ] **M14 `BLOCKERS.md` notes, first part** (209–330) — 114 Russian.
 - [ ] **M15 `BLOCKERS.md` notes, second part** (331–509) — 149 Russian. Known defect for this
   part: the note keys are out of order (N1 N3 N4 N6 N7 N5 N8 N9 N12 N11 N13 N10 N14 N15) and
-  **two items are numbered N11**. All fifteen keys exist, so no reference is dangling today
-  (`REFACTOR.md` and `CHANGELOG.md` cite §N2 and §N10 — checked by hand: those keys are
-  present). Renumbering one of the two N11 notes moves an address other documents use, so the
-  part that does it names what the referring documents mean by N11 (`plan.md` means the journal
-  decision, `worklog/0097` the other).
+  **two items are numbered N11**. **Measured at M13: no shipped document cites `§N11` at all** — the keys the
+  documents do cite are `§B1`, `§B2`, `§B3`, `§N2`, `§N4`, `§N8`, `§N10`, `§N13`, `§N16`, `§N17` (README,
+  `PLAN.md`, `REFACTOR.md`, `CHANGELOG.md`, `templates/ci.yml`, `tools/gates/common.js`, five checks), and
+  `§N11` appears only in `plan.md` and one worklog entry — so renumbering the free N11 moves no address of the
+  package (`plan.md` means the journal decision, `worklog/0097` the whitespace one). All the quoted keys above
+  exist and must keep their numbers.
 - [ ] **M16 `REFACTOR.md`** — 269 lines, 217 Russian: the log of the finished waves, so it is
   compacted into "what the wave established" rather than rewritten sentence by sentence.
 - [ ] **M17 PLAN §1–§3** (21–165) — 111 Russian.

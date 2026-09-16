@@ -1,208 +1,184 @@
 # BLOCKERS — size-report
 
-Журнал блокеров и известных пробелов. Запись здесь — это то, что нельзя закрыть
-умолчанием: либо работа стоит, либо дефект известен и обойдён так, что забыть о
-нём не получится.
+The journal of blockers and known gaps. An entry is something that silence must not close: either the work
+stops, or the defect is known and worked around in a way that cannot be forgotten.
 
-Правила ведения:
+The rules of keeping it:
 
-- у каждой записи есть **воспроизведение** (команда, а не рассказ), **следствие**
-  и **предлагаемая починка**;
-- обойдённый пробел обязан держаться проверкой, которая упадёт, когда пробел
-  закроют: иначе обход превращается в тишину;
-- закрытая запись не удаляется: помечается датой, тем, что сделали, и тем, чем
-  теперь держится.
+- a **blocker** (B\*) has a **reproduction** (a command rather than a story), a **consequence** and a **suggested
+  fix**; a **note** (N\*) is an observation: it names the measurement that established it, and a gap among them
+  names the options with their price;
+- a worked-around gap must be held by a check that reddens **when the gap is closed** — otherwise the workaround
+  becomes silence;
+- a closed entry is not deleted: it is dated, and says what was done and what holds it now.
+
+Quoted lines of the tool's own output stay in the language it prints (Russian): they are what a reader sees.
 
 ---
 
-## B1. Пути вне ASCII зависели от `core.quotePath` — ЗАКРЫТ 2026-09-14
+## B1. Paths outside ASCII depended on `core.quotePath` — CLOSED 2026-09-14
 
-**Суть.** Движок берёт список изменённых файлов из `git log --name-only` и
-полагался на настройку git `core.quotePath`. По умолчанию она **включена**, и
-тогда git отдаёт не-английские пути закавыченными и экранированными:
+**The essence.** The engine takes the list of changed files from `git log --name-only` and used to rely on git's
+`core.quotePath`, which is **on** by default: non-English paths then arrive quoted and escaped, and no path from
+the settings matches such a string, so a column holding one found no file in any commit.
 
 ```text
 "docs/\320\267\320\260\320\274\320\265\321\202\320\272\320\270.md"
 ```
 
-Такой строке путь из настроек (`docs/заметки.md`) не соответствует, поэтому
-колонка с не-английским путём не находила файла ни в одном коммите.
+**The consequence was double:**
 
-**Следствие было двойным:**
+1. a column with such a path was empty through the whole history — the file seemed not to exist for the tool;
+2. a commit whose **only** change of volume was that column lost its row altogether (in the fixture, “a branch —
+   an edit of code and notes”): it landed among the skipped ones as “no change of volume”.
 
-1. колонка с таким путём пустела на всей истории: файла для инструмента будто не
-   существовало;
-2. коммит, у которого эта колонка была **единственным изменением объёма**, терял
-   строку целиком (в фикстуре — «ветка — правка кода и заметок»): он попадал в
-   список пропущенных как «без изменения объёма».
+The defect did not show on the live project (`safe-resets`, all paths ASCII), so the parity reference did not
+depend on the setting, while the fixture did: on a machine with git's default settings it gave 13 rows instead
+of 14.
 
-На живом проекте (`safe-resets`, все пути ASCII) дефект не проявлялся, поэтому
-эталон паритета с ним от этой настройки не зависел, а фикстура зависела: на
-машине с настройками git по умолчанию она давала 13 строк вместо 14.
+**What was done.** One boundary of git calls (`src/git.js`, the list `GIT_PINS`): every call goes through one
+argument builder that adds `-c core.quotePath=false` and three settings of the same class (colouring, the
+signature block, the encoding of subjects), while the subprocess environment gets a pinned locale (`gitEnv`). A
+command-line key outranks both the machine's settings and the ones from the environment, so the guarantee does
+not depend on who has what configured — and that is asserted separately.
 
-**Что сделано.** Закрепление на границе вызова git (`src/size-table.js`, блок
-«граница вызова git»): все вызовы git идут через один сборщик аргументов, который
-добавляет `-c core.quotePath=false` и три настройки того же класса (раскраска,
-блок подписи, кодировка подписей), а окружение подпроцессов получает
-фиксированную локаль. Ключ командной строки сильнее и настроек машины, и настроек
-из окружения — поэтому гарантия не зависит от того, что у кого настроено; это
-отдельно утверждается проверкой.
+**What holds it** — `test/environment.test.js`, four checks: the output does not depend on git's settings and the
+locale; the pin cannot be overridden from the environment; in an environment without the machine's settings the
+fixture gives **14 rows** and all columns are filled. **Re-verified by mutation on 2026-09-16:** with
+`core.quotePath=false` taken out of `GIT_PINS` reddens exactly two of them — the one asserting the engine's output
+does not depend on git's settings and the locale, and the one asking the fixture for 14 rows with every column
+filled in an environment without the machine's settings — and the other two stay green.
 
-**Чем держится.** `test/parity.test.js` сверяет вывод с эталоном в четырёх заведомо
-чужих окружениях (без настроек машины, с включённым `core.quotePath`, с раскраской
-и чужой кодировкой, с `LC_ALL=C`) и отдельно утверждает правильное: фикстура даёт
-столько же строк, сколько в эталоне, колонка с не-ASCII меткой заполнена, коммит
-строку получает. Проверка проверена мутацией: если убрать закрепление, краснеют
-ровно две проверки — «вывод не зависит от настроек» и «14 строк без настроек
-машины», — а остальные остаются зелёными.
+**What confirms it on the live project.** `pnpm run parity:live` compares the numbers and the artifact with the
+`safe-resets` reference in two environments: the ordinary one and the one with unreadable machine settings.
 
-**Чем подтверждено на живом проекте.** `pnpm run parity:live` сверяет числа и
-артефакт с эталоном `safe-resets` в двух средах: обычной и с нечитаемыми
-настройками машины.
-
-**Воспроизведение (как это выглядело до починки)** — пригодится, если закрепление
-кто-нибудь снимет:
+**Reproduction** — for the day the pin is taken away. Before the fix this printed `13`; today, measured
+2026-09-16, it prints `14` (and `skipped` of 2), because the command-line pin outranks the variable:
 
 ```bash
-git clone fixtures/synthetic/history.bundle /tmp/size-report-b1
+SR=$(git rev-parse --show-toplevel)
+git clone $SR/fixtures/synthetic/history.bundle /tmp/size-report-b1
 cd /tmp/size-report-b1
 GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.quotePath GIT_CONFIG_VALUE_0=true \
-  node ../../size-report/bin/size.js \
-  --config ../../size-report/fixtures/synthetic/config.json --json | jq '.rows | length'
-# 13 — колонка с не-ASCII путём пуста, один коммит потерял строку
+  node $SR/bin/size.js --config $SR/fixtures/synthetic/config.json --json | jq '.rows | length'
 ```
 
 ---
 
-## B2. `core.autocrlf` ломал сверку с рабочим деревом — ЗАКРЫТ 2026-09-14
+## B2. `core.autocrlf` broke the comparison with the working tree — CLOSED 2026-09-14
 
-**Суть.** Сверка с рабочим деревом (`assertMatchesDisk`) сравнивала размер блоба из
-истории с размером файла на диске. При `core.autocrlf=true` (в установке Git для
-Windows это значение по умолчанию) на диске лежат CRLF, а в git — LF: файл не
-«пропущенная правка», но размеры различаются, и инструмент отказывался работать
-вовсе — и при этом сообщал «перенос состояния пропустил правку», то есть врал о
-причине.
+**The essence.** The comparison with the working tree (`assertMatchesDisk`, `src/history.js`) compared the size of
+the blob from the history with the size of the file on disk. With `core.autocrlf=true` (the default of Git's
+installer for Windows) the disk holds CRLF while git holds LF: not a lost edit, yet the sizes differ — and the
+tool refused to work at all, saying “the carried state missed an edit”, which lied about the cause.
 
-**Воспроизведение (как это выглядело до починки).**
+**Reproduction** — for the day the comparison is weakened. Measured 2026-09-16: green (code 0) today, where
+before the fix it refused.
 
 ```bash
+SR=$(git rev-parse --show-toplevel)
 T=$(mktemp -d)
-git -c core.autocrlf=true clone -q fixtures/synthetic/history.bundle "$T/a"
-git -C "$T/a" config core.autocrlf true        # согласованное окружение: статус чистый
-(cd "$T/a" && node "$PWD/bin/size.js" --config "$PWD/fixtures/synthetic/config.json" --json)
+git -c core.autocrlf=true clone -q $SR/fixtures/synthetic/history.bundle "$T/a"
+git -C "$T/a" config core.autocrlf true     # a consistent checkout: the status is clean
+(cd "$T/a" && node $SR/bin/size.js --config $SR/fixtures/synthetic/config.json --json)
+# before the fix (the tool prints in Russian):
 # Error: размер src/code.js на HEAD (735 B) не совпал с файлом на диске (749 B):
 #        перенос состояния между коммитами пропустил правку
 ```
 
-**Почему не вышло закреплением, как B1.** Закрепление `core.autocrlf=false` на
-вызовах git этой сверке не помогает: содержимое читается с диска, а не из git. Хуже
-того, оно бы её ослабило — в выкладке с CRLF весь рабочий каталог выглядел бы
-изменённым, все файлы попали бы в список «грязных», и сверка молча перестала бы
-что-либо проверять.
+**Why a pin did not work here, unlike B1.** Pinning `core.autocrlf=false` on git calls does not help this
+comparison: the content is read from the disk rather than from git. Worse, it would weaken it — in a CRLF
+checkout the whole working directory would look modified, every file would land among the dirty ones, and the
+comparison would quietly stop checking anything.
 
-**Что нашлось по ходу (и почему пункт D6 обещал слишком мало).** D6 предлагал
-сравнивать не размеры, а содержимое: `git hash-object --path=<путь> <файл>` отдаёт
-хеш того, что попало бы в индекс, и его надо сверять с хешем блоба HEAD. Этого
-мало: переводы строк git возвращает **не всегда**. Файл, в котором CRLF лежат в
-самом коммите (в фикстуре — `notes/crlf.txt`), при `core.autocrlf=true`
-выкладывается на диск как есть, а «очистка» заменила бы их на LF — то есть
-`hash-object` файла на диске даёт не тот блоб, что лежит в HEAD. Сам git про такие
-файлы предупреждает («CRLF will be replaced by LF»), а `git status` считает их
-чистыми: он смотрит на запись о файле в индексе, а не перечитывает содержимое.
-Один такой файл — и починка «в лоб» снова роняла бы инструмент, только теперь на
-другом файле (проверено: на `notes/crlf.txt`).
+**What was found along the way.** Comparing content rather than sizes is not enough on its own: git does not
+always restore line endings. A file whose CRLF lie in the commit itself (in the fixture, `notes/crlf.txt`) is
+checked out as it is under `core.autocrlf=true`, while the “cleanup” would put LF back — so `hash-object` of the
+file on disk gives a blob other than the one in HEAD. Git itself warns about such a file (“CRLF will be replaced
+by LF”) while `git status` calls it clean, since it looks at the index's record rather than re-reading the
+content. One such file, and a blunt fix would bring the tool down again — measured on `notes/crlf.txt`.
 
-**Что сделано** (`src/size-table.js`: одна функция `assertMatchesDisk` плюс хеш
-блоба в состоянии). Сверка стала двусторонней, и обе стороны сравнивают содержимое,
-а не размеры:
+**What was done.** The comparison became two-sided, and both sides compare content rather than sizes:
 
-1. **Состояние против дерева коммита.** `git ls-tree -r -z HEAD` — независимая от
-   чтения блобов правда о содержимом HEAD. Колонка, у которой в состоянии файла
-   нет, обязана быть пустой и в дереве (иначе потеряно создание файла). Это та самая
-   проверка, ради которой сверка существует: она ловит правку, потерянную при
-   переносе состояния между коммитами.
-2. **Файл на диске против того же содержимого.** `git hash-object --stdin-paths`
-   (один вызов на все файлы) даёт хеш того, что git положил бы в индекс. Не
-   совпало — остаётся случай, который хешем не отличить: файл, который git в этой
-   выкладке не возвращает обратно. Тогда содержимое на диске сверяется с
-   `git cat-file --filters HEAD:<путь>` — тем, что git сам выложил бы на диск для
-   этого блоба. Файлы, изменённые в дереве, из сверки с диском выпадают, как и
-   раньше: их содержимое в коммите и на диске различается законно.
+1. **The carried state against the commit's tree.** `git ls-tree -r -z HEAD` is the truth about HEAD's content
+   independent of reading blobs. A column with no file in its state must be empty in the tree as well (otherwise
+   a creation was lost). That is the very check the comparison exists for: it catches an edit lost while the
+   state was carried between commits.
+2. **The file on disk against that same content.** `git hash-object --stdin-paths` (one call for all files)
+   gives the hash of what git would put into the index. Where that does not match, one case remains — a file git
+   does not give back in this checkout — and there the content on disk is compared with
+   `git cat-file --filters HEAD:<path>`, which is what git itself would have laid out for that blob. Files edited
+   in the tree stay out of the disk comparison, as before: their content differs between the commit and the disk
+   lawfully.
 
-**Следствие шире починки.** Сверка стала точнее, а не только устойчивее: сравнение
-идёт по содержимому, поэтому правка, не изменившая размер, теперь ловится (раньше
-проходила мимо), и колонка с потерянным созданием файла — тоже.
+**The consequence is wider than the fix.** The comparison became more precise rather than merely more tolerant:
+with content compared, an edit that changed no size is caught now (it used to slip past), and so is a column
+whose file creation was lost.
 
-**Чем держится** (`test/parity.test.js`, по проверке на каждую сторону):
+**What holds it** — one check per side:
 
-| Проверка | Что утверждает | Мутация, которую она роняет |
+| Check | What it asserts | The mutation that reddens it |
 |---|---|---|
-| «выкладка с переводами строк в CRLF не мешает сверке» | числа и sha256 артефакта совпадают с обычной выкладкой; тест сам утверждает, что клон вышел с CRLF и статус пуст | на движке до починки красная |
-| «правка файла только на диске ловится — и в обычной выкладке, и в CRLF» | файл, помеченный `--assume-unchanged` и правленный на диске (git о правке молчит), обязан уронить сверку | сравнение дерева с деревом (сверка-пустышка) роняет ровно её |
-| «потерянная правка merge-коммита ловится состоянием против дерева» | мутированный движок без `--diff-merges=first-parent` обязан упасть на сверке состояния | выключенная сверка состояния роняет ровно её |
+| `test/crlf.test.js`: a CRLF checkout does not hinder the comparison | the numbers and the artifact's sha256 match the ordinary checkout; the check itself asserts the clone came out with CRLF and a clean status | green today; red on the engine before the fix |
+| `test/disk.test.js`: an edit on disk alone is caught, in both checkouts | a file marked `--assume-unchanged` and edited on disk (git stays silent about it) must bring the comparison down | a tree-against-tree comparison (an empty check) reddens exactly this one |
+| `test/disk.test.js`: a lost edit of a merge commit is caught by the state against the tree | an engine without `--diff-merges=first-parent` must fail on the state comparison | turning the state comparison off reddens exactly this one |
 
-**Статус:** закрыт.
+**Status:** closed.
 
 ---
 
-## B3. Колонка, чей файл удалён до HEAD, роняет прогон — ЗАКРЫТ 2026-09-14
+## B3. A column whose file was deleted before HEAD brought the run down — CLOSED 2026-09-14
 
-**Суть.** Файл, добавленный и затем удалённый в истории (обычное дело: временный
-модуль, перенесённый в другой файл, убранный скрипт), в колонке не работает
-вовсе: прогон отказывает **кодом 1** с текстом, который не значит ничего.
+**The essence.** A file added and then deleted in the history (an everyday thing: a temporary module, a script
+that was removed) did not work in a column at all — the run refused with **code 1** and a message that meant
+nothing.
 
-**Воспроизведение** (гипотеза — файл прошёл через историю и исчез до HEAD):
+**Reproduction** (the hypothesis: the file went through the history and vanished before HEAD). Measured
+2026-09-16: green (code 0) today, with the column empty at HEAD and holding its 13 bytes where the file existed.
 
 ```bash
-SR=/Users/vernikr/Downloads/projects/size-report
+SR=$(git rev-parse --show-toplevel)
 git clone -q --no-hardlinks $SR/fixtures/synthetic/history.bundle /tmp/b3 && cd /tmp/b3
-printf 'const a = 1;\n' > src/gone.js && git add src/gone.js && git commit -qm 'добавил'
-rm src/gone.js && git add -A && git commit -qm 'удалил'
-# колонка {label: gone.js, paths: ['src/gone.js']} добавлена в копию конфига фикстуры
+printf 'const a = 1;\n' > src/gone.js && git add src/gone.js && git commit -qm 'added'
+rm src/gone.js && git add -A && git commit -qm 'removed'
+# the column {label: "gone.js", paths: ["src/gone.js"]} added to a copy of the fixture's config
 node $SR/bin/size.js --config /tmp/b3.json --json
+# before the fix (the tool prints in Russian):
 # ✗ состояние «gone.js» на HEAD не совпало с деревом коммита (файла нет вместо файла нет):
 #   перенос состояния между коммитами пропустил правку
 ```
 
-**Причина.** В `assertMatchesDisk` (`src/history.js`) условие
-`p === undefined || tree.get(p) !== state[i].sha` считает отказом и тот случай,
-когда файла нет **ни в состоянии, ни в дереве**, — то есть когда колонка пуста на
-HEAD законно (файл удалён, а не потерян). Комментарий рядом говорит обратное:
-«колонка, у которой в состоянии файла нет, обязана быть **пустой и в дереве
-(иначе потеряно создание файла)**». Отсюда и текст: обе половины сообщения
-склеены из «файла нет» и не рассказывают ничего.
+**The cause.** In `assertMatchesDisk` (`src/history.js`) the condition `p === undefined || tree.get(p) !==
+state[i].sha` counted as a loss the case where the file is absent **both** in the state and in the tree — that
+is, where a column is empty at HEAD lawfully (the file was deleted rather than lost). The comment beside it said
+the opposite, and the message was the two halves “there is no file” glued together.
 
-**Следствие.** Отчёт по проекту с такой колонкой не собирается совсем; гонять
-инструмент по чужому репозиторию с историей удалений нельзя без правки настроек
-руками. Обход участка — колонку не заводить, то есть терять число.
+**The consequence.** A report over a project with such a column could not be assembled at all: running the tool
+over someone else's repository with a history of deletions was impossible without editing the settings by hand.
+The workaround was to declare no such column — that is, to lose the number.
 
-**Что сделано.** Отказом стало только **расхождение** сторон, а не пустота с
-обеих: сверка задаёт вопрос «что колонка несёт в дереве и что — в состоянии» и
-сравнивает ответы. Потерянным считается три вещи, и все три по-прежнему роняют
-прогон: создание (в дереве файл есть, состояние о нём не знает), изменение (файл
-есть с обеих сторон, содержимое разное) и удаление (состояние о файле знает, а в
-дереве его нет). Колонка, чей файл жил в истории и был удалён до HEAD, пуста с
-обеих сторон — это не потеря. Заодно защита в тексте отказа: сборка сообщения
-больше не падает на `tree.get(p)`, когда путь из состояния в дереве не нашёлся (в
-старом коде это был бы стек вместо объяснения — тот же класс случая, потерянное
-удаление), а сама строка теперь называет **обе** стороны по имени: «в дереве
-`src/only-in-merge.js` 77d3e2f, в состоянии файла нет».
+**What was done.** Only a **disagreement** of the two sides is a loss now, not emptiness on both. Three things
+count as lost, and all three still bring the run down: a creation (the tree has the file, the state does not know
+it), an edit (the file is on both sides with different content) and a deletion (the state knows the file, the
+tree does not). A column whose file lived in the history and was deleted before HEAD is empty on both sides —
+which is not a loss. The message itself no longer breaks on `tree.get(p)` when a path from the state is not found
+in the tree (in the old code that would have been a stack instead of an explanation), and it now names **both**
+sides (the tool prints in Russian): “в дереве `src/only-in-merge.js` 77d3e2f, в состоянии файла нет”.
 
-**Чем держится** (`test/disk.test.js`, три проверки, все на числах и текстах):
+**What holds it** — `test/disk.test.js`, three checks, all of them on numbers and texts:
 
-| Проверка | Что утверждает | На коде до починки | Чем доказано, что стережёт |
-|---|---|---|---|
-| «файл, удалённый до HEAD, не роняет прогон и числа сходятся с историей» | история с добавлением, правкой, удалением, возвратом и повторным удалением собирается кодом 0, а числа колонки сходятся с размером блоба из git на каждом коммите (возврат даёт то же число, что первое появление) | красная ровно текстом блокера — «состояние «gone.js» на HEAD не совпало с деревом коммита (файла нет вместо файла нет)» | вернуть прежнее условие `p === undefined` — падает она (прогон клона `a93acf7` с этим тестом), вместе с ней — вторая, на тексте отказа |
-| «потерянное создание файла ловится состоянием против дерева» | файл, появившийся **только в слиянии**, при потере списка изменённых путей у merge-коммита роняет прогон и называет сторону дерева и сторону состояния | только на тексте отказа: ловля была и раньше (та же мутация на старом коде отказывала на этом же файле старой формулировкой) | мутация внутри самой проверки: движок без `--diff-merges=first-parent` собирается тут же и обязан отказать; проверка ещё и утверждает, что файла нет ни у одного родителя (`git cat-file -e`) — иначе мутация была бы про другое |
-| «потерянное удаление файла ловится состоянием против дерева» | состояние помнит файл, которого в дереве нет (файл удаляется только в слиянии): мутированный движок обязан отказать, назвав «в дереве файла нет» и путь из состояния | красная: до починки B3 этот случай падал внутренней ошибкой — `TypeError: Cannot read properties of undefined (reading ’slice’)`, код 5 со стеком | та же мутация: без `--diff-merges=first-parent` удаление из слияния не видно, и проверка это ловит |
+| Check | What it asserts | The mutation that reddens it |
+|---|---|---|
+| a file deleted before HEAD does not bring the run down and the numbers agree with the history | a history with an addition, an edit, a deletion, a return and a second deletion assembles with code 0, and each commit's number equals the size of the blob git holds (the return gives the same number as the first appearance) | putting the old condition `p === undefined` back reddens this one together with the second, on the message's text |
+| a lost creation is caught by the state against the tree | a file that appeared **only in a merge** must bring the run down when the list of changed paths of the merge commit is lost, naming the tree's side and the state's side | the mutation lives inside the check: an engine without `--diff-merges=first-parent` is assembled at once and must refuse; the check also asserts the file exists in neither parent, or the mutation would be about something else |
+| a lost deletion is caught by the state against the tree | the state remembers a file the tree does not have (the file is deleted only in a merge): the mutated engine must refuse, naming “there is no file in the tree” and the path from the state | the same mutation — without `--diff-merges=first-parent` the deletion is invisible, and the check catches it; before the fix this case was an internal error, **code 5** with a stack |
 
-Ловля потерянной **правки** стережётся там же проверкой на фикстуре (мутированный
-движок без первого родителя), она была и остаётся красной на этом случае; правка
-файла только на диске — проверкой на двух выкладках.
+A lost **edit** is held by the same fixture check (an engine without the first parent), and an edit on disk alone
+by the check over the two checkouts.
 
-**Статус:** закрыт. Прогон починки — `WORKLOG.md` §28; на живом проекте и на
-фикстуре дефект не проявлялся (колонок с удалённым до HEAD файлом там нет), а
-числа, артефакт и оба эталона после починки те же.
+**Status:** closed. The fix ran in `worklog/archive/WORKLOG.md` §28; neither the live project nor the fixture
+showed the defect (no column there has a file deleted before HEAD), and the numbers, the artifact and both
+references stayed the same after the fix.
 
 ---
 
