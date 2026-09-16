@@ -564,7 +564,13 @@ references stayed the same after the fix.
   the whole work is done: the simplest to hold, and the most visible risk — a package whose printed interface
   changes in the tree while the registry keeps the old one.
 
-  **For the user to decide:** the cadence. Until then the portions are committed locally and not pushed.
+  **For the user to decide:** the cadence. **Answered in part, 2026-09-16:** pushes are no longer held —
+  the mission agent's instruction is that every portion goes to `origin/main` as soon as its own commit is
+  green, which is what the repository's own rule asks for anyway ("after every portion of work … the
+  attached copy in this project is updated"). So what stays open here is only the release half: a PATCH per
+  portion, or batched, with the registry's answer differing from the tree's source until the release. Before
+  the first of those pushes the full profile was run by hand and was green (`pnpm run verify`: eight steps,
+  including `test:all`, `parity:live`, `check:standards` and `pack:check`).
 
 - **N21. The fixture builders write the frozen layer — translating them re-takes both references.**
   `tools/synthetic/*` (note.js, content.js, history.js) writes the synthetic fixture's files, subjects and its
