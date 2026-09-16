@@ -50,8 +50,8 @@ them) and `docs-facts.js` 4 → 3. Of the 235:
 - **4 are prose**, not literals — `tools/refusals.js:134`, `tools/run-tests.js:22,40`,
   `tools/docs-facts.js:170`;
 - **210 are this owner's own**; step 1 lands 10 of them and **three are blocked** (`BLOCKERS.md`
-  N29), so **200 minus what N29 settles** is left for steps 2–8 and the twelve files read **225** now
-  (`tools/**` as a whole reads 428).
+  N29), step 2 lands 13, so **187 minus what N29 settles** is left for steps 3–8 and the twelve files
+  read **212** now (`tools/**` as a whole reads 415).
 
 And the same measurement for step 8: `tools/refusals.js`'s 55 Cyrillic lines are `truth` **37** +
 `advice.why` **12** + the case `id`s **2** + the `uncatchable` prose **2** + `ADVICE_LINE` **1** +
@@ -194,9 +194,21 @@ No reader at all, measured:
    literals → green. Repair (1) — remove `parity-live.js`'s redundant copy, which two other consumers
    already take from this file — is a code change and waits for the mission agent, so the three stay
    Russian and the step is closed with a named hole rather than hidden one.
-2. **`tools/yaml.js` + `tools/page-harness.js`** — thrown and assertion messages. Red first: make a
-   template violate the subset and watch the message a person now reads (English) while
-   `test/templates.test.js` stays green — the message is what the check prints, not what it matches.
+2. **`tools/yaml.js` + `tools/page-harness.js` — done 2026-09-16, 10 + 3 → 0.** `yaml.js`: the eight
+   throws of the parser (`linesOf`, `scalar` twice, the flow list, `map`, `list`, `node`,
+   `parseWorkflow`). `page-harness.js`: the three messages of `contractData` and `pageHtml`.
+   Red first, measured two ways. (a) Both files were returned to Russian together and the **full**
+   profile stayed green (175 checks, 0 failures) — no check reads a word of them, and the near
+   duplicates the wording has elsewhere (`test/parity.test.js:32,41`, `tools/make-fixture.js:127,150`)
+   are no reader either, because a single-line message cannot form a clone (jsdom's rule here is 50
+   tokens and 5 lines). (b) The message a person now reads was taken by hand: a block scalar answers
+   `line 4: the block scalar (`|`) is outside the subset — assemble the step value into one line`, an
+   unquoted `? … : …` answers `line 4: a colon with a space in an unquoted value — YAML reads it as the
+   end of the value; quote the value or rewrite the command`, a bad item answers `line 3: the list item
+   is not a mapping`, and an open flow list answers `the flow list is not closed: [v1`. `pnpm run dup`
+   was run after the translation as its own question — translating two instruments could have made a
+   **new** twin the way `firstDiff` did — and answered “новых клонов нет (клонов 10 …)”; the N29 pair
+   is untouched by this step, and its three literals stay as they were.
 3. **`tools/run-tests.js`** — the verdicts and the three `plural` word-triples. Red first: translate
    `MODES`' **keys** instead of its values → `node tools/run-tests.js fast` answers with the "run not
    named" message; put the keys back and translate the values. The `sec()`/`load()` comma is **not**

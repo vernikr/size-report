@@ -25,7 +25,7 @@ export function contractData(tmp, name) {
   const dir = cloneFixture(path.join(tmp, 'fixture-' + name));
   const run = runFixture(dir, ['--data']);
   assert.equal(run.code, 0,
-    'инструмент не отдал --data (код ' + run.code + '): ' + run.stderr.trim());
+    'the tool gave no --data (code ' + run.code + '): ' + run.stderr.trim());
   const golden = JSON.parse(fs.readFileSync(path.join(SYNTH, 'golden.json'), 'utf8'));
   // `text` is the same answer in bytes: reproducibility of runs is checked against it.
   return { dir: dir, text: run.stdout, data: JSON.parse(run.stdout), golden: golden };
@@ -66,10 +66,10 @@ export const pageMath = new Function(stripModules(derivedSrc)
 export function pageHtml(tmp, name) {
   const dir = cloneFixture(path.join(tmp, 'page-' + name));
   const run = runFixture(dir, ['--write']);
-  assert.equal(run.code, 0, 'инструмент не собрал отчёт: ' + run.stderr.trim());
+  assert.equal(run.code, 0, 'the tool did not build the report: ' + run.stderr.trim());
   const cfg = JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
   const file = path.join(dir, cfg.output);
-  assert.ok(fs.existsSync(file), 'отчёт не появился по пути из настроек: ' + cfg.output);
+  assert.ok(fs.existsSync(file), 'the report did not appear at the path from the settings: ' + cfg.output);
   return fs.readFileSync(file, 'utf8');
 }
 

@@ -31,7 +31,7 @@ function linesOf(src) {
   });
   for (const l of lines) {
     if (/\s$/.test(l.text) || l.text.indexOf('\t') >= 0) {
-      throw new Error('строка ' + l.line + ': отступ или хвостовые пробелы вне подмножества');
+      throw new Error('line ' + l.line + ': the indent or the trailing spaces are outside the subset');
     }
   }
   return lines;
@@ -48,19 +48,19 @@ function flowItem(text) {
 
 function scalar(text, line) {
   if (text === '|' || text === '>') {
-    throw new Error('строка ' + line + ': блочный скаляр (`' + text + '`) вне подмножества —'
-      + ' соберите значение шага в одну строку');
+    throw new Error('line ' + line + ': the block scalar (`' + text + '`) is outside the subset —'
+      + ' assemble the step value into one line');
   }
   /* A rule of YAML itself, and in this file it is no decoration: `? … : …` in a command as an
    * unquoted value parses as the end of the value, which means the description does not parse at
    * all — and a substring search does not see that. */
   const quoted = text[0] === '"' || text[0] === "'" || text[0] === '[';
   if (!quoted && text.indexOf(': ') >= 0) {
-    throw new Error('строка ' + line + ': двоеточие с пробелом в незакавыченном значении —'
-      + ' YAML прочитает это как конец значения; закавычьте значение или перепишите команду');
+    throw new Error('line ' + line + ': a colon with a space in an unquoted value —'
+      + ' YAML reads it as the end of the value; quote the value or rewrite the command');
   }
   if (text[0] === '[') {
-    if (text[text.length - 1] !== ']') throw new Error('потоковый список не закрыт: ' + text);
+    if (text[text.length - 1] !== ']') throw new Error('the flow list is not closed: ' + text);
     return text.slice(1, -1).split(',').map((s) => flowItem(s.trim()));
   }
   if (/^\d+$/.test(text)) return Number(text);
@@ -87,7 +87,7 @@ function map(p, indent) {
   while (p.at < p.lines.length && p.lines[p.at].indent === indent && p.lines[p.at].text[0] !== '-') {
     const head = p.lines[p.at];
     const kv = split(head.text);
-    if (kv === null) throw new Error('строка ' + head.line + ': не ключ и не элемент списка');
+    if (kv === null) throw new Error('line ' + head.line + ': neither a key nor a list item');
     p.at++;
     out[kv.key] = valueAt(p, kv, head.line, indent);
   }
@@ -107,7 +107,7 @@ function list(p, indent) {
     /* A mapping item is written by its first line (`- name: …`) and its remaining keys stand two
      * spaces deeper. */
     const kv = split(rest);
-    if (kv === null) throw new Error('строка ' + head.line + ': элемент списка не отображение');
+    if (kv === null) throw new Error('line ' + head.line + ': the list item is not a mapping');
     const item = {};
     item[kv.key] = valueAt(p, kv, head.line, head.indent);
     const more = p.at < p.lines.length && p.lines[p.at].indent > head.indent && p.lines[p.at].text[0] !== '-'
@@ -121,7 +121,7 @@ function node(p, indent) {
   const first = p.lines[p.at];
   if (first === undefined || first.indent < indent) return null;
   if (first.text[0] === '-') return list(p, first.indent);
-  if (first.indent > indent) throw new Error('строка ' + first.line + ': отступ глубже ожидаемого');
+  if (first.indent > indent) throw new Error('line ' + first.line + ': the indent is deeper than expected');
   return map(p, first.indent);
 }
 
@@ -129,6 +129,6 @@ export function parseWorkflow(src) {
   const lines = linesOf(src);
   const p = { lines: lines, at: 0 };
   const doc = map(p, lines[0].indent);
-  if (p.at !== lines.length) throw new Error('разбор кончился на строке ' + lines[p.at].line);
+  if (p.at !== lines.length) throw new Error('the parse ended at line ' + lines[p.at].line);
   return doc;
 }
