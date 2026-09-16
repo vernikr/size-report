@@ -14,10 +14,10 @@ import { outsideFix, pathRoles } from './config.js';
  * so it cannot be invented: what the history does not hold, the answer is silent about. */
 
 const REASON_TEXT = {
-  merge: 'коммит — слияние, а строки слияний скрыты настройкой «rows.merges: false»',
-  report: 'тронут только сам отчёт (и то, что перечислено в «skip»)',
-  outside: 'ни один файл коммита не отслеживается колонкой',
-  flat: 'числа не сдвинулись: файлы колонок тронуты, а объём не изменился'
+  merge: 'the commit is a merge, and the rows of merges are hidden by the setting "rows.merges: false"',
+  report: 'only the report itself was touched (and what "skip" lists)',
+  outside: 'no file of the commit is tracked by a column',
+  flat: 'the numbers did not move: column files were touched, and the volume did not change'
 };
 
 /* A commit by name. git resolves a revision name, and only when there is no such name do we look up a sha
@@ -32,20 +32,19 @@ function lookup(root, commits, target) {
   // The name resolved and the commit is missing from the report: that is not "no such commit" — the commit
   // exists, and exactly that has to be said, or the person goes looking for a problem in the history.
   if (resolved !== null && found.length === 0) {
-    refuseCause('commit outside the history', '«' + target + '» — это коммит ' + resolved.slice(0, 7)
-      + ', но его нет в истории отчёта: строки строятся по коммитам текущей ветки'
-      + '\n  починка: посмотрите историю отчёта: git log --oneline'
-      + ' (всю историю репозитория показывает git log --all)');
+    refuseCause('commit outside the history', '"' + target + '" is the commit ' + resolved.slice(0, 7)
+      + ', but it is not in the history of the report: rows are built over the commits of the current branch'
+      + '\n  fix: look at the history of the report: git log --oneline'
+      + ' (the whole history of the repository is shown by git log --all)');
   }
   if (found.length === 0) {
-    refuseCause('no such commit', '«' + target + '» — не имя ревизии и не начало sha'
-      + '\n  починка: посмотрите историю: git log --oneline');
+    refuseCause('no such commit', '"' + target + '" is not a revision name and not the start of a sha'
+      + '\n  fix: look at the history: git log --oneline');
   }
   if (found.length > 1) {
-    refuseCause('ambiguous commit', 'префикс «' + target + '» неоднозначен: подходят '
-      + found.length + ' коммитов'
+    refuseCause('ambiguous commit', 'the prefix "' + target + '" is ambiguous: ' + found.length + ' commits fit'
       + '\n  ' + found.slice(0, 5).map((c) => c.sha.slice(0, 7) + ' ' + c.subject).join('\n  ')
-      + '\n  починка: назовите больше знаков');
+      + '\n  fix: name more characters');
   }
   return found[0];
 }
@@ -65,9 +64,9 @@ function touchedOf(cfg, files) {
 }
 
 const FIX = {
-  merge: 'включите строки слияний: "rows": { "merges": true }',
-  report: 'не требуется: строка про коммит не может лежать внутри самого коммита — обновляйте отчёт отдельным коммитом',
-  flat: 'не требуется: числа не изменились — строка без единого числа читалась бы как поломка'
+  merge: 'turn on the rows of merges: "rows": { "merges": true }',
+  report: 'not needed: a row about the commit cannot lie inside that very commit — update the report separately',
+  flat: 'not needed: the volume did not change — a row without a single number would read as a breakage'
 };
 
 /* The fix by reason. For "past the columns" it is one text for two answers (`outsideFix`) and names the
@@ -112,19 +111,19 @@ export function explainCommit(cfg, root, target) {
  * are equally successful answers, hence exit code 0 for both. */
 export function explainText(rep) {
   const lines = [];
-  const where = '  коммит ' + rep.sha.slice(0, 7) + ' «' + rep.subject.slice(0, 60) + '»';
+  const where = '  commit ' + rep.sha.slice(0, 7) + ' "' + rep.subject.slice(0, 60) + '"';
   if (rep.row !== null) {
-    lines.push('✓ строка есть: ' + rep.row + '-я из ' + rep.rows + ' — объём изменился');
+    lines.push('✓ the row is there: ' + rep.row + ' of ' + rep.rows + ' — the volume changed');
   } else {
-    lines.push('— строка не нужна: ' + REASON_TEXT[rep.reason]);
+    lines.push('— no row needed: ' + REASON_TEXT[rep.reason]);
   }
   lines.push(where);
-  if (rep.touched.columns.length > 0) lines.push('  тронуты колонки: ' + rep.touched.columns.join(', '));
-  if (rep.touched.excluded.length > 0) lines.push('  исключено настройками: ' + rep.touched.excluded.join(', '));
+  if (rep.touched.columns.length > 0) lines.push('  columns touched: ' + rep.touched.columns.join(', '));
+  if (rep.touched.excluded.length > 0) lines.push('  excluded by the settings: ' + rep.touched.excluded.join(', '));
   if (rep.touched.untracked.length > 0) {
-    lines.push('  мимо колонок и исключений: ' + rep.touched.untracked.join(', ')
-      + ' — за это отвечает проверка полноты: ' + cliCommand('check'));
+    lines.push('  past the columns and the exceptions: ' + rep.touched.untracked.join(', ')
+      + ' — the coverage check answers for this: ' + cliCommand('check'));
   }
-  if (rep.fix !== null) lines.push('  починка: ' + rep.fix);
+  if (rep.fix !== null) lines.push('  fix: ' + rep.fix);
   return lines.join('\n');
 }

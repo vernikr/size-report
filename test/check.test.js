@@ -49,7 +49,7 @@ test('полнота: непокрытый путь назван вместе с
   assert.equal(hasStack(res.stdout + res.stderr), false, 'ответ пришёл стеком вместо объяснения');
   assert.ok(res.stdout.indexOf(LOOSE) >= 0, 'непокрытый путь не назван:\n' + res.stdout);
   assert.ok(res.stdout.indexOf(LOOSE_SINCE) >= 0, 'не назван коммит, заведший путь:\n' + res.stdout);
-  assert.match(res.stdout, /починка: .*--init/, 'нет готовой команды починки:\n' + res.stdout);
+  assert.match(res.stdout, /fix: .*--init/, 'нет готовой команды починки:\n' + res.stdout);
 });
 
 test('полнота: сказано, какая часть истории покрыта и кто выпал', () => {
@@ -69,7 +69,7 @@ test('полнота: сказано, какая часть истории по�
   const text = runFixture(dir, ['check']).stdout;
   assert.ok(text.indexOf(ONLY_REPORT) >= 0 && text.indexOf(NO_VOLUME) >= 0,
     'в тексте не названы коммиты, выпавшие без строки:\n' + text);
-  assert.match(text, /только таблица 1/, 'в тексте нет сводки по причинам:\n' + text);
+  assert.match(text, /report only 1/, 'в тексте нет сводки по причинам:\n' + text);
 });
 
 test('полнота: путь, ставший колонкой или исключением, закрывает нарушение', () => {
@@ -91,22 +91,22 @@ test('полнота: путь, ставший колонкой или искл�
   });
 
   const text = runSize(dir, ['--config', asSkip, 'check']);
-  assert.match(firstLine(text.stdout), /тронутые пути отслеживаются или исключены/,
+  assert.match(firstLine(text.stdout), /every touched path is tracked or excluded/,
     'на полном покрытии инструмент не сказал этого прямо:\n' + text.stdout);
 });
 
 test('объяснение: числа не сдвинулись — назван файл колонки и сказано, что делать нечего', () => {
   const res = runFixture(dir, ['explain', NO_VOLUME]);
   assert.equal(res.code, 0, 'объяснение вернуло код отказа:\n' + res.stdout + res.stderr);
-  assert.match(res.stdout, /числа не сдвинулись/, 'причина названа не та:\n' + res.stdout);
+  assert.match(res.stdout, /the numbers did not move/, 'причина названа не та:\n' + res.stdout);
   assert.ok(res.stdout.indexOf('src/code.js') >= 0, 'не назван файл колонки, который тронул коммит');
-  assert.match(res.stdout, /починка: не требуется/, 'предложена починка там, где починять нечего');
+  assert.match(res.stdout, /fix: not needed/, 'предложена починка там, где починять нечего');
 });
 
 test('объяснение: коммит только отчёта — причина и что это не дефект', () => {
   const res = runFixture(dir, ['explain', ONLY_REPORT]);
   assert.equal(res.code, 0);
-  assert.match(res.stdout, /тронут только сам отчёт/, 'причина названа не та:\n' + res.stdout);
+  assert.match(res.stdout, /only the report itself was touched/, 'причина названа не та:\n' + res.stdout);
   assert.ok(res.stdout.indexOf('docs/size-table.html') >= 0, 'не назван файл отчёта');
 });
 
@@ -156,7 +156,7 @@ test('мимо колонок: полнота и объяснение говор
     'починка объяснения не назвала путь:\n' + rep.fix);
 
   const text = runSize(dir, ['--config', file, 'check']).stdout;
-  const head = '  починка: ';
+  const head = '  fix: ';
   const line = text.split('\n').filter((l) => l.indexOf(head) === 0).pop();
   assert.notEqual(line, undefined, 'полнота не сказала, что делать:\n' + text);
   assert.equal(line.slice(head.length, head.length + STEM.length), STEM,
@@ -181,14 +181,14 @@ test('объяснение: коммит без файлов — починки 
   assert.equal(rep.fix, null, 'предложена починка без имён: ' + JSON.stringify(rep.fix));
 
   const text = runFixture(side, ['explain', sha]).stdout;
-  assert.equal(/починка:/.test(text), false, 'в тексте команда починки без имён:\n' + text);
+  assert.equal(/fix:/.test(text), false, 'в тексте команда починки без имён:\n' + text);
 });
 
 test('объяснение: слияние объясняется настройкой, которая его скрыла', () => {
   const file = configWith('nomerge.json', (cfg) => { cfg.rows.merges = false; return cfg; });
   const res = runSize(dir, ['--config', file, 'explain', '9326134']);
   assert.equal(res.code, 0);
-  assert.match(res.stdout, /слияние/, 'причина названа не та:\n' + res.stdout);
+  assert.match(res.stdout, /the commit is a merge/, 'причина названа не та:\n' + res.stdout);
   assert.match(res.stdout, /rows\.merges/, 'не сказано, какой настройкой строка скрыта');
   assert.match(res.stdout, /"merges": true/, 'нет готового значения для починки');
 });
@@ -215,7 +215,7 @@ test('объяснение: несуществующее имя и коммит 
   const typo = runFixture(dir, ['explain', 'maser']);
   assert.equal(typo.code, 2, 'выдуманное имя не отказ:\n' + typo.stdout + typo.stderr);
   assert.equal(hasStack(typo.stderr), false, 'отказ напечатал стек');
-  assert.match(typo.stderr, /не имя ревизии и не начало sha/,
+  assert.match(typo.stderr, /is not a revision name and not the start of a sha/,
     'отказ не назвал настоящую причину:\n' + typo.stderr);
   assert.match(typo.stderr, /git log/, 'отказ не даёт готовой команды');
 
@@ -229,10 +229,10 @@ test('объяснение: несуществующее имя и коммит 
 
   const away = runFixture(side, ['explain', 'side']);
   assert.equal(away.code, 2, 'коммит вне истории отчёта не отказ:\n' + away.stdout + away.stderr);
-  assert.match(away.stderr, /нет в истории отчёта/, 'причина названа не та:\n' + away.stderr);
+  assert.match(away.stderr, /not in the history of the report/, 'причина названа не та:\n' + away.stderr);
   assert.ok(away.stderr.indexOf(sha.slice(0, 7)) >= 0,
     'отказ не назвал sha коммита, о котором спросили:\n' + away.stderr);
-  assert.ok(!/нет такого коммита/.test(away.stderr),
+  assert.ok(!/is not a revision name and not the start of a sha/.test(away.stderr),
     'коммит, который есть, назван несуществующим:\n' + away.stderr);
 });
 
@@ -244,13 +244,13 @@ test('отказы команд: неизвестное слово, неизве
   const absent = runFixture(dir, ['explain', 'zzzzzzz']);
   assert.equal(absent.code, 2);
   assert.equal(hasStack(absent.stderr), false, 'отказ напечатал стек');
-  assert.match(absent.stderr, /не имя ревизии и не начало sha/,
+  assert.match(absent.stderr, /is not a revision name and not the start of a sha/,
     'отказ не назвал настоящую причину:\n' + absent.stderr);
   assert.match(absent.stderr, /git log/, 'отказ не даёт готовой команды');
 
   // A short prefix matches several commits of the fixture — here the choice is a person's.
   const many = runFixture(dir, ['explain', '9']);
   assert.equal(many.code, 2);
-  assert.match(many.stderr, /неоднозначен/, 'неоднозначный префикс разрешён молча:\n' + many.stderr);
+  assert.match(many.stderr, /is ambiguous/, 'неоднозначный префикс разрешён молча:\n' + many.stderr);
   assert.match(many.stderr, /9dfe679/, 'в отказе нет подходящих коммитов');
 });

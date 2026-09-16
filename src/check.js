@@ -37,7 +37,7 @@ function wrapped(head, items) {
   return lines;
 }
 
-const REASON_WORD = { merge: 'слияние', report: 'только таблица', flat: 'без изменения объёма' };
+const REASON_WORD = { merge: 'merges', report: 'report only', flat: 'no change of volume' };
 
 function short(sha) {
   return sha.slice(0, 7);
@@ -107,20 +107,22 @@ export function coverage(cfg, root, configFile) {
 export function coverageText(rep) {
   const lines = [];
   const unknown = rep.paths.unknown;
-  const counts = '  история: ' + rep.history.commits + ' коммитов, ' + rep.history.rows + ' строк, без строки '
+  const counts = '  history: ' + rep.history.commits + ' commits, ' + rep.history.rows + ' rows, without a row '
     + rep.history.dropped.length;
   if (!rep.ok) {
-    lines.push('✗ покрытие: ' + unknown.length + (unknown.length === 1 ? ' путь' : ' путей')
-      + ' истории не отслеживается и не исключён');
+    lines.push('✗ coverage: ' + unknown.length
+      + (unknown.length === 1
+        ? ' path of the history is neither tracked nor excluded'
+        : ' paths of the history are neither tracked nor excluded'));
     unknown.slice(0, SHOW).forEach((u) => {
-      lines.push('    ' + u.path + ' — с ' + short(u.since) + ' «' + u.subject.slice(0, 60) + '»');
+      lines.push('    ' + u.path + ' — since ' + short(u.since) + ' "' + u.subject.slice(0, 60) + '"');
     });
-    if (unknown.length > SHOW) lines.push('    … ещё ' + (unknown.length - SHOW));
-    lines.push('  починка: ' + outsideFix(unknown.map((u) => u.path))
-      + '; черновик колонок по расширениям даёт ' + cliCommand('--init draft.json'));
+    if (unknown.length > SHOW) lines.push('    … and ' + (unknown.length - SHOW) + ' more');
+    lines.push('  fix: ' + outsideFix(unknown.map((u) => u.path))
+      + '; a draft of columns by extension: ' + cliCommand('--init draft.json'));
   } else {
-    lines.push('✓ покрытие: ' + rep.history.commits + ' коммитов истории, ' + rep.history.rows
-      + ' строк, тронутые пути отслеживаются или исключены');
+    lines.push('✓ coverage: ' + rep.history.commits + ' commits of the history, ' + rep.history.rows
+      + ' rows, every touched path is tracked or excluded');
   }
   lines.push(counts + ' (' + Object.keys(rep.history.byReason)
     .filter((k) => rep.history.byReason[k] > 0)
@@ -131,7 +133,7 @@ export function coverageText(rep) {
       if (shas.length > 0) lines.push(...wrapped('    ' + REASON_WORD[key] + ' (' + shas.length + '): ', shas));
     });
   }
-  lines.push('  пути: ' + rep.paths.covered + ' отслеживаются, ' + rep.paths.excluded + ' исключены'
-    + (rep.ok ? '' : ', ' + unknown.length + ' незнакомы'));
+  lines.push('  paths: ' + rep.paths.covered + ' tracked, ' + rep.paths.excluded + ' excluded'
+    + (rep.ok ? '' : ', ' + unknown.length + ' unknown'));
   return lines.join('\n');
 }

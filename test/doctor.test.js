@@ -64,7 +64,7 @@ test('свежий проект без настроек: работает на �
   assert.match(res.stdout + res.stderr, /settings derived from the project/,
     'ответ умолчал, откуда взялись настройки:\n' + res.stdout + res.stderr);
   assert.match(res.stdout + res.stderr, /--init/, 'нет команды, которой настройки закрепляются');
-  assert.match(res.stdout, /покрытие:/, 'покрытие не сосчитано, хотя настройки есть:\n' + res.stdout);
+  assert.match(res.stdout, /coverage:/, 'покрытие не сосчитано, хотя настройки есть:\n' + res.stdout);
 
   const rep = JSON.parse(runSize(dir, ['doctor', '--json']).stdout);
   assert.equal(rep.schema, 1, 'у ответа нет схемы — агенту не на что ветвиться');

@@ -184,6 +184,19 @@ the `dup`-safe choice: the phrase belongs to `src/modes.js` (S1) and repeating i
 The lesson: for a note printed on success, the reader to look for is **the other cases' `must`
 phrases**, not the note's own words — `grep` over the text cannot see it, only the run can.
 
+**Found while doing step 2: a negative match that had stopped guarding.** `test/check.test.js:235`
+asserted `!/нет такого коммита/` — the **cause name** of S1's step 3, not any printed message:
+`refuseCause` prints the message alone, so the phrase had disappeared from every answer in that
+step and the assertion had been passing on nothing since. C2's rule says a negative over translated
+text travels with the text, so it now reads `!/is not a revision name and not the start of a sha/`,
+the phrase of the **sibling** answer ("no such commit" against "commit outside the history").
+What it is worth, measured rather than assumed: with the outside-history branch switched off, the
+test catches the mistake one line earlier, on the positive at `:232`
+(`✗ "side" is not a revision name and not the start of a sha`), so the negative is the second line
+of defence and not the first. Its lesson for the remaining subplans: a negative match can go
+**empty** at the step that renames a cause, and no red run says so — `grep` the old phrase and see
+whether anything still prints it.
+
 Two smaller corrections. `BLOCKERS.md:167` is a reader the plan's table did not name: it is a claim
 about what the tool prints **now** ("it now names both sides"), so by `plan.md`'s rule it moved with
 the text in the same commit; the two reproductions at `BLOCKERS.md:148` and `:263-264` stay as they
@@ -192,12 +205,29 @@ are, being records of what a reader saw *before* that fix (the `plan.md` allow-l
 `in the state: …` — where the Russian had none: the sides are easier to tell apart in English, and
 the shape (the path, both sides, the sentence that names the class, the advice line) is intact.
 
-**Step 2 — the coverage and the explanation** (`src/check.js`, `src/explain.js`, 36 lines, one
-commit, because `REASON_WORD` and `REASON_TEXT` are two spellings of one vocabulary: the coverage's
-reason line and the explanation's reason sentence must agree in English as they do in Russian).
+**Step 2 — the coverage and the explanation — done 2026-09-16** (`src/check.js` 12 → **0**,
+`src/explain.js` 24 → **0**, `tools/refusals.js` 66 → 61, `test/check.test.js` 83 → 78,
+`test/doctor.test.js` 82 → 82 — its one `покрытие:` assertion shares its line with a Russian
+message). The vocabulary is one: `merges` / `report only` / `no change of volume` in the summary
+line and `the commit is a merge…` / `only the report itself was touched…` /
+`the numbers did not move…` in the sentence, and `FIX.flat` says `the volume did not change` where
+the sentence says `the numbers did not move` — the Russian pair was deliberately two words
+(`не сдвинулись` / `не изменились`) and the English keeps that variation, which is also what keeps
+`dup` quiet. The three commit refusals and the `покрытие неполно` case moved with their texts, and
+`FIX.report` reads `update the report separately` rather than "in a commit of its own": that phrase
+is the `must` phrase of the `size table diverged from the history` case (the lesson of step 1,
+applied before the run rather than after it). `REASON_WORD`'s `report only` and
+`no change of volume` now differ from the frozen `SKIP_WORDS` — exactly the consequence N24
+recorded: the `--json`/`--data` answers keep one Russian word per skipped commit while the
+summary line is English. The step itself: `src/check.js` and `src/explain.js`, 36 lines, one commit,
+because `REASON_WORD` and `REASON_TEXT` are two spellings of one vocabulary — the coverage's reason
+line and the explanation's reason sentence have to agree in English as they did in Russian.
 Joint edits: the three commit refusals and the `покрытие неполно` case in `tools/refusals.js`,
 `test/check.test.js` (the list above), `test/doctor.test.js:67`, and the slicing assertions
-(`head = '  починка: '`). Do not touch `outsideFix` — the sentence around it yes, its words no.
+(`head = '  fix: '`). `outsideFix` was not touched — the sentence around it yes, its words no.
+
+One reader of this step that the plan did not name is in the correction below: a negative match
+that had gone **empty** at S1's step 3 and now reads the sibling answer's phrase.
 
 **Step 3 — the diagnostics** (`src/doctor.js`, 33 lines). Joint edits: `test/doctor.test.js` (the
 list above), `test/hook.test.js:313,315`. Keep the shape of `doctorText`: one verdict line, the
