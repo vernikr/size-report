@@ -8,6 +8,7 @@ The rules of keeping it:
 - a **blocker** (B\*) has a **reproduction** (a command rather than a story), a **consequence** and a **suggested
   fix**; a **note** (N\*) is an observation: it names the measurement that established it, and a gap among them
   names the options with their price;
+- note keys run in the order the entries appear, so a note is cited by number rather than counted;
 - a worked-around gap must be held by a check that reddens **when the gap is closed** — otherwise the workaround
   becomes silence;
 - a closed entry is not deleted: it is dated, and says what was done and what holds it now.
@@ -182,138 +183,174 @@ references stayed the same after the fix.
 
 ---
 
-## Заметки (не блокеры)
+## Notes (not blockers)
 
-- **N1. Контрольный режим в свежем клоне фикстуры красный.** В фикстуре артефакт
-  закоммичен (коммит «только отчёт» сдвигает его содержимое), поэтому до
-  `--write` файл не совпадает с историей. Порядок проверок поэтому такой:
-  `--json`, затем `--write`, затем контрольный режим — так же поступает и
-  `tools/make-fixture.js`.
-- ~~**N2. Путь движка в тексте ошибки меняется при переносе**~~ — закрыто
-  2026-09-14 (волна 0 чистки, `REFACTOR.md` R-0.1/R-0.3). Подсказка больше не
-  цитирует файл движка: она называет точку входа (`bin/size.js`), и её выполнение
-  создаёт настройки, по которым инструмент сразу работает. Заодно у отказов
-  появились коды выхода по таблице `PLAN.md` §4.1 и справка вместо стека.
-  Стережёт `test/cli.test.js` (10 проверок, все красные на движке до правки).
-- **N3. Что проверено и оказалось инертным** (чтобы не перепроверять). Каждая
-  строка — это прогон движка в клоне фикстуры с подсунутой настройкой и сравнение
-  с эталоном побайтово:
+- **N1. The control check is red in a fresh clone of the fixture.** The fixture keeps the artifact committed
+  (the “report only” commit moves its content), so until it is rewritten the file disagrees with the history.
+  Hence the order of the checks: `--json`, then `--write`, then the control check — and `tools/make-fixture.js`
+  does the same (the golden, the artifact, then a check that has to be green). Measured 2026-09-16 on a fresh
+  clone: code 1 before `--write`, naming the report's first differing line, and code 0 after it.
+- ~~**N2. The engine's path in a refusal text changed with the project's location**~~ — closed 2026-09-14 (wave 0 of
+  the cleanup, `REFACTOR.md` R-0.1/R-0.3). The advice no longer quotes the engine's file: it names the entry
+  point (`bin/size.js`), and running it creates the settings the tool then works by (`invocation` in
+  `src/refusal.js`). The refusals also gained exit codes from the table of `PLAN.md` §4.1 and help instead of a
+  stack. Held by `test/cli.test.js`, nine checks of the command line (this note said ten — measured
+  2026-09-16).
+- **N3. What was checked and turned out inert** (so that it is not checked again). Each row is the engine's
+  run in a clone of the fixture with the setting forced in, compared with the ordinary run byte for byte —
+  re-measured 2026-09-16: eleven settings and three environment variables, the same bytes every time (12 712 B
+  from a 14-row history):
 
-  | Настройка | Результат |
+  | Setting | Result |
   |---|---|
-  | `diff.renames=true/false` | не влияет на числа: проверено сравнением вывода движка в обоих значениях (закрыто в N8) |
-  | `color.ui=always` | не влияет (свой формат вывода не раскрашивается), но закреплено — чтобы не полагаться на это |
-  | `log.showSignature=true` | не влияет без подписанных коммитов; закреплено — блок подписи попал бы в разбор путей |
-  | `i18n.logOutputEncoding`, `i18n.commitEncoding` | не влияет без коммитов с чужим заголовком `encoding`; кодировка закреплена |
-  | `pager.log=true`, `GIT_PAGER=less` | не влияет (вывод не в терминал); `--no-pager` закреплён |
-  | `LC_ALL`, `LANG` | не влияет; локаль подпроцессов закреплена |
-  | `core.abbrev=4`, `log.date=relative`, `log.decorate=full` | не влияет: инструмент просит `%H`, `--date=format:` и свой формат |
-  | `status.showUntrackedFiles=no` | не влияет на числа (только на список грязных файлов в сверке с диском) |
-  | `core.autocrlf=true` | на числа не влияет; сверку с диском ломало — закрыто сравнением содержимого (B2) |
+  | `diff.renames=true/false` | no effect on the numbers, in either value (closed in N8) |
+  | `color.ui=always` | no effect (the tool's own output is not coloured), pinned anyway — rather than relying on that |
+  | `log.showSignature=true` | no effect without signed commits; pinned — a signature block would mix into the parse of paths |
+  | `i18n.logOutputEncoding`, `i18n.commitEncoding` | no effect without commits carrying a foreign `encoding` header; the read encoding is pinned |
+  | `pager.log=true`, `GIT_PAGER=less` | no effect (the output does not go to a terminal); `--no-pager` is pinned |
+  | `LC_ALL`, `LANG` | no effect; the locale of subprocesses is pinned |
+  | `core.abbrev=4`, `log.date=relative`, `log.decorate=full` | no effect: the engine asks for `%H`, `--date=format:` and a format of its own |
+  | `status.showUntrackedFiles=no` | no effect on the numbers; the dirty list of the comparison with the disk comes from `git status --porcelain` |
+  | `core.autocrlf=true` | no effect on the numbers; it used to break the comparison with the disk — closed by comparing content (B2) |
 
-- **N4. «Сумма дельт сходится с текущим размером» — верно не для всех колонок.** У
-  файла, удалённого и возвращённого (в фикстуре — `notes/crlf.txt`), в колонке две
-  клетки роста: первое появление и возврат. «Сейчас» — один размер, поэтому сумма
-  дельт больше него (117 против 63 на фикстуре). В колонке «Общий объём» уход файла
-  виден: её дельта падает на объём исчезнувшего, тогда как в клетке самого файла
-  стоит `—` (дельты нет). Так работает артефакт, и страница повторяет то же
-  правило — поэтому числа двух отчётов совпадают. Тесты называют такие колонки
-  поимённо и утверждают точные числа (`test/contract.test.js`): правило нельзя
-  поменять молча. Менять его (например, показывать уход файла как спад) — это
-  менять числа отчёта, то есть отдельный проход, а не правка контракта.
-- **N6. В браузере все страницы `file://` делят одну память.** Отчёт читают с диска,
-  а не с сервера, поэтому запись выбора не может лежать под одним ключом: ключ —
-  отпечаток паспорта отчёта (имя инструмента, схема данных, путь артефакта,
-  заголовок и метки колонок в порядке отчёта). Проверено в Chrome 153 на двух
-  отчётах одной истории: оба держат по своей записи (`size-report:4684b2b2` и
-  `size-report:5dcd0db1`) и выбор одного не трогает другой. Там, где браузер памяти
-  не даёт вовсе (приватное окно, чужой отчёт без адреса), страница работает без неё:
-  все проверки в `test/contract.test.js`, кроме проверок памяти, идут на документе
-  без адреса — это и есть окружение без памяти.
+- **N4. “The sum of the deltas agrees with the current size” — true not for every column.** A file that was
+  deleted and brought back (in the fixture, `notes/crlf.txt`) has two cells of growth in its column: the first
+  appearance and the return. “Now” is a single size, so the sum of the deltas exceeds it — measured on the
+  fixture: 54 + 63 = 117 against 63 now. The total column does show the departure: its delta falls by the size
+  of what vanished (1 878 → 1 824 in the fixture), while the file's own cell says `—` (no delta). That is how
+  the artifact works, and the page follows the same rule — which is why the numbers of the two reports agree.
+  `test/contract-derived.test.js` names such columns and asserts exact numbers: the rule cannot be changed in
+  silence. Changing it (showing a departure as a fall, say) would change the report's numbers — a pass of its
+  own rather than an edit of the contract.
+- **N5. The reasons of skipped commits in the contract are the engine's sentences** (`"cd78fd9 (только таблица)"`).
+  The list stays a wording rather than data, and on purpose: the page does not carry it at all, because the
+  report's own commit is one of the skipped ones, so the file would never become a fixed point (`src/data.js`).
+  The question behind a sentence — why a commit has no row — belongs to `size explain` (`PLAN.md` §5, step 5),
+  and that is where the reason is laid out into fields (`reason`, `touched`, `fix`) rather than derived a second
+  time (`src/explain.js`).
 
-- **N7. Смена якоря не перезагружает документ.** Ссылку на выбор страница носит в
-  адресе (`#size-report=…`). Если отчёт у читателя уже открыт, переход по ссылке для
-  браузера — это смена якоря в том же документе: загрузки не происходит, и без
-  обработчика `hashchange` ссылка срабатывала бы только в новой вкладке. Проверено в
-  Chrome: при пустом обработчике адрес менялся, а вид — нет. Держится проверкой
-  «ссылка: смена адреса на открытой странице тоже применяется» (jsdom поднимает
-  `hashchange` так же асинхронно).
+- **N6. In a browser every `file://` page shares one memory.** The report is read from a disk rather than from a
+  server, so the stored choice cannot live under a single key: the key is the fingerprint of the report's
+  passport — the tool's name, the data schema, the artifact's path, the title and the column labels in the order
+  of the report (`src/page/state.js`; 32 bits are enough, the mark identifies rather than protects). A record of
+  someone else's report lies under another key and is not picked up, and reading accepts only a record of our own
+  format and passport. Where the browser grants no memory at all (a private window), the page works without it:
+  the record is what is lost, while the numbers and the markup do not depend on it. Held by
+  `test/page-choice.test.js` — a further visit returns the same choice and the same numbers, and a foreign or
+  broken record is not applied. What no check holds is that branch of a browser granting no memory: named out
+  loud rather than left looking covered.
 
-- **N5. Причины пропущенных коммитов в контракте — строками движка**
-  (`"cd78fd9 (только таблица)"`). Разложить их по полям (`{sha, why}`) — вместе с
-  командой объяснения (`size explain`, план §5, шаг 5): сейчас это единственное
-  поле контракта, которое описывает формулировку, а не данные.
+- **N7. A change of the anchor does not reload the document.** The page carries the choice in the address
+  (`#size-report=…`). Where the report is already open, following a link is, for the browser, a change of the
+  anchor in the same document: nothing is loaded, and without a `hashchange` handler the link would work in a new
+  tab only. Held by the check that a change of the address on an open page is applied as well
+  (`test/page-choice.test.js`; jsdom raises `hashchange` as asynchronously as a browser does, so the check waits
+  for the event). The handler is in `src/page/app.js`.
 
-- **N8. Псевдоним колонки и `diff.renames` — ЗАКРЫТО 2026-09-14.** Колонка может
-  перечислять несколько путей одного файла (`modern.js` — это `src/modern.js` или
-  `src/legacy.js`). При выключенном распознавании переименований git отдаёт в
-  коммите-переименовании **оба** пути, движок брал первый по порядку настроек —
-  тот, которого в коммите уже нет, — и состояние теряло файл (сверка отказывала на
-  законном случае). Воспроизведение (на фикстуре, где у колонки `modern.js` два
-  псевдонима):
+- **N8. A column's alias and `diff.renames` — CLOSED 2026-09-14.** A column may list several paths of one file
+  (`modern.js` is `src/modern.js` or `src/legacy.js`). With rename detection off, git gives **both** paths in a
+  rename commit; the engine took the first in the order of the settings — the one the commit no longer has — and
+  the state lost the file (the comparison refused on a lawful case). Reproduction — measured 2026-09-16: green
+  (code 0), 14 rows, `modern.js` = 246, which is the blob's own size:
 
   ```bash
+  SR=$(git rev-parse --show-toplevel)
   git clone -q --no-hardlinks $SR/fixtures/synthetic/history.bundle /tmp/n8 && cd /tmp/n8
-  git mv src/modern.js src/legacy.js && git commit -qm 'имя вернулось'
-  git config diff.renames false          # не умолчание, но и не запрет
+  git mv src/modern.js src/legacy.js && git commit -qm 'the name came back'
+  git config diff.renames false          # not the default, but not a prohibition either
   node $SR/bin/size.js --config $SR/fixtures/synthetic/config.json --json
-  # было: ✗ состояние «modern.js» на HEAD не совпало с деревом коммита
+  # before the fix (the tool prints in Russian):
+  # ✗ состояние «modern.js» на HEAD не совпало с деревом коммита
   #         (в дереве src/legacy.js aa07bce, в состоянии файла нет)
-  # стало: ✓ 14 строк, modern.js = 246 — тот же размер, что у блоба в git
   ```
 
-  **Что сделано.** Путь для состояния выбирается по тому, что в коммите **есть**, а
-  не по порядку настроек: план собирает все псевдонимы, которых коммит коснулся, а
-  берётся первый, для которого git отдал блоб (`src/history.js`). Прежние числа
-  поехать не могли и не поехали: старая логика и новая совпадают всюду, где первый
-  по порядку псевдоним в коммите существует, — то есть в любом прогоне, который до
-  сих пор заканчивался отчётом, — и различаются только там, где раньше состояния не
-  было вовсе. Проверено тремя способами: вывод движка до и после правки побайтово
-  совпал на истории фикстуры при `diff.renames` в обоих значениях (12 824 Б),
-  оба замороженных эталона воспроизводятся байт в байт, живой отчёт — те же
-  95 × 27 и 225 673 Б, а прогон на живой истории остался **1,56–1,58 с**.
+  **What was done.** The path for the state is chosen by what the commit **has** rather than by the order of the
+  settings: the plan collects every alias the commit touched and takes the first git gave a blob for
+  (`src/history.js`). The earlier numbers could not move and did not: old logic and new agree wherever the first
+  alias exists in the commit — that is, in every run that used to end in a report — and differ only where there
+  was no state at all. Checked three ways: the engine's output before and after the fix was byte-identical on the
+  fixture's history at both values of `diff.renames`; both frozen standards reproduce byte for byte; the live
+  report stayed the same (95 × 27, the reference of `parity:live`).
 
-  **Чем держится.** «переименование внутри псевдонимов колонки не роняет прогон»
-  (`test/disk.test.js`): история с переименованием в другой псевдоним собирается и
-  при умолчании git, и при `diff.renames=false`, а число колонки сверяется с блобом
-  из git (`cat-file -s`), а не с самим движком. Красная до правки: клон `237bbdd` с
-  этим тестом — 5 из 6 зелёные, красная ровно она, текстом «состояние «modern.js»
-  на HEAD не совпало с деревом коммита». Ловля расхождений при этом не ослабла:
-  третьим свидетелем той же мутации закрыто потерянное **удаление** (файл удаляется
-  только в слиянии — состояние о нём помнит, а в дереве его нет).
+  **Held by** the check that a rename inside a column's aliases does not bring the run down (`test/disk.test.js`):
+  a history with a rename into another alias assembles both at git's default and at `diff.renames=false`, and the
+  column's number is compared with the blob from git (`cat-file -s`) rather than with the engine itself. Red
+  before the fix: 5 of 6 green in that clone, and this one red with the refusal above as its text. The catching
+  of disagreements was not weakened: by the same mutation a lost **deletion** is closed too (a file deleted in a
+  merge only — the state remembers it while the tree does not have it).
 
-- **N9. Пометка приближения — по формату, а не по содержимому.** Точность клетки
-  решает расширение пути (`pointExact` в `src/metrics.js`), потому что именно
-  расширение говорит, возьмёт ли формат минификатор. Следствие, которое стоит
-  знать: пустой файл (`src/empty.js` фикстуры) помечен приближённым, хотя пустое
-  минифицируется точно, а `.md` из одних ASCII-слов мог бы терять только
-  комментарии. Ошибка в эту сторону безопасна (приближение, объявленное там, где
-  число точное, — осторожность, а не обман) и зеркальна тому, как решён `min` под
-  снятием балласта: там точность тоже считается по формату, а не по содержимому.
-  Если понадобится точность по содержимому (пустой файл, JSON под снятием
-  балласта — он уже точен), это правка того же одного правила, а не формы данных.
+- **N9. The mark of approximation is taken by format rather than by content.** A cell's exactness is decided by
+  the path's extension (`pointExact` in `src/metrics.js`): whether the file goes to the minifier at all, or
+  whether its strategy strips ballast exactly. A consequence worth knowing: the fixture's empty file is marked
+  approximate although emptiness minifies exactly, and a `.md` of ASCII words alone could lose only comments. The
+  error in that direction is safe — an approximation declared where the number is exact is caution rather than a
+  lie — and mirrors how `min` is decided under ballast stripping: exactness is taken by format there too.
+  Measured 2026-09-16 on the fixture's artifact, whose settings ask for no minifier (the default is ballast
+  stripping): every mark of `min` follows that rule — `package.json` alone is exact (the `json` strategy) while
+  `empty.js`, which stripping leaves as it is, is marked approximate, together with both `.md` columns. Precision
+  taken by content (an empty file, JSON under ballast stripping — it is exact already) would be an edit of that
+  one rule rather than of the shape of the data.
 
-- **N12. Проверка, которая читает окружение машины, — тот же класс, что B1 и N10.**
-  Первый пуш хука был красным только в CI: GitHub ставит всему набору `CI`, хук в
-  этом окружении молчит по устройству, и девять сценариев честно получали
-  «пропущено по причине CI». Продукт был прав, проверка — нет: она зависела от
-  окружения. Правило из этого: проверка сама задаёт своё окружение
-  (`delete process.env.CI` в `test/hook.test.js`), а сценарий про выключатели
-  передаёт их вызовом, не рассчитывая на машину. Осталось ли такое где-то ещё —
-  стережёт прогон: CI гоняет набор в двух средах (`GIT_CONFIG_GLOBAL=/dev/null` и
-  обычной), поэтому чужое окружение видно сразу, но не видно того, что CI ставит и
-  что в обеих среда одинаково (тот же `CI`) — это ловится только самим CI.
+- ~~**N10. The harness reads git without pinned settings**~~ — **closed 2026-09-14** (`REFACTOR.md` R-1.4). In
+  `tools/harness.js` `gitIn` called `git -C …` as it was, while the engine pins the environment at its own
+  boundary (`src/git.js`, closed in `B1`). That had no effect: every path of this repository is ASCII, and the
+  numbers and the tool's output are read by the tool rather than by the harness. But a check that reads git
+  directly depends on the machine — the documentation guard found it first: with `GIT_CONFIG_GLOBAL=/dev/null`
+  `git log --name-only` returned a fixture path quoted, and `docs/заметки.md` from `BLOCKERS.md` became
+  “nonexistent” (`quotePath` is on by default). The guard would have been green on this machine and red on
+  another, which is a false net. Now: the list of pins and the locale come from `src/git.js`, and both the engine
+  and the harness use them; no unpinned git call is left in the checks and tools, and that is held by
+  `test/git-pins.test.js` rather than by this paragraph. The workaround that the check held was removed together
+  with the gap.
 
-- **N11. Склейка без пробелов мимо линтера — наблюдение, не блокер.** Два класса
-  склейки выглядят похоже, а ловит линтер только один. `no-multi-spaces` (заведён
-  в `R-1.2`) берёт случай, когда от склейки остался лишний пробел (`, } else {      const …`).
-  Обратный случай — пропавшая между операторами строка, где лишних пробелов нет
-  (`}function writeMode(cfg, root) {`): такое нашлось глазами в диффе прохода
-  `WORKLOG.md` §36 и было бы видно только в истории. Дешёвый кандидат —
-  `padding-line-between-statements` с требованием пустой строки перед объявлением
-  функции; он ловит именно этот случай и не рубит принятые однострочники. Пока не
-  заведён: сначала надо посмотреть, сколько замечаний он даёт на живом дереве
-  (если десятки — это переформатирование, а не правило).
+- **N11. The report's journal is `CHANGELOG.md`, and that is a convention rather than an accident.** Settings
+  inferred from the project look for a journal among four names in the **root** and take the first that exists
+  (`src/project.js`: `JOURNALS`, `journalOf`). The list starts with `WORKLOG.md`, and no such file is in the root
+  any more: the working journal became a directory of entries (`worklog/`). So the inference stops at
+  `CHANGELOG.md`, and this repository's report counts commits by releases rather than by passes of the journal.
+
+  **What was measured before accepting it.** In the assembled report (113 rows when it was written) 14 rows carry
+  a section: 13 release commits that opened a section (the case “a new one was opened”, which does not depend on
+  the document's order), and one commit that edited the existing section `1.0.0`, the only section it touched, so
+  its name is right too. The links are live: an anchor like `CHANGELOG.md#240--2026-09-15` leads to a real
+  heading. Neither the numbers, nor the artifact, nor either frozen standard depends on the journal's name.
+
+  **The accepted price.** Two consequences worth knowing: the report no longer ties a row to a pass of the
+  working journal, and a known limitation becomes reachable — `touchedSection` falls back to the last edited
+  section **in the document's order**, while the list of releases is written top down, so a commit editing **two**
+  existing sections would be named by the older of them (there is no such commit today: the one that edits
+  touches a single section). Against that stands the chosen journal growing: every release opens a section in it,
+  while the archived `worklog/archive/WORKLOG.md` is frozen at section 73 and would have left every commit after
+  the move without a section.
+
+  **The options and their price.**
+  1. **Accept it and write it down (chosen).** Nothing changes, the tool works exactly as before.
+  2. **Pin the journal by the project's settings.** `size-table.config.json` cannot be partial: an absent file is
+     the very “settings inferred from the project”, while a file with no single column is a refusal of the
+     settings check. Pinning means carrying the whole profile by hand, and after that every new path must become
+     a column or a `skip` record, or `check` answers code 1 — the project trades an automatic report for a
+     hand-kept one. That is a behaviour change, so it is not taken inside a documentation pass.
+  3. **Teach the tool a journal outside the root** (or a directory of entries read as one journal). That is the
+     only way to change **which** journal the output picks, and it is a code change: `journalOf` together with the
+     sample and the address built beside it, plus a decision about the report's contract — `journal.path` would
+     stop being a single path. That is a new capability rather than a fix, and it needs a release of its own.
+
+  **For the user to decide:** whether the report's journal should be the working journal at all (option 3 together
+  with the question of the contract). Until that is decided the convention above stands, and the report is right
+  as it is.
+
+- **N12. A check that reads the machine's environment is the same class as B1.** The hook's first push was red in
+  CI alone: GitHub sets `CI` for the whole suite, the hook stays silent in that environment by construction, and
+  every scenario honestly got “skipped for the CI reason”. The product was right, the check was not: it depended
+  on the environment. The rule from it: a check sets its own environment — `test/hook.test.js` drops `CI` and
+  `SIZE_REPORT_NO_HOOK` for itself, and the scenario about the switches hands them over in the call rather than
+  relying on the machine. What is left of that class is held by the run rather than by a sentence: the slow
+  profile repeats the whole suite with `GIT_CONFIG_GLOBAL=/dev/null` (`tools/gates/run.js`), so a foreign
+  environment shows at once — while nothing shows what CI itself sets and what both environments share (that same
+  `CI`), and only CI catches that. Measured 2026-09-16: the hermetic step belongs to the **slow** profile —
+  `slow` is `full` plus the hermetic `test:all` plus `cover`, while `ci.yml` runs `verify` and
+  `verify-slow.yml` runs `verify:slow` on a schedule — so the second environment is a step of the schedule
+  rather than of every CI run.
 
 - **Слияние: git не зовёт `post-commit` — проверено опытом, не догадкой.** При
   `git merge` хуков `pre-commit`/`commit-msg`/`post-commit` не бывает вовсе: git
@@ -347,60 +384,6 @@ references stayed the same after the fix.
   пи́н в потребителе поднят. Держится: `test/cli.test.js` (набор отказов) и
   `test/docs-pin.test.js` («пример установки ведёт на ревизию, чья справка знает
   названные команды»).
-
-- **N11. Журнал отчёта — `CHANGELOG.md`, и это соглашение, а не случайность.** Настройки,
-  выведенные из проекта, ищут журнал среди четырёх имён в **корне** и берут первое, которое есть
-  (`src/project.js`: `JOURNALS`, `journalOf`). Список начинается с `WORKLOG.md`, а такого файла в
-  корне больше нет: рабочий журнал стал каталогом записей `worklog/`. Поэтому вывод останавливается
-  на `CHANGELOG.md`, и отчёт этого репозитория считает коммиты по выпускам, а не по проходам журнала.
-
-  **Что измерено перед тем, как это принять.** В собранном отчёте (113 строк на момент записи) раздел
-  несут 14 строк: 13 — релизные коммиты, заведшие новый раздел (случай «заведён новый», он не зависит
-  от порядка документа), и одна — коммит, который правил существующий раздел `1.0.0`, единственный им
-  затронутый, так что и там имя верное. Ссылки живые: якорь вида
-  `CHANGELOG.md#240--2026-09-15` ведёт на настоящий заголовок. Ни числа, ни артефакт, ни оба
-  замороженных эталона от имени журнала не зависят.
-
-  **Принятая цена.** Два следствия, о которых стоит знать: отчёт больше не привязывает строку к
-  проходу рабочего журнала, и становится достижимо известное ограничение — `touchedSection`
-  отступает к последнему правленому разделу **в порядке документа**, а список выпусков написан
-  сверху вниз, поэтому коммит, правящий **два** существующих раздела, будет назван по старшему из
-  них (сегодня такого коммита нет: единственный правящий касается одного раздела). Против этого —
-  выбранный журнал растёт: каждый выпуск заводит в нём раздел, тогда как архивный
-  `worklog/archive/WORKLOG.md` заморожен на разделе 73 и оставил бы все коммиты после переезда
-  без раздела.
-
-  **Варианты и их цена.**
-  1. **Принять и записать словами (выбрано).** Ничего не меняется, инструмент работает ровно как
-     раньше.
-  2. **Закрепить журнал настройками проекта.** `size-table.config.json` неполным быть не может:
-     отсутствие файла — это и есть «настройки выводятся из проекта», а файл без единой колонки
-     отказ проверки настроек. Закрепление значит нести весь профиль руками, и после этого каждый
-     новый путь обязан стать колонкой или записью `skip`, иначе `check` отвечает кодом 1 — проект
-     меняет автоматический отчёт на поддерживаемый вручную. Это смена поведения, поэтому внутри
-     прохода по документации не берётся.
-  3. **Научить инструмент журналу вне корня** (или каталогу записей, читаемому как один журнал).
-     Это единственный способ изменить, **какой** журнал выбирает вывод, и это правка кода:
-     `journalOf` и собираемые рядом образец и адрес, плюс решение о контракте отчёта —
-     `journal.path` перестал бы быть одним путём. Это новая возможность, а не починка, и ей нужен
-     свой выпуск.
-
-  **Решать пользователю:** должен ли журнал отчёта быть рабочим журналом вообще (вариант 3 вместе с
-  вопросом о контракте). Пока это не решено, соглашение выше в силе, и отчёт верен как есть.
-
-- ~~**N10. Обвязка читает git без закреплённых настроек**~~ — **закрыто 2026-09-14**
-  (`REFACTOR.md` R-1.4). В `tools/harness.js` `gitIn` звал `git -C …` как есть,
-  тогда как движок закрепляет окружение на своей границе (`src/git.js`, закрыто в
-  `B1`). Пока это ни на что не влияло: все пути самого репозитория ASCII, а числа
-  и вывод инструмента читает не обвязка, а сам инструмент. Но проверка, которая
-  читает git напрямую, зависит от машины — сторож документации это нашёл первым:
-  с `GIT_CONFIG_GLOBAL=/dev/null` `git log --name-only` вернул путь фикстуры
-  закавыченным, и `docs/заметки.md` из `BLOCKERS.md` стал «несуществующим»
-  (`quotePath` по умолчанию включён). Сторож был бы зелёным на этой машине и
-  красным на другой, то есть ложной сетью. Стало: список закреплений и локаль — из
-  `src/git.js`, им пользуются и движок, и обвязка; незакреплённых вызовов git в
-  проверках и инструментах нет, и это стережёт `test/git-pins.test.js`, а не этот
-  абзац. Обход, который держался проверкой, снят вместе с пробелом.
 
 - **N14. Храповик покрытия падает от комментариев, а не от кода: просадок 11, из них 10 — наши,
   одна — давняя.** Шаг `cover` в slow-профиле красный. Разобрано тремя замерами в отдельных
@@ -544,4 +527,15 @@ references stayed the same after the fix.
 
   **Решать пользователю:** что из трёх строить, а что объявить отменённым. До решения код не тронут
   (проход документационный), а сам документ модуля называет реальность и ссылается сюда.
+
+- **N18. Склейка без пробелов мимо линтера — наблюдение, не блокер.** Два класса
+  склейки выглядят похоже, а ловит линтер только один. `no-multi-spaces` (заведён
+  в `R-1.2`) берёт случай, когда от склейки остался лишний пробел (`, } else {      const …`).
+  Обратный случай — пропавшая между операторами строка, где лишних пробелов нет
+  (`}function writeMode(cfg, root) {`): такое нашлось глазами в диффе прохода
+  `WORKLOG.md` §36 и было бы видно только в истории. Дешёвый кандидат —
+  `padding-line-between-statements` с требованием пустой строки перед объявлением
+  функции; он ловит именно этот случай и не рубит принятые однострочники. Пока не
+  заведён: сначала надо посмотреть, сколько замечаний он даёт на живом дереве
+  (если десятки — это переформатирование, а не правило).
 

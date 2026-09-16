@@ -386,10 +386,10 @@ files). The parts below are the order to work in; each is one commit.
   turned from open questions into **settled** ones with each answer's home, and §17's gzip row now says what the
   registry holds. **Three promises true only with a code change went to `BLOCKERS.md` as note N17** (the schema,
   the migration, the block written into a project's instructions), each with the file, the place and the evidence.
-- [ ] **Carried to M14–M15 (`BLOCKERS.md`):** the note keys are out of order and two of them are N11, and the
-  file also holds **N17** — the three promises of `docs/module-design.md` §9 and §13 that need a decision
-  rather than a documentation edit. Measured at M13: the two N11 notes are the journal decision and the
-  whitespace one, and no shipped document cites `§N11` (see the M15 entry for the quoted keys).
+- [x] **Carried to M14 (`BLOCKERS.md`):** the note keys were out of order and two of them were N11 — **settled
+  at M14** (see its entry: the journal note keeps N11, the whitespace one became N18, four blocks moved and every
+  cited key kept its number). The file also holds **N17** — the three promises of `docs/module-design.md` §9 and
+  §13 that need a decision rather than a documentation edit; that one is still for the user.
 - [x] **Done at M11a — the guard's language dependence:** an unnamed `§N` reference is resolved to the
   requirements by a word, and the word is now read in **both languages** (`test/docs-commands.test.js`),
   so the seven unnamed references in `PLAN.md` (§4.3, §11.2, §7.3, §4.2 twice, §12, §3.3, §7.2, §8) stay
@@ -419,15 +419,30 @@ files). The parts below are the order to work in; each is one commit.
   fix; B3: code 0, `gone.js` empty at HEAD and 13 B at the commit where the file existed). The two Russian
   check names B1 quoted were replaced by what they assert, so the document does not pin a wording that lives in
   the checks.
-- [ ] **M14 `BLOCKERS.md` notes, first part** (209–330) — 114 Russian.
-- [ ] **M15 `BLOCKERS.md` notes, second part** (331–509) — 149 Russian. Known defect for this
-  part: the note keys are out of order (N1 N3 N4 N6 N7 N5 N8 N9 N12 N11 N13 N10 N14 N15) and
-  **two items are numbered N11**. **Measured at M13: no shipped document cites `§N11` at all** — the keys the
-  documents do cite are `§B1`, `§B2`, `§B3`, `§N2`, `§N4`, `§N8`, `§N10`, `§N13`, `§N16`, `§N17` (README,
-  `PLAN.md`, `REFACTOR.md`, `CHANGELOG.md`, `templates/ci.yml`, `tools/gates/common.js`, five checks), and
-  `§N11` appears only in `plan.md` and one worklog entry — so renumbering the free N11 moves no address of the
-  package (`plan.md` means the journal decision, `worklog/0097` the whitespace one). All the quoted keys above
-  exist and must keep their numbers.
+- [x] **M14 `BLOCKERS.md` notes, first part and the key numbering** — done 2026-09-16 (114 Russian). 172 added /
+  178 removed = **350 changed lines in one file**; Cyrillic 317 → 169 lines, of which nine remain in this part and
+  all nine are quoted tool output. **The keys are now N1…N18 in order, with no duplicate**, and every cited key
+  kept both its number and its meaning (§B1–§B3, §N2, §N4, §N8, §N10, §N13, §N16, §N17 — measured before and
+  after). The duplicate was settled by measurement: the journal note **keeps N11** (what `plan.md` means) and the
+  whitespace note became **N18** at the end; the plan's earlier remark about `worklog/0097` citing the other N11
+  is wrong — nothing outside the plan cites `§N11` at all. **Renumbering alone was not enough, and the reason is
+  measured:** N10 is cited as 10 while its entry stood after N13, so four blocks moved (N5 up two places, N10 to
+  its own number, the journal note before N12, the whitespace note to the end) and two of them were translated in
+  the same edit because they travelled whole — M15 is smaller by those two notes. **Six claims were false and
+  every one was corrected against the code:** `test/cli.test.js` holds nine checks, not ten; `test/contract.test.js`
+  does not exist (the witnesses are `test/contract-derived.test.js` and `test/page-choice.test.js`); the page
+  checks do **not** run on a document without an address (the harness always gives one) and the no-storage branch
+  has no check at all — said out loud in the note; the reasons of skipped commits are strings on purpose while
+  `explain` lays them into fields; the hermetic run is a step of the **slow** profile rather than of every CI
+  run. Re-measured live: the inert-settings table (eleven settings, three environment variables, identical bytes),
+  N1's check order (code 1 before `--write`, 0 after), N8's reproduction (14 rows, `modern.js` = 246 = the blob),
+  N9's approximation bits (every mark follows the format rule), N4's numbers (54 + 63 = 117 against 63 now). A
+  rule about key order went into the file's own preamble, since the defect was exactly that.
+- [ ] **M15 `BLOCKERS.md` notes, second part** — 160 Russian lines left, in these blocks (line numbers measured
+  2026-09-16, the file is 540 lines): the unkeyed note about merging (355), N13 (365), N14 (388), N15 (441),
+  N16 (469), N17 (495), N18 (531). The key numbering is settled and needs no part of its own; what is left is
+  the same three steps as everywhere (actualise against the code, compact, translate). The unkeyed note stays
+  unkeyed: it is cited by description rather than by number, and giving it a key would put a number out of order.
 - [ ] **M16 `REFACTOR.md`** — 269 lines, 217 Russian: the log of the finished waves, so it is
   compacted into "what the wave established" rather than rewritten sentence by sentence.
 - [ ] **M17 PLAN §1–§3** (21–165) — 111 Russian.
