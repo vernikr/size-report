@@ -90,3 +90,14 @@ Opened 2026-09-16 with the string-translation work (`docs/plans/2026-09-16-i18n-
   them). How it shows: after those two owners the example silently stops selecting anything — the run
   answers green with **fewer** checks, which is the failure mode the runner's own counter exists to
   catch for files rather than for patterns. Prose, not a literal; fix it with the checks' pass.
+- **`test/gates-verify.test.js:146-149` — an assertion that cannot fail.** Seen 2026-09-16 in W2's
+  step 7, while measuring who reads the hooks' messages: the sweep over `pnpm run ([a-z:.-]+)` in the
+  hook text asserts `scriptOf('pnpm run ' + m[1]) !== null`, and `scriptOf` returns the matched token
+  for anything the pattern accepts — so the check is true for every match. Measured: the token inside
+  the install message was replaced with `pnpm run hooks:no-such-script` and the probe stayed green,
+  while its own message promises "the hook calls «…», which does not exist". What the sweep does hold:
+  a hook has to call `pnpm run verify:fast` (`:142-143`) and may not inline check commands — replacing
+  that call reddens the probe. The workflow side of the same idea (`:132`) compares against the real
+  scripts and does check existence. A sensor's own defect, so the string work records it and does not
+  chase it; the fix is one line (compare `m[1]` with `scripts`), and it is a gate-file edit, so it
+  needs the trailer.

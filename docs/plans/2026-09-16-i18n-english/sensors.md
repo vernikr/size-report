@@ -2,7 +2,8 @@
 
 Subplan of `plan.md` (T0). Owns `tools/gates/**` (6 files, 77 lines), `tools/suites.js` (38),
 `.githooks/**` (4) and the `note` of the two baselines (2) — **121 lines, the tracker's row, and it
-holds by measurement** (77 + 38 + 4 + 2). Written 2026-09-16, not started. Unlike W1, this owner is
+holds by measurement** (77 + 38 + 4 + 2). Written 2026-09-16, **all seven steps done the same day, and
+closed**: the counter answers zero over all eleven files and both baselines. Unlike W1, this owner is
 **entirely gate files**: every commit of this subplan needs the `Gate-Change:` trailer, and that is
 not a formality here — it is the shape of the acceptance.
 
@@ -23,9 +24,9 @@ rg -cP '[\p{Cyrillic}]' tools/suites.js dup-baseline.json coverage-baseline.json
 | `tools/gates/deps.js` | 5 | the verdicts, the refusal of a failed run, the advice and the "for information" line (26, 47, 51, 53, 56) — **done 2026-09-16, 5 → 0** |
 | `tools/gates/common.js` | **0** | measured: the shared harness carries no Russian at all |
 | `tools/suites.js` | 38 | the `why` of every entry in `FAST` and `SLOW`, and the unknown-run error (98) — **done 2026-09-16, 38 → 0** |
-| `.githooks/pre-commit` | 2 | the "pnpm is not on PATH" message and how to reinstall the hooks |
-| `.githooks/pre-push` | 2 | the same message, and the "no `origin/main`" notice about the range |
-| `dup-baseline.json`, `coverage-baseline.json` | 2 | the `note` the sensors write into them |
+| `.githooks/pre-commit` | 2 | the "pnpm is not on PATH" message and how to reinstall the hooks — **done 2026-09-16, 2 → 0** |
+| `.githooks/pre-push` | 2 | the same message, and the "no `origin/main`" notice about the range — **done 2026-09-16, 2 → 0** |
+| `dup-baseline.json`, `coverage-baseline.json` | 2 | the `note` the sensors write into them — **done**, moved by hand in steps 3 and 4 |
 
 The two baseline lines are the **file side** of the notes whose source is inside the 77
 (`dup.js:128-129`, `coverage.js:81-84`): the same text counts once as a literal and once as data, and
@@ -235,10 +236,21 @@ not a mark). The `commit-msg` hook answers at once; the `pre-push` hook re-reads
    and `--list` prints the same commands as before (`fast` five lines, `full` eight, `slow` ten — the same
    counts W2's step 1 recorded, and `run.js` was not touched either). The runs are the same size: 70 checks
    in the fast run, 175 in the full one.
-7. **`.githooks/pre-commit` and `.githooks/pre-push`** — the four messages. Red first: rewrite the
-   **call** (`pnpm run verify:fast` → anything else) → `test/gates-verify.test.js:142-143` red; the
-   words around the call are free. This step is the one where the trailer's own subject is met: the
-   hooks are gate files, and a person meets their messages on the next commit.
+7. **`.githooks/pre-commit` and `.githooks/pre-push` — done 2026-09-16, 4 → 0, and W2 closed with
+   them.** The four messages: `pnpm is not in PATH — the fast profile did not run` twice (the second
+   with `install the hooks again: pnpm run hooks:install` under it) and
+   `— pre-push: there is no origin/main, so the trailers were not checked over the range`. Red first,
+   one message at a time: all four went back to Russian on their own and `test/gates-verify.test.js`
+   stayed green — no reader of the wording. What the probe does read was measured the same way: the
+   **call line** (`exec pnpm run verify:fast` → `pnpm run verify`) reddens it at `:142-143`, which is
+   the hook's promise that it runs the profile rather than its own commands. The two branches were also
+   walked by hand, so the messages were read as a person meets them: a PATH without pnpm printed the
+   first two, and a temporary repository with a stub `pnpm` and no `origin/main` printed the fourth.
+   Both hooks still parse (`sh -n`) and no order, condition or command of theirs moved.
+   A finding of this step, recorded rather than fixed (`TODO.md`): the sweep at `:146-149` cannot fail
+   (it asserts the token it just matched is non-null), so a wrong script name inside a message would
+   pass — measured by putting `pnpm run hooks:no-such-script` into the install message and watching the
+   probe stay green.
 
 **Why the tree is green between the commits.** Each read verdict moves with its reader in the same
 commit (steps 2–5); everything else of this owner has no reader (measured one by one above), so a

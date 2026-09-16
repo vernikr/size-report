@@ -5,8 +5,8 @@
 # Installed once: `pnpm run hooks:install` (core.hooksPath = .githooks).
 set -e
 if ! command -v pnpm >/dev/null 2>&1; then
-  echo "pre-commit: pnpm не найден в PATH — быстрый профиль не выполнен" >&2
-  echo "  поставить хуки заново: pnpm run hooks:install" >&2
+  echo "pre-commit: pnpm is not in PATH — the fast profile did not run" >&2
+  echo "  install the hooks again: pnpm run hooks:install" >&2
   exit 1
 fi
 

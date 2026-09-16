@@ -7,11 +7,11 @@
 # Installed once: `pnpm run hooks:install` (core.hooksPath = .githooks).
 set -e
 if ! command -v pnpm >/dev/null 2>&1; then
-  echo "pre-push: pnpm не найден в PATH — быстрый профиль не выполнен" >&2
+  echo "pre-push: pnpm is not in PATH — the fast profile did not run" >&2
   exit 1
 fi
 pnpm run verify:fast
 if git rev-parse --verify --quiet origin/main^{commit} >/dev/null; then
   exec node tools/gates/gatefiles.js --range origin/main
 fi
-echo "  — pre-push: origin/main нет, проверка трейлеров по диапазону не выполнена"
+echo "  — pre-push: there is no origin/main, so the trailers were not checked over the range"
