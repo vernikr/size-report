@@ -66,8 +66,8 @@ function legacy(dir, args) {
     env: Object.assign({}, process.env, gitConfig({ 'core.quotePath': 'false' }))
   });
   if (res.status !== 0) {
-    throw new Error('копия не отработала (' + (args.join(' ') || 'контрольный режим')
-      + ', код ' + res.status + '): ' + (res.stderr || '').trim());
+    throw new Error('the copy did not run (' + (args.join(' ') || 'the check mode')
+      + ', code ' + res.status + '): ' + (res.stderr || '').trim());
   }
   return res.stdout || '';
 }
@@ -130,8 +130,8 @@ function plan() {
   const project = path.resolve(args.positional || (frozen ? frozen.project.path : DEFAULT_PROJECT));
   const want = args.flags['--at'] || (frozen ? frozen.project.head : null);
   if (!fs.existsSync(project)) {
-    throw new Error('проект не найден: ' + project
-      + '\n  укажите путь: node tools/parity-freeze.js <путь-к-проекту>');
+    throw new Error('the project was not found: ' + project
+      + '\n  name the path: node tools/parity-freeze.js <path-to-project>');
   }
   return { out: out, project: project, want: want };
 }
@@ -145,18 +145,18 @@ function take(work, project, want) {
   /* Shallow-ness is checked on the clone rather than on the source: the source may be a history
    * bundle (a file), which has no working tree of its own. */
   if (git(clone, ['rev-parse', '--is-shallow-repository']) === 'true') {
-    throw new Error('история проекта обрезана (shallow): эталон снимается только с полной истории');
+    throw new Error('the project history is truncated (shallow): the reference is taken from a full history only');
   }
   const at = want || git(clone, ['rev-parse', 'HEAD']);
   try {
     git(clone, ['checkout', '-q', at]);
   } catch (_e) {
-    throw new Error('в проекте нет ревизии ' + at + ' — эталон снимается только с той, что в нём есть');
+    throw new Error('the project has no revision ' + at + ' — the reference is taken from one it holds');
   }
   const head = git(clone, ['rev-parse', 'HEAD']);
   const short = head.slice(0, 7);
   if (!fs.existsSync(path.join(clone, CONFIG_NAME))) {
-    throw new Error('в ревизии ' + short + ' нет ' + CONFIG_NAME + ' — эталону нечего описывать');
+    throw new Error('the revision ' + short + ' has no ' + CONFIG_NAME + ' — the reference would have nothing to describe');
   }
   const cfg = JSON.parse(fs.readFileSync(path.join(clone, CONFIG_NAME), 'utf8'));
   const headDate = git(clone, ['log', '-1', '--date=format:%Y-%m-%d %H:%M', '--pretty=format:%ad', head]);
@@ -166,8 +166,8 @@ function take(work, project, want) {
   legacy(clone, ['--write']);
   const artifact = fs.readFileSync(path.join(clone, cfg.output));
   if (!artifact.equals(gitBytes(clone, ['show', head + ':' + cfg.output]))) {
-    throw new Error('копия собрала не тот артефакт, что лежит в ревизии ' + short
-      + ' — эталон снимается не этой ревизией инструмента');
+    throw new Error('the copy built an artifact other than the one the revision ' + short + ' holds'
+      + ' — the reference is not taken with this revision of the tool');
   }
   legacy(clone, []);
   return { head: head, headDate: headDate, commits: commits, cfg: cfg, data: data, artifact: artifact };
@@ -202,13 +202,13 @@ function store(out, project, taken) {
   write('manifest.json', Buffer.from(JSON.stringify(ctx, null, 2) + '\n', 'utf8'));
   write('README.md', Buffer.from(manifestNote(ctx), 'utf8'));
 
-  console.log('✓ эталон паритета: ' + path.relative(ROOT, out));
-  console.log('  проект ' + ctx.project.name + ' на ' + head.slice(0, 7) + ': '
-    + commits + ' коммитов, ' + data.rows.length + ' строк × ' + data.columns.length + ' колонок');
-  console.log('  артефакт ' + cfg.output + ': ' + artifact.length + ' Б, sha256 '
+  console.log('✓ the parity reference: ' + path.relative(ROOT, out));
+  console.log('  the project ' + ctx.project.name + ' at ' + head.slice(0, 7) + ': '
+    + commits + ' commits, ' + data.rows.length + ' rows × ' + data.columns.length + ' columns');
+  console.log('  the artifact ' + cfg.output + ': ' + artifact.length + ' B, sha256 '
     + ctx.artifact.sha256.slice(0, 12));
-  console.log('  инструмент ' + ctx.tool.file + ' sha256 ' + ctx.tool.sha256.slice(0, 12)
-    + ' — эталон привязан к этой ревизии');
+  console.log('  the tool ' + ctx.tool.file + ' sha256 ' + ctx.tool.sha256.slice(0, 12)
+    + ' — the reference is tied to this revision');
 }
 
 function main() {

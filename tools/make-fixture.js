@@ -124,7 +124,7 @@ function runLegacy(tool, dir, cfgPath, args, env) {
  * and in the fixture it has to stay untracked rather than become one commit more. */
 function takeArtifact(paths, clone) {
   const wrote = runLegacy(paths.tool, clone, paths.config, ['--write']);
-  if (wrote.code !== 0) throw new Error('инструмент не собрал артефакт: ' + wrote.stderr.trim());
+  if (wrote.code !== 0) throw new Error('the tool did not build the artifact: ' + wrote.stderr.trim());
   const artifact = fs.readFileSync(path.join(clone, CONFIG.output));
   fs.writeFileSync(path.join(paths.out, 'artifact.sha256'),
     sha256(artifact) + '  ' + CONFIG.output + '\n', 'utf8');
@@ -141,13 +141,13 @@ function localeStable(paths, clone, data) {
 
 function takeGolden(paths, ctx) {
   if (!fs.existsSync(paths.tool)) {
-    throw new Error('нет инструмента, с которого снимать эталон: ' + paths.tool
-      + ' (укажите --legacy-tool <путь>)');
+    throw new Error('there is no tool to take the reference with: ' + paths.tool
+      + ' (name it with --legacy-tool <path>)');
   }
   const clone = path.join(paths.work, 'clone');
   git(paths.work, ['clone', '-q', paths.bundle, clone]);
   const json = runLegacy(paths.tool, clone, paths.config, ['--json']);
-  if (json.code !== 0) throw new Error('инструмент не отдал --json: ' + json.stderr.trim());
+  if (json.code !== 0) throw new Error('the tool gave no --json: ' + json.stderr.trim());
   const data = JSON.parse(json.stdout);
   const golden = Buffer.from(JSON.stringify(data, null, 2) + '\n', 'utf8');
   fs.writeFileSync(path.join(paths.out, 'golden.json'), golden, 'utf8');
@@ -155,7 +155,7 @@ function takeGolden(paths, ctx) {
   const artifact = takeArtifact(paths, clone);
   // The check mode must be green: the golden was taken from an agreed artifact.
   const checked = runLegacy(paths.tool, clone, paths.config, []);
-  if (checked.code !== 0) throw new Error('контрольный режим на фикстуре красный: ' + checked.stderr.trim());
+  if (checked.code !== 0) throw new Error('the check mode on the fixture is red: ' + checked.stderr.trim());
 
   ctx.localeStable = localeStable(paths, clone, data);
   ctx.legacy = {
@@ -194,16 +194,16 @@ function writeManifest(out, ctx) {
 }
 
 function announce(bundle, ctx) {
-  console.log('✓ фикстура: ' + path.relative(ROOT, path.dirname(bundle)));
-  console.log('  коммитов ' + ctx.commits.length + ', HEAD ' + ctx.head.slice(0, 7)
-    + ', bundle ' + fs.statSync(bundle).size + ' Б');
+  console.log('✓ the fixture: ' + path.relative(ROOT, path.dirname(bundle)));
+  console.log('  ' + ctx.commits.length + ' commits, HEAD ' + ctx.head.slice(0, 7)
+    + ', bundle ' + fs.statSync(bundle).size + ' B');
   if (ctx.legacy) {
-    console.log('  эталон: ' + ctx.legacy.rows + ' строк × ' + ctx.legacy.columns + ' колонок, '
-      + ctx.legacy.skipped + ' коммитов без строки, артефакт ' + ctx.legacy.artifactBytes + ' Б');
-    console.log('  инструмент ' + ctx.legacy.file + ' sha256 ' + ctx.legacy.sha256.slice(0, 12));
+    console.log('  the reference: ' + ctx.legacy.rows + ' rows × ' + ctx.legacy.columns + ' columns, '
+      + ctx.legacy.skipped + ' commits without a row, artifact ' + ctx.legacy.artifactBytes + ' B');
+    console.log('  the tool ' + ctx.legacy.file + ' sha256 ' + ctx.legacy.sha256.slice(0, 12));
   }
   if (!ctx.localeStable) {
-    console.log('  ! эталон зависит от локали: числа при LC_ALL=C отличаются (см. README фикстуры)');
+    console.log('  ! the reference depends on the locale: the numbers under LC_ALL=C differ (see the fixture README)');
   }
 }
 
@@ -216,7 +216,7 @@ function main() {
     const log = commitLog(repo);
     const head = git(repo, ['rev-parse', 'HEAD']).trim();
     if (log.length === 0 || log[log.length - 1].sha !== head) {
-      throw new Error('история фикстуры собрана неверно');
+      throw new Error('the fixture history was assembled wrong');
     }
 
     fs.mkdirSync(opts.out, { recursive: true });
@@ -234,7 +234,7 @@ function main() {
     writeManifest(opts.out, ctx);
     announce(bundle, ctx);
   } finally {
-    if (opts.keep) console.log('  временный каталог: ' + work);
+    if (opts.keep) console.log('  the temporary directory: ' + work);
     else fs.rmSync(work, { recursive: true, force: true });
   }
 }

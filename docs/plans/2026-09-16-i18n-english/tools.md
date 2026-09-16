@@ -51,12 +51,14 @@ them) and `docs-facts.js` 4 → 3. Of the 235:
   `tools/docs-facts.js:170`;
 - **210 are this owner's own**; step 1 lands 10 of them and **three are blocked** (`BLOCKERS.md`
 - **210 are this owner's own**; step 1 lands 10 of them and **three are blocked** (`BLOCKERS.md`
-  N29), step 2 lands 13, step 3 lands 23, step 4 lands 74 and step 7 lands 1, so **89 minus what N29 and
-  N30 settle** is left for steps 6 and 8 and the twelve files read **114** now (`tools/**` as a whole
-  reads 317). Step 5 was closed by measurement without editing anything. What remains by file:
-  `refusals.js` 55, `parity-freeze.js` 31 (16 of them N21's), `make-fixture.js` 17 (3 N21's),
-  `harness.js` 3 and `parity-live.js` 3 (both N29) and the two `run-tests.js` comments and the one of
-  `docs-facts.js`.
+  N29), step 2 lands 13, step 3 lands 23, step 4 lands 74, step 6 lands 29 and step 7 lands 1, so **60
+  minus what N29 and N30 settle** is left for step 8 and the twelve files read **85** now (`tools/**` as
+  a whole reads 288). Step 5 was closed by measurement without editing anything. What remains by file:
+  `refusals.js` 55 and the 30 lines of the two builders that N21 keeps (`parity-freeze.js` 16 +
+  `make-fixture.js` 3), exactly the two halves of the allow-list — plus `harness.js` 3 and
+  `parity-live.js` 3 (both N29) and the three prose comments (`run-tests.js` 2, `docs-facts.js` 1).
+  Every one of the 85 is named; after step 8 the counter should answer **31** (28 of them allow-listed
+  and 6 of them N29's, minus N29's six when repair (1) lands).
 
 And the same measurement for step 8: `tools/refusals.js`'s 55 Cyrillic lines are `truth` **37** +
 `advice.why` **12** + the case `id`s **2** + the `uncatchable` prose **2** + `ADVICE_LINE` **1** +
@@ -259,11 +261,22 @@ No reader at all, measured:
    the help instead of a section name — is a code change, not this plan's.** No file was edited by this
    step: `git status` while closing it showed `tools/docs-facts.js` byte-identical to the tree, and
    `pnpm run verify` was green with it untouched.
-6. **`tools/parity-freeze.js` + `tools/make-fixture.js`** — the console lines only, and **measured
-   2026-09-16 as what holds this step**: of the 31 Cyrillic lines of `parity-freeze.js`, **16 are
-   `manifestNote` (`:98-118`)** and 15 are this owner's console lines; of the 17 of `make-fixture.js`,
-   **3 are the fixture's config values (`:56`, `:57`, `:64`)** and 14 are console. The 19 allowed ones
-   are N21's and permanent; nothing else holds the step — only their own commit is missing. Red first:
+6. **`tools/parity-freeze.js` + `tools/make-fixture.js` — done 2026-09-16, 15 + 14 → 0 + 0, with the
+   19 allow-listed lines standing word for word.** Of the 31 Cyrillic lines of `parity-freeze.js`,
+   **16 are `manifestNote` (`:98-118`)** and of the 17 of `make-fixture.js`, **3 are the fixture's
+   config values (`:56`, `:57`, `:64`)** — those 19 stay, and that is N21 rather than an oversight:
+   they are written into `fixtures/**` (`parity-freeze` writes `README.md` from `manifestNote(ctx)`, the
+   builder writes `config.json` from `CONFIG`), so translating them re-takes both references.
+   **Measured for the question this step was asked:** the re-takes were compared with what is committed
+   in the tree — `node tools/make-fixture.js --out …` answers byte-identically to `fixtures/synthetic`
+   for every file, and `node tools/parity-freeze.js fixtures/live/history.bundle --out …` differs from
+   `fixtures/parity` in exactly two files: `manifest.json`, whose `name`/`path` fields record the path
+   the reference was taken from (the difference the plan already names as legitimate), and
+   `README.md`, **in one interpolated word of that same field** — `Проект: `history.bundle`` against
+   `Проект: `safe-resets``, the Russian template standing word for word. `fixtures/**` is unmodified in
+   the tree and `fixtures/parity/artifact.sha256` still reads `1bdb27e1…`. Red first: both builders
+   returned to Russian together leave the **full verify** green. `pnpm run dup` answered no new twin.
+   The step's own plan text, kept for the record: Red first:
    the allow-list's own evidence — the string of `make-fixture.js:56` stands in the frozen
    `fixtures/synthetic/config.json` (measured, 1 line), so translating it reddens `test/frozen.test.js`
    on the next re-take; the step proves the two writing functions are untouched by staying green.
