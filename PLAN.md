@@ -429,205 +429,190 @@ the changes is **not in v1** (requirements §8, §12 `requirements.md`).
 
 ---
 
-## 5. План переноса по шагам
+## 5. The move, step by step — a record rather than a plan
 
-Каждый шаг — отдельный релиз пакета, ничего не ломающий, и отдельное изменение
-в проекте-потребителе. Шаг 0 — без кода.
+Every step was a release of the package that broke nothing and an edit in the consumer; step 0 carried no
+code. The move is done, so what stands below is what each step still holds up: its promise, what it left in
+the tree and what it did not finish. The steps keep their numbers and their word — `REFACTOR.md` and
+`BLOCKERS.md` cite them as “`PLAN.md` §5, step N”. One thing the plan got wrong about the future: its
+per-step version labels (`v0.1.0` … `v0.5.0`) never existed — the first release was `1.0.0` on 2026-09-14
+and the package is at **2.4.0** today, with every release's numbers in `CHANGELOG.md`.
 
-### Шаг 0. Заморозка паритета (подготовка) — ✅ **сделано 2026-09-14**
+### Step 0. Freezing parity (preparation) — ✅ done 2026-09-14
 
-**Делаем:** фиксируем сегодняшний вывод как эталон, иначе «перенос ничего не
-сломал» нечем доказать.
+**The promise:** freeze today's output as a standard, or “the move broke nothing” has nothing to prove it.
 
-**Сделано.** Эталон снят с `safe-resets` (149 коммитов, 95 строк × 27 колонок,
-артефакт 225 673 Б) скриптом `tools/parity-freeze.js`; фикстура собрана скриптом
-`tools/make-fixture.js` (16 коммитов, 14 строк × 10 колонок, два коммита без
-строки) — подробности и числа в `WORKLOG.md` §2. Оба скрипта лежат в `tools/`,
-результат — в `fixtures/`.
+**What it left:** the standard taken from `safe-resets` — **149 commits, 95 rows × 27 columns, artifact
+225 673 B** — by `tools/parity-freeze.js`, and the synthetic fixture built by `tools/make-fixture.js` —
+**16 commits, 14 rows × 10 columns, two commits that get no row** — in `fixtures/parity/` and
+`fixtures/synthetic/`, each with a manifest that holds the head, the commits, the sha256 of every file and
+the stability flags. The freeze is a measurement rather than a snapshot of bytes: the dates, the author
+and the contents are fixed, so the commits' shas — the fixture's identity — are reproducible, while
+`history.bundle` may differ between versions of git. The fixture deliberately carries the traps a table
+can meet: a rename, a merge with a conflict edit, a commit that touched only the report, a non-English file
+name, CRLF in a text file, an `.mjs` with `export`, a file deleted and brought back, `<`/`&`/`"` in a
+subject, an unknown extension, a file emptied to zero bytes.
 
-Ход работ, который этот шаг описывает:
+**How it is held today:** the fixture is reproduced from its `git bundle` in a clean temporary directory
+and its golden numbers are compared with the generator (`test/parity.test.js`), the records in
+`fixtures/*/manifest.json` are compared with the files (`test/frozen.test.js`), and `pnpm run check:standards`
+takes both standards anew and compares them byte for byte — measured 2026-09-16: 4 of 4 files of the fixture,
+3 of 3 of the live one, its bundle at `bd6ef9d`, 149 commits.
 
-1. `node tools/size-table.js --write` и хеш `docs/size-table.html` — сохранить как
-   `fixtures/parity/artifact.sha256` (шаг 1 обязан воспроизвести тот же файл
-   **байт-в-байт**).
-2. `node tools/size-table.js --json > fixtures/parity/data.json` на текущем
-   HEAD вместе с копией `size-table.config.json` и списком sha.
-3. Собрать **синтетическую фикстуру**: `git bundle` с ~20 коммитами истории
-   safe-resets (обязательно с: переименованием файла, слиянием, коммитом «только
-   таблица», не-английским именем файла, файлом с CRLF, `.mjs` с `export`) и
-   golden-числами для неё. Скрипт сборки — `tools/make-fixture.js`, лежит в
-   пакете, запускается один раз руками.
+### Step 1. The engine moved as it was — “parity” — ✅ done 2026-09-14
 
-**Приёмка:** фикстура воспроизводится из бандла в чистом временном каталоге;
-golden-числа совпадают с выводом текущего генератора на этой фикстуре.
+**The promise:** move the core **with no new metrics and no change of the report's form** — the git history,
+`raw`, the `min` of that day (a simplification), the journal, the anchors, the static HTML, `--init`, `--json`,
+the control mode — with `gzip` left out. The code moves to ESM, and the split into files (§4.2) goes as an
+item of its own (D1 below) so that the port is proved before the rearrangement rather than after it.
 
-### Шаг 1. Перенос движка как есть (v0.1.0) — «паритет»
+**What the port gave.** `src/size-table.js` is the entry point and holds re-exports alone — no computation at
+all; the mechanics lie in **15 modules** along the seams of the data (`REFACTOR.md` §R-1.3), and `bin/size.js`
+is the command outside them. The public surface is a **frozen list of 55 names** held by `test/api.test.js`:
+the split may neither lose a name nor add one — a lost name breaks whoever leant on it, an added one means a
+module's insides leaked. The **frozen copy of the engine** — the very revision the standard was taken with —
+is **not in the tree**: its bytes live in history and are fetched from there on demand
+(`fixtures/legacy/size-table.cjs`), and what is fetched is compared with the record of the standard's origin,
+so a copy that quietly stopped being frozen would be caught. The live project is compared on a clone and
+nothing is written in the project itself.
 
-**Делаем:** переносим ядро **без новых метрик и без смены формата отчёта**:
-git-история, `raw`, текущий `min` (упрощение), `gzip` выкидываем, журнал, якоря,
-рендер статичного HTML, `--init`, `--json`, контрольный режим. Код переезжает в
-ESM; разбиение по файлам §4.2 — отдельным проходом (пункт D1), чтобы перенос
-доказывался до переустройства, а не после него.
+**What proves the parity (automatic, not by eye):**
 
-**Сделано (2026-09-14, проход 1).** Эталон снят заранее, до правки кода
-(`fixtures/parity/`, `fixtures/synthetic/`, `fixtures/legacy/size-table.cjs` —
-замороженная копия реализации, её sha256 сверяется с ревизией, с которой снят
-эталон). Паритет-тест `test/parity.test.js` сверяет движок пакета с эталоном
-побайтово: числа (`--json`), артефакт (sha256) и контрольный режим, плюс прогон
-под `LC_ALL=C`; замороженная копия сверяется рядом с движком, чтобы провал было
-нельзя списать на расхождение самого эталона. Движок перенесён в `src/size-table.js`
-и `bin/size.js`: только шапка импортов, `__filename` через `import.meta.url` и
-хвост экспорта — ни строки механики. Живой проект сверяется командой
-`pnpm run parity:live` на клоне (в самом проекте ничего не пишется).
-
-**Перенос (2026-09-14, проход 2).** Движок лежит в `src/size-table.js`, команда —
-в `bin/size.js` (импорт `main` и `process.exitCode`); поверхность CLI пока прежняя
-(`--write`, `--json`, `--init`, `--config`) — имена команд `size init/measure/render`
-приходят вместе с шагом 2, чтобы перенос не менял ничего, кроме раскладки.
-
-Содержимое механики не тронуто: эталонная копия превращается в файл движка **ровно
-четырьмя механическими заменами** (шапка `require` → `import` и путь файла из
-`import.meta.url`, убран самозапуск `require.main`, `module.exports` → `export`, в
-список экспорта добавлен `main`). Проверено побайтовым сравнением результата этих
-замен с `src/size-table.js`; 1129 строк механики совпадают с эталоном без единого
-изменения.
-
-Доказательства паритета (все автоматические, не на глаз):
-
-| Где | Что сверено | Результат |
+| Where | What is compared | Result |
 |---|---|---|
-| `pnpm test` — 15 проверок, 14 с | Фикстура в четырёх чужих окружениях: `--json` побайтово, sha256 артефакта, контрольный режим — для движка пакета и рядом для эталонной копии; сверка с рабочим деревом в выкладке CRLF и её зубы | 15 из 15 |
-| `pnpm run parity:live` — 8,5 с | Живой проект на клоне в двух средах: `--json` побайтово, sha256 артефакта, контрольный режим | 95 строк × 27 колонок, артефакт 225 673 Б, sha256 `1bdb27e1…` — совпало |
+| `pnpm test` — the fixture in four deliberately foreign environments | `--json` byte for byte, the sha256 of the artifact, the control mode — for the package's engine and, beside it, for the frozen copy; the comparison with the working tree in a CRLF checkout and its teeth | 15 of 15 that day; the fast run is 72 of 177 today and the full one 177 |
+| `pnpm run parity:live` — the live project on a clone, in two environments | `--json` byte for byte, the sha256 of the artifact, the control mode | 95 rows × 27 columns, artifact 225 673 B, sha256 `1bdb27e1…` — the numbers the standard's manifest holds, re-read 2026-09-16 |
 
-**Починка B1 (2026-09-14, проход 3).** Настройки, влияющие на разбор, закреплены на
-границе вызова git: `-c core.quotePath=false` и три настройки того же класса
-(раскраска, блок подписи, кодировка подписей) плюс фиксированная локаль
-подпроцессов. Эталоны пересъёмки не потребовали: закрепление даёт те же числа, что
-снимались в окружении с `core.quotePath=false`. Сверка идёт и в обычном окружении,
-и в четырёх заведомо чужих; `pnpm run parity:live` проверяет две среды вместо
-одной. Свидетель прежнего поведения заменён утверждением правильного: фикстура
-обязана давать в чужом окружении столько же строк, сколько в эталоне (§B1).
+**Fix B1 (2026-09-14).** The settings that can move a number are pinned at the boundary of the git call:
+`-c core.quotePath=false` and the three of that class (colour, the signature block, the encoding of subjects)
+plus a fixed locale for the subprocesses. The standards needed no re-taking: the pinning gives the same
+numbers as an environment with `core.quotePath=false` in the first place. The comparison runs in the ordinary
+environment and in four deliberately foreign ones; `pnpm run parity:live` compares two environments rather
+than one. The witness of the former behaviour gave way to the statement of the right one: the fixture must
+give as many rows in a foreign environment as the standard holds (`BLOCKERS.md` §B1, closed).
 
-**Починка B2 (2026-09-14, проход 4).** Сверка с рабочим деревом размеры больше не
-сравнивает: она отвечает на два вопроса — состояние на HEAD против дерева коммита
-и файл на диске против того же содержимого (с точностью до переводов строк,
-которые git возвращает не всегда). Обе стороны сравнивают содержимое, поэтому
-правка, не изменившая размер, теперь ловится. Три проверки в `test/parity.test.js`
-держат по мутации на каждую сторону (`BLOCKERS.md` §B2). Числа и артефакт не
-изменились: живой проект сверен побайтово в двух средах.
+**Fix B2 (2026-09-14).** The comparison with the working tree no longer compares sizes: it answers two
+questions — the state at HEAD against the tree of that commit, and the file on disk against the same content
+(line endings included, which git does not always return). Both sides compare content, so an edit that did not
+change the size is caught; the witness is a clone with CRLF (`BLOCKERS.md` §B2, closed).
 
-**Отложено этими проходами** (перенос не улучшаем — улучшения отдельными пунктами):
+**Deferred by these passes** — the move was not to be improved: improvements went as items of their own.
 
-- ~~**D1.** Разбиение движка по файлам §4.2~~ — сделано 2026-09-14 (R-1.3
-  `REFACTOR.md`): движок разложен по швам на 15 модулей, точки входа осталась
-  одна, публичный API (58 имён) не изменился, вывод и артефакт — байт в байт.
-- ~~**D2.** Чтение путей независимо от `core.quotePath`~~ — сделано закреплением
-  на границе вызова git (`BLOCKERS.md` §B1).
-- ~~**D6.** Сверка с рабочим деревом сравнивает содержимое, а не байты~~ — сделано
-  2026-09-14: сверка двусторонняя, свидетель — клон с CRLF (`BLOCKERS.md` §B2).
-- ~~**D3.** Текст подсказки в ошибке цитирует путь движка~~ — сделано 2026-09-14
-  (волна 0 чистки, `REFACTOR.md` §2): подсказка цитирует точку входа
-  `bin/size.js`, и её выполнение даёт работающие настройки; стережёт
-  `test/cli.test.js`.
-- **D4.** Метрика `gzip` в реестре: по требованиям v1 не нужна, но её удаление —
-  изменение поведения, а не перенос, поэтому уходит отдельным пунктом.
-- ~~**D5.** Шапка движка всё ещё предлагает запуск `node tools/size-table.js`~~
-  — сделано 2026-09-14 (волна 0 чистки, `REFACTOR.md` R-0.5): шапка и советы
-  `--init` называют реальные команды, упоминаний путей, которых в пакете нет, не
-  осталось (разбиение файла — D1, закрыто выше 2026-09-14).
+- ~~**D1.** Splitting the engine into files (§4.2)~~ — done 2026-09-14 (`REFACTOR.md` §R-1.3): 15 modules
+along the seams, one entry point left, the public API of **55 names** unchanged, output and artifact byte
+for byte.
+- ~~**D2.** Reading paths independently of `core.quotePath`~~ — done by pinning at the git call
+(`BLOCKERS.md` §B1).
+- ~~**D6.** The working-tree comparison compares content rather than bytes~~ — done 2026-09-14: the comparison
+is two-sided, the witness is a clone with CRLF (`BLOCKERS.md` §B2).
+- ~~**D3.** The hint of a refusal quoted the engine's own path~~ — done 2026-09-14 (wave 0 of the cleaning,
+`REFACTOR.md` §2): the hint quotes an entry point that exists (`bin/size.js` of the installed package), and
+what it advises is carried out by the check rather than promised (`test/refusals.test.js` executes the advice,
+`test/docs-commands.test.js` refuses a call by the package's bare name).
+- **D4.** The `gzip` metric in the registry: the first version does not need it (requirement §12
+`requirements.md`), but removing it is a change of behaviour rather than a move, so it goes as an item of its
+own. The registry holds four metrics today (`raw`, `min`, `tok`, `gzip`), the default set carries three
+(§4.4), and the question is open in §10.
+- ~~**D5.** The engine's header still offered `node tools/size-table.js`~~ — done 2026-09-14 (wave 0 of the
+cleaning, `REFACTOR.md` §R-0.5): the header and the `--init` advice name real commands, and not one mention
+of a path the package does not have remains (the split of the file is D1, closed above).
 
-**Приёмка:**
+**Acceptance, in today's names:**
 
-- `size render` на safe-resets даёт файл, **побайтово равный** сегодняшнему
-  `docs/size-table.html` (сравнение по хешу из шага 0);
-- `size measure --json` совпадает с `data.json` шага 0 (числа и порядок строк);
-- тесты модуля: 12 наборов проверок из `tests/size-table.js` переехали и зелёные;
-- `size check` падает на испорченном отчёте так же, как текущий контрольный режим.
+- the report built on `safe-resets` is **byte for byte** the artifact of the standard — sha256 `1bdb27e1…`,
+225 673 B — `pnpm run check:standards` and `test/frozen.test.js`;
+- the data agrees with the frozen numbers row by row and cell by cell — the same runs (`--data` today, the
+`--json` of that day);
+- the checks that lived in the consumer's `tests/size-table.js` moved into the package's suite, which holds
+**38 files and 177 checks** today (`tools/suites.js`);
+- the control mode refuses a spoiled report exactly as the former one did — the mode without a flag, held by
+`test/check.test.js`.
 
-**В проекте-потребителе:** `pnpm add -D file:../size-report` (или из
-gh-packages, см. §8), `size-report.config.json` из старого конфига через
-`--migrate`, `scripts.sizes`/`test:sizes` → `size render` / `size check`,
-`tools/size-table.js` и `tests/size-table.js` удаляются вместе с шагами в
-`harness.js`, `doc-sync.js` перестаёт их считать, `docs/TESTING.md`, `AGENTS.md`,
-`README.md` правятся, `.gitignore` получает `.size-report/`. Отчёт на этом шаге
-**остаётся в git** (`docs/size-table.html`) — он ещё и доказательство паритета.
+**In the consumer:** the package arrived as a dependency, and `tools/size-table.js` and `tests/size-table.js`
+left together with their steps in the harness. Two expectations of the plan did not survive contact: the
+settings file kept its own name — `size-table.config.json`, which is the default `CONFIG_NAME`, while
+`size-report.config.json` is the name of the **template** — and the report **stayed in git** there rather
+than leaving it: that is the project's business, and `--init` does not touch `.gitignore`
+(`REFACTOR.md` §R-4.8).
 
-**Выпуск (сделан 2026-09-14):** `1.0.0`, git-зависимость из публичного
-репозитория (`WORKLOG.md` §40, §44); публикация в npm — §8.4.
+**Release (2026-09-14):** `1.0.0`, a git dependency on the public repository
+(`worklog/archive/WORKLOG.md` §40, §44); the registry publication is §8.4, and the package is published there
+today as `@vernikr/size-report`.
 
-### Шаг 2. Данные и отображение: интерактивный отчёт (v0.2.0) — «разговор с агентом»
+### Step 2. The data and the view: the interactive report — “a conversation with an agent” — ✅ done 2026-09-14
 
-**Делаем:** модель данных §4.3, `size measure --json`, программа отчёта
-(дерево, чекбоксы, категории, переключатели метрик, пересчёт суммы на лету,
-`localStorage`), пре-собранный `dist/app.js`, отказ от «отчёта в git».
+**The promise:** the data model of §4.3, the data mode, the report's program (the tree, the switches, the
+categories, the metric toggles, the total recounted on the fly, `localStorage`), the pre-built `dist/app.js`,
+and the report leaving git in the consumer.
 
-**Сделано (2026-09-14, срез 1 — контракт данных).** Движок отдаёт данные отдельным
-режимом (`--data`): метаданные (имя и версия пакета, локаль, заголовки, путь
-артефакта, команда починки, журнал), метрики со способом и честностью, категории,
-файлы (метка, текущий путь, алиасы, категория и её источник) и строки с абсолютными
-значениями плюс текущие значения (`now`). Производных величин в контракте нет —
-инвариант §3.14 — и это проверяется по составу полей, а не обещанием. Категория
-файла считается по расширению (`.md` — документация, конфиги — служебные, картинки
-и шрифты — ресурсы, остальное — код), а категория из настроек колонки старше
-правила. Метрика, которая не минификация, помечена приближением. Старые `--json` и
-`--write` не тронуты: паритет с замороженным эталоном остаётся побайтовым.
+**Slice 1 — the data contract.** The engine hands the data out in a mode of its own (`--data`): the metadata
+(the package's name and version, the locale, the headings, the artifact's path, the repair command, the
+journal), the metrics with their method and their honesty, the categories, the files (label, current path,
+aliases, category and where that category came from) and the rows with absolute values plus the current ones
+(`now`). There is no derived quantity in the contract — the invariant §3.14 — and that is checked by the set
+of fields (`test/contract-data.test.js`) rather than promised. A file's category follows its extension
+(`.md` — documentation, settings — service files, images and fonts — assets, the rest — code), and a category
+named in the column's settings outranks that rule. A metric whose measurement is an approximation says so
+(`accuracy`), and the marks of the approximate cells travel beside it (`approx`); the rule is computed from
+the formats the report actually holds rather than from the metric's name (`src/metrics.js`). The older
+`--json` and `--write` were left untouched: the parity with the frozen standard stays byte for byte.
 
-Потребляемость доказана минимальной страницей (`--page`, `size-report.html` рядом с
-таблицей): данные и скрипт внутри одного файла, внешних ссылок нет; метрики,
-категории и файлы включаются и выключаются, таблица и итоги пересчитываются на
-месте. Вычислительная часть страницы — не пересказ, а те же исходники, которыми считает
-артефакт (`src/derived.js`): второго расчёта нет, и проверка контракта
-следит за тем, чтобы он не появился (список функций оболочки страницы закрыт).
-Тест сверяет итоги с итогами артефакта, дельту итога — с суммой дельт по файлам, а
-сумму дельт по колонке — с текущим размером. Страница работает в настоящем DOM
-(jsdom) — и в тесте, и в браузере. Числа контракта сверяются с замороженным
-эталоном и на фикстуре, и на живом проекте (`pnpm run parity:live`).
+The page carries the same code as the artifact: the data and the program live inside one file with no
+external reference, so the report opens from disk alone; the metrics, the categories and the files are
+switched on and off, and the table and the totals are recounted on the spot. The part that counts is not a
+retelling: it is `src/derived.js` embedded as it stands, and `test/page-view.test.js` compares the names the
+assembled program defines with the names of that module, so a second calculation cannot appear unnoticed.
+`test/contract-derived.test.js` compares the totals with the artifact's, the delta of a total with the sum of
+the files' deltas, and the deltas of a column with the current size. The page runs in a real DOM (jsdom) both
+in the checks and in a browser, and the contract's numbers are compared with the frozen standard — on the
+fixture and on the live project (`pnpm run parity:live`).
 
-**Сделано (2026-09-14, срез 2 — панель: дерево файлов).** Левая панель вместо
-плоского списка с категориями показывает дерево по реальной структуре каталогов
-(требование §8.2 `module-design.md`): папки строятся из тех же путей, что показаны
-в подписи файла, у папки три состояния и переключатель на всё поддерево, рядом —
-число файлов; быстрые кнопки категорий остались и переставляют те же галочки.
-Состояние хранят только файлы — поэтому дерево, категории и таблица не могут
-разойтись. Числа, артефакт и форма вывода не менялись: паритет держится
-(`WORKLOG.md` §23, `REFACTOR.md` R-2.4).
+**Slice 2 — the panel is a tree.** Instead of a flat list by category the panel shows a tree of the project's
+directories (requirement §8.2 `module-design.md`): folders are built from the same paths the file's caption
+shows, a folder has three states and a switch for its whole subtree with the count of files beside it, while
+the quick category buttons stayed as a row above the tree and switch the same boxes. Only files hold the
+state, so the tree, the categories and the table cannot drift apart. The numbers, the artifact and the form
+of the output did not move: the parity held (`worklog/archive/WORKLOG.md` §23, `REFACTOR.md` R-2.4).
 
-**Сделано (2026-09-14, срез 3 — память выбора).** Панель помнит, что читатель
-выключил: запись живёт в памяти браузера под ключом из «паспорта отчёта» (имя
-инструмента, схема данных, путь артефакта, заголовок и метки колонок) и хранит
-только выключенное, **по именам** — файл путём, метрика ключом. Поэтому запись
-чужого отчёта не подхватывается (в браузере все страницы `file://` делят одну
-память), перенаправленная колонка и убранная метрика ничего не значат, а
-появившееся остаётся включённым. Верхушки истории в паспорте намеренно нет:
-подросшая история — тот же отчёт. Правило и цена решения — `REFACTOR.md` R-2.5,
-числа и браузерная проверка — `WORKLOG.md` §24.
+**Slice 3 — the choice is remembered.** The panel remembers what a reader switched off: the record lives in
+the browser's memory under a key taken from the report's passport (the tool's name, the data schema, the
+artifact's path, the title and the column labels) and holds only what is off, **by names** — a file by its
+path, a metric by its key. A record of a foreign report is therefore not picked up (in a browser every
+`file://` page shares one memory), while a redirected column or a removed metric means nothing and what
+appeared stays on. The tip of the history is deliberately not part of the passport: a grown history is the
+same report. The rule and the price of the decision are in `REFACTOR.md` R-2.5, the numbers and the browser
+check in `worklog/archive/WORKLOG.md` §24.
 
-**Сделано (2026-09-14, срез 4 — обмен выбором ссылкой).** Адрес страницы и есть
-ссылка: та же запись, что ложится в память браузера, ложится и в якорь
-(`#size-report=…`), поэтому передать выбор = скопировать адрес. Ссылка старше
-памяти (она — явный выбор отправителя) и память читателя не подменяет; чужой и
-испорченный адрес не применяется, но объясняется строкой над таблицей, а
-присланный адрес не переписывается. Работает и на уже открытой странице
-(`hashchange`: браузер на смену якоря документ не перезагружает). Решение,
-отказы и браузерная проверка — `REFACTOR.md` R-2.6, `WORKLOG.md` §25.
+**Slice 4 — the choice can be sent by a link.** The page's address **is** the link: the same record that goes
+into the browser's memory goes into the anchor (`#size-report=…`), so passing a choice on is copying the
+address. The link is older than the memory (it is the sender's explicit choice) and does not replace the
+reader's; a foreign or a broken address is not applied but explained by a line above the table, and an address
+that was sent is not rewritten. It works on an already open page too (`hashchange`: the browser does not
+reload the document for a changed anchor). The decision, the refusals and the browser check are in
+`REFACTOR.md` R-2.6 and `worklog/archive/WORKLOG.md` §25.
 
-**Осталось из шага 2:** пре-собранный `dist/app.js` вместо текста в движке и отказ
-от «отчёта в git» в проекте-потребителе. Внешний вид страницы, дерево файлов и
-память выбора сделаны раньше (`REFACTOR.md` R-2.2, R-2.4, R-2.5).
+**What the step did not finish:** the pre-built `dist/app.js` — the page's program is still embedded into the
+report as text at build time rather than shipped as a built file of its own (`REFACTOR.md` R-2.1 names it as
+what is left there, and §8.4 says what stands in its place in the package's publication) — and the report
+leaving git in the consumer,
+which went the other way by decision (`REFACTOR.md` R-4.8). The look of the page, the tree of files and the
+memory of the choice were done earlier than this step's text expected (`REFACTOR.md` R-2.2, R-2.4, R-2.5).
 
-**Приёмка:** на фикстуре и на safe-resets суммы при полном включении совпадают с
-`--json` на каждой строке и клетке (это переезд проверки из `tests/size-table.js`
-§«числа таблицы против независимого источника»); выключение файла меняет сумму
-ровно на его значение; сумма дельт по колонке сходится с `git cat-file -s` на
-HEAD; отчёт открывается из `file://` без сети (проверка `ui-dom`-стилем через
-jsdom + ручная проверка двойным щелчком).
+**Acceptance, in today's names:** on the fixture and on `safe-resets` the totals with everything switched on
+agree with the data on every row and cell (the check moved from the consumer's `tests/size-table.js`, where it
+was called “the table's numbers against an independent source”); switching a file off moves the total by
+exactly its value; the deltas of a column sum to the size of the file at HEAD — apart from the columns
+`BLOCKERS.md` §N4 names, where a file left and came back, and that exception is written down rather than
+hidden. The report opens from `file://` with no network: the page runs in a real DOM in the checks (jsdom)
+and was walked in a browser by hand. A shallow clone is refused rather than answered with a short table.
 
-**В проекте:** `docs/size-table.html` удаляется из git и из `.gitignore`
-добавляется `.size-report/`; `test:sizes` заменяется на `size check` (полнота и
-настройки); `fetch-depth: 0` в CI из проекта уходит (полная история нужна только
-job'у отчёта пакета); `docs/TESTING.md` описывает новую проверку.
+**In the consumer:** the coverage script became the coverage mode — `size check` — while the comparison of
+the report with the history is the mode without a flag, and `docs/TESTING.md` describes the new check. The
+report itself **stayed in git** there, and the plan's expectation that it would leave (together with a
+`.size-report/` in `.gitignore`) is one of the decisions the move took the other way (`REFACTOR.md` R-4.8).
 
-**Выпуск:** `0.2.0`.
+**Release:** done together with the rest of the move — the plan's own label for this step (`v0.2.0`) never
+existed, and the numbers of every release are in `CHANGELOG.md`.
 
 ### Шаг 3. Настоящая минификация (v0.3.0)
 

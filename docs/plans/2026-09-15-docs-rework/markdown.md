@@ -682,8 +682,35 @@ files). The parts below are the order to work in; each is one commit.
   word `of` in the gap), `CHANGELOG.md` §227 and §234 (`§6`, the file named as `README` without the
   extension), `PLAN.md` §509 (`§B1`, the note named nowhere near). All four resolve correctly by eye; a
   wording pass (M26) may decide to carry the name beside the reference instead.
-- [ ] **M19 PLAN §5, steps 0–2** (432–682) — 161 Russian.
-- [ ] **M20 PLAN §5, steps 3–6** (683–856) — 140 Russian.
+- [x] **M19 PLAN §5, steps 0–2** (432–616 today) — done 2026-09-16, and §5's head and steps 0–2 are English
+  throughout. 182 added / 198 removed = **380 changed lines in one file** at the 600 budget; the file 1178 →
+  **1162** lines and Cyrillic in it 582 → **421**, none left in the range (the first Cyrillic line is 617 —
+  step 3, the neighbour). The four doc guards 8 of 8, `verify:fast` green (5 steps, 72 of 177). `worklog/0124`.
+  **The finished move was compacted rather than retold** — every step keeps its number, its promise, what it
+  left in the tree, how it is held today and what it did not finish; the per-pass narrative and the shell
+  commands of the freeze live in the journal. **Corrections, each by measurement:** the per-step version
+  labels (`v0.1.0` … `v0.5.0`) **never existed** — the first release was `1.0.0` on 2026-09-14 and the package
+  is at **2.4.0** today with every release's numbers in `CHANGELOG.md`; the fixture is **16 commits** (the text
+  said ~20 — the manifest and `check:standards` agree); `src/size-table.js` is the re-export entry point with
+  **no** computation, the mechanics lying in **15 modules** (`REFACTOR.md` §R-1.3); the public API is **55
+  names** (the text said 58); the frozen copy of the engine is **not** in the tree — its bytes are fetched
+  from history and compared with the record of the standard's origin; the commands `size init/measure/render`
+  never arrived (today's surface is §4.7), and `--page` does not exist at all; the honesty mark follows the
+  formats a metric really holds (`src/metrics.js`) rather than “everything that is not minification”, with the
+  per-cell marks in `approx`; the two guards of the shared computation are `test/page-view.test.js` (the names
+  the assembled program defines against `src/derived.js`) and `test/contract-derived.test.js`; D3's witness was
+  a file that does not hold it (`test/cli.test.js` → the advice is **executed** by `test/refusals.test.js`,
+  the form of the call held by `test/docs-commands.test.js`); the consumer's settings file kept
+  `size-table.config.json`, while `size-report.config.json` is the name of the **template**; there is no
+  `--migrate`; and the report **stayed in git** in the consumer (`REFACTOR.md` R-4.8). The bare `§B1` of step 1
+  now names `BLOCKERS.md` — the first of the four blinded references recorded after M18a is closed.
+  **Incoming references measured:** ten citations of `PLAN.md` §5 or of a step from outside (six in
+  `REFACTOR.md`, one in `BLOCKERS.md`, two in `CHANGELOG.md`, one in `docs/module-design.md`, which names
+  §4.8.4 and step 4) — none lost, and the guard resolves every `§`-reference of the six documents.
+  **Carried into the next passes:** steps 3–6 are still headed «Шаг N» while the citations outside say “step
+  N”, so M20 turns those headings into `Step N`; `PLAN.md` §11 still promises that the `gzip` metric “is
+  removed” while the registry holds it and the package ships it (§4.4, D4) — a claim for M22, address recorded.
+- [ ] **M20 PLAN §5, steps 3–6** (617–790) — 140 Russian.
 - [ ] **M21 PLAN §6–§9** (857–1041) — 128 Russian (13 + 18 + 83 + 14 by section).
 - [ ] **M22 PLAN §10–§14** (1042–1230) — 153 Russian (82 + 9 + 11 + 39 + 12 by section). The plan of a
   finished move: what the steps settled is kept, the steps themselves go (the architecture is what is
