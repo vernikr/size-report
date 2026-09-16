@@ -46,7 +46,7 @@ function fail(text) {
 function indent(text, limit) {
   const lines = String(text).trim().split('\n');
   const head = lines.slice(0, limit).map((line) => '      ' + line);
-  if (lines.length > limit) head.push('      … всего строк: ' + lines.length);
+  if (lines.length > limit) head.push('      … lines in all: ' + lines.length);
   return head.join('\n');
 }
 
@@ -69,7 +69,7 @@ function differ(name, made, committed) {
   const b = fs.readFileSync(path.join(committed, name));
   return (a.indexOf(0) < 0 && b.indexOf(0) < 0)
     ? firstDiff(a.toString('utf8'), b.toString('utf8'))
-    : 'байты: ' + a.length + ' Б против ' + b.length + ' Б';
+    : 'bytes: ' + a.length + ' B against ' + b.length + ' B';
 }
 
 function compareFiles(names, made, committed) {
@@ -77,7 +77,7 @@ function compareFiles(names, made, committed) {
   names.forEach((name) => {
     const a = fs.readFileSync(path.join(made, name));
     if (a.equals(fs.readFileSync(path.join(committed, name)))) same++;
-    else fail('  ✗ ' + name + ': пересъём не совпал с закоммиченным\n'
+    else fail('  ✗ ' + name + ': the re-take did not match the committed one\n'
       + indent(differ(name, made, committed), 4));
   });
   return same;
@@ -91,7 +91,7 @@ function compareManifest(made, committed) {
   [a, b].forEach((m) => { if (m.files) delete m.files[BUNDLE]; });
   const keys = Object.keys(b).concat(Object.keys(a).filter((k) => !(k in b)));
   const diff = keys.filter((k) => JSON.stringify(a[k]) !== JSON.stringify(b[k]));
-  diff.forEach((k) => fail('  ✗ manifest.json: поле ' + k + ' разошлось\n'
+  diff.forEach((k) => fail('  ✗ manifest.json: the field ' + k + ' diverged\n'
     + indent(firstDiff(JSON.stringify(a[k], null, 2), JSON.stringify(b[k], null, 2)), 4)));
   return diff.length === 0;
 }
@@ -121,33 +121,33 @@ function bundleFacts(file) {
 function describeRefs(heads) {
   return Object.keys(heads).sort().map((ref) => (ref === '*' ? '' : ref + ' → ')
     + heads[ref].slice(0, 7)).filter((line) => line !== '').join(', ')
-    + ', коммитов ' + heads['*'];
+    + ', ' + heads['*'] + ' commits';
 }
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'size-report-standards-'));
 try {
   const synthetic = path.join(tmp, 'synthetic');
-  if (snapshot('фикстура не снялась', ['tools/make-fixture.js', '--out', synthetic])) {
+  if (snapshot('the fixture was not taken', ['tools/make-fixture.js', '--out', synthetic])) {
     const same = compareFiles(FIXTURE_FILES, synthetic, SYNTH);
     const manifestOk = compareManifest(synthetic, SYNTH);
     const made = bundleFacts(path.join(synthetic, BUNDLE));
     const kept = bundleFacts(path.join(SYNTH, BUNDLE));
     const bundleOk = JSON.stringify(made) === JSON.stringify(kept);
     if (!bundleOk) {
-      fail('  ✗ ' + BUNDLE + ': пересъём несёт другую историю\n'
-        + indent('снято сейчас: ' + describeRefs(made) + '\nзакоммичено: ' + describeRefs(kept), 4));
+      fail('  ✗ ' + BUNDLE + ': the re-take carries a different history\n'
+        + indent('taken now: ' + describeRefs(made) + '\ncommitted: ' + describeRefs(kept), 4));
     }
     if (same === FIXTURE_FILES.length && manifestOk && bundleOk) {
-      console.log('  ✓ фикстура: ' + same + ' из ' + FIXTURE_FILES.length
-        + ' файлов побайтово, манифест по полям, бандл несёт ' + made['*'] + ' коммитов');
+      console.log('  ✓ the fixture: ' + same + ' of ' + FIXTURE_FILES.length
+        + ' files byte for byte, the manifest by fields, the bundle carries ' + made['*'] + ' commits');
     }
   }
 
   const parity = path.join(tmp, 'parity');
-  if (snapshot('эталон паритета не снялся', ['tools/parity-freeze.js', LIVE, '--out', parity])) {
-    console.log('  ✓ паритет: снят из истории потребителя, '
-      + compareFiles(PARITY_FILES, parity, PARITY) + ' из ' + PARITY_FILES.length
-      + ' файлов совпали побайтово');
+  if (snapshot('the parity reference was not taken', ['tools/parity-freeze.js', LIVE, '--out', parity])) {
+    console.log('  ✓ parity: taken from the consumer history, '
+      + compareFiles(PARITY_FILES, parity, PARITY) + ' of ' + PARITY_FILES.length
+      + ' files matched byte for byte');
   }
 
   /* The bundle is a replacement for the project, and it has to be one without reservations: it declares both `HEAD` and the
@@ -157,17 +157,17 @@ try {
   const live = bundleFacts(LIVE);
   if (live.HEAD !== frozen.project.head || live['refs/heads/main'] !== frozen.project.head
       || live['*'] !== String(frozen.project.commits)) {
-    fail('  ✗ ' + BUNDLE + ' истории потребителя больше не заменяет проект:\n'
-      + indent('сейчас: ' + describeRefs(live) + '\nожидалось: HEAD и refs/heads/main на '
-        + frozen.project.head + ', коммитов ' + frozen.project.commits, 4));
+    fail('  ✗ ' + BUNDLE + ' of the consumer history no longer replaces the project:\n'
+      + indent('now: ' + describeRefs(live) + '\nexpected: HEAD and refs/heads/main at '
+        + frozen.project.head + ', ' + frozen.project.commits + ' commits', 4));
   } else {
-    console.log('  ✓ бандл истории: HEAD и ветка main на '
-      + frozen.project.head.slice(0, 7) + ', ' + live['*'] + ' коммитов');
+    console.log('  ✓ the history bundle: HEAD and the branch main at '
+      + frozen.project.head.slice(0, 7) + ', ' + live['*'] + ' commits');
   }
 } finally {
   fs.rmSync(tmp, { recursive: true, force: true });
 }
 
-if (bad === 0) console.log('✓ эталоны воспроизводятся, рабочее дерево не тронуто');
-else console.error('✗ расхождений: ' + bad);
+if (bad === 0) console.log('✓ the references reproduce, the working tree is untouched');
+else console.error('✗ divergences: ' + bad);
 process.exitCode = bad === 0 ? 0 : 1;

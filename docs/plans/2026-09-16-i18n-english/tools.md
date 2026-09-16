@@ -50,8 +50,9 @@ them) and `docs-facts.js` 4 → 3. Of the 235:
 - **4 are prose**, not literals — `tools/refusals.js:134`, `tools/run-tests.js:22,40`,
   `tools/docs-facts.js:170`;
 - **210 are this owner's own**; step 1 lands 10 of them and **three are blocked** (`BLOCKERS.md`
-  N29), step 2 lands 13 and step 3 lands 23, so **164 minus what N29 and N30 settle** is left for steps
-  4–8 and the twelve files read **189** now (`tools/**` as a whole reads 392).
+- **210 are this owner's own**; step 1 lands 10 of them and **three are blocked** (`BLOCKERS.md`
+  N29), step 2 lands 13, step 3 lands 23 and step 4 lands 74, so **90 minus what N29 and N30 settle** is
+  left for steps 5–8 and the twelve files read **115** now (`tools/**` as a whole reads 318).
 
 And the same measurement for step 8: `tools/refusals.js`'s 55 Cyrillic lines are `truth` **37** +
 `advice.why` **12** + the case `id`s **2** + the `uncatchable` prose **2** + `ADVICE_LINE` **1** +
@@ -222,10 +223,20 @@ No reader at all, measured:
    be right for both 1 and 21); (c) `node tools/run-tests.js nope` answers the English “No run was
    named” and exits 2. `pnpm run dup` was asked its own question and answered no new twin. The
    `sec()`/`load()` comma is **not** touched (N26).
-4. **`tools/check-standards.js` + `tools/pack-check.js` + `tools/parity-live.js`** — the verdicts.
-   Red first: the exit code is the interface (`tools/gates/run.js`), so the experiment is
-   `pnpm run check:standards` still answering 0 and `pack:check` still passing; the absence of a
-   reader is proven by the grep above rather than assumed.
+4. **`tools/check-standards.js` + `tools/pack-check.js` + `tools/parity-live.js` — done 2026-09-16,
+   21 + 21 + 35 → 0 + 0 + 3.** All the verdicts of the two re-take checks and of the live parity, plus
+   the two environment labels and the contract lines; the three left in `parity-live.js` are exactly
+   **N29**'s pair, and nothing else in the file was touched. Red first, and the evidence is stronger
+   than the plan's grep: all three files were returned to Russian together and the **full `verify` —
+   the eight steps, not only the tests — stayed green**, so the interface of all three is the exit code
+   and not a word; the printed lines of each were taken in English by hand (see the journal). Measured
+   for the question the step was asked: neither the artifact's hash (`fixtures/parity/artifact.sha256`,
+   `1bdb27e1…`) nor the built page's (`docs/size-report.html`, `40eda37d…`) moved — `check-standards`
+   compares the fixtures it re-takes, and the page is built from the locale dictionary, so no
+   translated word is inside a compared artifact. `pnpm run dup` was asked its own question and
+   answered no new twin. One near-twin was measured on the way: `tools/gates/run.js:42` (W2's) describes
+   this step in almost the same words as its final line — no guard compares them, one line cannot form
+   a clone, and it is named here so W2 sees it.
 5. **`tools/docs-facts.js`** — the pinned revision's section name. The working-tree split (135) is
    already S1's; what is left is `commandsAt` (175, 177), which reads a revision **older than the
    rename** — today's pin. Red first: replace `'Команды:'` with the English name instead of adding it

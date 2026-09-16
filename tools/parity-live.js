@@ -45,8 +45,8 @@ const DEFAULT_BIN = path.join(ROOT, 'bin', 'size.js');
  * live project has ASCII paths only, so `core.quotePath` has nothing to do here — what is checked is
  * the fact itself: the output does not depend on the machine's settings. */
 const PROFILES = [
-  { label: 'обычное окружение', env: null },
-  { label: 'настройки машины не читаются (GIT_CONFIG_GLOBAL=/dev/null)', env: { GIT_CONFIG_GLOBAL: '/dev/null' } }
+  { label: 'the usual environment', env: null },
+  { label: 'the machine settings are not read (GIT_CONFIG_GLOBAL=/dev/null)', env: { GIT_CONFIG_GLOBAL: '/dev/null' } }
 ];
 
 function parseArgs(args) {
@@ -99,29 +99,29 @@ function runCli(bin, dir, args, env) {
  * and returned fall out of the delta comparison and are named out loud (`BLOCKERS.md` §N4). */
 async function checkContract(bin, dir, env, frozen) {
   const res = await runCli(bin, dir, ['--data'], env);
-  if (res.code !== 0) return { errors: ['--data не отдался (код ' + res.code + '): ' + res.stderr.trim()] };
+  if (res.code !== 0) return { errors: ['--data did not come back (code ' + res.code + '): ' + res.stderr.trim()] };
   const got = JSON.parse(res.stdout);
   const errors = [];
 
-  if (got.schema !== 1) errors.push('схема данных не объявлена');
-  if (got.rows.length !== frozen.rows.length) errors.push('строк ' + got.rows.length + ' вместо ' + frozen.rows.length);
-  if (got.files.length !== frozen.columns.length) errors.push('файлов ' + got.files.length + ' вместо ' + frozen.columns.length);
+  if (got.schema !== 1) errors.push('the data schema is not declared');
+  if (got.rows.length !== frozen.rows.length) errors.push(got.rows.length + ' rows instead of ' + frozen.rows.length);
+  if (got.files.length !== frozen.columns.length) errors.push(got.files.length + ' files instead of ' + frozen.columns.length);
   if (JSON.stringify(got.now) !== JSON.stringify(frozen.rows[frozen.rows.length - 1].cells)) {
-    errors.push('«сейчас» разошлось с последней строкой эталона');
+    errors.push('"now" diverged from the last row of the reference');
   }
 
   got.rows.forEach((row, r) => {
     if (r >= frozen.rows.length) return;
-    if (row.sha !== frozen.rows[r].sha) { errors.push('строка ' + (r + 1) + ': sha разошёлся'); return; }
+    if (row.sha !== frozen.rows[r].sha) { errors.push('row ' + (r + 1) + ': the sha diverged'); return; }
     if (JSON.stringify(row.values) !== JSON.stringify(frozen.rows[r].cells)) {
-      errors.push('строка ' + (r + 1) + ': абсолютные значения разошлись с эталоном');
+      errors.push('row ' + (r + 1) + ': the absolute values diverged from the reference');
       return;
     }
     got.metrics.forEach((m) => {
       let sum = 0;
       row.values.forEach((v) => { if (v !== null) sum += v[m.key]; });
       if (sum !== frozen.rows[r].totals[m.key]) {
-        errors.push('строка ' + (r + 1) + '/' + m.key + ': итог ' + sum + ' вместо ' + frozen.rows[r].totals[m.key]);
+        errors.push('row ' + (r + 1) + '/' + m.key + ': the total is ' + sum + ' instead of ' + frozen.rows[r].totals[m.key]);
       }
     });
   });
@@ -144,7 +144,7 @@ async function checkContract(bin, dir, env, frozen) {
       });
       const at = got.now[i] === null ? 0 : got.now[i][m.key];
       if (sum !== at) {
-        errors.push('колонка «' + f.label + '»/' + m.key + ': дельты не сходятся с текущим размером');
+        errors.push('the column "' + f.label + '"/' + m.key + ': the deltas do not add up to the current size');
       }
     });
   });
@@ -171,12 +171,12 @@ function broken(lines, bad, why) {
  * printed not all at once but three at a time: the rest follow from the first. */
 function contractLines(lines, contract) {
   if (contract.errors.length === 0) {
-    lines.push('    ✓ контракт данных несёт те же числа: ' + contract.rows + ' строк, '
-      + contract.files + ' файлов, итоги и дельты сходятся с «сейчас»'
-      + (contract.gaps.length === 0 ? '' : ' (кроме колонок с возвратом файла: ' + contract.gaps.join(', ') + ')'));
+    lines.push('    ✓ the data contract carries the same numbers: ' + contract.rows + ' rows, '
+      + contract.files + ' files, the totals and the deltas add up to "now"'
+      + (contract.gaps.length === 0 ? '' : ' (except the columns where a file came back: ' + contract.gaps.join(', ') + ')'));
     return 0;
   }
-  contract.errors.slice(0, 3).forEach((e) => lines.push('    ✗ контракт данных: ' + e));
+  contract.errors.slice(0, 3).forEach((e) => lines.push('    ✗ the data contract: ' + e));
   return 1;
 }
 
@@ -191,9 +191,9 @@ async function checkProfile(profile, expected, tmp) {
   gitIn(dir, ['checkout', '-q', head]);
 
   const json = await runCli(bin, dir, ['--json'], profile.env);
-  if (json.code !== 0) return broken(lines, bad, 'движок не отдал --json (код ' + json.code + '): ' + json.stderr.trim());
-  bad += verdict(lines, json.stdout === data, 'числа совпали с эталоном побайтово',
-    'числа разошлись с эталоном: ' + firstDiff(json.stdout, data));
+  if (json.code !== 0) return broken(lines, bad, 'the engine gave no --json (code ' + json.code + '): ' + json.stderr.trim());
+  bad += verdict(lines, json.stdout === data, 'the numbers matched the reference byte for byte',
+    'the numbers diverged from the reference: ' + firstDiff(json.stdout, data));
 
   /* The report is a self-contained page, while the golden was taken from the former static table:
    * there is no byte comparison here any more, and that is not a loss but another subject. What has
@@ -201,19 +201,19 @@ async function checkProfile(profile, expected, tmp) {
    * pulls nothing from outside (an external reference would make it unopenable without a network —
    * and it is built exactly to be opened from disk). */
   const wrote = await runCli(bin, dir, ['--write'], profile.env);
-  if (wrote.code !== 0) return broken(lines, bad, 'движок не собрал отчёт: ' + wrote.stderr.trim());
+  if (wrote.code !== 0) return broken(lines, bad, 'the engine did not build the report: ' + wrote.stderr.trim());
   const artifact = readIfExists(path.join(dir, artifactRel));
   const external = artifact === null ? [] : ['src="', '<link '].filter((m) => artifact.indexOf(m) >= 0);
   const selfMade = artifact !== null && external.length === 0 && artifact.indexOf('id="data"') >= 0;
   bad += verdict(lines, selfMade,
-    'отчёт самодостаточен: ' + artifactRel + ', ' + artifact.length + ' Б, без внешних ссылок',
-    artifact === null ? 'отчёта нет по пути из настроек: ' + artifactRel
-      : 'отчёт не самодостаточен: ' + (external.length > 0 ? 'внешние ссылки ' + external.join(', ')
-        : 'в нём нет данных'));
+    'the report is self-contained: ' + artifactRel + ', ' + artifact.length + ' B, no external references',
+    artifact === null ? 'there is no report at the path from the settings: ' + artifactRel
+      : 'the report is not self-contained: ' + (external.length > 0 ? 'external references ' + external.join(', ')
+        : 'it carries no data'));
 
   const checked = await runCli(bin, dir, [], profile.env);
-  bad += verdict(lines, checked.code === 0, 'контрольный режим на своём артефакте зелёный',
-    'контрольный режим красный: ' + checked.stderr.trim());
+  bad += verdict(lines, checked.code === 0, 'the check mode on its own artifact is green',
+    'the check mode is red: ' + checked.stderr.trim());
 
   bad += contractLines(lines, await checkContract(bin, dir, profile.env, frozen));
   return { bad: bad, lines: lines };
@@ -224,15 +224,15 @@ async function main() {
   const repo = path.resolve(typeof args.flags['--repo'] === 'string' ? args.flags['--repo'] : DEFAULT_REPO);
   const bin = path.resolve(typeof args.flags['--bin'] === 'string' ? args.flags['--bin'] : DEFAULT_BIN);
 
-  for (const [what, file] of [['эталона', path.join(PARITY, 'manifest.json')], ['движка', bin]]) {
+  for (const [what, file] of [['the reference', path.join(PARITY, 'manifest.json')], ['the engine', bin]]) {
     if (!fs.existsSync(file)) {
-      console.error('✗ нет ' + what + ': ' + file + ' — нечего сверять');
+      console.error('✗ there is no ' + what + ': ' + file + ' — nothing to compare');
       return 2;
     }
   }
   if (!fs.existsSync(repo)) {
-    console.error('✗ проект-потребитель не найден: ' + repo
-      + '\n  укажите путь: node tools/parity-live.js --repo <путь>');
+    console.error('✗ the consumer project was not found: ' + repo
+      + '\n  name the path: node tools/parity-live.js --repo <path>');
     return 2;
   }
 
@@ -252,9 +252,9 @@ async function main() {
     results.forEach((r) => r.lines.forEach((line) => console.log(line)));
 
     const bad = results.reduce((sum, r) => sum + r.bad, 0);
-    console.log((bad === 0 ? '✓ паритет с живым проектом' : '✗ паритет с живым проектом нарушен')
-      + ': проект ' + manifest.project.name + ' на ' + head.slice(0, 7) + ', '
-      + rows + ' строк × ' + manifest.data.columns + ' колонок, сред ' + PROFILES.length);
+    console.log((bad === 0 ? '✓ parity with the live project' : '✗ parity with the live project is broken')
+      + ': the project ' + manifest.project.name + ' at ' + head.slice(0, 7) + ', '
+      + rows + ' rows × ' + manifest.data.columns + ' columns, ' + PROFILES.length + ' environments');
     return bad === 0 ? 0 : 1;
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });

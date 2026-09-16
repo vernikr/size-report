@@ -43,7 +43,7 @@ function run(bin, cwd, args) {
   const res = spawnSync(process.execPath, [bin, '--config', CONFIG].concat(args),
     { cwd: cwd, encoding: 'utf8', maxBuffer: MAX_BUF });
   if (res.status !== 0) {
-    throw new Error(path.basename(bin) + ' ' + args.join(' ') + ': код ' + res.status + '\n' + (res.stderr || '').trim());
+    throw new Error(path.basename(bin) + ' ' + args.join(' ') + ': code ' + res.status + '\n' + (res.stderr || '').trim());
   }
   return res.stdout;
 }
@@ -72,37 +72,37 @@ try {
   fs.mkdirSync(unpacked);
   execFileSync('tar', ['-xzf', path.join(tmp, tarball), '-C', unpacked]);
   const pkg = path.join(unpacked, 'package');
-  ok('собран пакет', tarball);
+  ok('the package was built', tarball);
 
   /* The `files` list is the promise of the delivery, and it is checked from both sides: it must not
    * name what the repository does not have (a forgotten file or an empty directory travels to the
    * release as a promise), and the tarball must not carry what the list does not promise. */
   const promised = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).files;
   const absent = promised.filter((entry) => !fs.existsSync(path.join(ROOT, entry)));
-  if (absent.length > 0) bad('в files названо то, чего в репозитории нет', absent.join(' '));
-  else ok('список files называет только существующее', promised.join(' '));
+  if (absent.length > 0) bad('files names what the repository does not have', absent.join(' '));
+  else ok('the files list names only what exists', promised.join(' '));
 
   /* Some files npm puts into the tarball on its own, past the list (the manifest, and by npm's rules
    * README and licences) — they are not counted as foreign, or the check would complain about what
    * npm itself added. */
   const AUTO = /^(package\.json|README(\..*)?|LICEN[SC]E(\..*)?)$/i;
   const extra = fs.readdirSync(pkg).filter((entry) => !AUTO.test(entry) && promised.indexOf(entry) < 0);
-  if (extra.length > 0) bad('в пакет попало то, что files не обещает', extra.join(' '));
-  else ok('постороннего в пакете нет', fs.readdirSync(pkg).length + ' записей');
+  if (extra.length > 0) bad('what files does not promise made it into the package', extra.join(' '));
+  else ok('nothing foreign is in the package', fs.readdirSync(pkg).length + ' entries');
 
   /* Files: compared by content, not by count — otherwise a loss and an extra file could balance each
    * other out. Templates are checked alongside the sources: they are the "take it and put it down"
    * promise, and a template that did not make it into the delivery is a promise that is not there. */
-  [['src', 'исходники'], ['templates', 'шаблоны']].forEach(([dir, what]) => {
+  [['src', 'the sources'], ['templates', 'the templates']].forEach(([dir, what]) => {
     const packed = path.join(pkg, dir);
     if (!fs.existsSync(packed)) {
-      throw new Error('в тарболле нет каталога ' + dir + ': проверьте список files в package.json');
+      throw new Error('the tarball has no ' + dir + ' directory: check the files list in package.json');
     }
     const inRepo = trackedEntries(dir);
     const inPack = fs.readdirSync(packed).sort();
     const missing = inRepo.filter((f) => inPack.indexOf(f) < 0);
-    if (missing.length > 0) bad('в пакет не доехали ' + what, missing.join(' '));
-    else ok('все ' + what + ' в пакете', inRepo.length + ' записей');
+    if (missing.length > 0) bad('the package is missing ' + what, missing.join(' '));
+    else ok('the package carries ' + what, inRepo.length + ' entries');
   });
 
   /* A project takes a template as it is, so it has to arrive byte for byte: an edit made after the
@@ -110,8 +110,8 @@ try {
   trackedEntries('templates').forEach((f) => {
     const a = fs.readFileSync(path.join(ROOT, 'templates', f));
     const b = fs.readFileSync(path.join(pkg, 'templates', f));
-    if (!a.equals(b)) bad('шаблон изменился при упаковке', f);
-    else ok('шаблон в пакете побайтово тот же', f);
+    if (!a.equals(b)) bad('a template changed while being packed', f);
+    else ok('the template in the package is byte-identical', f);
   });
 
   /* Module parsing leans on the file beside it (`parse-worker.js`) rather than on a path from the
@@ -119,8 +119,8 @@ try {
    * user pays a Node launch for every cell. */
   const parse = await import(pathToFileURL(path.join(pkg, 'src', 'parse.js')).href);
   parse.moduleError('export const a = 1;');
-  if (parse.parseMode() !== 'thread') bad('разбор модуля в пакете ушёл в запуск, а не в поток');
-  else ok('разбор модуля в пакете идёт потоком');
+  if (parse.parseMode() !== 'thread') bad('module parsing in the package fell back to a launch instead of a thread');
+  else ok('module parsing in the package goes through a thread');
 
   const repoBin = path.join(ROOT, 'bin', 'size.js');
   const packBin = path.join(pkg, 'bin', 'size.js');
@@ -129,22 +129,22 @@ try {
 
   const jsonRepo = run(repoBin, repoClone, ['--json']);
   const jsonPack = run(packBin, packClone, ['--json']);
-  if (jsonRepo !== jsonPack) bad('--json из пакета не совпал с выводом репозитория');
-  else ok('--json из пакета совпадает побайтово');
+  if (jsonRepo !== jsonPack) bad('--json from the package did not match the repository output');
+  else ok('--json from the package is byte-identical');
 
   [repoBin, packBin].forEach((bin, i) => run(bin, i === 0 ? repoClone : packClone, ['--write']));
 
   const rel = JSON.parse(fs.readFileSync(CONFIG, 'utf8')).output;
   const a = fs.readFileSync(path.join(repoClone, rel));
   const b = fs.readFileSync(path.join(packClone, rel));
-  if (!a.equals(b)) bad('отчёт из пакета не совпал с репозиторием');
-  else ok('отчёт из пакета совпадает побайтово', b.length + ' Б');
+  if (!a.equals(b)) bad('the report from the package did not match the repository');
+  else ok('the report from the package is byte-identical', b.length + ' B');
 } catch (e) {
-  bad('проверка не прошла', e.message);
+  bad('the check did not go through', e.message);
 } finally {
   fs.rmSync(tmp, { recursive: true, force: true });
 }
 
-if (failed === 0) console.log('✓ пакет работает из собранного тарболла');
-else console.error('✗ проверок провалено: ' + failed);
+if (failed === 0) console.log('✓ the package works from the assembled tarball');
+else console.error('✗ checks failed: ' + failed);
 process.exitCode = failed === 0 ? 0 : 1;
