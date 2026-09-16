@@ -82,6 +82,11 @@ The exception is always the same one: when a commit changes nothing that ships i
 (only the journal, the sensors' baselines, the reports), there is nothing to release — say so in
 the commit in words.
 
+**A portion is pushed as soon as its commit is green**, whether or not a release follows it:
+`git push origin main`, with the full profile run by hand first (CI runs the same profiles on the
+push). A branch push publishes nothing — the release workflow runs on `v*` tags — so holding a
+portion back buys nothing and only lets the attached copy drift from the tree.
+
 ## The size report
 
 The report is one file, a self-contained page: `docs/size-report.html`. A hook
