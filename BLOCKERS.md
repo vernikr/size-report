@@ -684,3 +684,23 @@ references stayed the same after the fix.
   **For the user to decide:** (1), (2) or (3). The subplan plans (1) and states that steps 1–5 do not depend on
   the answer — step 6 is the only one that moves.
 
+- **N26. The numbers of the instruments stay Russian while their words turn English.** Measured 2026-09-16 while
+  planning subplan W1: a duration is formatted with `.replace('.', ',')` in four places —
+  `tools/run-tests.js:43` (`sec`), `:64` (`load`), and `tools/gates/run.js:111,114` (W2's profile summary) — so
+  after the translation the fast profile would print `всего 12,2 с` turned into `total 12,2 s`, and a Russian
+  decimal comma inside an English sentence. A separator is formatting rather than a string literal, and this work's
+  own rule is that only a literal's value changes; no check reads it either (measured: no test matches
+  `[0-9],[0-9]`, and the profile runner reads exit codes alone).
+
+  **Options and their price.** (1) **Leave it and name it here** (W1's plan as written): the criterion of the work
+  is about literals, the comma is a known residue in four call sites of two files, and a reader of an English run
+  meets one Russian habit. (2) **Change the formatting in the same portion**: two files, four call sites, and the
+  numbers become `12.2`; it is a behaviour change of the printed report (not of any measurement), so it is allowed
+  only as a deliberate decision — and it would also touch `tools/gates/run.js`, a gate file, which needs the
+  `Gate-Change:` trailer for a change that is not about a threshold. (3) **Force the locale in the instruments**
+  (a `Intl.NumberFormat` with an explicit locale): more code for the same four lines, and it adds a locale question
+  of its own — which locale the repository's own tooling should print in — that nothing else here asks.
+
+  **For the user to decide:** (1), (2) or (3). It is the same kind of question as N25 (a printed surface that the
+  literal-only rule cannot settle) and can be decided together with it.
+
