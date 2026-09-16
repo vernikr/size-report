@@ -78,7 +78,7 @@ assert the **call lines** inside those files (`pnpm run verify:fast`, `tools/gat
 | The `--list` output and the step commands | Identifiers and shell words, not text: `test/gates-verify.test.js` compares CI's steps with them. |
 | The rule names of `deps.js` (`.dependency-cruiser.cjs`'s ids), metric keys (`lines`, `branches`…) and the report schema's keys | Data of the reports and of the config; D1 owns the config's own comments. |
 | The reports in `reports/` | Measured: they carry keys and metric names only, no Russian (`tools/gates/common.js:5-7` says they are diffed, not read). |
-| The decimal comma of the profile summary (`tools/gates/run.js:111,114`) | Formatting made by code, not a literal — `BLOCKERS.md` N26, the same question W1 met in `tools/run-tests.js`. |
+| The decimal comma of the profile summary (`tools/gates/run.js:111,114`) | Formatting made by code, not a literal — `BLOCKERS.md` N26, the same question W1 met in `tools/run-tests.js`, **decided 2026-09-16 and already applied**: both call sites read `localeNumber(n, 1)` from `tools/harness.js`, so the separator now follows the machine's locale (`ru_RU.UTF-8` → `12,2`, `en_US.UTF-8` → `12.2`) and this step has nothing left to do about it — the comma is no longer a Russian habit of the tooling. |
 | `eslint.metrics.config.js` (6), `.dependency-cruiser.cjs` (7), `.gitignore` (4) | D1's declarative files, and gate files of their own. |
 | The probes' own Russian (`test/gates-*.test.js`) | C3's checks: W2 edits in them **only** the assertion lines that read a W2 verdict (the seven above). |
 
@@ -120,7 +120,8 @@ not a mark). The `commit-msg` hook answers at once; the `pre-push` hook re-reads
 1. **`tools/gates/run.js`** — the eleven step labels and the profile's verdicts. Red first: the
    measured absence of a reader (`--list` prints commands; a step's output is not captured), so the
    experiment is `pnpm run verify:fast` still green and `pnpm run verify:fast --list` unchanged
-   command for command. The comma in the summary stays (N26).
+   command for command. The comma in the summary is gone (N26 decided 2026-09-16: the summary numbers go through
+   `localeNumber`, so they follow the machine's locale while the words stay English).
 2. **`tools/gates/deps.js` and `tools/gates/metrics.js`** — their verdicts and advice, with the two
    probe reads (`test/gates-deps.test.js:48`, `test/gates-metrics.test.js:144`) in the same commit.
    Red first: translate `'deps: находок нет (…)'` alone → the probe goes red in the same run.

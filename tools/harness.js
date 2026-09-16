@@ -199,6 +199,15 @@ export function runFixtureWith(target, dir, args, env) {
   return runTool(target, dir, ['--config', CONFIG].concat(args), env);
 }
 
+/* A number for a person to read: printed in the locale the machine runs in, with a fixed number of decimals. The
+ * separator belongs to the locale rather than to a sentence, while the words around the number stay English — an
+ * explicitly pinned locale would raise a question nothing here asks: which language the repository's own tooling
+ * prints in. The decimals are the reader's: hundredths in the checks' run, tenths in a profile's summary. */
+export function localeNumber(n, digits) {
+  return new Intl.NumberFormat(undefined,
+    { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(n);
+}
+
 /* Collecting output without waiting for the end: needed where runs are interleaved and cannot be awaited one by one
  * (`tools/parity-live.js`). Chunks are kept as buffers rather than glued to a string: a chunk arrives from the stream
  * wherever the kernel returned it, and a multi-byte character may fall on the border between chunks. A string built from

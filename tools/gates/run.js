@@ -24,6 +24,7 @@
 
 import path from 'node:path';
 import { bad, ok, parseArgs, run } from './common.js';
+import { localeNumber } from '../harness.js';
 
 /* Steps: the name is the name of the script in `package.json`, so that a person can run one step
  * alone. The text is why the step is here (printed in the summary), looked up by script name. */
@@ -108,10 +109,10 @@ if (profile === undefined || PROFILES[profile] === undefined) {
   console.log('\nсводка профиля «' + profile + '»:');
   results.forEach((r) => {
     console.log('  ' + (r.code === 0 ? '✓' : '✗') + ' ' + r.name.padEnd(18)
-      + r.seconds.toFixed(1).replace('.', ',') + ' с');
+      + localeNumber(r.seconds, 1) + ' с');
   });
   const total = results.reduce((sum, r) => sum + r.seconds, 0);
-  console.log('  всего ' + total.toFixed(1).replace('.', ',') + ' с ('
+  console.log('  всего ' + localeNumber(total, 1) + ' с ('
     + path.basename(process.cwd()) + ', шагов ' + results.length + ')');
 
   if (failed.length > 0) {

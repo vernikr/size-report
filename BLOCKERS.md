@@ -729,6 +729,22 @@ references stayed the same after the fix.
   **For the user to decide:** (1), (2) or (3). The subplan plans (1) and states that steps 1–5 do not depend on
   the answer — step 6 is the only one that moves.
 
+  **DECIDED 2026-09-16 by the mission agent: option (2), the words move into the locale dictionaries.** A
+  report whose `locale` is `ru` stays Russian in its chrome, which is what a locale is for. What changed:
+  `src/page/panel.js` reads `appUi.notOnHead`, `appUi.category`, `appUi.categoryFromConfig` and
+  `appUi.categoryByExtension` instead of four literals (the file's counter 3 → **0**), the two dictionaries
+  carry the four keys each (`src/locales.js`: `ru` in Russian, `en` in English), and `uiText`
+  (`src/page/build.js`) passes them into the page's own dictionary — the path every other page caption already
+  travels. Measured in a real DOM (jsdom) on pages built from the fixture, ru and en, by the decision's own
+  reason: the ru report's checkbox reads `data/table.toml · категория: по расширению`, the en one
+  `data/table.toml · category: by extension`, no tooltip holds `undefined` (16 boxes each), and the second key
+  was exercised by naming a file absent on HEAD in the data block of an assembled page — the panel answers
+  `src/code.js (нет на HEAD) · категория: по расширению`. Price paid: four keys in each dictionary instead of
+  four literals, and the assembled page changes (the script and the `ui` block), which is a rebuild of this
+  repository's own `docs/size-report.html` and nothing else — `fixtures/parity/artifact.sha256` is still taken
+  by the frozen copy (`1bdb27e1…`), and `check:standards`, `parity:live` and `pack:check` are green. Of the
+  three options this was the only one that keeps both reports in one language each.
+
 - **N26. The numbers of the instruments stay Russian while their words turn English.** Measured 2026-09-16 while
   planning subplan W1: a duration is formatted with `.replace('.', ',')` in four places —
   `tools/run-tests.js:43` (`sec`), `:64` (`load`), and `tools/gates/run.js:111,114` (W2's profile summary) — so
@@ -748,6 +764,20 @@ references stayed the same after the fix.
 
   **For the user to decide:** (1), (2) or (3). It is the same kind of question as N25 (a printed surface that the
   literal-only rule cannot settle) and can be decided together with it.
+
+  **DECIDED 2026-09-16 by the mission agent: a number is formatted by `Intl.NumberFormat` in the locale the
+  machine runs in.** One helper, `localeNumber(n, digits)` in `tools/harness.js` (the module both callers already
+  import from), took the place of `sec()` and `load()` in `tools/run-tests.js` and of two `toFixed(1).replace`
+  calls in `tools/gates/run.js`: four call sites, two files, one implementation — the separator now belongs to
+  the locale rather than to a sentence, and no locale is pinned, because the question "which language should the
+  repository's tooling print in" is one nothing here asks. Measured: `LC_ALL=en_US.UTF-8` answers `12.20`, while
+  `ru_RU.UTF-8` and `de_DE.UTF-8` answer `12,20`; the fast suite run whole under `LC_ALL=ru_RU.UTF-8` prints
+  `✓ fast run: 70 checks, failures 0, 6,17 s (load at the start 3,08; …)` and stays green (the tests read exit
+  codes and their own texts, not these numbers — no check matches `[0-9],[0-9]`). `tools/gates/run.js` is a gate
+  file, so the commit carries the `Gate-Change:` trailer; the change is not about a threshold, and it is named
+  there. Nothing shipped moves: the numbers of the report itself are the report's own business
+  (`src/derived.js` splits thousands by thin spaces on purpose), and no reference, artifact or golden was
+  touched.
 
 - **N27. The language guard (`G1` of the tracker) is withdrawn.** Planned, never written: the last row of the map
   was a check that would redden on a new Russian literal outside the allow-list, and the tracker's criterion
@@ -890,7 +920,8 @@ references stayed the same after the fix.
   the numbers alone.
 
   **What is not part of it.** `sec()` and `load()` keep the decimal comma (`replace('.', ',')`) — that is
-  **N26**, a question of its own and still open; only the word-half of the comment at `tools/run-tests.js:40`
+  **N26** — decided on 2026-09-16 as well (below), and with it the whole comment at `tools/run-tests.js:40`
+  went, since it existed to explain the comma; only the word-half of that comment
   moved here, and the comment itself is prose left in place (`TODO.md`).
 
   **DECIDED 2026-09-16 by the mission agent: the repair is taken.** `plural` now takes two words and returns

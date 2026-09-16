@@ -76,6 +76,13 @@ function uiText(page, loc) {
      * the mark in text, as it does with everything else in the panel. */
     notMeasuredRule: page.notMeasuredRule,
     notMeasuredChoice: page.notMeasuredChoice,
+    /* The tooltip of a file's checkbox: where the file stands and how its category was decided. The
+     * panel keeps no words of its own — a Russian report stays Russian in its chrome too, and an
+     * English one gets English there. */
+    notOnHead: page.notOnHead,
+    category: page.category,
+    categoryFromConfig: page.categoryFromConfig,
+    categoryByExtension: page.categoryByExtension,
     methodLabel: page.panelMethod,
     empty: page.emptyMetrics,
     noFiles: page.noFiles,

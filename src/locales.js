@@ -28,6 +28,13 @@ export const LOCALES = {
         + ' (собранный, замок зависимостей, сам отчёт или слишком крупный)',
       notMeasuredChoice: 'не измеряется: в набор колонок отчёта не попал'
         + ' — набор задают настройки (columns)',
+      /* The tooltip of a measured file: where the file stands and how its category was decided.
+       * A file absent on HEAD is named by the path it came with, and a category comes either from
+       * the settings or from the extension — both are answers to the reader's "why so". */
+      notOnHead: ' (нет на HEAD)',
+      category: ' · категория: ',
+      categoryFromConfig: 'из настроек',
+      categoryByExtension: 'по расширению',
       all: 'все',
       sub: '{tool} {version} · {artifact}',
       /* Words of precision: a metric label speaks about the worst in its column, a cell
@@ -86,6 +93,10 @@ export const LOCALES = {
         + ' (built, a dependency lock, the report itself, or too large)',
       notMeasuredChoice: 'not measured: it is not in the report’s set of columns'
         + ' — that set comes from the settings (columns)',
+      notOnHead: ' (not on HEAD)',
+      category: ' · category: ',
+      categoryFromConfig: 'from the settings',
+      categoryByExtension: 'by extension',
       all: 'all',
       sub: '{tool} {version} · {artifact}',
       exact: 'an exact number',

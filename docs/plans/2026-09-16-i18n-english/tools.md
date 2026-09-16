@@ -96,7 +96,8 @@ is the exit code"), and no test reads these words (measured: `test/gates-*.test.
 `tools/run-tests.js:38` (`MODES = { fast: 'быстрый', full: 'полный' }`) — the **keys are CLI words**
 (`node tools/run-tests.js fast`) and only the values are text, which is the file's own "red first"
 experiment; and `:56`/`:60` — `plural(n, 'проверка', 'проверки', 'проверок')`, three literals of one
-counter, and `:43`/`:64` — a decimal **comma** made by code rather than by a literal (N26).
+counter, and `:43`/`:64` — the two `sec()`/`load()` call sites of the number formatting (N26, decided 2026-09-16:
+they now call `localeNumber` from `tools/harness.js`).
 
 **3. `tools/harness.js`** (13, **done 2026-09-16**) — two **names** (`PACKAGE.name = 'движок пакета'` at 45 and 188,
 `'замороженная копия реализации'` at 77) and the assertion messages of the shared helpers. The
@@ -136,11 +137,16 @@ around them (`parity-freeze.js:205-211`, `make-fixture.js:197-206`) are W1's and
 | Six comments (prose, not literals): `tools/refusals.js` 3, `tools/run-tests.js` 2 (`:22` quotes a command with a Russian test-name pattern, `:40` explains the Russian numbers), `tools/docs-facts.js` 1 (`:170`) | Leftovers of the prose pass, out of this work's scope by definition. `TODO.md` (like S3's `src/metrics.js:61-63`). The `docs-facts.js` one is the exception: step 5 aligns its wording if the tolerance is chosen, since the comment would otherwise claim the wrong thing — prose, no behaviour. |
 | The sensors' own advice markers (`tools/gates/dup.js:139`, `tools/gates/coverage.js:93` — measured 2026-09-16; the `:1` of the first writing of this plan was a guess, and since W1's step 8 these two are the only Russian advice markers left in the tree, the tolerance of `ADVICE_LINE` being spent) | W2's texts, and never parsed by `adviceOf` (the extractor reads the *tool's* output). Measured, so that narrowing the regex in step 7 cannot surprise anyone — and measured for step 8 too: these two are the **only** Russian advice markers left in the repository, so the `src/**` half of its condition holds by measurement rather than by assumption. |
 
-**New open question — N26 (`BLOCKERS.md`): the numbers stay Russian while the words turn English.**
-`tools/run-tests.js:43` and `:64` format a duration with `.replace('.', ',')`, and `tools/gates/run.js:111,114` (W2) do the same, so a translated profile prints "total 12,2 s". A comma is
-formatting, not a literal, and this work changes literals only: options and price are recorded there
-for the mission agent. Nothing else of this owner formats a number this way (measured: two files,
-four call sites).
+**N26 (`BLOCKERS.md`) — decided 2026-09-16: a number is formatted by `Intl.NumberFormat` in the locale the
+machine runs in.** `sec()` and `load()` are gone from `tools/run-tests.js` and both
+`toFixed(1).replace('.', ',')` calls are gone from `tools/gates/run.js`: four call sites of two files now use
+one helper, `localeNumber(n, digits)` in `tools/harness.js` — the module `run-tests.js` already imported from
+and the one `gates/run.js` imports now. No locale is pinned, so the separator follows the machine
+(`en_US.UTF-8` → `12.20`, `ru_RU.UTF-8` → `12,20`; a whole fast run under the Russian locale prints
+`6,17 s` and stays green). Nothing else of this owner formats a number this way (measured: two files, four
+call sites), and the comment at `run-tests.js:40` that explained the comma went with `sec()` — it was the prose
+leftover this plan accounted for, so the owner's prose comments read **1** (`:22`) now. `tools/gates/run.js` is a
+gate file, hence the `Gate-Change:` trailer on that commit.
 
 ## Cross-ownership
 
@@ -230,8 +236,9 @@ No reader at all, measured:
    `BLOCKERS.md` **N30** (the rule in `plural` is Russian grammar: no choice of three English words can
    be right for both 1 and 21); (c) `node tools/run-tests.js nope` answers the English “No run was
    named” and exits 2. `pnpm run dup` was asked its own question and answered no new twin. The
-   `sec()`/`load()` comma is **not** touched (N26) — while the word half of the same comment stopped being an
-   exception on 2026-09-16, when N30's one-line repair landed and the helper was rewritten to know two forms.
+   word half of the comment stopped being an exception on 2026-09-16, when N30's repair landed, and the
+   comma half went with `sec()` when N26 was decided the same day: the file's second prose comment is gone,
+   so the owner's prose is one line (`:22`) — the counter reads `tools/run-tests.js:1`.
 4. **`tools/check-standards.js` + `tools/pack-check.js` + `tools/parity-live.js` — done 2026-09-16,
    21 + 21 + 35 → 0 + 0 + 3.** All the verdicts of the two re-take checks and of the live parity, plus
    the two environment labels and the contract lines; the three left in `parity-live.js` are exactly
@@ -346,8 +353,8 @@ W2's), so no step needs a `Gate-Change:` trailer.
   lines of `manifestNote` (`parity-freeze.js:98-118`) and the 3 config values of the fixture
   (`make-fixture.js:56,57,64`), permanent since N21 was decided; the 3 lines of `docs-facts.js` — its 2
   section names of the pinned revision, which N20's release moves, and the one comment that names them —
-  and 1 prose comment (`run-tests.js:22`), whose sibling `:40` stopped being an exception with N30's
-  repair. 16 + 3 + 3 + 1 = 23. The command:
+  and 1 prose comment (`run-tests.js:22`), the only one left after N26's decision took the comment that
+  explained the comma with `sec()`. 16 + 3 + 3 + 1 = 23. The command:
   `rg -cP '[\p{Cyrillic}]' tools/refusals.js tools/parity-live.js tools/parity-freeze.js tools/run-tests.js tools/pack-check.js tools/check-standards.js tools/make-fixture.js tools/harness.js tools/yaml.js tools/docs-facts.js tools/page-harness.js tools/synthetic/repo.js`.
 - The counts and the keys are untouched — `test/refusals-catalog.test.js` says so, and it is the
   sensor that would catch a renamed cause or a lost `✗ `.

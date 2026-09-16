@@ -1,8 +1,9 @@
 # S5 — `automation`: the installed hook and the panel's chrome
 
 Subplan of `plan.md` (T0). Owns `src/hook.js`, `src/page/panel.js`, `bin/postinstall.js`.
-Written 2026-09-16; steps 1–5 and the post-install half of step 6 landed 2026-09-16, and the panel's three
-lines (`src/page/panel.js`) are the one step left, waiting on the N25 decision. The last subplan of the runtime layer, and the only one whose
+Written 2026-09-16; steps 1–5 and the post-install half of step 6 landed 2026-09-16, and the panel's four
+literals went into the locale dictionaries the same day, when N25 was decided — not translated, so the
+subplan is closed with its planned step changed in shape rather than taken. The last subplan of the runtime layer, and the only one whose
 text lands **outside the repository**: the hook writes its own body into `.git/hooks/post-commit`
 of someone else's project, and its commit subject into that project's history.
 
@@ -55,6 +56,14 @@ prints these lines (S1's file, S5's words).
 neighbouring `appUi.notMeasuredRule` / `notMeasuredChoice` come from the locale dictionary and are
 **data** (S1's), not part of this batch.
 
+**Decided 2026-09-16 (N25): these words went where their neighbours live — into the locale
+dictionaries.** `src/page/panel.js` reads them from `appUi`, both dictionaries carry the four keys
+(`src/locales.js`), and `uiText` (`src/page/build.js`) passes them into the page's own dictionary.
+So the file's counter reads **0** and the words are data of the `ru` side, which the work's own
+allow-list names — a translated chrome inside a Russian report was the one outcome the decision
+ruled out. Measured in jsdom on the fixture: the ru report answers
+`data/table.toml · категория: по расширению`, the en one `data/table.toml · category: by extension`.
+
 **6. The post-install note** (`bin/postinstall.js:41–42`) — `'· size-report: хук поставлен (…) —
 отчёт обновляется после каждого коммита; снять: size uninstall-hook'`, read by a person once,
 after `npm i`.
@@ -71,12 +80,13 @@ after `npm i`.
 | The `ru` content of this project's own report (title, heading, category and metric labels) | Comes from the settings file and the locale dictionary; not S5's. |
 | `.githooks/pre-commit` (2) and `.githooks/pre-push` (2) | Gate files, and they belong to W2 — see the map correction in `plan.md`. |
 
-**New open question — N25 (`BLOCKERS.md`): the panel's three strings are not localized.** They are
-hardcoded, while every other caption of the page is picked by `cfg.locale`. So after step 6 a
-`locale: 'ru'` report keeps Russian content and gets English chrome (`· category: by extension`
-inside a report titled «Объём файлов по коммитам»), and this project's own report is such a report.
-Options and price are recorded there; the plan does not decide. If N25 chooses "move them into the
-dictionaries", step 6 changes shape (it becomes a code change, so it leaves this work) or drops.
+**N25 (`BLOCKERS.md`) — decided 2026-09-16: the words move into the locale dictionaries.** They were
+hardcoded while every other caption of the page is picked by `cfg.locale`, so translating them would have
+given a `locale: "ru"` report English chrome inside Russian content — and this repository's own tracked
+report is such a report. The decision fell on the option that keeps both reports in one language each:
+four keys in every dictionary instead of four literals, a lookup in `appUi` instead of a constant. It is a
+code change, so it leaves the batch of literals this subplan is — and it is the step the subplan planned as
+a translation, which is why the plan records the change of shape rather than a dropped step.
 
 ## Cross-ownership
 
@@ -154,7 +164,8 @@ and does not appear here.
   committed (<sha>)`, `✗ size-report: report commit failed: …`;
 - the hook file's comments: the mark line keeps `size-report`, the three comments say what the file
   is, that a command overwrites it whole, and that the hook itself commits nothing;
-- the panel's tooltip: `<path> (not on HEAD) · category: by extension` / `from settings`;
+- the panel's tooltip (moved into the dictionaries by N25): `<path> (not on HEAD) · category: …`
+  with `from the settings` / `by extension` in the `en` side while the `ru` side keeps its own words;
 - the post-install note: `· size-report: hook installed (…) — the report refreshes after every
   commit; remove: size uninstall-hook`.
 
@@ -192,10 +203,12 @@ and does not appear here.
    back to Russian reddens the test that reads it.
 6. **The post-install note — done 2026-09-16** (41–42): `· size-report: hook installed (…) — the
    report refreshes after every commit; remove it: size uninstall-hook`. No reader, measured.
-   **The panel's chrome (9–11) is the one step left, and it waits on N25** — a decision rather than a
-   translation: translating these three literals makes the chrome inside a `locale: "ru"` report
-   English, and this repository's own tracked report is such a report. The step is neither done nor
-   dropped here; the options and their price are in `BLOCKERS.md` N25.
+   **The panel's chrome (9–11) went into the dictionaries on 2026-09-16**, by N25's decision: the four
+   literals are now keys of the locale dictionary (`notOnHead`, `category`, `categoryFromConfig`,
+   `categoryByExtension`), `src/page/panel.js` reads them from `appUi` and `uiText` passes them into the
+   page's own dictionary. Not translated: a `locale: "ru"` report keeps Russian chrome, which is what the
+   decision was for. Translation of these lines was the plan's step 6 as written; the step's shape
+   changed, and the subplan closes with it.
 
 **Outcome of steps 1–5, measured 2026-09-16.** The counter over the two files answers nothing
 (`src/hook.js` 40 → 0, `bin/postinstall.js` 2 → 0); `tools/refusals.js` 61 → 55, `test/hook.test.js`
@@ -236,8 +249,10 @@ so a step can land alone. No reference moves: the fixtures carry no hook word, a
   words is the report's own content, and the step list is built so that each check-read string
   moves with its check.
 - `git status` clean, the journal entry written, and the report's own commit present (expected).
-- The strings of N25's three panel lines are either landed with the mixed-language consequence
-  accepted, or the step is dropped with the reason — the decision is the mission agent's.
+- N25's four panel literals are **not** translated but moved into the locale dictionaries (decided
+  2026-09-16): the counter over the three files answers nothing, and the ru report's own chrome is
+  proved Russian in a real DOM — `data/table.toml · категория: по расширению` beside
+  `data/table.toml · category: by extension` for the same build with `locale: "en"`.
 
 **Release:** this subplan changes bytes that ship (`src/hook.js`, `bin/postinstall.js`), so the
 portion owes a release; how to batch releases is N20 and is not decided here. If the cadence is

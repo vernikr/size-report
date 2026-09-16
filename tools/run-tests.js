@@ -29,22 +29,13 @@ import { spawn } from 'node:child_process';
 import { ROOT, checksIn, filesOf, testFiles } from './suites.js';
 // Output collection is the harness's own: gluing chunks into a string tears a multi-byte character at a border and spoils
 // the numbers read from the output.
-import { collectOutput } from './harness.js';
+import { collectOutput, localeNumber } from './harness.js';
 
 const argv = process.argv.slice(2);
 const mode = argv[0];
 const extra = argv.slice(1);
 const jobs = Number(process.env.SIZE_REPORT_TEST_JOBS || 0) || Math.max(1, os.cpus().length);
 const MODES = { fast: 'fast', full: 'full' };
-
-/* A comma in the fraction is what the Russian framing of the numbers left here (`BLOCKERS.md` N26),
- * and the word form is English: a rule that branched on the last digit put a singular after every
- * count ending in one, so `21 check` stood where the language wants `21 checks` (`BLOCKERS.md` N30) —
- * a broken counter in either language. Hence `plural`, which knows two forms: `1 check` and
- * `5 checks`. */
-function sec(n) {
-  return n.toFixed(2).replace('.', ',');
-}
 
 /* English keeps one form above one — `21 checks`, not `21 check` (the Russian rule that branched on the
  * last digit answered `21 check` for the same helper, `BLOCKERS.md` N30). A language with three forms
@@ -59,10 +50,6 @@ function checks(n) {
 
 function files(n) {
   return n + ' ' + plural(n, 'file', 'files');
-}
-
-function load() {
-  return os.loadavg()[0].toFixed(2).replace('.', ',');
 }
 
 /* One file, one process: both the duration and the run's own counters come from it. A file that did not run prints its
@@ -98,18 +85,19 @@ async function runAll(list, args, together) {
 
 function line(result) {
   return '  ' + (result.code === 0 ? '✓' : '✗') + ' ' + result.file.padEnd(28) + ' '
-    + checks(result.tests).padEnd(18) + ' ' + sec(result.seconds) + ' s';
+    + checks(result.tests).padEnd(18) + ' ' + localeNumber(result.seconds, 2) + ' s';
 }
 
 async function measure(all) {
   console.log('every file measured on its own, one at a time (' + files(all.length) + ', load '
-    + load() + '):\n');
+    + localeNumber(os.loadavg()[0], 2) + '):\n');
   const results = await runAll(all, extra, 1);
   results.slice().sort((a, b) => a.seconds - b.seconds).forEach((r) => {
     console.log('  ' + r.file.padEnd(28) + ' ' + checks(r.tests).padEnd(18) + ' '
-      + sec(r.seconds) + ' s' + (r.code === 0 ? '' : ' — FAILED'));
+      + localeNumber(r.seconds, 2) + ' s' + (r.code === 0 ? '' : ' — FAILED'));
   });
-  console.log('\nthe measuring window — load ' + load() + ', numbers of different windows are not comparable.'
+  console.log('\nthe measuring window — load ' + localeNumber(os.loadavg()[0], 2)
+    + ', numbers of different windows are not comparable.'
     + ' The split is declared by a property of the file — `tools/suites.js`.');
   if (results.some((r) => r.code !== 0)) process.exitCode = 1;
 }
@@ -131,7 +119,7 @@ async function suite(name) {
 
   /* The load is named by a measurement **on the way in** rather than on the way out: the run's pool is itself a noticeable
    * part of the load, and a number taken at the end would say more about the run than about the window. */
-  const loadBefore = load();
+  const loadBefore = localeNumber(os.loadavg()[0], 2);
   console.log((name === 'fast' ? '▶ fast run' : '▶ full run') + ': ' + files(list.length)
     + ', ' + checks(declared)
     + (name === 'fast'
@@ -152,7 +140,7 @@ async function suite(name) {
       return;
     }
     bad++;
-    console.error('\n✗ ' + r.file + ' (' + sec(r.seconds) + ' s, code ' + r.code + '):\n');
+    console.error('\n✗ ' + r.file + ' (' + localeNumber(r.seconds, 2) + ' s, code ' + r.code + '):\n');
     console.error(r.out.trimEnd() + '\n');
   });
 
@@ -166,7 +154,7 @@ async function suite(name) {
   // The duration is a measurement rather than a verdict: it is printed so that "expensive inside the fast run" is visible
   // to the eye, while the run does not turn red over it.
   console.log('\n' + (bad === 0 ? '✓ ' : '✗ ') + MODES[name] + ' run: ' + checks(declared)
-    + ', failures ' + bad + ', ' + sec(seconds) + ' s (load at the start ' + loadBefore
+    + ', failures ' + bad + ', ' + localeNumber(seconds, 2) + ' s (load at the start ' + loadBefore
     + '; no time target is declared)');
 
   if (bad > 0) process.exitCode = 1;

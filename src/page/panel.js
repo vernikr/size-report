@@ -6,9 +6,10 @@ import { appData, appUi, appView, appFileAt, appFoldSet, appMeasured } from './s
  * apart. */
 function appFileBox(i) {
   const f = appData.files[i];
-  const where = appFileAt(i) + (f.path === null ? ' (нет на HEAD)' : '');
-  return appBox(f.label, where + ' · категория: '
-    + (f.categoryBy === 'config' ? 'из настроек' : 'по расширению'), appView.files[i], (e) => {
+  const where = appFileAt(i) + (f.path === null ? appUi.notOnHead : '');
+  return appBox(f.label, where + appUi.category
+    + (f.categoryBy === 'config' ? appUi.categoryFromConfig : appUi.categoryByExtension),
+  appView.files[i], (e) => {
     appView.files[i] = e.target.checked;
     appRender();
   });
