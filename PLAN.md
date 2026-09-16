@@ -953,191 +953,147 @@ that quietly turned into a promise is worse than one that stays on the list.
 
 ---
 
-## 10. Открытые вопросы (решаем до указанного шага)
+## 10. The open questions — and what became of each
 
-| Вопрос | Предложение по умолчанию | До шага |
+The plan kept the questions it refused to guess at, each with the step that was to answer it. Every one of them
+was answered; the table states the answer and the file that holds it, and the two paragraphs after it keep all
+that is still worth knowing about the naming and the publication.
+
+| Question of that day | What the plan proposed | What happened |
 |---|---|---|
-| Имя пакета и способ публикации (приватно/публично) | ✅ решено и **сделано** 2026-09-15: имя **`@vernikr/size-report`** (область владельца — имя `size-report` в реестре занято чужим пакетом), доступ **public**, установка и из реестра, и git-ссылкой; выпуски идут **тегом** из CI по удостоверению GitHub Actions — без секрета и без кода, издатель заведён `npm trust github` (выпуск `1.2.0` опубликован так, `WORKLOG.md` §57) | 1 |
-| Точное место отчёта и данных на диске | `.size-report/report.html`, `.size-report/data.json`, кэш рядом | 2 |
-| Формат машиночитаемых данных для агента | тот же JSON, что встроен в отчёт + `size measure --json` | 2 |
-| Выбор минификатора разметки (HTML) | свой минимальный (комментарии + пробелы между тегами) | 3 |
-| Порог `maxBytes` «слишком большой файл» | 1 МБ на файл, настраивается | 3 |
-| Токенизаторы Claude и DeepSeek: словарь или приближение | OpenAI — словарь; остальные — приближение с пометкой, словарь добавляется, когда лёгкий | 4 |
-| Считать токены для всех семейств сразу или для выбранного | ✅ решено 2026-09-14: только для выбранного в настройках — и потому словарь выбирается не на странице, а запуском (§4.8.4) | 4 |
-| Границы категории «ресурсы» (файлы локализации) | всё, что в `assets: [.svg, .woff2, .json, .po, .arb]`, переопределяемо | 2 |
-| Лицензия пакета | MIT (проверить словари токенизаторов) | 1 |
-| Нужен ли job отчёта в CI проекта-потребителя | да, но отдельным job'ом с `fetch-depth: 0` и артефактом | 5 |
+| The package's name and the way of publishing it | decided when the plan was written | **`@vernikr/size-report`** (the owner's scope), **public**, first published 2026-09-15; a release goes out by tag from CI with the GitHub attestation (R-4.24) — the un-scoped name belongs to someone else (§8.4) |
+| Where the report and the data lie on disk | `.size-report/report.html`, `.size-report/data.json`, the cache beside | the report is `docs/size-report.html` by default (`outputOf` in `src/project.js`) and the settings may name another path — the consumer keeps `docs/size-table.html`; the data is the block the page carries, written out on demand by `--data`. There is **no `.size-report/` state at all**: the hook's own state lies inside the git directory (step 6) |
+| The machine-readable format for an agent | the same JSON the report embeds, plus `size measure --json` | the same JSON, reachable as `--json` and `--data`; no mode was ever called `measure` (§4.7) |
+| The minifier for markup (HTML) | a minimal one of our own: comments and the spaces between tags | **not built:** markup gets stripping alone — comments and indentation, with the mark of an approximation — while the real minifier answers for JS/TS/CSS (step 3, requirement §3.1) |
+| The `maxBytes` threshold for “too large a file” | 1 MB per file, configurable | **not configurable today:** `MAX_BYTES = 512 KB` is a constant of the engine (`src/project.js`). §9 keeps this open, and a file over it goes to `skip` with its reason rather than silently |
+| The Claude and DeepSeek tokenizers: a dictionary or an estimate | OpenAI by dictionary, the others by a marked estimate, a dictionary added once a light one appears | **one family — `openai`** (step 4): the others have no dictionary that could be called their own, and a family may be added when one does (R-5.6) |
+| Tokens for every family at once, or for the chosen one | only for the chosen one, and therefore the dictionary is chosen by a run rather than on the page | as decided: the family and its encoding live in the run's settings, and the page receives finished numbers (§4.8.4) |
+| The boundaries of the “assets” category (localization files) | anything in `assets: [.svg, .woff2, .json, .po, .arb]`, overridable | the categories are the engine's own table — `code`, `docs`, `chore`, `assets` (`CATEGORY_EXTS` in `src/data.js`) — and a column may name its category, an unknown one being refused (`src/config.js`); localization files got no category of their own |
+| The package's licence | MIT, with the terms of the tokenizers' dictionaries checked | `MIT` in the manifest and `LICENSE` in the shipped list; the dictionaries' terms remain a person's business, both optional dependencies declaring theirs as their own (§8.4) |
+| Whether a consumer needs a CI job for the report | yes, a job of its own, with `fetch-depth: 0` and the artifact | the template `templates/ci.yml` describes exactly that job (named `size`): a whole-history checkout and the check by one command, with a variant for a report that is not in git. The consumer runs the same command inside its own CI (its `test:sizes` script) rather than adding the file |
 
-**Имя для реестра — что свободно.** Проверено запросом к реестру 2026-09-15 (23:13
-UTC): заняты `size-report` (чужой пакет 2017 года, 1.0.2) и `size-table` (чужой, 0.2.0);
-свободны — отвечают «не найден» — `sizereport`, `size-reporter`, `size-report-cli`,
-`size-report-tool`, `size-table-cli`, `repo-size-report`, `code-size-report`,
-`git-size-report`, `size-history`, `size-diff-report`; из области владельца свободны
-`@vernikr/size-report`, `@vernikr/size-table`, `@vernikr/size`, `@vernikr/repo-size`,
-но сама область требует логина `vernikr` в npm, и его занятость этим запросом не
-проверяется (страница профиля закрыта для запроса) — это шаг владельца.
-**Решение принято 2026-09-15: `@vernikr/size-report`** — владелец назвал область
-свободной. Имя не путается с чужим пакетом того же смысла, а форма вызова почти не
-меняется, потому что исполняемый файл называется `size`, а не именем пакета.
-Выпуск-переименование — **1.1.1** (`CHANGELOG.md`); числа от него не меняются, но
-имя инструмента входит в паспорт отчёта, поэтому сохранённый выбор читателя в
-браузере один раз не подхватится (то же сказано в выпуске).
+**The name, in short.** The registry has the un-scoped `size-report` taken by someone else's package (2017,
+last `1.0.2`), so the name carries the owner's scope; the plan also weighed `size-report-cli`, still a neighbour
+of that foreign package, which is exactly the confusion the tool stopped inviting (R-4.21). The rename shipped
+as **`1.1.1`**: not a number moved, but the tool's name is part of the report's passport, so a reader's saved
+choice did not carry over once.
 
-**Опубликовано 2026-09-15** (`WORKLOG.md` §53). Учётных данных на машине не было
-вовсе (пустой файл настроек npm, `npm whoami` → `ENEEDAUTH`, ни токена в
-окружении, ни записи в цепочке ключей), поэтому вход выполнил владелец, а у
-аккаунта с security key вторую ступень умеет только браузерный путь:
-`npm publish` из настоящего терминала (`tmux`) выдаёт ссылку
-подтверждения вместо требования кода из приложения. Проверено как чужой: в пустом
-каталоге вне репозитория `npm install` даёт 1.1.1, `pnpm add` — тоже,
-`npx @vernikr/size-report --help` работает, а `size --init` → `--write` → `size`
-собирает и сверяет отчёт на живом проекте с историей.
+**What the publication taught, and it is worth keeping.** The registry serves a new package at once, while its
+metadata document is cached by a CDN for five minutes, so a `npm view` seconds after the push can answer “not in
+the registry” about a package that is already there. The sign of a publication is therefore `npm access get
+status` (`public`), confirmed by an anonymous request for the tarball — not the first `npm view` that comes to
+hand.
 
-Отдельная ловушка самой проверки: реестр отдаёт пакет сразу, а вот его обычный
-документ метаданных Cloudflare кэширует на 300 секунд по заголовку `Accept`,
-поэтому первый запрос, сделанный через считаные секунды после отправки, записал
-ответ «404» — и следующие пять минут `npm install` отвечал «нет в реестре», хотя
-пакет уже был. Поэтому признак выкладки — `npm access get status` (`public`) и
-анонимный запрос тарболла, а не первый попавшийся `npm view`.
+**What the rename touched, and what it did not.** Only the string with the name, and only where it is a name of
+the package rather than of the executable (`bin` is `size`, and the tool stopped advising a call by package name
+in R-4.21 — a suggestion and a draft are assembled from the path to the manifest). The rename reached the
+manifest's `name`, the data (`src/tool.js`), the help line and the page file's default name (`src/refusal.js`,
+`src/cli.js`), the report's passport — the link's anchor and the memory key (`src/page/app.js`) — the path to the
+engine inside an installation and the hook's label (`src/hook.js`), the templates including the file names
+`templates/size-report.config.json` and `.github/workflows/size-report.yml`, and the checks and tools that read
+the name. The counts of that day are history: they were a snapshot rather than a rule, and the rename is done.
+What stays true is the shape of the operation: the frozen standards did not move (their settings name the fix
+command and their captions take no part in the name), the consumer's manifest did not change (a git reference to
+the repository, which was not renamed), while its lock file **did** — the key of a dependency comes from the
+manifest, so an installation run is needed or CI on a frozen lock will not come together.
 
-Прежний вариант, если бы область оказалась занята, — **`size-report-cli`**:
-свободен без условий, но остаётся соседом чужого `size-report`, а это и есть цена
-путаницы — имя, набранное руками, в проекте без установленного пакета
-разрешается в чужой пакет, а не в отказ (тексты инструмента имя больше не
-называют — R-4.21).
-
-**Что затронет переименование** — набор файлов у всех вариантов один и тот же,
-различается только строка замены: имя в манифесте и выведенный из него путь в
-подсказках (`node node_modules/size-report/bin/size.js` → тот же путь с новым именем).
-Зов по имени пакета в текстах не встречается вовсе — ни старого, ни нового (R-4.21),
-поэтому сам переезд имён текстов почти не трогает; у области владельца добавляется
-отдельный шаг — зарегистрировать логин. Счёт ниже — вхождения строки `size-report`,
-пересчитаны 2026-09-15 (в первой записи стояли 18, 49 и 124 — числа устарели на
-коммитах после выпуска, потому что счёт — снимок, а не правило). Манифест: поле `name` —
-и только оно, `bin` остаётся `size`. `src/` — 16 вхождений в семи файлах; решают
-`src/tool.js` (имя в данных: из него собирается путь в советах и адрес установки),
-`src/refusal.js` (строка справки), `src/cli.js` (имя файла страницы по умолчанию),
-`src/page/app.js` (якорь ссылки и ключ памяти: имя входит в паспорт отчёта, поэтому у
-отчёта, пересобранного после переименования, ключ будет другим и выбор читателя в
-браузере не подхватится), `src/hook.js` (путь к движку в каталоге установки; место
-состояния и метка хука — свои литералы, их можно оставить, чтобы уже поставленные хуки
-узнавались и снимались). Команду починки этот список больше не называет: подсказка и
-черновик собираются из пути к манифесту, а не из имени пакета (`REFACTOR.md` R-4.21).
-Шаблоны — 14 вхождений, включая имена файлов `templates/size-report.config.json` и
-`.github/workflows/size-report.yml`. Проверки и инструменты — 55 вхождений; с именем
-работают `test/contract.test.js` (утверждает имя инструмента в данных),
-`test/templates.test.js`, `test/docs-commands.test.js` и `tools/docs-facts.js` (список
-разрешённых зовов). Документация — 136 вхождений в семи файлах, но править надо не
-все: журнал и история — свидетели прошлого, меняется рабочая часть. **Потребитель:**
-`package.json` не меняется (там git-ссылка на репозиторий, а репозиторий
-переименовывать не нужно), а `pnpm-lock.yaml` — меняется: ключ пакета берётся из
-манифеста, поэтому после переименования там нужен прогон установки, иначе CI на
-замороженном локе не сойдётся.
-**Что не меняется:** замороженные эталоны (их настройки задают команду починки явно,
-имя в подписи не участвует) и опубликованный отчёт потребителя — в нём имя встречается
-14 раз, но это темы коммитов в теле таблицы, а подпись своя (`pnpm run sizes` и
-заголовок из настроек). Обратная сторона: у проекта, чьи настройки команду починки
-не задают, в подпись идёт умолчание с именем пакета — там переименование сдвинет байты
-отчёта, числа при этом те же.
-
-**Цена бездействия.** git-ссылка работает сегодня и ничего не стоит: установка,
-ключи не нужны, версия держится тегом. Не даёт она двух вещей — установки по имени
-из реестра и штатного обновления версии. Третьего — подсказки, ведущей в чужой
-пакет, — после R-4.21 нет: совет называет путь, а не имя; остаётся только имя,
-набранное человеком вручную.
+**The price of the git reference, named once.** It works and costs nothing: the package installs, no key is
+needed, the version is held by a tag. What it does not give is installing by name from the registry and an
+ordinary version bump — that is what the registry under the owner's scope added (§8.4).
 
 ---
 
-## 11. Что сознательно не делаем в v1
+## 11. What the first version deliberately does not do
 
-- Сжатый размер (gzip/brotli) — метрика `gzip` из текущего реестра **удаляется**.
-- Жёсткие пороги, блокировки, уведомления — только показываем.
-- Комментарий со сводкой в PR и публикация отчёта — только шаблон-заготовка.
-- Централизованное управление многими проектами (архитектурно не исключено:
-  ядро получает источник истории параметром).
-- Поддержка платформ, кроме GitHub (переносимость заложена тонкой оболочкой).
-- Токенизация в браузере (только предвычисленные числа).
-- Второй язык реализации.
-
----
-
-## 12. Порядок работ и оценка
-
-| Шаг | Выпуск | Что в проекте | Объём (сессии) | Зависит от |
-|---|---|---|---|---|
-| 0. Паритет и фикстура | — | ничего | 0,5 | — |
-| 1. Движок как есть | 0.1.0 | удаление `tools/`+`tests/size-table.js`, конфиг, scripts, доки | 2–3 | 0 |
-| 2. Данные + интерактивный отчёт | 0.2.0 | отчёт из git, `check` вместо `test:sizes`, CI | 3–4 | 1 |
-| 3. esbuild | 0.3.0 | ничего (числа меняются) | 1–2 | 2 |
-| 4. Токены | 0.4.0 | ничего | 2 | 3 |
-| 5. Интеграция (check/doctor/hook/шаблоны) | 0.5.0 | job CI (блок в `AGENTS.md` отменён: требования его не просят) | 2 | 2 |
-| 6. Полировка, перф, доки | 1.0.0 — ✅ **выпущен 2026-09-14** | версия, `CHANGELOG.md`, тег | 2 | 5 |
-
-Критический путь — шаг 1 → 2; дальше шаги 3 и 5 независимы (минификация и
-интеграция), их можно менять местами по обстоятельствам.
+- **A compressed size (gzip/brotli) — and here the plan changed its mind.** It promised that the `gzip` metric
+  would be *removed* from the registry; it stayed instead: the registry holds four metrics — `raw`, `min`, `tok`,
+  `gzip` — and the package ships all four (§4.4, decision D4). What keeps the promise harmless is the
+  **default set**: a fresh project gets `raw` and `min` (`src/config.js`), so nothing pushes the metric on
+  anybody.
+- Hard thresholds, blocking, notifications — the tool only shows. (This repository's own gate against bloat is
+  its own device, not the package's.)
+- A summary comment on a pull request and publishing the report anywhere — only a template draft
+  (`templates/ci.yml`); the report is committed into the project by the hook, and the tool publishes nothing.
+- Managing many projects from one place — nothing forbids it (the engine reads the project it is run in, and
+  `parity:live` takes another one by `--repo`), but no such mode exists.
+- Platforms other than GitHub: the release workflow is GitHub's, while commit links know **GitHub and GitLab**
+  (`REMOTE_RE` in `src/project.js`); portability beyond that is the thin shell's business (requirement §9.2).
+- Tokenization in the browser — the page counts nothing and receives finished numbers (R-2.7).
+- A second implementation language — there is one, JavaScript.
 
 ---
 
-## 13. Чек-листы
+## 12. The order of the work — and what it took
 
-### Приёмка любого шага
+The plan put the move in seven steps and priced each in sessions. The order is what still holds, and it was
+followed: **0** (freezing parity) → **1** (the engine moved as it was) → **2** (the data and the interactive
+report) → **3** (real minification) and **5** (integration) — independent of each other and interchangeable —
+→ **6** (polish, performance, documents), with **4** (tokens) after 3. The whole sequence was finished on
+**2026-09-14**, released as `1.0.0`, and what each release changed in the numbers is in `CHANGELOG.md`.
 
-- [ ] Тесты пакета зелёные, golden сравнивается побайтово; сторож документации
-      (`test/docs-*.test.js`) молчит — он падает вместе с документом, а не по желанию.
-- [ ] Повторный прогон даёт те же данные и отчёт (детерминизм).
-- [ ] Полный прогон по истории safe-resets не дольше предыдущего шага (или в
-      CHANGELOG объяснено, почему дольше).
-- [ ] `docs/ROADMAP.md` и `WORKLOG.md` проекта отражают изменение, доки
-      потребителя (`README`, `AGENTS.md`, `docs/TESTING.md`) актуализированы.
-- [ ] В проекте-потребителе нет ссылок на удалённые файлы: `rg 'size-table'
-      --glob '!docs/archive/**'` и `rg 'test:sizes'` чисты.
+The rest of that table is history and is worth naming as history: the **per-step version labels**
+(`0.1.0` … `0.6.0`) never existed as releases, the session estimates were the plan's own guess, and none of
+them is a promise today. The passes themselves — what was done, what was found, what was measured — are in
+`worklog/archive/WORKLOG.md`.
 
-### Удаление инструмента из проекта-потребителя (шаг 1–2)
+---
 
-- [ ] `tools/size-table.js`, `tests/size-table.js` удалены.
-- [ ] `package.json`: `sizes`/`test:sizes` переписаны, `test:all` не зовёт
-      удалённые наборы.
-- [ ] `tests/harness.js`: шаги таблицы убраны из `STEPS`, входной список снятого
-      прогона и `HEAD_INPUT` не упоминают размеры.
-- [ ] `tests/doc-sync.js`: `runCounts('tests/size-table.js')` убран вместе со
-      счётчиками в `docs/TESTING.md`.
-- [ ] `docs/TESTING.md`: разделы `tools/size-table.js` и `tests/size-table.js`
-      заменены ссылкой на инструмент.
-- [ ] `AGENTS.md`: §0, §2, §4, §5 — команды и правила про отчёт.
-- [ ] `README.md`: раздел «Объём кода».
-- [ ] `docs/ROADMAP.md`: §54–§56 помечены переехавшими; §33–§35 остаются историей.
-- [ ] `.github/workflows/ci.yml`: шаг и комментарий про `test:sizes`.
-- [ ] `.gitignore`: `.size-report/`; `docs/size-table.html` удалён из индекса.
-- [ ] `docs/size-table.html` больше не правится руками и не коммитится.
+## 13. The checklists
 
-### Готовность релиза пакета
+**A change to the package.** The gate is the repository's own: `pnpm run verify:fast` before an edit and in the
+pre-commit hook, `pnpm run verify` before pushing and in CI (one command, §8.5). Beyond it the plan asked for
+three things, and all three stand as they were written:
 
-- [x] `npm pack` не тащит лишнего (`files`; `pnpm run pack:check` — обе стороны
-      списка). `dist/app.js` не собирается: программа страницы вклеивается в неё
-      при сборке отчёта (`src/page/build.js`), пре-собранный файл был бы второй
-      копией того же.
-- [x] README проверен на «человеке без контекста»: установка → init → отчёт
-      (инструкция прогнана покомандно в свежем проекте, `WORKLOG.md` §16–§18).
-- [x] Все коды выхода описаны (`README.md`, таблица кодов) и проверены тестом
+- The checks are green **and the standards are compared byte for byte**, the documentation guards
+  (`test/docs-*.test.js`) green with them — they fall together with the document rather than at a wish.
+- A repeated run yields the same data and the same report (`test/environment.test.js`, 4 checks).
+- **No run is judged by time** — the plan's “not slower than the previous step, or explained in `CHANGELOG.md`”
+  was abolished on 2026-09-15: a run prints its duration and the load of the window and declares no target
+  (`REFACTOR.md` R-5.8).
+
+**Taking the tool out of the consumer project (steps 1–2) — done, with one item reversed.** The copies are gone
+(its `tools/` is empty, `tests/size-table.js` removed), the table is guarded by the package's own command, which
+that project's harness runs as its **first wave**, and no reference to the removed files is left there. The item
+that did **not** hold is the last one: `docs/size-table.html` is still edited by hand and still committed — the
+consumer keeps its report in git deliberately (`REFACTOR.md` R-4.8), the opposite of what the checklist expected.
+
+**Readiness of a release** — the list the first release was walked against, and still the live one:
+
+- [x] `npm pack` carries nothing extra and nothing missing: `pnpm run pack:check` reads the `files` list from
+      both sides. There is no `dist/app.js` to build — the page's program is pasted into it while the report is
+      assembled (`src/page/build.js`), and a pre-assembled file would be a second copy of the same thing.
+- [x] `README.md` was walked by a person without context: installation → initialisation → a report, command by
+      command in a fresh project (`worklog/archive/WORKLOG.md` §16–§18).
+- [x] Every exit code is documented (the table of codes in `README.md`) and checked by tests
       (`test/cli.test.js`, `test/doctor.test.js`, `test/check.test.js`).
-- [x] Сообщения об ошибках содержат команду починки (реестр причин,
-      `src/refusal.js`; сверяется `test/docs-commands.test.js`).
-- [x] `CHANGELOG.md` с описанием «что изменится в числах и почему» — замер
-      сверяется с живым прогоном (`test/changelog.test.js`).
+- [x] A refusal carries a fix command that works — the registry of causes (`src/refusal.js`), with the form of
+      the call held by `test/docs-commands.test.js`.
+- [x] `CHANGELOG.md` says what changes in the numbers and why, and its table is checked against a live run
+      (`test/changelog.test.js`).
+- [x] The install example leads to a revision that can do what the text teaches (`test/docs-pin.test.js`), and
+      the release itself goes out by tag from CI with the GitHub attestation (`test/release.test.js`, 3 checks,
+      `REFACTOR.md` R-4.24).
 
 ---
 
-## 14. Ссылки
+## 14. References
 
-- `docs/requirements.md` — что требуется от продукта (§3 метрики, §4 полнота,
-  §6 отчёт вне git, §7 автообновление, §11–§13 нефункциональные и сценарий).
-- `docs/module-design.md` — как устроен модуль (§2 инварианты, §3 данные против
-  отображения, §4 структура, §6 формат данных, §7 метрики, §8 отчёт, §15 план).
-- `../figma/safe-resets/docs/ROADMAP.md` §33–§35 (история таблицы, зонды и цифры),
-  §54–§56 (три отложенные работы, уезжают в пакет).
-- `../figma/safe-resets/docs/TESTING.md` §`tools/size-table.js`, §`tests/size-table.js` —
-  легенда механики, которую переносим в документацию пакета.
-- `../figma/safe-resets/AGENTS.md` §2, §4, §5 — грабли git/Figma-окружения, из которых
-  выведены инварианты §3 этого плана.
-- `BLOCKERS.md` — блокеры и известные пробелы (открытых сейчас нет: §B1, §B2 и §B3
-  закрыты; границы и заметки — там же).
+- `docs/requirements.md` — what the product asks for: §3 the measures, §4 which files are tracked and the
+  guarantee of completeness, §6 what enters the history (the report as an output — the implementation keeps it
+  **in** git, deliberately), §7 the self-refresh, §9 platforms, §11 non-functional, §12 what is out of the first
+  version, §13 the smallest scenario; the one decision that went against it is recorded in `REFACTOR.md` R-4.8.
+- `docs/module-design.md` — how the module is built: §2 the invariants, §3 the shift that separates data from
+  display, §4 the structure, §5 files and categories, §6 the canonical data, §7 the metrics, §8 the report's
+  page, §9 the settings, §15 the plan of that move.
+- `REFACTOR.md` — the registry of the rewriting work: an `R-n.m` address is a thing that was done, each row
+  naming the file that holds the result. `BLOCKERS.md` — the blockers, all three closed (§B1, §B2, §B3), and the
+  notes, of which **14 are open** today: among them the coverage ratchet (§N14), the duplicate sensor's own
+  baseline (§N15) and three promises of the design that never reached the code (§N17).
+- The frozen fixtures and the standards compared byte for byte: `fixtures/synthetic` — a history built to break
+  on the traps its own `README.md` lists — and `fixtures/live/history.bundle`, the consumer's history at the
+  reference revision (`pnpm run check:standards`).
+- The source project of the move keeps its own records: its journal and the section of
+  `../figma/safe-resets/docs/TESTING.md` about the size table. What this move took from it is in
+  `worklog/archive/WORKLOG.md`: §16–§18 walking the instruction and the two divergences it found, §21 the CI,
+  §26–§27 the two sensors, §30 the mark of an approximation, §35–§36 the commands and the hook, §40–§41 the
+  release and the split, §44 the repository going public, §53–§57 the publication and the releases by tag.

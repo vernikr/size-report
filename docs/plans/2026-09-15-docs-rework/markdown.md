@@ -783,11 +783,39 @@ files). The parts below are the order to work in; each is one commit.
   **Outside this subplan, recorded as addresses only:** the manifest's `description` and the step labels of
   `.github/workflows/ci.yml` are Russian — both are package and workflow fields rather than markdown, and
   `package.json` is a gate file, so changing them is a decision of its own.
-- [ ] **M22 PLAN §10–§14** (956–1143) — 153 Russian (82 + 9 + 11 + 39 + 12 by section). The plan of a
-  finished move: what the steps settled is kept, the steps themselves go (the architecture is what is
-  still load-bearing). PLAN is a `§`-reference target, so its numbering stays. **Addresses carried in:** §10's
-  `maxBytes` is a setting only in the promise (`MAX_BYTES = 512 KB`, §9), the settings migration it repeats was
-  never made (§N17), and §11's “the `gzip` metric is removed” contradicts the registry and the package (§4.4, D4).
+- [x] **M22 PLAN §10–§14** (956–1099 today) — done 2026-09-16, and **`PLAN.md` is closed whole: Cyrillic in it
+  is zero** (788 lines at the start of the rework — no named printed-output quotation was needed in this range,
+  the Russian of these sections having been our own phrases and npm's answers, which are described rather than
+  quoted). 127 added / 171 removed = **298 changed lines in one file** at the 600 budget; the file 1143 → **1099**
+  lines. Four doc guards 8 of 8, `verify:fast` green (5 steps, 72 of 177) and the full profile green after the
+  edit (8 steps, 72.8 s), `PLAN.md` being one of the documents the guards read. `worklog/0127`.
+  **The three carried addresses are closed by measurement.** §10's `maxBytes` is a setting only in the promise:
+  `MAX_BYTES = 512 KB` is a constant of `src/project.js` (§9 keeps it open, and a file over it goes to `skip`
+  with its reason). The settings migration §10 repeats was never made — the data's `schema: 1` is frozen and the
+  settings have neither `schemaVersion` nor `--migrate` (`BLOCKERS.md` §N17). And §11's “the `gzip` metric is
+  removed” **changed its mind**: the registry holds four metrics (`raw`, `min`, `tok`, `gzip`) and the package
+  ships them (§4.4, D4) — what keeps that harmless is the **default set** `raw` + `min` (`src/config.js`), which
+  the plan now says outright.
+  **The chronicle went, the facts stayed.** §10's long naming narrative (the list of free names, the login,
+  the publish walk of 2026-09-15, the renaming's counts per file — the old text itself called those counts a
+  snapshot rather than a rule) shrank to what still holds: why the name carries the scope, the one trap worth
+  keeping (**the registry serves a package at once while its metadata document is cached for five minutes**, so
+  the sign of a publication is `npm access get status` plus an anonymous tarball request), the shape of the
+  renaming (the consumer's lock file had to move, the frozen standards did not) and the price of a git reference.
+  §12's table of version labels and session estimates went the same way: the order is kept (0 → 1 → 2, with 3 and
+  5 independent), the labels `0.1.0` … `0.6.0` **never existed** as releases, the sequence finished on
+  2026-09-14 as `1.0.0`. §13's two historical checklists became what they settled — including the one item that
+  **did not hold** (the consumer still edits `docs/size-table.html` by hand and commits it, R-4.8, the opposite
+  of that checklist's expectation) and the time target the plan still demanded, abolished on 2026-09-15 (R-5.8) —
+  while the release checklist stays live with the pin and the tag-by-CI release added (`test/release.test.js`,
+  3 checks).
+  **Two addresses in §14 were wrong and are fixed:** the consumer's sections §33–§35 and §54–§56 are in its
+  **`WORKLOG.md`** (measured in that project: the headings `## 33.` … `## 35.`, `## 54.` … `## 56.`), not in
+  `docs/ROADMAP.md` as the plan wrote, and the consumer's `docs/TESTING.md` no longer has sections named after
+  the removed `tools/size-table.js` — it has one about the package's size table. The reference list now names
+  what exists, measured: requirements §3/§4/§6/§7/§9/§11/§12/§13, module-design §2–§9 and §15, the two registries
+  (**all three blockers closed, 14 notes open** — N1, N3–N7, N9, N11, N12, N14–N18), the frozen fixtures, and the
+  archive's sections §16–§18, §21, §26–§27, §30, §35–§36, §40–§41, §44, §53–§57.
 - [ ] **M23 CHANGELOG 1–222** — 148 Russian: the framing of "what changes in numbers" and the
   releases 2.4.0 … 2.1.0. Numbers and tables are facts and stay.
 - [ ] **M24 CHANGELOG 223–422** — 114 Russian: 2.0.2 … 1.3.0.
@@ -811,7 +839,8 @@ files). The parts below are the order to work in; each is one commit.
   them breaks the standards; they must leave the criterion. (2) **Quoted tool data inside translated documents** —
   the §1 rule of `REFACTOR.md` keeps a cause name, a printed refusal and a printed report line verbatim Russian:
   `REFACTOR.md` 16 lines now and `BLOCKERS.md` 10, each named at its place. (3) Other documents have their
-  quotations still to be named as this rework reaches them: `README.md` 4 lines, `PLAN.md` 788 (untranslated),
-  `CHANGELOG.md` 452 (untranslated), the plan files 3 + 2 + 31 lines. M26 decides the wording of the criterion:
+  quotations still to be named as this rework reaches them: `README.md` 4 lines, `CHANGELOG.md` 452 (untranslated),
+  the plan files — `markdown.md` 34, `plan.md` 3, `comments.md` 2 lines. **`PLAN.md` left this list on
+  2026-09-16: it is translated whole and holds zero Cyrillic lines.** M26 decides the wording of the criterion:
   either it excludes the frozen fixtures and counts named quotations apart, or each quotation is listed. Left as
   is, the criterion would forbid the very rule three passes were built on.
