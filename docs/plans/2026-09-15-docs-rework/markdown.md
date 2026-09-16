@@ -438,11 +438,34 @@ files). The parts below are the order to work in; each is one commit.
   N1's check order (code 1 before `--write`, 0 after), N8's reproduction (14 rows, `modern.js` = 246 = the blob),
   N9's approximation bits (every mark follows the format rule), N4's numbers (54 + 63 = 117 against 63 now). A
   rule about key order went into the file's own preamble, since the defect was exactly that.
-- [ ] **M15 `BLOCKERS.md` notes, second part** — 160 Russian lines left, in these blocks (line numbers measured
-  2026-09-16, the file is 540 lines): the unkeyed note about merging (355), N13 (365), N14 (388), N15 (441),
-  N16 (469), N17 (495), N18 (531). The key numbering is settled and needs no part of its own; what is left is
-  the same three steps as everywhere (actualise against the code, compact, translate). The unkeyed note stays
-  unkeyed: it is cited by description rather than by number, and giving it a key would put a number out of order.
+- [x] **M15 `BLOCKERS.md` notes, second part** — the unkeyed note about merging, N13–N18 — done 2026-09-16 (169
+  Russian lines in the file, the part's own ≈166). 178 added / 186 removed = **364 changed lines in one file**;
+  Cyrillic in the file 169 → **10 lines**, and every one of the ten is quoted tool output, named as such; the
+  document is closed. **The document is a `§`-reference target and nothing moved:** the keys are still N1…N18 in
+  order with the struck-through closed ones in place, and every cited key (§B1–§B3, §N2, §N4, §N8, §N10, §N13,
+  §N16, §N17) kept its number and meaning — measured before and after as a list. **The merge note was wrong twice
+  over, and the measurement is the whole point of it.** On git 2.50.1 with hooks logging their calls, a `--no-ff`
+  merge runs `pre-merge-commit`, `commit-msg` and `post-merge`, and does **not** run `pre-commit`/`post-commit` —
+  the note claimed `commit-msg` does not happen either, while git does validate the merge message (`-m` and the
+  editor path give the same set). The second half was confirmed: with `MERGE_HEAD` alive, `git commit --only
+  <path>` exits 128 `fatal: cannot do a partial commit during a merge.` — which is why the report's commit is
+  assembled with plumbing. The tool's own comments and README already said only the true half (`post-commit` is
+  not run for a merge), so this note was the one place overstating it. **N13 re-measured live:** `--wite` → code 2
+  `незнакомый ключ` with the fix, `--config` → code 2 with the ready command, and the pin guard (`installSpec`,
+  forty characters or a branch/tag name) checks out; the consumer project's pin was dropped from the note — it
+  lives outside this tree and nothing here can witness it. **N14 re-measured today:** 11 regressions against a
+  baseline of 39 files, 80.57 % of lines / 89.05 % of branches / 92.37 % of functions, and `src/data.js` still
+  91.66 → 89.47 (the old one) — the numbers in the note hold, so the note keeps them. **N15 re-measured:**
+  jscpd's own baseline is portable (the same tree in another directory green, a third copy red with `found 10 new
+  clones not in the baseline (allowed: 0)`, exit 1), while handing jscpd **our** file answers `missing field` +
+  `version` and exits 1 — the note's correction stands and now carries today's numbers. **N16 re-measured:** in a
+  repository with no commits `--write` gives code 5 with a stack from `execFileSync`, and with the first commit
+  code 0 and `docs/size-report.html`. **N17 and N18 checked against the code rather than restated:** the package's
+  `files`, the three files in `templates/`, the absence of `AGENTS` in `src/`, `CONFIG_NAME`, `validateConfig` and
+  the inert `$schema` key all hold; `eslint.config.js` carries `no-multi-spaces` as an error and does not carry
+  `padding-line-between-statements`. N18's reference to the journal is corrected to `worklog/archive/WORKLOG.md`
+  §36 (the old root path no longer exists). No fix suggested by the notes was carried out, and no new guard was
+  added — the note about a key-uniqueness guard stays a note.
 - [ ] **M16 `REFACTOR.md`** — 269 lines, 217 Russian: the log of the finished waves, so it is
   compacted into "what the wave established" rather than rewritten sentence by sentence.
 - [ ] **M17 PLAN §1–§3** (21–165) — 111 Russian.

@@ -352,190 +352,182 @@ references stayed the same after the fix.
   `verify-slow.yml` runs `verify:slow` on a schedule — so the second environment is a step of the schedule
   rather than of every CI run.
 
-- **Слияние: git не зовёт `post-commit` — проверено опытом, не догадкой.** При
-  `git merge` хуков `pre-commit`/`commit-msg`/`post-commit` не бывает вовсе: git
-  создаёт коммит слияния сам, и вызывается `post-merge` (опыт на git 2.50: три
-  обычных коммита дали три `POST-COMMIT`, слияние — только `POST-MERGE`). Хук
-  автообновления из-за этого ставится двумя файлами (`src/hook.js`), и
-  `git commit --only` на слиянии отказывает (`cannot do a partial commit during a
-  merge`, потому что `MERGE_HEAD` жив, пока работает `post-merge`) — поэтому
-  коммит отчёта собирается плумбингом. Оба факта — про API git, а не про этот
-  проект, и стоят здесь, чтобы их не переоткрывали.
+- **A merge: git runs no `post-commit` for it — measured, not guessed.** For `git merge` git makes the merge commit
+  itself: `pre-commit` and `post-commit` do not run at all, while `pre-merge-commit` and `commit-msg` do (git still
+  validates the merge message) and `post-merge` runs after the commit — measured on git 2.50.1 with hooks logging
+  their calls (three ordinary commits gave three of each; a `--no-ff` merge gave `pre-merge-commit`, `commit-msg`
+  and `post-merge`, and neither `pre-commit` nor `post-commit`). The self-updating hook is installed as two files
+  for that reason (`src/hook.js`), and `git commit --only <path>` refuses while the merge is unfinished
+  (`fatal: cannot do a partial commit during a merge`, because `MERGE_HEAD` is alive while `post-merge` runs —
+  measured the same way). Both facts are about git's API rather than about this project, and they stand here so
+  that they are not rediscovered.
 
-- **N13. Пин в примере установки отстал, а лишнее слово не отвергалось** — **закрыто 2026-09-14** (`REFACTOR.md` R-4.13).
-  **Воспроизведение.** `README.md` §1 ставил пакет примером
-  `pnpm add -D github:vernikr/size-report#d63468d`, а §5–§6 учат `size check`,
-  `size doctor`, `size explain <sha>` и `size install-hook`. На той ревизии справка
-  знает только флаги, а `plainWords` собирал слова без разбора: любой лишний или
-  неизвестный ключ просто не читался, и прогон отвечал обычной проверкой таблицы.
-  **Следствие.** Документированный путь установки вёл в пустоту, причём без отказа:
-  `check`, `doctor`, `explain` и `install-hook` отвечали нулём, ничего не сделав (хук
-  не ставился), а `templates/` в поставке не было. «Всё хорошо» на то, чего
-  инструмент не умеет, хуже отказа — именно это и нашёл сквозной прогон. Тот же
-  пи́н держал и проект-потребитель, так что шаг 5 (интеграция) стоял на ревизии без
-  всего, что шаг 5 добавил.
-  **Починка.** Незнакомый ключ, ключ со значением без значения (`--config`),
-  `--force` без `--init` и слово после режима со значением — отказ кодом 2 с
-  названным виновником и готовой командой, и разбор аргументов идёт **до чтения
-  проекта**. Пример установки ведёт на ревизию, где названные команды есть, причём
-  **сорока знаками**: короткий sha pnpm разрешает только через верхушки веток, и он
-  же перестаёт разрешаться на следующем коммите в неё — сторож документации
-  проверяет и это, и то, что в справке **той** ревизии есть названные команды;
-  пи́н в потребителе поднят. Держится: `test/cli.test.js` (набор отказов) и
-  `test/docs-pin.test.js` («пример установки ведёт на ревизию, чья справка знает
-  названные команды»).
+- **N13. The pin in the install example lagged behind, and an extra word was not refused** — **closed 2026-09-14**
+  (`REFACTOR.md` R-4.13). **The defect.** The install example in `README.md` stopped at
+  `pnpm add -D github:vernikr/size-report#d63468d`, while the text goes on to teach `size check`, `size doctor`,
+  `size explain <sha>` and `size install-hook`. At that revision the help knew flags alone, and the words were
+  collected without parsing: an unknown or extra key was simply not read, and the run answered the ordinary check
+  of the table. **The consequence.** The documented path led into emptiness without a refusal: `check`, `doctor`,
+  `explain` and `install-hook` answered zero having done nothing (the hook was not installed), and `templates/` was
+  absent from the package. “All is well” for what the tool cannot do is worse than a refusal — an end-to-end run is
+  what found this. **The fix.** An unknown key, a key whose value is missing (`--config`), `--force` without
+  `--init` and a word after a mode that takes a value are refused with code 2, the culprit named and the fix given,
+  and the arguments are parsed **before the project is read** (re-measured 2026-09-16: `--wite` → code 2 with the
+  key named, `--config` → code 2 with the ready command). The install example leads to a revision whose help knows
+  the named commands, and the pin is either **forty characters** of a sha or a branch (tag) name: pnpm resolves a
+  short sha only through visible refs, so a short pin stops resolving on the next commit of that branch. In this
+  repository the pin is the release tag, and the example equals what the tool itself advises (`installSpec`,
+  `src/tool.js`). Held by `test/cli.test.js` (the refusals) and `test/docs-pin.test.js` (the example leads to a
+  revision whose help knows the named commands — read from the history rather than from the tree).
 
-- **N14. Храповик покрытия падает от комментариев, а не от кода: просадок 11, из них 10 — наши,
-  одна — давняя.** Шаг `cover` в slow-профиле красный. Разобрано тремя замерами в отдельных
-  рабочих копиях (`git worktree`), а не по памяти.
+- **N14. The coverage ratchet falls from comments rather than from code: 11 regressions, 10 of them ours, one**
+  **not ours.** The `cover` step of the slow profile is red, and the run that found it measured (in separate working
+  copies rather than from memory).
 
-  **Где он был красным.**
-  1. На ревизии `202c768` (там `coverage-baseline.json` и снят): **зелёный** — «в базе 39 файлов,
-     просадок нет» (83.29 % строк). Значит база была верна своему дереву.
-  2. На ревизии `758a385` (**родитель первого прохода по комментариям** этой переработки):
-     **уже красный**, ровно одна просадка — `src/data.js`, ветви 91.66 → 89.47. Этот красный к
-     переработке комментариев отношения не имеет: он приехал с работами по дереву отчёта и странице
-     (`364a0ac`, `da69a32`, `4079329` — они между базой и этой ревизией), а база после них не
-     переснималась. То же число `89.47` стоит и сейчас — то есть эта просадка не наша ни строкой.
-  3. Сейчас: 11 просадок — та же `data.js` плюс десять файлов с падением доли на десятые доли
-     процента (`cli.js` 91.95 → 91.66, `hook.js` 88.16 → 87.64, `derived.js` 75.86 → 75 и т. д.).
+  **The mechanism, proven by numbers.** `c8` counts as a line **every line of a file that falls into a coverage
+  range**, and as covered one that lies inside an executed range; so removing a comment inside executed code lowers
+  the numerator and the denominator by one, and the share falls as a ratio. Confirmed across ten files:
+  `Δcovered = Δtotal = the number of removed lines` (`hook.js` −19 = −19 = −19: 395/448 → 376/429; `cli.js`
+  −3 = −3 = −3: 80/87 → 77/84), and `lines.total` equals the file's line count minus the trailing line
+  (`derived.js`: 112 against 113). One file is the exception: `strip/guard.js` 57/59 → 55/58, the numerator falling
+  one line more — its comments were rewritten both in the header and inside code, and `total` counts every line of
+  the file while `covered` counts only what fell into an executed range.
 
-  **Механизм, доказанный числами.** `c8` считает строкой **каждую строку файла, попавшую в диапазон
-  покрытия**, а покрытой — ту, что лежит внутри исполнившегося диапазона; поэтому удаление
-  комментария внутри исполнившегося кода уменьшает и числитель, и знаменатель на единицу, а доля
-  как отношение падает. Подтверждение по десяти файлам: `Δпокрытых = Δвсего = число удалённых строк`
-  (`hook.js` −19 = −19 = −19: 395/448 → 376/429; `cli.js` −3 = −3 = −3: 80/87 → 77/84). И
-  `lines.total` совпадает с числом строк файла минус строку в конце: у `derived.js` это 112 против
-  113. Десятый файл — единственный, где числа разошлись: `strip/guard.js` 57/59 → 55/58, то есть в
-  числителе пропало на строку больше (там комментарии переписаны и в шапке, и внутри кода, а
-  `total` считает все строки файла, тогда как `covered` — только попавшие в исполнившийся диапазон).
+  **The state, measured 2026-09-16** (`pnpm run cover`): 11 regressions against a baseline of 39 files — the old one
+  in `src/data.js` (branches 91.66 → 89.47), which came in with the work on the report's tree and the page
+  (`364a0ac`, `da69a32`, `4079329`) and the baseline was never retaken after it, plus ten files whose share fell by
+  tenths of a percent (`cli.js` 91.95 → 91.66, `hook.js` 88.16 → 87.64, `derived.js` 75.86 → 75, and so on). The
+  same measurement in working copies shows the ratchet green at the revision the baseline was taken at (`202c768`,
+  83.29 % of lines) and `data.js` alone already red at the parent of the first comment pass (`758a385`), so ten of
+  the eleven are this work's.
 
-  **При этом проверок не потеряно ни одной.** Итоги по дереву не упали, а чуть выросли: было 80.53 %
-  строк (на `758a385`) — стало 80.57 %; ветви 89.05 % и функции 92.37 % — те же. И код в проходах не
-  тронут: ни в одном коммите `refactor(comments)` в `src`/`bin` нет ни одной добавленной, удалённой
-  или изменённой строки кода — единственное, что там менялось, — текст комментариев в концах строк.
+  **No check was lost.** The totals over the tree rose rather than fell — 80.57 % of lines, 89.05 % of branches,
+  92.37 % of functions — and not one line of code was touched in the comment passes: no `refactor(comments)` commit
+  adds, removes or changes a line of code in `src`/`bin`, the only thing that moved there being comment text at the
+  ends of lines.
 
-  **Цена такого датчика.** Красный шаг читается как «код приехал без проверки», хотя означает
-  «комментарий стал короче». Обещание храповика для этого случая неверно, и на проходе по
-  комментариям он краснеет гарантированно — то есть остаток работы (`M9f`, `M10` ~6200 строк, `M11`)
-  будет краснеть на каждом шаге.
+  **The price of such a sensor.** A red step reads as “code arrived without a check”, though it means “a comment
+  grew shorter”: the ratchet's promise is wrong for this case, and a pass over comments reddens it by
+  construction.
 
-  **Варианты и их цена.**
-  1. **Переснять базу** (`pnpm run baseline:coverage`, человеческое действие, трейлер `Gate-Change:`).
-     Дешево и честно ровно наполовину: заодно прощаются настоящие просадки, а они есть — та самая
-     `data.js`, которая не переснималась с момента, когда её уронила работа по отчёту. И следующий
-     проход по комментариям покраснеет снова.
-  2. **Научить датчик считать исполнившиеся строки, а не долю от всех** (сравнивать `covered` с
-     исполнившимися строками или перейти на `statements`/`branches` без `lines`). Тогда комментарии
-     перестанут влиять вовсе. Это правка датчика, то есть гейт-файла: своя цена (трейлер, проверки
-     датчика, выпуск) и смена смысла храповика — с «доли строк файла» на «сколько проверок
-     исполнилось».
-  3. **Оставить как есть и записать соглашение**: после каждого прохода по комментариям база
-     переснимается человеком. Красный шаг остаётся сигналом, но требует человеческого шага в каждом
-     таком проходе — и до этого шага slow-профиль и расписание CI красные.
+  **Options and their price.**
+  1. **Retake the baseline** (`pnpm run baseline:coverage`, a human action, the `Gate-Change:` trailer). Cheap and
+     honest only halfway: it forgives the real regressions as well — the very `data.js` that was never retaken
+     after the work on the report dropped it — and the next comment pass reddens again.
+  2. **Teach the sensor executed lines rather than a share of all** (compare `covered` with executed lines, or move
+     to `statements`/`branches` without `lines`). Comments would then stop mattering altogether. That edits a sensor,
+     that is, a gate file: its own price (trailer, the sensor's probes, a release) and a change of what the ratchet
+     means — from “a share of a file's lines” to “how much of the code ran”.
+  3. **Leave it as it is and write the convention down**: after every pass over comments a human retakes the
+     baseline. The red step stays a signal, but it demands a human step each time — and until then the slow profile
+     and the CI schedule are red.
 
-  **Решать пользователю:** какой вариант принять. До решения `pnpm run verify:fast` и `pnpm run
-  verify` зелёные (в полном профиле `cover` не гоняется вовсе), а `pnpm run verify:slow` и
-  `verify-slow.yml` по расписанию — красные: одна просадка давняя, десять наши-механические.
+  **For the user to decide:** which option to take. Until then `pnpm run verify:fast` and `pnpm run verify` are
+  green (`cover` does not run in the full profile at all), while `pnpm run verify:slow` and `verify-slow.yml` on a
+  schedule are red: one regression is old, ten are mechanical and ours.
 
-- **N15. Свой отпечаток клонов у датчика дублей — возможно, уже лишний.** Нашлось на проходе M10f
-  (2026-09-15) при сверке комментариев: и в `tools/gates/dup.js`, и в `test/gates-dup.test.js` стояло,
-  что родная база jscpd (`--baseline`) привязана к пути выкладки, и потому храповик построен на своём
-  отпечатке. **Измерено — для закреплённого jscpd 5.2.0 это неверно.** База, снятая самим jscpd
-  (`--update-baseline`, формат `{version, fingerprints}`), применённая к тому же дереву в другом
-  каталоге, остаётся зелёной (`--fail-on-new-clones=0`, выход 0); переживает переименование файлов и
-  сдвиг строк; на действительно новой копии краснеет («1 new clones»). Замеры: игрушечное дерево (13
-  строк, два одинаковых файла) и всё дерево пакета (`src bin tools test`, 11 отпечатков — столько же
-  клонов датчик называет сегодня). А «все клоны новые» получается, если подсунуть jscpd **наш файл**
-  `dup-baseline.json`: он отвечает `missing field version` и выходит с кодом 1 — похоже, прежний замер
-  («15 новых клонов» на чистой копии) был именно этим, в нашей базе 15 отпечатков.
+- **N15. The duplicate sensor's fingerprint of its own — possibly superfluous by now.** Found on pass M10f
+  (2026-09-15) while checking comments: both `tools/gates/dup.js` and `test/gates-dup.test.js` said jscpd's own
+  baseline (`--baseline`) was bound to the checkout's path, and the ratchet was built on a fingerprint of its own
+  for that reason.
 
-  **Что остаётся верным и почему свой файл пока есть.** Наш `dup-baseline.json` — это гейт-файл под
-  защитой `gatefiles`, с `schema`, именем конфига и пометкой для человека, и о нём же говорят счётчики
-  датчика и его машинный отчёт. У файла jscpd нет ни схемы, ни пометок, и никто его не стережёт (в
-  дереве ему и не обязательно лежать: `--baseline` берёт путь).
+  **Measured — for the pinned jscpd 5.2.0 that is wrong.** A baseline jscpd takes itself
+  (`--baseline <file> --update-baseline`, format `{version, fingerprints}`) stays green on the same tree scanned
+  from another directory, survives renames and shifted lines, and reddens on a genuinely new clone
+  (`found 10 new clones not in the baseline (allowed: 0)`, exit 1 with `--fail-on-new-clones=0`, which is the
+  default of “more than none”). Re-measured 2026-09-16 on a toy tree — two copies of `src/args.js`, one
+  fingerprint: the same tree copied to another directory green, a third copy red. And “every clone is new” comes
+  from handing jscpd **our** file `dup-baseline.json`: it answers `missing field` + `version` and exits 1 (measured),
+  while our file holds 15 fingerprints — an earlier measurement (“15 new clones” on a clean copy) was apparently
+  exactly that.
 
-  **Варианты и цена.** (1) Оставить как есть: свой отпечаток дублирует родной, зато формат файла и
-  счётчики наши. Цена — около тридцати строк лишнего кода и два способа говорить об одном и том же.
-  (2) Перейти на `--baseline` и `--baseline-from-ref origin/main`: второй взгляд против дерева главной
-  ветки у jscpd уже есть, датчик сократится, но база станет чужим форматом (без пометки и схемы), а её
-  обновление — `--update-baseline` вместо `pnpm run baseline:dup`, то есть гейт-файл меняет вид и
-  храповик переснимается. (3) Гибрид: свой файл для чтения человеком и защиты `gatefiles`, а
-  сравнение с главной веткой — через `--baseline-from-ref`. Цена — два механизма в одном гейте.
+  **What still holds, and why the file of our own remains.** Our `dup-baseline.json` is a gate file guarded by
+  `gatefiles`, with a `schema`, the config's name and a note a person reads, and the sensor's counters and its
+  machine report speak of it; jscpd's file carries nothing but versions and fingerprints, and no gate protects it
+  (it need not even live in the tree: `--baseline` takes a path).
 
-  **Решать пользователю:** нужен ли свой отпечаток при родном. До решения поведение не тронуто,
-  исправлены только комментарии, которые утверждали обратное.
+  **Options and their price.** (1) Leave it as it is: our fingerprint duplicates the native one, while the file's
+  format and the counters are ours — around thirty lines of extra code and two ways to say one thing. (2) Move to
+  `--baseline` and `--baseline-from-ref origin/main`: the second look against the main branch is already there, the
+  sensor shrinks, but the baseline becomes a foreign format (no note, no schema) and updating it becomes
+  `--update-baseline` instead of `pnpm run baseline:dup` — the gate file changes shape and the ratchet is retaken.
+  (3) A hybrid: our file for human reading and the `gatefiles` guard, the main-branch comparison through
+  `--baseline-from-ref` — two mechanisms in one gate.
 
-- **N16. Репозиторий без коммитов — внутренняя ошибка с чужим стеком.** Нашлось на проходе M7 подплана
-  `markdown` (2026-09-16) при сверке требования README «git-репозиторий с историей».
+  **For the user to decide:** whether a fingerprint of our own is needed beside the native one. The behaviour is
+  untouched until then; only the comments that claimed the opposite were corrected.
 
-  **Воспроизведение.** Свежий `git init`, один файл в индексе, ни одного коммита:
-  `node bin/size.js --write` → **код 5** и «внутренняя ошибка (это дефект инструмента…)» со стеком от
-  `execFileSync` в `readHistory` (`src/git.js`), потому что `git log` в таком репозитории отвечает
-  `fatal: your current branch 'main' does not have any commits yet`. С первым коммитом та же команда
-  зелёная и пишет `docs/size-report.html` (код 0).
+- **N16. A repository without commits is an internal error with a stack that belongs to no one.** Found on pass
+  M7 of the `markdown` subplan (2026-09-16) while checking README's requirement of a git repository with a history.
 
-  **Следствие.** Первый запуск до первого коммита — ровно тот случай, который `--init` переживает
-  намеренно (`src/project.js` ловит «нет коммитов» и продолжает) — объявлен дефектом инструмента с
-  просьбой прислать текст, а готовая починка («сделайте коммит») до читателя не доходит. Код 5 значит
-  «внутренняя ошибка», а это состояние проекта, а не поломка движка.
+  **The reproduction**, measured 2026-09-16: a fresh `git init`, one file in the index, no commits —
+  `node bin/size.js --write` gives **code 5** and “внутренняя ошибка (это дефект инструмента…)” with a stack from
+  `execFileSync` in `readHistory` (`src/git.js`), because `git log` in such a repository answers
+  `fatal: your current branch 'main' does not have any commits yet`; with the first commit the same command is
+  green (code 0) and writes `docs/size-report.html`.
 
-  **Что верно в документации.** Требование README не лжёт: история нужна, и коммит хотя бы один. Это
-  пробел кода, а не документа; код в этом проходе не трогался — проход документационный.
+  **The consequence.** The first run before the first commit — exactly the case `--init` survives on purpose
+  (`src/project.js` catches “no commits” and goes on) — is declared a tool defect with a request to send the text,
+  and the ready fix (“make a commit”) never reaches the reader. Code 5 means “internal error”, while this is a state
+  of the project rather than a broken engine.
 
-  **Варианты и цена.** (1) Свой отказ («история пуста») с готовой командой — дешёвый, но добавляет
-  место отказа, а их считает каталог (`test/refusals-catalog.test.js`), значит нужна строка в каталоге
-  и, возможно, случай в `test/refusals.test.js`. (2) Считать пустую историю пустым отчётом (ноль
-  строк) — отчёт честно скажет, что коммитов нет, но это новое поведение отчёта. (3) Оставить как есть:
-  код 5 остаётся, а требование «хотя бы один коммит» живёт в README.
+  **What is right in the documentation.** README's requirement does not lie — a history is needed, and at least one
+  commit; this is a gap of the code rather than of the document, and the code was not touched in that pass (a
+  documentation pass).
 
-  **Решать пользователю:** какой вариант принять. До решения поведение не тронуто, README называет
-  требование и ссылается сюда.
+  **Options and their price.** (1) A refusal of its own (“the history is empty”) with the ready command: cheap,
+  but it adds a place of refusal, and those are counted by the catalog (`test/refusals-catalog.test.js`), so a row in
+  the catalog is needed and perhaps a case in `test/refusals.test.js`. (2) Treat an empty history as an empty report
+  (no rows): honest “there are no commits yet”, but that is a new behaviour of the report. (3) Leave it as it is:
+  code 5 stays, and the requirement of at least one commit lives in README.
 
-- **N17. Три обещания проекта модуля, которых нет в коде: схема настроек, миграция и блок для агентов.**
-  Нашлось на проходе M12 подплана `markdown` (2026-09-16) при сверке §9 и §13 `docs/module-design.md`.
+  **For the user to decide:** which option to take. Until then the behaviour is untouched, and README names the
+  requirement and points here.
 
-  **Что обещано и что есть.** Три места проекта обещают то, что без правки кода неверно:
+- **N17. Three promises of the module's design that are not in the code: a settings schema, a migration and a**
+  **block for agents.** Found on pass M12 of the `markdown` subplan (2026-09-16) while checking §9 and §13 of
+  `docs/module-design.md`.
 
-  1. «формальная схема настроек» (§9) — схемы в поставке нет: `package.json` объявляет `bin`, `src`,
-     `templates`, `README.md`, `CHANGELOG.md`, `LICENSE`, а `templates/` держит три файла
-     (`size-report.config.json`, `README.md`, `ci.yml`). Проверка живёт в коде (`validateConfig` в
-     `src/config.js`), и ключ `$schema` в файле проекта ни на что не влияет.
-  2. «миграция при обновлении формата» (§9) — кода миграции нет: читается один файл
-     (`CONFIG_NAME = 'size-table.config.json'`), неверное значение — отказ с готовой починкой, а не
-     преобразование старого формата.
-  3. «при установке модуль сам вписывает в файл инструкций проекта короткий блок» (§13) — в чужие файлы
-     проекта инструмент не пишет вообще: поиск по `AGENTS` в `src/` не находит ничего, `installHook`
-     пишет только в `.git/hooks` и отказывается трогать чужой хук, список игнорирования не правится, а в
-     поставке лежит заметка для человека (`templates/README.md`).
+  **What is promised and what is there.** Three places promise what is untrue without a code change:
 
-  **Чем проверено.** Состав поставки — `files` в `package.json`; содержимое `templates/` — перечислением
-  каталога; проверка настроек — чтением `validateConfig` и `loadConfig` в `src/config.js`; запись в чужие
-  файлы — поиском по `AGENTS` в `src/` и чтением `src/hook.js`; семейства токенов — `src/tokens.js`.
+  1. “a formal schema of the settings” (§9) — no schema ships: `package.json` declares `bin`, `src`, `templates`,
+     `README.md`, `CHANGELOG.md`, `LICENSE`, and `templates/` holds three files (`size-report.config.json`,
+     `README.md`, `ci.yml`). Validation lives in the code (`validateConfig` in `src/config.js`), and a `$schema`
+     key in the project's file does nothing.
+  2. “a migration when the format is updated” (§9) — there is no migration code: one file is read
+     (`CONFIG_NAME = 'size-table.config.json'`), and a wrong value is a refusal with the ready fix rather than a
+     conversion of an old format.
+  3. “on installation the module itself writes a short block into the project's instructions file” (§13) — the tool
+     writes into no foreign file at all: searching `src/` for `AGENTS` finds nothing, `installHook` writes only into
+     `.git/hooks` and refuses to touch a foreign hook, the ignore list is not edited, and the package carries a note
+     for a person (`templates/README.md`).
 
-  **Следствие.** Читатель проекта модуля считает все три вещи существующими: редактор подсказок не даёт,
-  старый файл настроек не преобразуется, а агент в новой сессии узнаёт об инструменте не из своего файла
-  инструкций, а из заметки, которую туда должен положить человек.
+  **What was checked.** The package's contents — `files` in `package.json`; the contents of `templates/` — by listing
+  it; the settings check — by reading `validateConfig` and `loadConfig` in `src/config.js`; the writing into foreign
+  files — by searching `src/` for `AGENTS` and reading `src/hook.js`; the tokenizer families — `src/tokens.js`.
 
-  **Варианты и цена.** (1) Схема: положить в поставку схему и сослаться на неё из
-  `templates/size-report.config.json` — редактор получает подсказки сразу, но появляется вторая сущность,
-  которую надо держать в согласии с `validateConfig`. (2) Миграция: распознавать старый формат в
-  `loadConfig` и переписывать по `--init` — одно место чтения, но новый код и новые случаи в проверках.
-  (3) Блок для агентов: не писать в чужие файлы (как сейчас), а дать готовый текст в заметке шаблонов —
-  дешево, но требует честного слова в документации; либо писать по явному ключу настроек, а не при
-  установке — тогда запись в чужой файл становится осознанной.
+  **The consequence.** A reader of the module's design takes all three for existing: the editor gives no hints, an
+  old settings file is not converted, and an agent in a new session learns about the tool not from its own
+  instructions file but from a note a person has to put there.
 
-  **Решать пользователю:** что из трёх строить, а что объявить отменённым. До решения код не тронут
-  (проход документационный), а сам документ модуля называет реальность и ссылается сюда.
+  **Options and their price.** (1) The schema: ship it and point `templates/size-report.config.json` at it — the
+  editor gets hints at once, but there is a second thing to keep in agreement with `validateConfig`. (2) The
+  migration: recognise the old format in `loadConfig` and rewrite on `--init` — one place of reading, but new code
+  and new cases in the checks. (3) The block for agents: do not write into foreign files (as today) and give the
+  ready text in the templates' note — cheap, but it takes an honest word in the documentation; or write by an
+  explicit settings key rather than on installation, so that writing into a foreign file becomes a conscious act.
 
-- **N18. Склейка без пробелов мимо линтера — наблюдение, не блокер.** Два класса
-  склейки выглядят похоже, а ловит линтер только один. `no-multi-spaces` (заведён
-  в `R-1.2`) берёт случай, когда от склейки остался лишний пробел (`, } else {      const …`).
-  Обратный случай — пропавшая между операторами строка, где лишних пробелов нет
-  (`}function writeMode(cfg, root) {`): такое нашлось глазами в диффе прохода
-  `WORKLOG.md` §36 и было бы видно только в истории. Дешёвый кандидат —
-  `padding-line-between-statements` с требованием пустой строки перед объявлением
-  функции; он ловит именно этот случай и не рубит принятые однострочники. Пока не
-  заведён: сначала надо посмотреть, сколько замечаний он даёт на живом дереве
-  (если десятки — это переформатирование, а не правило).
+  **For the user to decide:** which of the three to build and which to declare cancelled. Until then the code is
+  untouched (a documentation pass), and the module's document names the reality and points here.
+
+- **N18. Glued statements slipping past the linter — an observation, not a blocker.** Two kinds of gluing look
+  alike, and the linter catches only one. `no-multi-spaces` (introduced in `R-1.2`) takes the case where a leftover
+  extra space betrays the gluing (`, } else {      const …`). The opposite case — a line lost between two
+  statements, with no extra spaces (`}function writeMode(cfg, root) {`) — was found by eye in a pass's diff
+  (`worklog/archive/WORKLOG.md` §36) and would otherwise be visible only in history. A cheap candidate is
+  `padding-line-between-statements` demanding an empty line before a function declaration: it catches exactly that
+  case and does not cut the accepted one-statement lines. It is not enabled: first the number of findings it gives
+  on the live tree has to be seen (dozens would mean a reformatting rather than a rule). Measured 2026-09-16:
+  `eslint.config.js` carries `no-multi-spaces` as an error and does not carry `padding-line-between-statements`,
+  while what it explains as consciously left out is `max-statements-per-line` and `brace-style`.
 
