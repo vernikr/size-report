@@ -22,7 +22,7 @@ import { totalsOf } from './derived.js';
  */
 
 function kmb(bytes) {
-  return Math.round(bytes / 1024) + ' КБ';
+  return Math.round(bytes / 1024) + ' KB';
 }
 
 /* Degradation is a fact of the report, not an error: the numbers came from a different
@@ -30,7 +30,7 @@ function kmb(bytes) {
  * an optional dependency is missing. The fact is printed once per sensor and becomes code
  * 4 — otherwise an approximation would travel into CI as success. */
 function note(gaps) {
-  gaps.forEach((gap) => console.error('! ' + gap.why + '\n  починка: ' + gap.fix));
+  gaps.forEach((gap) => console.error('! ' + gap.why + '\n  fix: ' + gap.fix));
   return gaps.length === 0 ? EXIT.OK : EXIT.SENSOR;
 }
 
@@ -52,7 +52,7 @@ function verdict(code, gaps) {
 export function check(cfg, want, root) {
   const out = path.join(root, cfg.output);
   if (!fs.existsSync(out)) {
-    console.error('✗ таблица размеров: нет файла ' + cfg.output + ' — соберите её: ' + cfg.fixCommand);
+    console.error('✗ size table: no file ' + cfg.output + ' — build it: ' + cfg.fixCommand);
     return 1;
   }
   const have = fs.readFileSync(out, 'utf8');
@@ -62,16 +62,16 @@ export function check(cfg, want, root) {
   const b = want.split('\n');
   let i = 0;
   while (i < a.length && i < b.length && a[i] === b[i]) i++;
-  console.error('✗ таблица размеров: ' + cfg.output + ' расходится с историей git (строка ' + (i + 1) + '):');
-  console.error('    в файле:    ' + (a[i] === undefined ? '<строк нет>' : a[i].trim().slice(0, 160)));
-  console.error('    по истории: ' + (b[i] === undefined ? '<строк нет>' : b[i].trim().slice(0, 160)));
+  console.error('✗ size table: ' + cfg.output + ' diverged from the git history (line ' + (i + 1) + '):');
+  console.error('    in the file:    ' + (a[i] === undefined ? '<no rows>' : a[i].trim().slice(0, 160)));
+  console.error('    by the history: ' + (b[i] === undefined ? '<no rows>' : b[i].trim().slice(0, 160)));
   const missing = [...want.matchAll(/id="c-([^"]+)"/g)].map((m) => m[1])
     .filter((id) => have.indexOf('id="c-' + id + '"') === -1);
   if (missing.length > 0) {
-    console.error('  строк нет в файле: ' + missing.length + ' (' + missing.slice(0, 5).join(', ')
+    console.error('  rows missing in the file: ' + missing.length + ' (' + missing.slice(0, 5).join(', ')
       + (missing.length > 5 ? ', …' : '') + ')');
   }
-  console.error('  починка: ' + cfg.fixCommand + ' — и закоммитить ' + cfg.output + ' отдельным коммитом.');
+  console.error('  fix: ' + cfg.fixCommand + ' — and commit ' + cfg.output + ' in a commit of its own.');
   return 1;
 }
 
@@ -86,10 +86,10 @@ function withOutput(cfg, root, file) {
 export function writeMode(cfg, root, file) {
   const out = rebuild(withOutput(cfg, root, file), root);
   const { rows, files, now, skipped } = out.data;
-  console.log('✓ ' + path.relative(root, out.file) + ': ' + rows.length + ' строк × ' + files.length + ' файлов, '
-    + kmb(byteLen(out.html)) + ' (пропущено без строки: ' + skipped.length + ' — '
+  console.log('✓ ' + path.relative(root, out.file) + ': ' + rows.length + ' rows × ' + files.length + ' files, '
+    + kmb(byteLen(out.html)) + ' (skipped without a row: ' + skipped.length + ' — '
     + skipped.join(', ') + ')');
-  console.log('  состояние на HEAD: ' + files.map((f, i) => f.label + ' '
+  console.log('  state at HEAD: ' + files.map((f, i) => f.label + ' '
     + (now[i] === null ? '—' : cfg.metrics.map((m) => now[i][m]).join('/'))).join(', '));
   return sensorNote(cfg);
 }
@@ -98,8 +98,8 @@ export function checkMode(cfg, root) {
   const out = artifact(cfg, root);
   const code = check(cfg, out.html, root);
   if (code === 0) {
-    console.log('✓ отчёт: ' + out.data.rows.length + ' коммитов × ' + out.data.files.length + ' файлов '
-      + 'совпадает с историей (' + cfg.output + ', ' + kmb(byteLen(out.html)) + ')');
+    console.log('✓ report: ' + out.data.rows.length + ' commits × ' + out.data.files.length + ' files '
+      + 'matches the history (' + cfg.output + ', ' + kmb(byteLen(out.html)) + ')');
   }
   return verdict(code, sensorGaps(cfg));
 }

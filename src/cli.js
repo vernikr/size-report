@@ -39,8 +39,8 @@ const asked = (cmd) => (cmd.verb === null ? (cmd.mode === null ? '' : cmd.mode) 
 function ensureHook(root, cfg) {
   const files = autoInstall(root, cfg);
   if (files === null) return;
-  console.error('· хук поставлен: ' + files.join(', ') + ' — отчёт обновляется после каждого'
-    + ' коммита (снять: ' + cliCommand('uninstall-hook') + ')');
+  console.error('· hook installed: ' + files.join(', ') + ' — the report is rebuilt after every'
+    + ' commit (remove it: ' + cliCommand('uninstall-hook') + ')');
 }
 
 /* Delivery. Diagnostics and the hook answer before the settings are read: they need the
@@ -77,8 +77,8 @@ export function main() {
     // Unexpected failures are a defect of the tool, not a dead end for the user, and the
     // text says so — otherwise the user looks for the mistake on their side. The stack is
     // printed whole: nothing else can diagnose such a refusal.
-    console.error('✗ внутренняя ошибка (это дефект инструмента, а не проекта —'
-      + ' пришлите, пожалуйста, этот текст целиком):\n' + e.stack);
+    console.error('✗ internal error (this is a defect of the tool, not of the project —'
+      + ' please send this text whole):\n' + e.stack);
     return EXIT.INTERNAL;
   }
 }

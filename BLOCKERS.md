@@ -461,7 +461,7 @@ references stayed the same after the fix.
   M7 of the `markdown` subplan (2026-09-16) while checking README's requirement of a git repository with a history.
 
   **The reproduction**, measured 2026-09-16: a fresh `git init`, one file in the index, no commits —
-  `node bin/size.js --write` gives **code 5** and “внутренняя ошибка (это дефект инструмента…)” with a stack from
+  `node bin/size.js --write` gives **code 5** and “internal error (this is a defect of the tool…)” with a stack from
   `execFileSync` in `readHistory` (`src/git.js`), because `git log` in such a repository answers
   `fatal: your current branch 'main' does not have any commits yet`; with the first commit the same command is
   green (code 0) and writes `docs/size-report.html`.

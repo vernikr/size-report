@@ -54,7 +54,7 @@ test('движок пакета: --write собирает отчёт и прох
   assert.equal(checked.code, 0,
     'контрольный режим красный на своём же артефакте: ' + checked.stderr.trim());
 
-  const rows = /: (\d+) строк × (\d+) файлов/.exec(wrote.stdout);
+  const rows = /: (\d+) rows × (\d+) files/.exec(wrote.stdout);
   assert.notEqual(rows, null, 'сборка не отчиталась числом строк: ' + wrote.stdout.trim());
   assert.equal(Number(rows[1]), goldenJson.rows.length, 'число строк разошлось с эталоном');
   assert.equal(Number(rows[2]), goldenJson.columns.length, 'число колонок разошлось с эталоном');

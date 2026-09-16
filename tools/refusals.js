@@ -303,18 +303,18 @@ export const CASES = [
     advice: [{ kind: 'coveredBy', file: 'test/disk.test.js', text: 'git checkout -- ' }] },
 
   /* Refusals that print and return a code (the `PRINTED` map). */
-  { id: 'нет файла таблицы', scenario: 'fixture', args: ['--config', '@notable'], code: 1,
-    must: ['таблица размеров: нет файла docs/nope.html', 'соберите её: '],
+  { id: 'no size table file', scenario: 'fixture', args: ['--config', '@notable'], code: 1,
+    must: ['size table: no file docs/nope.html', 'build it: '],
     truth: 'назван файл, который не найден, и команда, которая его соберёт',
     // The advice quotes `fixCommand` from the settings, so the case itself carries a setting naming
     // the real command (@fixNotable): otherwise there would be nothing to check.
     advice: [{ kind: 'run', text: '@fixNotable', expect: 0, mustFix: true, inClone: true }] },
-  { id: 'таблица разошлась с историей', scenario: 'drift', args: ['--config', '@drift'], code: 1,
-    must: ['расходится с историей git', 'починка: ', 'закоммитить'],
+  { id: 'size table diverged from the history', scenario: 'drift', args: ['--config', '@drift'], code: 1,
+    must: ['diverged from the git history', 'fix: ', 'in a commit of its own'],
     truth: 'сказано, где именно расходится, и что после сборки нужен отдельный коммит',
     advice: [
       { kind: 'run', text: '@fixDrift', expect: 0, mustFix: true },
-      { kind: 'manual', text: 'и закоммитить docs/size-table.html',
+      { kind: 'manual', text: 'and commit docs/size-table.html',
         why: 'коммит отчёта — за человеком: инструмент не коммитит за него (кроме хука, а тот ставится отдельной командой)' }
     ] },
   { id: 'покрытие неполно', scenario: 'fixture', args: ['--config', '@few', 'check'], code: 1,
@@ -327,7 +327,7 @@ export const CASES = [
     ] },
   { id: 'приближение вместо точного счёта', scenario: 'fixture', args: ['--config', '@sensor', '--write'], code: 4,
     env: { SIZE_REPORT_NO_OPTIONAL: '1' },
-    must: ['метрика «min» считает упрощением', 'метрика «tok» считает оценкой', 'починка: '],
+    must: ['метрика «min» считает упрощением', 'метрика «tok» считает оценкой', 'fix: '],
     truth: 'приближение названо приближением и не уезжает как успех',
     // Both pieces of advice are prose: the tool cannot install dependencies for a person. But the
     // alternative each names is a setting, and a run checks it.

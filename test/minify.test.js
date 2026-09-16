@@ -212,7 +212,7 @@ test('расхождение и отступление вместе: назва�
   const check = runSize(dir, ['--config', file], OFF);
   assert.equal(check.code, EXIT.VIOLATION,
     'вердикт отдан приближению: код ' + check.code + ', ' + check.stderr.trim());
-  assert.match(check.stderr, /расходится с историей/,
+  assert.match(check.stderr, /diverged from the git history/,
     'расхождение не названо: ' + check.stderr.trim());
   assert.match(check.stderr, /минификатор недоступен/,
     'другой счёт не назван, и расхождение осталось без причины: ' + check.stderr.trim());
