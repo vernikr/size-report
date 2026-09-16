@@ -33,7 +33,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { collectOutput, gitIn } from './harness.js';
+import { collectOutput, firstDiff, gitIn } from './harness.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PARITY = path.join(ROOT, 'fixtures', 'parity');
@@ -71,17 +71,11 @@ function readIfExists(file) {
   }
 }
 
-function firstDiff(a, b) {
-  const la = a.split('\n');
-  const lb = b.split('\n');
-  for (let i = 0; i < Math.max(la.length, lb.length); i++) {
-    if (la[i] !== lb[i]) {
-      return 'строка ' + (i + 1) + '\n      в выводе: ' + JSON.stringify((la[i] || '').slice(0, 160))
-        + '\n      в эталоне: ' + JSON.stringify((lb[i] || '').slice(0, 160));
-    }
-  }
-  return 'различие в байтах при одинаковых строках';
-}
+/* The comparison of two texts lives in the shared harness (`firstDiff`), where three other checks
+ * take it from as well. This file used to carry a copy of its own: a translated string is a different
+ * token for the duplicate sensor, so the pair the baseline accepted started to read as a **new**
+ * clone the moment one of the two was reworded (`BLOCKERS.md` N29). One implementation instead of two
+ * is the repair — the copy went on 2026-09-16. */
 
 /* A launch without waiting: the environments interleave, hence `spawn` rather than `spawnSync`. The
  * output is collected whole — it is compared byte for byte — and the joining of the chunks lives in

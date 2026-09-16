@@ -256,11 +256,11 @@ export function firstDiff(a, b) {
   const lb = b.split('\n');
   for (let i = 0; i < Math.max(la.length, lb.length); i++) {
     if (la[i] !== lb[i]) {
-      return 'строка ' + (i + 1) + '\n    в выводе: ' + JSON.stringify((la[i] || '').slice(0, 160))
-        + '\n    в эталоне: ' + JSON.stringify((lb[i] || '').slice(0, 160));
+      return 'line ' + (i + 1) + '\n    in the output: ' + JSON.stringify((la[i] || '').slice(0, 160))
+        + '\n    in the reference: ' + JSON.stringify((lb[i] || '').slice(0, 160));
     }
   }
-  return 'различие в байтах при одинаковых строках (переводы строк или кодировка)';
+  return 'the bytes differ although the lines are identical (line endings or encoding)';
 }
 
 /* A stack is never handed out: it holds no hint of a fix while it does hold the machine's paths. V8 frames start with an

@@ -850,6 +850,19 @@ references stayed the same after the fix.
   its way out of**: every other one was about a word reaching a reader, this one is about two implementations
   being the same tokens.
 
+  **DECIDED 2026-09-16 by the mission agent: repair (1).** The copy in `tools/parity-live.js` was removed and
+  the shared `firstDiff` is imported there beside `collectOutput, gitIn`; the three literals of the shared one
+  are English, and the three of the copy went with it. Measured after the repair: `pnpm run dup` answers
+  **8 clones, 47 lines** where it answered 10 and 62 — the tree holds one implementation instead of two, and the
+  baseline's stale fingerprint for the removed twin is simply not found, which is what a baseline is for. One
+  implementation, three importers (`tools/check-standards.js:27`, `test/parity.test.js:16`,
+  `test/crlf.test.js:14`) plus `tools/parity-live.js:36`. The tool that prints the diff still works:
+  `parity:live` green over both environments with the shared function, `node -e` on it prints
+  `line 2\n    in the output: "bb"\n    in the reference: "cc"`. The price paid is the cosmetic difference the
+  copy had kept (its continuation lines were indented six spaces and its tail line was shorter); no reader
+  reads either — measured when the literals were translated — and the duplicate sensor is the sensor that
+  would have caught the difference if anyone had.
+
 - **N30. The counter's word agreement is Russian grammar: an English word prints `21 check`.** Found 2026-09-16
   in W1's step 3, by the measurement the mission asked for rather than by reading.
 
@@ -879,4 +892,15 @@ references stayed the same after the fix.
   **What is not part of it.** `sec()` and `load()` keep the decimal comma (`replace('.', ',')`) — that is
   **N26**, a question of its own and still open; only the word-half of the comment at `tools/run-tests.js:40`
   moved here, and the comment itself is prose left in place (`TODO.md`).
+
+  **DECIDED 2026-09-16 by the mission agent: the repair is taken.** `plural` now takes two words and returns
+  the singular only for exactly one (`n === 1 ? one : many`); the `few` slot went with the language that needed
+  it, and the two call sites pass two words. Measured from the file's own text after the repair: `0 checks`,
+  `1 check`, `2 checks`, `4 checks`, `5 checks`, `11 checks`, `21 checks`, `22 checks`, `24 checks`,
+  `31 checks`, `70 checks`, `101 checks` — the class that was wrong (21, 31, 101) is right, and the runner's
+  own line reads `✓ fast run: 70 checks, failures 0, …`. No number moved: the counter still finds 70 checks in
+  the fast run and 175 in the full one, and `SITES`, `PRINTED` and `CASES` are untouched. The comment above the
+  helper was rewritten to say what the two forms are, and it now carries no Russian quotation: the word half of
+  `tools/run-tests.js:40` stopped being an exception with the repair, and the file's counter fell to one line
+  (`:22`, the example that names a Russian test — `TODO.md`, and C2/C3 will move it with the checks' names).
 

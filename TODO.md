@@ -84,14 +84,13 @@ Opened 2026-09-16 with the string-translation work (`docs/plans/2026-09-16-i18n-
   It is prose rather than a literal, so the string work does not touch it and `src/metrics.js` will
   not reach a zero Cyrillic count until someone does. Fix it in a portion of its own (one comment,
   no code), or name it permanently in that plan's allow-list.
-- **`tools/run-tests.js:40` — the comment explains grammar that is no longer the grammar.** Seen
-  2026-09-16 in W1's step 3: it says “The numbers are Russian: a comma in the fraction and the right
-  form of the word, or «1 проверок» beside «5 проверок» reads as a broken counter”. The comma half is
-  still true (`sec()`/`load()` are N26), the word half now describes `plural`, whose rule is Russian
-  and which is exactly what **N30** is about. How it shows: a reader of the file is told the word
-  form is the reason for the helper while the words it agrees are English. Prose, not a literal, so
-  the translation left it; it becomes true again with N30's one-line repair, or with one edited
-  comment.
+- **`tools/run-tests.js:40` — the comment is true again, apart from one half.** Narrowed 2026-09-16,
+  when N30's repair landed: the comment was rewritten to say what the two forms of `plural` are, and it
+  no longer quotes the Russian forms that the last-digit rule produced. What remains is the comma half:
+  the comment says a comma in the fraction is what the Russian framing left here, and that is still so
+  (`sec()`/`load()` are **N26**, an open question of its own). How it shows: a reader is told the comma
+  is a leftover while nothing in the file says whether it should stay — the answer is N26's, not the
+  comment's. Fix it with N26, or drop the half from the comment there.
 - **`tools/run-tests.js:22` — the example names a Russian test.** Seen 2026-09-16 in the same step:
   `node tools/run-tests.js fast --test-name-pattern=паритет` is offered as the example of passing
   flags to `node --test`, and it works only while the suites' test names are Russian (`C2`/`C3` own

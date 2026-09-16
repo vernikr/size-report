@@ -37,27 +37,28 @@ const extra = argv.slice(1);
 const jobs = Number(process.env.SIZE_REPORT_TEST_JOBS || 0) || Math.max(1, os.cpus().length);
 const MODES = { fast: 'fast', full: 'full' };
 
-/* The numbers are Russian: a comma in the fraction and the right form of the word, or "1 проверок" beside "5 проверок"
- * reads as a broken counter. */
+/* A comma in the fraction is what the Russian framing of the numbers left here (`BLOCKERS.md` N26),
+ * and the word form is English: a rule that branched on the last digit put a singular after every
+ * count ending in one, so `21 check` stood where the language wants `21 checks` (`BLOCKERS.md` N30) —
+ * a broken counter in either language. Hence `plural`, which knows two forms: `1 check` and
+ * `5 checks`. */
 function sec(n) {
   return n.toFixed(2).replace('.', ',');
 }
 
-function plural(n, one, few, many) {
-  const ten = n % 100;
-  const last = n % 10;
-  if (ten >= 11 && ten <= 14) return many;
-  if (last === 1) return one;
-  if (last >= 2 && last <= 4) return few;
-  return many;
+/* English keeps one form above one — `21 checks`, not `21 check` (the Russian rule that branched on the
+ * last digit answered `21 check` for the same helper, `BLOCKERS.md` N30). A language with three forms
+ * would pass three words; there are two here because the words are English. */
+function plural(n, one, many) {
+  return n === 1 ? one : many;
 }
 
 function checks(n) {
-  return n + ' ' + plural(n, 'check', 'checks', 'checks');
+  return n + ' ' + plural(n, 'check', 'checks');
 }
 
 function files(n) {
-  return n + ' ' + plural(n, 'file', 'files', 'files');
+  return n + ' ' + plural(n, 'file', 'files');
 }
 
 function load() {

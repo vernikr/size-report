@@ -50,16 +50,17 @@ them) and `docs-facts.js` 4 → 3. Of the 235:
 - **4 are prose**, not literals — `tools/refusals.js:134`, `tools/run-tests.js:22,40`,
   `tools/docs-facts.js:170`;
 - **210 are this owner's own**; step 1 lands 10 of them and **three are blocked** (`BLOCKERS.md`
-- **210 are this owner's own**; step 1 lands 10 of them and **three are blocked** (`BLOCKERS.md`
   N29), step 2 lands 13, step 3 lands 23, step 4 lands 74, step 6 lands 29, step 7 lands 1 and step 8
-  lands 55, so **every step is done** and the twelve files read **30** (`tools/**` as a whole reads
-  **233**). Step 5 was closed by measurement without editing anything. The measurement expected **31**
-  and got 30, and the missing line is named: the catalogue's own comment at `:134`, which step 8
-  translated instead of leaving it as prose — so the prose comments are three (`run-tests.js:22,40`,
-  `docs-facts.js:170`) rather than four. The 30 by file: `parity-freeze.js` 16 + `make-fixture.js` 3
-  (N21, permanent), `harness.js` 3 + `parity-live.js` 3 (N29, the user's decision), `docs-facts.js` 2
-  section names of the pinned revision (gone with the release that moves the pin, N20) + its comment,
-  and the two comments of `run-tests.js`. Nothing else in this owner is left to translate.
+  lands 55, and **the two decisions landed on 2026-09-16 as well** (N29's repair and N30's, one commit): the
+  six blocked literals are English and `plural` prints `21 checks`. So **every step is done** and the twelve
+  files read **23** (`tools/**` as a whole reads **226**). Step 5 was closed by measurement without editing
+  anything. The measurement expected 31, then 30, and lands at 23: one line was the catalogue's own comment at
+  `:134`, which step 8 translated rather than leaving it as prose, and seven more went with the two repairs
+  (six `firstDiff` literals and the word half of `run-tests.js:40`, whose comment now carries no Russian
+  quotation). The 23 by file: `parity-freeze.js` 16 + `make-fixture.js` 3 (N21, permanent), `docs-facts.js` 3
+  (2 section names of the pinned revision — gone with the release that moves the pin, N20 — and its comment),
+  and one comment in `run-tests.js` (`:22`, the example naming a Russian test). Nothing else in this owner is
+  left to translate; what is left is the two allow-lists of other owners and one comment of prose.
 
 And the same measurement for step 8: `tools/refusals.js`'s 55 Cyrillic lines are `truth` **37** +
 `advice.why` **12** + the case `id`s **2** + the `uncatchable` prose **2** + `ADVICE_LINE` **1** +
@@ -133,7 +134,7 @@ around them (`parity-freeze.js:205-211`, `make-fixture.js:197-206`) are W1's and
 | `<файл>` and `<коммит>` in the `template` shapes (`:146-184`) | Placeholders **of the printed advice**, whose literals are S1's (`src/args.js:39,92,129,133`, `src/config.js:144`, `src/refusal.js:101,117`) and whose `must` phrases are the catalogue's. They move with S1's step 2, not here. |
 | The cause names (`SITES` keys) and every `must` phrase | The owner of the printed text, per the table above. |
 | Six comments (prose, not literals): `tools/refusals.js` 3, `tools/run-tests.js` 2 (`:22` quotes a command with a Russian test-name pattern, `:40` explains the Russian numbers), `tools/docs-facts.js` 1 (`:170`) | Leftovers of the prose pass, out of this work's scope by definition. `TODO.md` (like S3's `src/metrics.js:61-63`). The `docs-facts.js` one is the exception: step 5 aligns its wording if the tolerance is chosen, since the comment would otherwise claim the wrong thing — prose, no behaviour. |
-| The sensors' own advice markers (`tools/gates/dup.js:139`, `tools/gates/coverage.js:93` — measured 2026-09-16; the `:1` of the first writing of this plan was a guess) | W2's texts, and never parsed by `adviceOf` (the extractor reads the *tool's* output). Measured, so that narrowing the regex in step 7 cannot surprise anyone — and measured for step 8 too: these two are the **only** Russian advice markers left in the repository, so the `src/**` half of its condition holds by measurement rather than by assumption. |
+| The sensors' own advice markers (`tools/gates/dup.js:139`, `tools/gates/coverage.js:93` — measured 2026-09-16; the `:1` of the first writing of this plan was a guess, and since W1's step 8 these two are the only Russian advice markers left in the tree, the tolerance of `ADVICE_LINE` being spent) | W2's texts, and never parsed by `adviceOf` (the extractor reads the *tool's* output). Measured, so that narrowing the regex in step 7 cannot surprise anyone — and measured for step 8 too: these two are the **only** Russian advice markers left in the repository, so the `src/**` half of its condition holds by measurement rather than by assumption. |
 
 **New open question — N26 (`BLOCKERS.md`): the numbers stay Russian while the words turn English.**
 `tools/run-tests.js:43` and `:64` format a duration with `.replace('.', ',')`, and `tools/gates/run.js:111,114` (W2) do the same, so a translated profile prints "total 12,2 s". A comma is
@@ -187,7 +188,7 @@ No reader at all, measured:
    twelve files, 210 of them this owner's own, and step 8's inventory (see the scope section): the
    planning figure of 331 was the pre-S1–S5 reading, and the plan's own `advice.why` count of 40 is
    **12** by measurement — so the numbers below are the counter's, not the plan's.
-1. **`tools/harness.js` — done 2026-09-16, 13 → 3** (the three are `BLOCKERS.md` N29). The two names
+1. **`tools/harness.js` — done 2026-09-16, 13 → 0** (the three of `firstDiff` followed on the same day, when N29's repair landed: the copy in `tools/parity-live.js` went, and with it the twin that held the literals in Russian). The two names
    (`the package engine`, `the frozen copy of the implementation`) and the messages of `legacyTool`,
    `requireTarget`, `refusal` and `runSize`. Red first, and it was worth the full profile: the file was
    returned to Russian **whole** and the full run stayed green — 175 checks, 0 failures — which is the
@@ -229,7 +230,8 @@ No reader at all, measured:
    `BLOCKERS.md` **N30** (the rule in `plural` is Russian grammar: no choice of three English words can
    be right for both 1 and 21); (c) `node tools/run-tests.js nope` answers the English “No run was
    named” and exits 2. `pnpm run dup` was asked its own question and answered no new twin. The
-   `sec()`/`load()` comma is **not** touched (N26).
+   `sec()`/`load()` comma is **not** touched (N26) — while the word half of the same comment stopped being an
+   exception on 2026-09-16, when N30's one-line repair landed and the helper was rewritten to know two forms.
 4. **`tools/check-standards.js` + `tools/pack-check.js` + `tools/parity-live.js` — done 2026-09-16,
    21 + 21 + 35 → 0 + 0 + 3.** All the verdicts of the two re-take checks and of the live parity, plus
    the two environment labels and the contract lines; the three left in `parity-live.js` are exactly
@@ -340,15 +342,12 @@ W2's), so no step needs a `Gate-Change:` trailer.
 
 ## Acceptance
 
-- The counter over the twelve files answers **exactly 30** — the plan expected 31, and the difference is
-  the catalogue's comment at `:134`, which step 8 translated rather than leaving it as prose (one prose
-  comment fewer). Every one of the 30 is named: the **six**
-  `firstDiff` literals — three in `tools/harness.js` and three in `tools/parity-live.js` (`BLOCKERS.md`
-  N29; they go if repair (1) is chosen, and then the number is **24**), the 16
+- The counter over the twelve files answers **exactly 23**, and every one of the 23 is named: the 16
   lines of `manifestNote` (`parity-freeze.js:98-118`) and the 3 config values of the fixture
-  (`make-fixture.js:56,57,64`), permanent since N21 was decided; the 2 section names of
-  `docs-facts.js`, which N20's release moves; and the 3 prose comments (`run-tests.js:22,40`,
-  `docs-facts.js:170`). The command:
+  (`make-fixture.js:56,57,64`), permanent since N21 was decided; the 3 lines of `docs-facts.js` — its 2
+  section names of the pinned revision, which N20's release moves, and the one comment that names them —
+  and 1 prose comment (`run-tests.js:22`), whose sibling `:40` stopped being an exception with N30's
+  repair. 16 + 3 + 3 + 1 = 23. The command:
   `rg -cP '[\p{Cyrillic}]' tools/refusals.js tools/parity-live.js tools/parity-freeze.js tools/run-tests.js tools/pack-check.js tools/check-standards.js tools/make-fixture.js tools/harness.js tools/yaml.js tools/docs-facts.js tools/page-harness.js tools/synthetic/repo.js`.
 - The counts and the keys are untouched — `test/refusals-catalog.test.js` says so, and it is the
   sensor that would catch a renamed cause or a lost `✗ `.
