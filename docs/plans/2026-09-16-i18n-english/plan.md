@@ -144,14 +144,17 @@ dictionary lines inside `src/**`.
 
 ### Re-measured 2026-09-16, after S1's steps 1–3 (the work, point 5)
 
-The instrument over `git ls-files` answers **13 032 lines**, of which `worklog/**` is 7 558, so the
-tree outside the journal is **5 474** against the 5 512 of the map's own reading; the two are readings
-of different moments (the subplans written meanwhile added 113 of them to `docs/plans/**`, and the
-work took out about as many), which is why this section gives the buckets as measured rather than as
-a sum of increments. Measured per bucket rather than subtracted:
-the allow-list — the frozen layer `fixtures/**` 2 602, the archive 15, `docs/plans/**` **278** (the
-row above says 165, which was its reading before the subplans existed), the builders that write a
-reference 107 → **3 002** — and everything else → **2 472**: `src/**` 278, `bin/**` 2, the `tools/**`
+The instrument over `git ls-files` answers **13 032 lines** (the reading taken before this section
+existed; after the portion's commit and this section it is **13 049**, of which `worklog/**` 7 569),
+so the tree outside the journal is **5 474** and then **5 480**, against the 5 512 of the map's own
+reading. Three readings of three moments: the subplans written meanwhile added about 113 lines to
+`docs/plans/**`, the work took out about as many, and this section's own text is the last six (four
+in `docs/plans/**`, two in `TODO.md`). That is why what follows is measured per bucket rather than
+subtracted. Measured per bucket rather than subtracted:
+the allow-list — the frozen layer `fixtures/**` 2 602, the archive 15, `docs/plans/**` **278 → 282**
+(the row above says 165, which was its reading before the subplans existed; the second figure is the
+one the tree gives now), the builders that write a reference 107 → **3 002 → 3 006** — and everything
+else → **2 472 → 2 474**: `src/**` 278, `bin/**` 2, the `tools/**`
 instruments 311, `tools/gates/**` 77, `tools/synthetic/**` 1 (the folder's 89 less the builders' 88),
 `test/**` 1 314, `templates/**` 35, `.github/**` 78, `.githooks/**` 4, the dotfiles with the two
 baselines' `note` 19, `package.json` 1, the allowed quotations **22**, the built report 349 — the
