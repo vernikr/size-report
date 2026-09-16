@@ -73,6 +73,22 @@ same way: line 113 reads `view.method` (the dictionary), line 105 reads the `why
 the `fix`. Translating by grep without this distinction would translate the dictionary's Russian into
 the English report of a Russian project.
 
+## Correction, measured 2026-09-16 while planning C1 — one internal error does have a reader
+
+This plan said the four internal errors have no reader at all, "measured by grep". The grep answered
+for the whole sentence `'стриппер испортил …'` and not for its first two words:
+`test/module.test.js:163` asserts `assert.match(res.stderr, /стриппер испортил/, …)` **after mutating
+`src/strip/js.js` for real** (the mutation loses the single-quote branch, the stripper eats the rest of
+a line and the code stops parsing). So the internal error of `src/strip/guard.js:46` is covered by a
+check, and the step that translates it has a red to prove itself with instead of a grep.
+
+Two neighbours in the same file are readers of the **negative** kind and have to be re-pointed in that
+same commit, or they quietly stop checking: `test/module.test.js:120` and `:195` assert
+`assert.equal(/стриппер/.test(res.stderr), false, …)` — "the tool must not blame the stripper". A
+negative match over a printed text is a reader too: once the sentence is English the regex matches
+nothing whatever the tool says, and the assertion stays green forever. C1's plan states the rule for
+every owner.
+
 ## Readers — each literal below is a promise about text, and each reader reddens if edited alone
 
 | Reader | Where | What it reads |
