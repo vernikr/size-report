@@ -58,13 +58,13 @@ function hasTrailer(message) {
 function report(what, files, message) {
   if (files.length === 0) return true;
   if (hasTrailer(message)) {
-    console.log('  ✓ ' + what + ': гейт-файлов ' + files.length + ', трейлер Gate-Change: есть');
+    console.log('  ✓ ' + what + ': gate files ' + files.length + ', the Gate-Change: trailer is there');
     return true;
   }
-  bad(what + ': правка гейта без трейлера Gate-Change:');
+  bad(what + ': a gate edit with no Gate-Change: trailer');
   files.forEach((f) => console.error('    ' + f));
-  console.error('    добавьте в сообщение коммита строку «Gate-Change: <причина>» —'
-    + ' пороги и базы меняет человек осознанно');
+  console.error('    add a line `Gate-Change: <reason>` to the commit message —'
+    + ' thresholds and baselines are changed by a person on purpose');
   return false;
 }
 
@@ -73,7 +73,7 @@ if (args.flags['--commit-msg'] !== undefined) {
   const staged = read(['diff', '--cached', '--name-only', '--diff-filter=ACDMR'])
     .stdout.split('\n').filter((f) => f !== '');
   if (report('gatefiles', gateFilesAmong(staged), message)) {
-    console.log('✓ gatefiles: коммит можно ставить (' + staged.length + ' файлов, гейт-файлов '
+    console.log('✓ gatefiles: the commit can be made (' + staged.length + ' files, gate files '
       + gateFilesAmong(staged).length + ')');
   }
 } else if (args.flags['--range'] !== undefined) {
@@ -93,7 +93,7 @@ if (args.flags['--commit-msg'] !== undefined) {
     checked++;
     if (!report('gatefiles ' + sha.slice(0, 7), gateFilesAmong(names), message)) clean = false;
   });
-  if (clean) ok('gatefiles: в диапазоне ' + base + '..HEAD коммитов ' + checked + ', гейт-файлы без трейлера не менялись');
+  if (clean) ok('gatefiles: across ' + base + '..HEAD there are ' + checked + ' commits, none of them touched a gate file without the trailer');
 } else {
-  bad('gatefiles: не назван режим — `--commit-msg <файл>` (хук) или `--range <рефа>` (CI)');
+  bad('gatefiles: no mode was named — `--commit-msg <file>` (the hook) or `--range <ref>` (CI)');
 }

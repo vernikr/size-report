@@ -74,7 +74,7 @@ test('гейт-файл без трейлера красный, с трейле�
   assert.equal(hook.code, 1, 'правка гейт-файла прошла хук без трейлера:\n' + hook.out);
   // The red has to be a verdict rather than a failure of the script itself (a broken import is a
   // non-zero code too, and without this comparison the probe would "pass" on it).
-  assert.match(hook.out, /правка гейта без трейлера/, 'красный не назвал причину:\n' + hook.out);
+  assert.match(hook.out, /a gate edit with no Gate-Change: trailer/, 'красный не назвал причину:\n' + hook.out);
   assert.match(hook.out, /package\.json/, 'хук не назвал гейт-файл:\n' + hook.out);
 
   write(staged, 'chore: правка порога\n\nGate-Change: порог поднят по замеру, причина такая\n');
@@ -103,7 +103,7 @@ test('обычная правка трейлера не требует', () => {
   write(staged, 'feat: правка обычного файла\n');
   const res = gate(['--commit-msg', staged]);
   assert.equal(res.code, 0, 'правка обычного файла потребовала трейлер:\n' + res.out);
-  assert.match(res.out, /коммит можно ставить/, 'вердикт не сказал, что коммит ставится:\n' + res.out);
+  assert.match(res.out, /the commit can be made/, 'вердикт не сказал, что коммит ставится:\n' + res.out);
 });
 
 test('короткая пометка вместо причины не принимается', () => {
@@ -112,5 +112,5 @@ test('короткая пометка вместо причины не прин�
   write(staged, 'chore: правка базы\n\nGate-Change: ok\n');
   const res = gate(['--commit-msg', staged]);
   assert.equal(res.code, 1, 'пометка без причины принята за обоснование:\n' + res.out);
-  assert.match(res.out, /правка гейта без трейлера/, 'красный не назвал причину:\n' + res.out);
+  assert.match(res.out, /a gate edit with no Gate-Change: trailer/, 'красный не назвал причину:\n' + res.out);
 });

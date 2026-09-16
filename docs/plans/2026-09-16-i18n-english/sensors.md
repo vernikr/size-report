@@ -18,7 +18,7 @@ rg -cP '[\p{Cyrillic}]' tools/suites.js dup-baseline.json coverage-baseline.json
 | `tools/gates/run.js` | 21 | the eleven step labels of `STEPS` (35–45), the `:hermetic` mark of a step's name (72), the unknown-profile refusal (87–88) and the profile's own words — the summary header, the `s`/`steps` of the total, the red-steps verdict and its advice (109–123) — **done 2026-09-16, 21 → 0** |
 | `tools/gates/dup.js` | 20 | the sensor's verdicts, its advice lines, the names of its two looks, and the baseline's `note` (128–129) — **done 2026-09-16, 20 → 0**, with the `note` inside `dup-baseline.json` (its 1 line) moved with it |
 | `tools/gates/coverage.js` | 18 | the verdicts, the totals line, the regression lines, the advice, the gone/new lines and the baseline's `note` (81–84) — **done 2026-09-16, 18 → 0**, with the `note` inside `coverage-baseline.json` (1 line) moved by hand |
-| `tools/gates/gatefiles.js` | 7 | the guard's verdicts (94, 98–99, 103, 110, 117) |
+| `tools/gates/gatefiles.js` | 7 | the guard's verdicts (61, 64, 76–77, 96, 98) and its advice (66–67) — **done 2026-09-16, 7 → 0** |
 | `tools/gates/metrics.js` | 6 | two verdicts, the refusal of a failed run, the overflow line and the advice (37, 63–71) — **done 2026-09-16, 6 → 0** |
 | `tools/gates/deps.js` | 5 | the verdicts, the refusal of a failed run, the advice and the "for information" line (26, 47, 51, 53, 56) — **done 2026-09-16, 5 → 0** |
 | `tools/gates/common.js` | **0** | measured: the shared harness carries no Russian at all |
@@ -44,8 +44,8 @@ different from W1, and the list is exact:
 
 | Verdict in the sensor | Probe that reads it |
 |---|---|
-| `'gatefiles: правка гейта без трейлера Gate-Change:'` (`gatefiles.js:94`) | `test/gates-files.test.js:77`, `:115` (`/правка гейта без трейлера/`) |
-| `'✓ gatefiles: коммит можно ставить (…)'` (`gatefiles.js:~103`) | `test/gates-files.test.js:106` (`/коммит можно ставить/`) |
+| `'gatefiles: правка гейта без трейлера Gate-Change:'` (`gatefiles.js:64`) | `test/gates-files.test.js:77`, `:115` (`/правка гейта без трейлера/`) — **moved 2026-09-16 to `'… : a gate edit with no Gate-Change: trailer'` / `/a gate edit with no Gate-Change: trailer/`** |
+| `'✓ gatefiles: коммит можно ставить (…)'` (`gatefiles.js:76`) | `test/gates-files.test.js:106` (`/коммит можно ставить/`) — **moved 2026-09-16 to `'✓ gatefiles: the commit can be made (…)'` / `/the commit can be made/`** |
 | `'dup: новых клонов N (…)'` (`dup.js:197`) | `test/gates-dup.test.js:72` (`/новых клонов 1/`) — **moved 2026-09-16 to `'dup: new clones N (…)'` / `/new clones 1/`** |
 | `'dup: базы нет (…)'` (`dup.js:139`) | `test/gates-dup.test.js:88` (`/базы нет/`) — **moved 2026-09-16 to `'dup: there is no baseline (…)'` / `/no baseline/`** |
 | `'<файл> — <метрика>: было X, стало Y'` and `'не в базе'` (`coverage.js:115-116`) | `test/gates-coverage.test.js:49`, `:63` — **moved 2026-09-16 to `… : was X, now Y` / `was not in the baseline` and `/… was 80, now 50/`, `/… was not in the baseline, now 0/`** |
@@ -205,10 +205,24 @@ not a mark). The `commit-msg` hook answers at once; the `pre-push` hook re-reads
    commits since `202c768`) and the price of each answer. Unlike N31, no key would move — the two baselines
    fail in two different ways, which is why the step's own acceptance reads "the sensor answers the same
    way": 13 regressions, 39 files, the totals unchanged.
-5. **`tools/gates/gatefiles.js`** — the guard's verdicts (94, 98–99, 103, 110, 117) and the three
-   reads in `test/gates-files.test.js:77`, `:106`, `:115`. Red first: this is the one sensor whose red
-   is cheap to produce by hand — commit a gate change without a trailer and read the message; the
-   probe does the same in a temporary repository.
+5. **`tools/gates/gatefiles.js` — done 2026-09-16, 7 → 0**, with the three reads in
+   `test/gates-files.test.js` (`:77` and `:115` → `/a gate edit with no Gate-Change: trailer/`, `:106`
+   → `/the commit can be made/`) in the same commit. The seven lines: the verdict that the trailer is
+   there (`gate files N, the Gate-Change: trailer is there`), the red verdict of a gate edit with no
+   trailer, the two advice lines under it, the commit-can-be-made verdict, the range verdict
+   (`across <ref>..HEAD there are N commits, none of them touched a gate file without the trailer`)
+   and the no-mode refusal. **Red first, one printed message at a time:** exactly **two** redden the
+   probe — the red verdict (both its reads) and the commit-can-be-made verdict — while the other five
+   (the trailer-is-there verdict, both advice lines, the range verdict, the no-mode refusal) leave the
+   probe green, which is the measurement of "no reader". No negative match over this text (measured:
+   the probe has no `assert.equal(/…/.test(out), false)`). What the translation did **not** touch: the
+   `GATE_FILES` list, the `TRAILER` pattern and `hasTrailer`'s twelve-character reason — the strings
+   that decide whether a commit is a gate-file commit stay as they were, so this step reached no
+   behaviour. Measured on the step's own commit: the hook printed
+   `✓ gatefiles: gate files 3, the Gate-Change: trailer is there` and
+   `✓ gatefiles: the commit can be made (7 files, gate files 3)`, and
+   `node tools/gates/gatefiles.js --range origin/main` answered with the English range verdict — the
+   two places a person meets this sensor's words.
 6. **`tools/suites.js`** — the `why` of every entry and the unknown-run error. Red first: rename the
    **field** `why` instead of its text → `test/suites.test.js:51` red ("в полном прогоне файл без
    названной причины"), which proves the field is what the guard reads; then the values.
