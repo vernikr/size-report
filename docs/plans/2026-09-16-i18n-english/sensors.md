@@ -16,7 +16,7 @@ rg -cP '[\p{Cyrillic}]' tools/suites.js dup-baseline.json coverage-baseline.json
 | File | Lines | What the Russian is |
 |---|---|---|
 | `tools/gates/run.js` | 21 | the eleven step labels of `STEPS` (35–45), the `:hermetic` mark of a step's name (72), the unknown-profile refusal (87–88) and the profile's own words — the summary header, the `s`/`steps` of the total, the red-steps verdict and its advice (109–123) — **done 2026-09-16, 21 → 0** |
-| `tools/gates/dup.js` | 20 | the sensor's verdicts, its advice lines, and the baseline's `note` (128–129) |
+| `tools/gates/dup.js` | 20 | the sensor's verdicts, its advice lines, the names of its two looks, and the baseline's `note` (128–129) — **done 2026-09-16, 20 → 0**, with the `note` inside `dup-baseline.json` (its 1 line) moved with it |
 | `tools/gates/coverage.js` | 18 | the verdicts, the regression lines, the advice, and the baseline's `note` (81–84) |
 | `tools/gates/gatefiles.js` | 7 | the guard's verdicts (94, 98–99, 103, 110, 117) |
 | `tools/gates/metrics.js` | 6 | two verdicts, the refusal of a failed run, the overflow line and the advice (37, 63–71) — **done 2026-09-16, 6 → 0** |
@@ -46,8 +46,8 @@ different from W1, and the list is exact:
 |---|---|
 | `'gatefiles: правка гейта без трейлера Gate-Change:'` (`gatefiles.js:94`) | `test/gates-files.test.js:77`, `:115` (`/правка гейта без трейлера/`) |
 | `'✓ gatefiles: коммит можно ставить (…)'` (`gatefiles.js:~103`) | `test/gates-files.test.js:106` (`/коммит можно ставить/`) |
-| `'dup: новых клонов N (…)'` (`dup.js:197`) | `test/gates-dup.test.js:72` (`/новых клонов 1/`) |
-| `'dup: базы нет (…)'` (`dup.js:139`) | `test/gates-dup.test.js:88` (`/базы нет/`) |
+| `'dup: новых клонов N (…)'` (`dup.js:197`) | `test/gates-dup.test.js:72` (`/новых клонов 1/`) — **moved 2026-09-16 to `'dup: new clones N (…)'` / `/new clones 1/`** |
+| `'dup: базы нет (…)'` (`dup.js:139`) | `test/gates-dup.test.js:88` (`/базы нет/`) — **moved 2026-09-16 to `'dup: there is no baseline (…)'` / `/no baseline/`** |
 | `'<файл> — <метрика>: было X, стало Y'` and `'не в базе'` (`coverage.js:115-116`) | `test/gates-coverage.test.js:49`, `:63` |
 | `'deps: находок нет (…)'` (`deps.js:53`) | `test/gates-deps.test.js:48` (`/находок нет/`) — **moved 2026-09-16 to `'deps: no findings (…)'` / `/no findings/`** |
 | `'metrics: новых нарушений N (…)'` (`metrics.js:63`) | `test/gates-metrics.test.js:144` (`/новых нарушений 1/`) — **moved 2026-09-16 to `'metrics: new violations N (…)'` / `/new violations 1/`** |
@@ -58,9 +58,15 @@ lines, the counting prose — has no reader.
 
 **3. The two baselines' `note`** — written by the sensors when the baseline is re-taken
 (`pnpm run baseline:dup`, `pnpm run baseline:coverage`), read by no machine (measured: the probes
-mention a note only in a comment, and no test matches it). It is a **human** sentence inside a gate
-file, which is why translating it means **re-taking the baselines with their scripts**, the way
-`AGENTS.md` says they are updated, and not editing the JSON by hand.
+mention a note only in a comment, and no test matches it; re-measured for `dup` on 2026-09-16 across
+the probes and the hooks). It is a **human** sentence inside a gate file, which is why the plan said
+translating it means **re-taking the baselines with their scripts**, the way `AGENTS.md` says they are
+updated, and not editing the JSON by hand. **For `dup` that turned out to be wrong, and the measurement
+says why** (`BLOCKERS.md` **N31**): the script writes `current.counts`, the committed baseline holds 15
+fingerprints while the tree produces 8, so a re-take would prune seven of them — a composition change
+rather than a wording one. The `note` was therefore moved by hand, with the fingerprints byte-identical
+and the text proved equal to the script's own literals; the pruning is the user's decision. The same
+question is measured for `coverage-baseline.json` in step 4 rather than assumed to be the same.
 
 **4. `tools/suites.js`'s `why`** (38) — one reason per check in `FAST` and `SLOW`, read by
 `test/suites.test.js` for its **presence** (`:51`: a file in the full run without a named reason is
@@ -155,11 +161,24 @@ not a mark). The `commit-msg` hook answers at once; the `pre-push` hook re-reads
    Thresholds, `GATE_FILES`, the baselines and the profile split are untouched, and both sensors answer
    on this repository as before: `✓ deps: no findings (113 modules, 472 relations)`,
    `✓ metrics: no new violations (the baseline holds 0 in 0 files)`.
-3. **`tools/gates/dup.js`** — the verdicts, the advice, the baseline's `note`, and the two probe
-   reads (`test/gates-dup.test.js:72`, `:88`) with the baseline itself re-taken by
-   `pnpm run baseline:dup` (the note is written by the script, never by hand). Red first: translate
-   `'dup: новых клонов N'` alone → `:72` red; and the re-take must leave the fingerprint counts
-   otherwise unchanged, which the sensor's own verdict then says.
+3. **`tools/gates/dup.js` — done 2026-09-16, 20 → 0**, with `dup-baseline.json`'s `note` (1 line) and the
+   two probe reads (`test/gates-dup.test.js:72` → `/new clones 1/`, `:88` → `/no baseline/`) in the same
+   commit. The twenty lines: the fallback reason of a run without a report (`'no report'`), the refusal of a
+   failed run, the baseline's `note`, the re-take verdict and its advice, the refusal when there is no
+   baseline, the names of the two looks (`'the baseline file'`, `'against <ref>'`), the unpacking failure,
+   the failed run over the ref's tree, the missing-ref note, the red verdict, the detail line of a clone, the
+   advice and the green verdict. **Red first, one printed message at a time** (each put back to Russian alone
+   with the whole probe file run): exactly two redden anything — `'dup: there is no baseline (…)'` (the probe's `:88`) and
+   `'dup: new clones N (…)'` (:72) — while the refusal paths, the re-take verdict and advice, both look names,
+   the three ref notes, the detail line, the advice and the green verdict leave the probe green. One honest
+   caveat about method: the first attempt at the missing-ref note patched the literal into a **syntax error**
+   of my own making, which made the sensor fail; patched correctly, that case is green too, so no reader was
+   hidden there. The baseline: **the script's re-take was measured and refused** — it would prune seven stale
+   fingerprints (15 in the file against 8 in the tree), so the `note` was moved by hand, the fingerprints
+   byte-identical and the text proved equal to the script's literals (`BLOCKERS.md` **N31**, the pruning left
+   to the user). The sensor answers as before: `✓ dup: no new clones (clones 8, lines 47, the baseline holds
+   15 fingerprints; looks 2: the baseline file, against origin/main)` — **the translation moved no finding**,
+   which is the step's own acceptance.
 4. **`tools/gates/coverage.js`** — the verdicts, the regression lines, the advice, the `note`, the two
    probe reads (`test/gates-coverage.test.js:49`, `:63`) and `coverage-baseline.json` re-taken with
    `pnpm run baseline:coverage` (which needs `pnpm run cover` first). Red first: translate

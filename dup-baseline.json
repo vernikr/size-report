@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "config": ".jscpd.json",
-  "note": "База дублей: отпечатки по содержимому клона (фрагмент + строки + токены), поэтому переезд файлов и выкладки её не сдвигает. Обновляется человеком.",
+  "note": "A baseline of duplicates: fingerprints by the content of a clone (fragment + lines + tokens), so moving files or checkouts does not shift it. Updated by a person.",
   "fingerprints": {
     "21bdd8cb03a5dc0d": 1,
     "3427416463def1d5": 1,

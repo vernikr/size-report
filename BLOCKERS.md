@@ -935,3 +935,31 @@ references stayed the same after the fix.
   `tools/run-tests.js:40` stopped being an exception with the repair, and the file's counter fell to one line
   (`:22`, the example that names a Russian test — `TODO.md`, and C2/C3 will move it with the checks' names).
 
+- **N31. The duplicates baseline carries seven fingerprints the tree no longer produces, so its scripted
+  re-take would change its composition — the note was moved by hand instead.** Measured 2026-09-16 in W2's
+  step 3, while translating the `note` the sensor writes into `dup-baseline.json` (`tools/gates/dup.js:128-129`).
+  The plan for that step asked for the baseline to be **re-taken by the script** (`pnpm run baseline:dup`),
+  the way `AGENTS.md` says baselines are updated. The measurement says the script would not be a one-word
+  edit: the committed baseline holds **15 fingerprints**, the tree produces **8** (the sensor's own reading:
+  `clones 8, lines 47, the baseline holds 15 fingerprints; looks 2`), and `newer()` counts only what *exceeds*
+  the baseline, so the seven extras are tolerated leftovers of earlier states — clones that no longer exist.
+  A re-take writes `current.counts`, so it would prune them: `dup-baseline.json` would lose seven entries, its
+  fingerprints going from 15 to 8 — a **composition** change rather than a wording one, and this portion's own
+  frame forbids exactly that ("behaviour, thresholds, fingerprints and the composition of the baseline do not
+  move").
+
+  **What was done instead.** The `note` was moved by hand — the JSON diff is **one line**, the fingerprints are
+  byte-for-byte what they were (`git show HEAD:dup-baseline.json` compared with the file: same set of 15, same
+  counts), the sensor answers as before (`✓ dup: no new clones (clones 8, lines 47, the baseline holds 15
+  fingerprints; looks 2: the baseline file, against origin/main)`), and the hand-written text was proved
+  **identical to what the script writes** (the two string literals of `tools/gates/dup.js` evaluated and
+  compared with the JSON value: equal). So a later `pnpm run baseline:dup` will not change the file's wording;
+  what it would change is the composition, and that is a decision of its own.
+
+  **For the user to decide:** whether to prune the seven stale fingerprints. Price of pruning: it is one
+  script run (`pnpm run baseline:dup`) with a `Gate-Change:` trailer, and the ratchet becomes **stricter** —
+  a fingerprint absent from the baseline can never hide anything, so while the seven sit there, a reappearance
+  of those seven historical clones would pass silently. Price of keeping them: the file says 15 while the tree
+  has 8, which a reader of the file has to notice for themselves. Nothing else moves either way, and the same
+  question will be measured for `coverage-baseline.json` in W2's step 4 rather than assumed to be identical.
+

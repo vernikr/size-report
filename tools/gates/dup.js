@@ -63,7 +63,7 @@ function scan(label, root, dirs) {
   const res = run('pnpm', ['exec', 'jscpd', '--config', '.jscpd.json', '--output', rel(out)].concat(list));
   const reportFile = path.join(out, 'jscpd-report.json');
   if (!fs.existsSync(reportFile)) {
-    return { failed: true, why: (res.stderr || res.stdout || 'нет отчёта').trim(), total: 0, clones: [], counts: {}, sample: {} };
+    return { failed: true, why: (res.stderr || res.stdout || 'no report').trim(), total: 0, clones: [], counts: {}, sample: {} };
   }
   const report = readJson(reportFile);
   const counts = {};
@@ -117,7 +117,7 @@ function refTree(ref, work) {
 
 const current = scan('current', ROOT, paths);
 if (current.failed) {
-  bad('dup: прогон не состоялся\n' + indent(current.why));
+  bad('dup: the run did not happen\n' + indent(current.why));
   process.exit();
 }
 
@@ -125,26 +125,26 @@ if (args.flags['--update']) {
   fs.writeFileSync(baselineFile, JSON.stringify({
     schema: 1,
     config: '.jscpd.json',
-    note: 'База дублей: отпечатки по содержимому клона (фрагмент + строки + токены),'
-      + ' поэтому переезд файлов и выкладки её не сдвигает. Обновляется человеком.',
+    note: 'A baseline of duplicates: fingerprints by the content of a clone (fragment + lines + tokens),'
+      + ' so moving files or checkouts does not shift it. Updated by a person.',
     fingerprints: current.counts
   }, null, 2) + '\n');
-  ok('dup: база обновлена — ' + Object.keys(current.counts).length + ' отпечатков в '
-    + baselineName + ' (клонов ' + current.total + ', строк ' + (current.lines || 0) + ')');
-  console.log('  обновление базы — человеческое действие: приложите причину трейлером Gate-Change:');
+  ok('dup: the baseline is re-taken — ' + Object.keys(current.counts).length + ' fingerprints in '
+    + baselineName + ' (clones ' + current.total + ', lines ' + (current.lines || 0) + ')');
+  console.log('  re-taking the baseline is a human action: attach a reason with the `Gate-Change:` trailer');
   process.exit();
 }
 
 if (!fs.existsSync(baselineFile)) {
-  bad('dup: базы нет (' + baselineName + ') — соберите её: pnpm run baseline:dup');
+  bad('dup: there is no baseline (' + baselineName + ') — collect it: pnpm run baseline:dup');
   process.exit();
 }
 const baseline = readJson(baselineFile).fingerprints || {};
 
 const runs = [{
-  against: 'файл базы',
+  against: 'the baseline file',
   total: current.total,
-  new: newer(baseline, current.counts).map((n) => Object.assign({ against: 'файл базы' }, sample(current, n)))
+  new: newer(baseline, current.counts).map((n) => Object.assign({ against: 'the baseline file' }, sample(current, n)))
 }];
 
 /* The whole branch look: unpacking, the run over that tree, the verdict. A function of its own rather
@@ -154,13 +154,13 @@ function refLook(wantRef) {
   const work = fs.mkdtempSync(path.join(os.tmpdir(), 'size-report-dup-'));
   try {
     const dir = refTree(wantRef, work);
-    if (dir === null) return 'dup: дерево ' + wantRef + ' не распаковалось — сравнение с базой ветки не выполнено';
+    if (dir === null) return 'dup: the tree of ' + wantRef + ' was not unpacked — the comparison with the branch baseline was not done';
     const ref = scan('ref', dir, paths);
     if (ref.failed) {
-      bad('dup: прогон по дереву ' + wantRef + ' не состоялся\n' + indent(ref.why));
+      bad('dup: the run over the tree of ' + wantRef + ' did not happen\n' + indent(ref.why));
       return null;
     }
-    const against = 'против ' + wantRef;
+    const against = 'against ' + wantRef;
     runs.push({
       against: against,
       total: ref.total,
@@ -177,7 +177,7 @@ let refNote = null;
 if (wantRef !== null) {
   const has = git(['rev-parse', '--verify', '--quiet', wantRef + '^{commit}']);
   refNote = has.status === 0 ? refLook(wantRef)
-    : 'dup: ' + wantRef + ' нет — сравнение с базой ветки не выполнено';
+    : 'dup: there is no ' + wantRef + ' — the comparison with the branch baseline was not done';
 }
 
 writeReport('dup.json', {
@@ -194,16 +194,16 @@ function sample(scanResult, entry) {
 
 const newClones = runs.reduce((sum, r) => sum + r.new.length, 0);
 if (newClones > 0) {
-  bad('dup: новых клонов ' + newClones + ' (в базе ' + Object.keys(baseline).length + ' отпечатков,'
-    + ' в дереве ' + current.total + ')');
+  bad('dup: new clones ' + newClones + ' (the baseline holds ' + Object.keys(baseline).length
+    + ' fingerprints, the tree has ' + current.total + ')');
   runs.forEach((r) => r.new.slice(0, 10).forEach((c) => {
-    console.error('    ' + (c.lines || '?') + ' строк, ' + (c.tokens || '?') + ' токенов: '
+    console.error('    ' + (c.lines || '?') + ' lines, ' + (c.tokens || '?') + ' tokens: '
       + (c.first || '?') + ' ↔ ' + (c.second || '?') + '  [' + c.against + ']');
   }));
-  console.error('    чинить код (вынести общее), а не базу');
+  console.error('    fix the code (take the shared part out), not the baseline');
 } else {
-  ok('dup: новых клонов нет (клонов ' + current.total + ', строк ' + (current.lines || 0)
-    + ', в базе ' + Object.keys(baseline).length + ' отпечатков; взглядов ' + runs.length
+  ok('dup: no new clones (clones ' + current.total + ', lines ' + (current.lines || 0)
+    + ', the baseline holds ' + Object.keys(baseline).length + ' fingerprints; looks ' + runs.length
     + ': ' + runs.map((r) => r.against).join(', ') + ')');
 }
 if (refNote !== null) console.log('  — ' + refNote);

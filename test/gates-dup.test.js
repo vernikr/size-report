@@ -69,7 +69,7 @@ test('новая копия красит гейт', () => {
   write(path.join(first, 'src/three.js'), MODULE);
   const red = probe('dup', ['--baseline', baseline, '--paths', paths, '--no-ref']);
   assert.equal(red.code, 1, 'третья копия того же модуля прошла молча:\n' + red.out);
-  assert.match(red.out, /новых клонов 1/, 'гейт не назвал число новых клонов:\n' + red.out);
+  assert.match(red.out, /new clones 1/, 'гейт не назвал число новых клонов:\n' + red.out);
   fs.rmSync(path.join(first, 'src/three.js'));
 });
 
@@ -85,5 +85,5 @@ test('без базы датчик отказывает, а не зеленее�
   const none = probe('dup', ['--baseline', path.join(tmp, 'нет-такого.json'),
     '--paths', paths, '--no-ref']);
   assert.equal(none.code, 1, 'отсутствие базы принято за чистое дерево:\n' + none.out);
-  assert.match(none.out, /базы нет/, 'отказ не назвал причину:\n' + none.out);
+  assert.match(none.out, /no baseline/, 'отказ не назвал причину:\n' + none.out);
 });
