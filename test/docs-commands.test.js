@@ -144,7 +144,7 @@ test('причины отказа совпадают у движка, справ
   // The mechanism is live rather than decorative: a cause that is not in the registry never reaches a
   // user.
   assert.throws(() => refuseCause('выдуманная причина', 'текст'),
-    /причина отказа не объявлена/, 'refuseCause пропустил неназванную причину');
+    /refusal cause is not declared/, 'refuseCause пропустил неназванную причину');
 });
 
 /* The document a reference names. On its own line: the name right after the reference ("§4.3

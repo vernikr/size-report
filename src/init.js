@@ -55,7 +55,7 @@ export function initMode(root, file, force) {
     // The advice names the very file in question: `--init --force` without a file would overwrite the
     // default name with a draft rather than the file the person named.
     const name = file === undefined || file === null ? CONFIG_NAME : advicePath(file);
-    refuseCause('конфиг уже есть', 'конфиг уже есть: ' + target
+    refuseCause('config already exists', 'конфиг уже есть: ' + target
       + '\n  починка: правьте его или перезапишите черновиком: ' + cliCommand('--init ' + name + ' --force'));
   }
   // What is pinned is the very thing the project runs on without a file (the project's derivation on

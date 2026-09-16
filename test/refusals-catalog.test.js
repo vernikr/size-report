@@ -110,7 +110,7 @@ test('у каждого места отказа есть случай в кат�
 
   // The closed list of what no run can check: the reason is said in words.
   const loose = CASES.filter((c) => c.uncatchable !== undefined);
-  assert.deepEqual(loose.map((c) => c.id), ['внутренняя ошибка'],
+  assert.deepEqual(loose.map((c) => c.id), ['internal error'],
     'список непроверяемых отказов изменился — это решение, а не мелочь, и его надо назвать');
   loose.forEach((c) => {
     assert.ok(c.uncatchable.length > 40, 'непроверяемый отказ «' + c.id + '» не объяснил, почему его не поймать');

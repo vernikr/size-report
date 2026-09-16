@@ -59,11 +59,11 @@ export function gitRoot() {
     // are told apart by what git itself said rather than by a guess: ENOENT means the program was not
     // found. One text for both ("not a git repository, or git is unavailable") named neither of them.
     if (e.code === 'ENOENT') {
-      refuseCause('нет git', 'git не запустился: его нет в PATH (таблица собирается по его'
+      refuseCause('git missing', 'git не запустился: его нет в PATH (таблица собирается по его'
         + ' истории, а смотрю я в ' + process.cwd() + ').\n'
         + '  починка: поставьте git (https://git-scm.com) и повторите команду');
     }
-    refuseCause('не git-репозиторий', 'git не видит здесь репозитория: таблица собирается по его'
+    refuseCause('not a git repository', 'git не видит здесь репозитория: таблица собирается по его'
       + ' истории (сейчас смотрю в ' + process.cwd() + ').\n'
       + '  смотрите: запущена ли команда из каталога проекта\n'
       + '  починка: если истории ещё нет — создайте её: git init');
@@ -112,7 +112,7 @@ export function loadConfig(file, root) {
     // out exactly when it is the default one anyway.
     const dflt = root !== undefined && path.resolve(root, CONFIG_NAME) === path.resolve(file);
     if (dflt) return derivedConfig(root);
-    refuseCause('нет файла настроек', 'нет файла настроек ' + file
+    refuseCause('no settings file', 'нет файла настроек ' + file
       + '\n  создайте его: ' + cliCommand('--init ' + advicePath(file))
       + '\n  смотрите: без «--config» настройки не нужны — они выводятся из проекта');
   }
@@ -120,7 +120,7 @@ export function loadConfig(file, root) {
   try {
     raw = JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch (e) {
-    refuseCause('настройки не разобраны', 'не разобран ' + file + ': ' + e.message
+    refuseCause('settings not parsed', 'не разобран ' + file + ': ' + e.message
       + '\n  починка: правьте ' + file + '; образец настроек даёт ' + cliCommand('--init') + ' в пустом каталоге');
   }
   const cfg = withDefaults(raw);
@@ -217,7 +217,7 @@ export function outsideFix(paths) {
 }
 
 export function validateConfig(cfg) {
-  const fail = (msg) => refuseCause('настройки неверны',
+  const fail = (msg) => refuseCause('settings invalid',
     'конфиг ' + cfg.path + ': ' + msg + '\n  починка: правьте ' + cfg.path);
   checkColumns(cfg, fail);
   checkMetrics(cfg, fail);

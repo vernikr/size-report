@@ -51,7 +51,7 @@ export function minifyWithEsbuild(text, file, rev) {
     // The advice names the one way out that answers this very cause: switching the minifier to
     // `strip` removes the cause but hands the same file to the `minify.guard` check, whose
     // verdict would be the same ("this is not JavaScript").
-    refuseCause('минификатор не разобрал', 'esbuild не разобрал ' + file + ' на '
+    refuseCause('minifier did not parse', 'esbuild не разобрал ' + file + ' на '
       + rev.slice(0, 7) + ': ' + cause(e.message)
       + '\n  починка: расширение соврало о содержимом или минификатор старше синтаксиса;'
       + ' задайте этому расширению упрощение в minify.ext (например {"' + ext + '": "strip-lines"})');

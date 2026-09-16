@@ -34,25 +34,25 @@ export function refuse(code, message) {
  * silently. The groups say where a cause comes from: the command line, settings and the
  * project, history, the hook, measurement. */
 export const CONFIG_CAUSES = [
-  ['командная строка', [
-    'незнакомый ключ', 'ключ без значения', 'повтор ключа', 'два режима сразу',
-    'лишнее слово', 'команда и режим', 'неизвестная команда', 'несовместимый ключ',
-    'нет ответа в JSON', 'два ответа сразу', 'нет коммита'
+  ['command line', [
+    'unknown flag', 'flag without a value', 'repeated flag', 'two modes at once',
+    'extra word', 'command and mode', 'unknown command', 'incompatible flag',
+    'no JSON answer', 'two answers at once', 'no commit'
   ]],
-  ['настройки и проект', [
-    'нет файла настроек', 'настройки не разобраны', 'настройки неверны',
-    'нет git', 'не git-репозиторий', 'конфиг уже есть'
+  ['settings and the project', [
+    'no settings file', 'settings not parsed', 'settings invalid',
+    'git missing', 'not a git repository', 'config already exists'
   ]],
-  ['история', ['нет такого коммита', 'коммит назван неточно', 'коммит вне истории']],
-  ['хук', ['чужой хук', 'чужой core.hooksPath', 'нечем звать инструмент']],
-  ['измерение', ['файл не JavaScript', 'минификатор не разобрал']]
+  ['history', ['no such commit', 'ambiguous commit', 'commit outside the history']],
+  ['hook', ['foreign hook', 'foreign core.hooksPath', 'no way to invoke the tool']],
+  ['measurement', ['file is not JavaScript', 'minifier did not parse']]
 ];
 
 /* A cause is a declared name, not decoration of the text: an undeclared one never reaches
  * the user, because that is a defect of the tool rather than a dead end for a human. */
 export function refuseCause(cause, message) {
   if (!CONFIG_CAUSES.some((g) => g[1].indexOf(cause) >= 0)) {
-    throw new Error('причина отказа не объявлена: ' + cause);
+    throw new Error('refusal cause is not declared: ' + cause);
   }
   refuse(EXIT.CONFIG, message);
 }

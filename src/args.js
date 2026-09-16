@@ -35,7 +35,7 @@ function takeValue(flag, args, i, values) {
   const next = args[i + 1];
   const none = next === undefined || next[0] === '-';
   if (none && flag === '--config') {
-    refuseCause('ключ без значения', 'the flag "' + flag + '" has no value: a settings file is needed'
+    refuseCause('flag without a value', 'the flag "' + flag + '" has no value: a settings file is needed'
       + '\n  fix: ' + cliCommand(flag + ' <file>'));
   }
   values[flag] = none ? null : next;
@@ -54,10 +54,10 @@ function scan(args) {
     const a = args[i];
     if (a[0] !== '-') { words.push(a); continue; }
     if (FLAGS.indexOf(a) < 0) {
-      refuseCause('незнакомый ключ', 'unknown flag "' + a + '"\n  fix: ' + cliCommand('--help'));
+      refuseCause('unknown flag', 'unknown flag "' + a + '"\n  fix: ' + cliCommand('--help'));
     }
     if (seen.has(a)) {
-      refuseCause('повтор ключа', 'the flag "' + a + '" is named twice\n  fix: ' + cliCommand('--help'));
+      refuseCause('repeated flag', 'the flag "' + a + '" is named twice\n  fix: ' + cliCommand('--help'));
     }
     seen.add(a);
     if (VALUE_FLAGS.indexOf(a) >= 0) i += takeValue(a, args, i, values);
@@ -80,15 +80,15 @@ function advisor(values) {
 function checkModes(plan) {
   const { modes, seen, mode, advice } = plan;
   if (modes.length > 1) {
-    refuseCause('два режима сразу', 'two modes at once: "' + modes[0] + '" and "' + modes[1]
+    refuseCause('two modes at once', 'two modes at once: "' + modes[0] + '" and "' + modes[1]
       + '" — it is one mode' + '\n  fix: ' + advice(modes[0]));
   }
   if (seen.has('--force') && mode !== '--init') {
-    refuseCause('несовместимый ключ', 'the flag "--force" works only with "--init"'
+    refuseCause('incompatible flag', 'the flag "--force" works only with "--init"'
       + '\n  fix: ' + cliCommand('--init --force'));
   }
   if (seen.has('--config') && mode === '--init') {
-    refuseCause('несовместимый ключ', '"--init" has a file of its own, while "--config" names the'
+    refuseCause('incompatible flag', '"--init" has a file of its own, while "--config" names the'
       + ' settings of the project' + '\n  fix: ' + cliCommand('--init <file>'));
   }
 }
@@ -103,10 +103,10 @@ function checkUnknownWord(plan) {
   if (verb === null || COMMANDS.indexOf(verb) >= 0) return;
   const valued = MODES.find((f) => VALUE_FLAGS.indexOf(f) >= 0 && typeof values[f] === 'string');
   if (valued !== undefined) {
-    refuseCause('лишнее слово', 'the extra word "' + verb + '": "' + valued + '" takes one value'
+    refuseCause('extra word', 'the extra word "' + verb + '": "' + valued + '" takes one value'
       + '\n  fix: ' + advice(valued + ' ' + advicePath(values[valued])));
   }
-  refuseCause('неизвестная команда', 'unknown command "' + verb + '"\n  fix: ' + cliCommand('--help'));
+  refuseCause('unknown command', 'unknown command "' + verb + '"\n  fix: ' + cliCommand('--help'));
 }
 
 /* A word and a mode together: the command says what to answer, the mode what to write, and
@@ -114,7 +114,7 @@ function checkUnknownWord(plan) {
 function checkWordAgainstMode(plan) {
   const { verb, mode, advice } = plan;
   if (verb === null || mode === null) return;
-  refuseCause('команда и режим', 'the command "' + verb + '" and the mode "' + mode
+  refuseCause('command and mode', 'the command "' + verb + '" and the mode "' + mode
     + '" are different things and do not work together' + '\n  fix: ' + advice(verb));
 }
 
@@ -124,16 +124,16 @@ function checkWordAgainstMode(plan) {
 function checkWordCount(plan) {
   const { verb, arg, advice } = plan;
   if (verb === 'explain' && arg.length === 0) {
-    refuseCause('нет коммита', 'the command "explain" needs a commit: a revision name (HEAD, a branch,'
+    refuseCause('no commit', 'the command "explain" needs a commit: a revision name (HEAD, a branch,'
       + ' a tag), a sha or its beginning'
       + '\n  fix: ' + advice('explain <commit>'));
   }
   if (verb === 'explain' && arg.length > 1) {
-    refuseCause('лишнее слово', 'the command "explain" takes one commit, not ' + arg.length
+    refuseCause('extra word', 'the command "explain" takes one commit, not ' + arg.length
       + ': "' + arg.slice(1).join('", "') + '" are extra\n  fix: ' + advice('explain <commit>'));
   }
   if (verb !== null && verb !== 'explain' && arg.length > 0) {
-    refuseCause('лишнее слово', 'the command "' + verb + '" takes no arguments: "' + arg[0] + '" is extra'
+    refuseCause('extra word', 'the command "' + verb + '" takes no arguments: "' + arg[0] + '" is extra'
       + '\n  fix: ' + advice(verb));
   }
 }
@@ -146,11 +146,11 @@ function checkWordCount(plan) {
 function checkAnswer(plan) {
   const { verb, mode, seen, advice } = plan;
   if (seen.has('--json') && verb !== null && ANSWER_COMMANDS.indexOf(verb) < 0) {
-    refuseCause('нет ответа в JSON', 'the command "' + verb + '" has no answer in JSON'
+    refuseCause('no JSON answer', 'the command "' + verb + '" has no answer in JSON'
       + '\n  fix: ' + advice(verb));
   }
   if (seen.has('--json') && verb === null && mode !== null) {
-    refuseCause('два ответа сразу', '"--json" and the mode "' + mode + '" are different: the data or'
+    refuseCause('two answers at once', '"--json" and the mode "' + mode + '" are different: the data or'
       + ' the write, not both' + '\n  fix: ' + advice(mode));
   }
 }

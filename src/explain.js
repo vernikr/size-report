@@ -32,17 +32,17 @@ function lookup(root, commits, target) {
   // The name resolved and the commit is missing from the report: that is not "no such commit" — the commit
   // exists, and exactly that has to be said, or the person goes looking for a problem in the history.
   if (resolved !== null && found.length === 0) {
-    refuseCause('коммит вне истории', '«' + target + '» — это коммит ' + resolved.slice(0, 7)
+    refuseCause('commit outside the history', '«' + target + '» — это коммит ' + resolved.slice(0, 7)
       + ', но его нет в истории отчёта: строки строятся по коммитам текущей ветки'
       + '\n  починка: посмотрите историю отчёта: git log --oneline'
       + ' (всю историю репозитория показывает git log --all)');
   }
   if (found.length === 0) {
-    refuseCause('нет такого коммита', '«' + target + '» — не имя ревизии и не начало sha'
+    refuseCause('no such commit', '«' + target + '» — не имя ревизии и не начало sha'
       + '\n  починка: посмотрите историю: git log --oneline');
   }
   if (found.length > 1) {
-    refuseCause('коммит назван неточно', 'префикс «' + target + '» неоднозначен: подходят '
+    refuseCause('ambiguous commit', 'префикс «' + target + '» неоднозначен: подходят '
       + found.length + ' коммитов'
       + '\n  ' + found.slice(0, 5).map((c) => c.sha.slice(0, 7) + ' ' + c.subject).join('\n  ')
       + '\n  починка: назовите больше знаков');

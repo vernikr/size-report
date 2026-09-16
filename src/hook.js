@@ -151,7 +151,7 @@ export function installHook(root, cfg) {
     // The advice names the very installation the README teaches — the git link pinned to this release, so that the advice
     // cannot drift from the release the documentation describes.
     const spec = installSpec();
-    refuseCause('нечем звать инструмент', 'не нашлось чем звать инструмент: хук без него молчал бы'
+    refuseCause('no way to invoke the tool', 'не нашлось чем звать инструмент: хук без него молчал бы'
       + ' после каждого коммита.\n'
       + '  починка: поставьте пакет зависимостью проекта'
       + (spec === null ? '' : ' (так, как он ставится в этот проект: pnpm add -D ' + spec + ')')
@@ -159,7 +159,7 @@ export function installHook(root, cfg) {
   }
   const hooks = hooksDir(root);
   if (hooks.custom) {
-    refuseCause('чужой core.hooksPath', 'в проекте задан core.hooksPath (' + hooks.dir + '): этот каталог может лежать'
+    refuseCause('foreign core.hooksPath', 'в проекте задан core.hooksPath (' + hooks.dir + '): этот каталог может лежать'
       + ' в другом репозитории, и править его инструмент не станет.\n'
       + '  починка: впишите в свой хук строку «' + runLine(entry) + '»');
   }
@@ -167,7 +167,7 @@ export function installHook(root, cfg) {
   const rels = files.map((f) => path.relative(root, f));
   files.forEach((file, i) => {
     if (fs.existsSync(file) && !isOurs(file)) {
-      refuseCause('чужой хук', 'хук ' + rels[i] + ' уже есть и поставлен не этим инструментом (в нём нет метки).\n'
+      refuseCause('foreign hook', 'хук ' + rels[i] + ' уже есть и поставлен не этим инструментом (в нём нет метки).\n'
         + '  починка: позовите инструмент из своего хука строкой «' + runLine(entry) + '»'
         + ' — перезаписи чужого файла нет намеренно');
     }
@@ -243,7 +243,7 @@ export function uninstallHook(root) {
   }
   present.forEach((file) => {
     if (!isOurs(file)) {
-      refuseCause('чужой хук', 'хук ' + path.relative(root, file) + ' поставлен не этим инструментом — не трогаю.\n'
+      refuseCause('foreign hook', 'хук ' + path.relative(root, file) + ' поставлен не этим инструментом — не трогаю.\n'
         + '  починка: уберите из него строку с «hook-run», если она там есть');
     }
   });

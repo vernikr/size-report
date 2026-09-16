@@ -39,6 +39,16 @@ Opened 2026-09-16 with the string-translation work (`docs/plans/2026-09-16-i18n-
   flag-less advice would fail those assertions: the check reddens over good behaviour instead of
   staying silent. Fixing means widening the derivation (a command whose second token is a word) —
   a check's behaviour rather than a literal, hence a portion of its own.
+- **`test/check.test.js:235` — a negative match on a cause name can never fail.** Seen 2026-09-16
+  while renaming the causes (subplan S1, step 3). The assertion is
+  `assert.ok(!/нет такого коммита/.test(away.stderr), …)`, and it reads a **cause name** — the
+  registry's vocabulary. The tool never prints it: a refusal prints the sentence its caller passes
+  (`src/refusal.js`), and the help prints the whole list. The sentence this case really prints is
+  `«<target>» — это коммит <sha>, но его нет в истории отчёта: …`, so the regex matches nothing
+  whichever answer the tool gives: green either way, before and after the rename (measured: the
+  phrase appears in the registry alone, now as the English `no such commit`). Fixing it means
+  matching the message's own words or the other cause's sentence — a check's behaviour rather than a
+  literal, hence a portion of its own.
 - **`src/metrics.js:61-63` — the last Russian comment in `src/`.** Seen 2026-09-16 while measuring
   the measurement layer for subplan S3 (`docs/plans/2026-09-16-i18n-english/measurement.md`): the
   comment above `METRICS` explains why a metric declares `needsText`, and it is the only comment

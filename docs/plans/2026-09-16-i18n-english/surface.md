@@ -141,15 +141,25 @@ named by the plan) and the two `template` shapes of `tools/refusals.js` (`<фа�
 `<file>`/`<commit>`), because `verifyAdvice` compares the declared shape with the printed advice. The `SITES` counts do not change: no cause is renamed and no
 site is added.
 
-**Step 3 — the cause registry** (`CONFIG_CAUSES` in `src/refusal.js`: five group names, 22 cause
-names) together with the internal `Error('причина отказа не объявлена: …')`. This is the
-cross-file step: `README.md`'s code table, `tools/refusals.js` (`SITES` keys, `CASES[].key`,
-`must`, `truth`), `test/refusals.test.js:317-318` and `test/docs-commands.test.js` are edited in
-the same commit. The check that proves the rename complete is
-`test/refusals-catalog.test.js` (a key missing in one file is a discrepancy) and the check that
-proves the texts still tell the truth is `test/refusals.test.js` (a live run per case).
-`test/refusals-catalog.test.js` also holds the closed list of uncatchable refusals by **id**
-(`'внутренняя ошибка'`) — that id is a name in the catalogue, so it moves with the case it names.
+**Step 3 — the cause registry** (`CONFIG_CAUSES` in `src/refusal.js`: five group names, **25 cause
+names** — the plan said 22, corrected here by counting them) together with the internal
+`Error('причина отказа не объявлена: …')`. The rename is atomic, because the registry is one list:
+`README.md`'s code table, `tools/refusals.js` (`SITES` keys, `CASES[].key`), the literal first
+argument of every `refuseCause(` site in `src/**` — measured, **29 sites**: `args.js` 14,
+`config.js` 5, `explain.js` 3, `hook.js` 4, `init.js` 1, `minify.js` 1, `strip/guard.js` 1 — and two
+checks: `test/docs-commands.test.js`'s `/причина отказа не объявлена/`, which reads the internal
+message, and `test/refusals-catalog.test.js`'s closed list of uncatchable refusals by **id**
+(`'внутренняя ошибка'`), which moves with the case it names. The check that proves the rename
+complete is `test/refusals-catalog.test.js` (a key missing in one file is a discrepancy) and the
+check that proves the texts still tell the truth is `test/refusals.test.js` (a live run per case).
+
+What this step does **not** move, measured: the `must` phrases of `tools/refusals.js` quote each
+module's printed text rather than the cause under it (`must: ['нет файла настроек', …]` quotes
+`src/config.js`'s sentence, which is S2's), so they leave with their own subplan;
+`test/cli.test.js:149`'s `refusal(broken, 2, 'настройки не разобраны')` is the check's own label and
+not a reader; and `test/check.test.js:235`'s `/нет такого коммита/` matches a cause name that is
+**never printed**, so that negative assertion is vacuous both before and after this step — recorded
+in `TODO.md` for a portion of its own.
 
 **Step 4 — what the modes print** (`src/cli.js`, 4 lines; `src/modes.js`, 13 lines). `КБ` → `KB`
 (the only place that prints a unit); the `✗`/`✓`/`!`/`·` marks stay as they are; the summary
