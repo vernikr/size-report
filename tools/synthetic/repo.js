@@ -71,7 +71,7 @@ export function mergeConflicted(dir, branch) {
   const res = spawnSync('git', gitArgv(['merge', '--no-commit', '--no-ff', branch]), {
     cwd: dir, encoding: 'utf8', env: Object.assign({}, gitEnv(), AUTHOR)
   });
-  if (res.status === 0) throw new Error('слияние в фикстуре прошло без конфликта');
+  if (res.status === 0) throw new Error('the merge in the fixture went through without a conflict');
 }
 
 export function write(dir, rel, text) {

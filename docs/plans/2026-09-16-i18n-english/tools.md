@@ -51,8 +51,12 @@ them) and `docs-facts.js` 4 → 3. Of the 235:
   `tools/docs-facts.js:170`;
 - **210 are this owner's own**; step 1 lands 10 of them and **three are blocked** (`BLOCKERS.md`
 - **210 are this owner's own**; step 1 lands 10 of them and **three are blocked** (`BLOCKERS.md`
-  N29), step 2 lands 13, step 3 lands 23 and step 4 lands 74, so **90 minus what N29 and N30 settle** is
-  left for steps 5–8 and the twelve files read **115** now (`tools/**` as a whole reads 318).
+  N29), step 2 lands 13, step 3 lands 23, step 4 lands 74 and step 7 lands 1, so **89 minus what N29 and
+  N30 settle** is left for steps 6 and 8 and the twelve files read **114** now (`tools/**` as a whole
+  reads 317). Step 5 was closed by measurement without editing anything. What remains by file:
+  `refusals.js` 55, `parity-freeze.js` 31 (16 of them N21's), `make-fixture.js` 17 (3 N21's),
+  `harness.js` 3 and `parity-live.js` 3 (both N29) and the two `run-tests.js` comments and the one of
+  `docs-facts.js`.
 
 And the same measurement for step 8: `tools/refusals.js`'s 55 Cyrillic lines are `truth` **37** +
 `advice.why` **12** + the case `id`s **2** + the `uncatchable` prose **2** + `ADVICE_LINE` **1** +
@@ -237,28 +241,43 @@ No reader at all, measured:
    answered no new twin. One near-twin was measured on the way: `tools/gates/run.js:42` (W2's) describes
    this step in almost the same words as its final line — no guard compares them, one line cannot form
    a clone, and it is named here so W2 sees it.
-5. **`tools/docs-facts.js`** — the pinned revision's section name. The working-tree split (135) is
-   already S1's; what is left is `commandsAt` (175, 177), which reads a revision **older than the
-   rename** — today's pin. Red first: replace `'Команды:'` with the English name instead of adding it
-   → `test/docs-pin.test.js` goes red with "у ревизии … нет справки с разделом «Команды»"; the same
-   red arrives by itself on the release that moves the pin past S1's rename (N20). So the step
-   **adds** the English name, keeps the Russian one with its reason in the comment, and is the one
-   allowed exception of this owner, named in the tracker's allow-list (the guard that would have enumerated
-   it is withdrawn, `BLOCKERS.md` N27;   the alternative — a structural parse of the help instead of a section name — is a code change, not this plan's).
-   **Corrected by measurement 2026-09-16:** `tools/docs-facts.js` reads **3** Cyrillic lines, not 4,
-   and `commandsAt:182,184` already carries **both** spellings (`'Команды:'` or `'Commands:'`,
-   `'Режимы:'` or `'Modes:'`) — S1's joint edit brought the English half in. So the code half of this
-   step is **already done**; what is left of it is the comment above (`:170`), which is prose, and
-   the two Russian names stay until N20's release moves the pin past the rename.
-6. **`tools/parity-freeze.js` + `tools/make-fixture.js`** — the console lines only. Red first: the
-   allow-list's own evidence — the string of `make-fixture.js:56` stands in the frozen
+5. **`tools/docs-facts.js` — closed 2026-09-16 by measurement: nothing is left to translate.** The file
+   reads **3** Cyrillic lines and all three stay: the comment at `:170`, which quotes the pinned
+   revision's section name as the very thing the code scans, and the two code lines (`:182`, `:184`),
+   which already carry **both** spellings — `'Команды:'` or `'Commands:'`, `'Режимы:'` or `'Modes:'` —
+   so the English half this step was to add arrived with S1's joint edit. The Russian half is live, not
+   tolerated for its own sake, and measured: the pin of `README.md:593` is `v2.4.0`, and
+   `git show v2.4.0:src/refusal.js` holds `'Команды:'` at `:99` and `'Режимы:'` at `:111`. The red
+   experiment was run in the direction the plan named: with the Russian alternative taken out,
+   `node --test test/docs-pin.test.js` goes red with `у ревизии «v2.4.0» нет справки с разделом
+   «Команды» — она старше того, чему учит текст`. And the question of what a translated name would do to
+   the standards sensor is answered by measurement too: **nothing** — none of the four instruments that
+   run under `pnpm run verify` imports `tools/docs-facts.js` (measured); the readers are
+   `test/docs-pin.test.js`, `docs-commands`, `docs-paths`, `docs-numbers`, `refusals`, `templates`,
+   `module` and `page-tree`, and only the pin guard reads a revision older than the rename.
+   **The working-tree split (`:135`) is S1's and the alternative named in the plan — a structural parse of
+   the help instead of a section name — is a code change, not this plan's.** No file was edited by this
+   step: `git status` while closing it showed `tools/docs-facts.js` byte-identical to the tree, and
+   `pnpm run verify` was green with it untouched.
+6. **`tools/parity-freeze.js` + `tools/make-fixture.js`** — the console lines only, and **measured
+   2026-09-16 as what holds this step**: of the 31 Cyrillic lines of `parity-freeze.js`, **16 are
+   `manifestNote` (`:98-118`)** and 15 are this owner's console lines; of the 17 of `make-fixture.js`,
+   **3 are the fixture's config values (`:56`, `:57`, `:64`)** and 14 are console. The 19 allowed ones
+   are N21's and permanent; nothing else holds the step — only their own commit is missing. Red first:
+   the allow-list's own evidence — the string of `make-fixture.js:56` stands in the frozen
    `fixtures/synthetic/config.json` (measured, 1 line), so translating it reddens `test/frozen.test.js`
    on the next re-take; the step proves the two writing functions are untouched by staying green.
-7. **`tools/synthetic/repo.js`** (the line W3 left, folded here on 2026-09-16) — the thrown message
-   of the merge the fixture builder expects to conflict (`:74`). Red first: the counter, plus
-   `pnpm run check:standards` staying green — the message is written into no fixture file (measured:
-   it is thrown only when the build goes wrong), so the honest experiment is the grep rather than a
-   red check.8. **`tools/refusals.js`** — the catalogue's own prose, **measured 2026-09-16 as `truth` 37,
+7. **`tools/synthetic/repo.js` — done 2026-09-16, 1 → 0.** The thrown message of the merge the fixture
+   builder expects to conflict (`:74`), now `the merge in the fixture went through without a conflict`.
+   Red first, and it was taken live rather than by grep: a clean merge was put in front of
+   `mergeConflicted` in a scratch repository of two branches that merge without a conflict, and the
+   builder answered with exactly that sentence. Measured for the question this step was asked: the
+   message stands in **no** file of `fixtures/**` (`rg` over the folder answers nothing), so it is
+   thrown only when the build goes wrong and reaches no frozen byte; `check:standards` re-took both
+   references green, `fixtures/parity/artifact.sha256` still reads `1bdb27e1…`, and the built page is
+   byte-identical to the committed one (`git status` names no change to it). `pnpm run dup` answered no
+   new twin.
+8. **`tools/refusals.js`** — the catalogue's own prose, **measured 2026-09-16 as `truth` 37, — the catalogue's own prose, **measured 2026-09-16 as `truth` 37,
    `advice.why` 12, the case `id`s 2, the `uncatchable` prose 2 and the header comment 1** (55 in
    all; the plan's `advice.why` 40 and its silence about the `id`s are both corrected here — the two
    Cyrillic `id`s, `покрытие неполно` and `приближение вместо точного счёта`, are read only inside
@@ -270,6 +289,10 @@ No reader at all, measured:
    refusal in `src/**` prints a Russian marker, and the sensors' markers are never parsed by the
    extractor — the only two Russian markers left in the repository are W2's
    (`tools/gates/dup.js:139`, `coverage.js:93`, measured above).
+   **What holds this step, measured 2026-09-16: nothing.** Its condition is met (no `src/**` module
+   prints a Russian marker since S5, and the two sensors' markers are never parsed by the extractor),
+   the tree is green around it, and N29/N30 touch `firstDiff` and `plural` rather than the catalogue —
+   so the step is waiting on a portion, not on a decision.
 
 **Why the tree is green between the commits.** Every instrument here talks through its **exit code**
 to the profile runner, and no test reads a verdict (both measured above), so a step can land alone;
@@ -282,10 +305,9 @@ W2's), so no step needs a `Gate-Change:` trailer.
 
 ## Acceptance
 
-- The counter over the twelve files answers **exactly 28** — and it does not move in step 3: the two lines
-  it leaves are two of the four prose comments below, already counted. Every one of the 28 is named: the three
-  `firstDiff` literals of `tools/harness.js` (`BLOCKERS.md` N29 — they go if repair (1) is chosen, and
-  then the number is 25), the 16
+- The counter over the twelve files answers **exactly 31**, and every one of them is named: the **six**
+  `firstDiff` literals — three in `tools/harness.js` and three in `tools/parity-live.js` (`BLOCKERS.md`
+  N29; they go if repair (1) is chosen, and then the number is **25**), the 16
   lines of `manifestNote` (`parity-freeze.js:98-118`) and the 3 config values of the fixture
   (`make-fixture.js:56,57,64`), permanent since N21 was decided; the 2 section names of
   `docs-facts.js`, which N20's release moves; and the 4 prose comments (`refusals.js:134`,
