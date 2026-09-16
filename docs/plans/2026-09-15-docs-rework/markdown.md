@@ -361,8 +361,34 @@ files). The parts below are the order to work in; each is one commit.
   three-vendor table replaced by dictionary / length estimate / bytes, each marked.
 - [ ] **Carried into M17–M22, measured:** `PLAN.md`'s row "Три датчика v1: `raw`, `min`, `tok`; `gzip` не
   поставляется" contradicts the code — gzip is in the registry (`src/metrics.js`) and ships with `src/`.
-- [ ] **M12 `docs/module-design.md` §8–§17** (lines 337–552 now, 147 Russian, measured) — a document about
-  the move, so it is compacted hard: architecture and invariants stay, the retelling goes.
+- [x] **M12 `docs/module-design.md` §8–§17** — 147 Russian lines → **342 changed lines in the document
+  plus 37 lines of a `BLOCKERS.md` note = 379 in two files** (`worklog/0112`); the document went 497 → 517
+  lines and its Cyrillic count went **147 → 0** — `module-design.md` is now wholly English, so the module is
+  closed. Incoming references measured: `REFACTOR.md` cites §8.2 and §8.4, `PLAN.md` cites §8.2 thrice and
+  §8.4 — no number touched, boundaries only shifted; doc guards 8 of 8. **Eleven claims rewritten by code and
+  measurement.** The report's file holds **four** parts, not three (styles, data, the printed words as their own
+  block, the program — which is why the report reads in the run's language); §8.3's "value from the points of
+  change" is gone, since no such points exist — a row carries the absolute number, and deltas come from one
+  shared calculation; §8.4's memory rules are stated exactly (one record for the memory and the address, keyed by
+  the report's passport, version and HEAD deliberately absent, only what is switched **off** is written); §9 is
+  **not** a formal schema and **not** a migration — the settings are checked in code (`validateConfig`), the file
+  is `size-table.config.json` with the draft copied under that name, and a project may have no file at all; §9's
+  settings table was invented and is now the real key set; §10's cache has no algorithm-version key and there is
+  no on-disk cache, and the measured device is named instead (ten git calls per run, the same for three files as
+  for ninety, one parse worker and one minifier service process per run); **§11 was the biggest untruth** — a
+  tracked report *is* committed by the hook, as a commit of its own whose tree comes from `HEAD` with one entry
+  replaced, and a loop is impossible by construction (`commit-tree` calls no hooks, the report's path gets no
+  row, same bytes) plus a lock; §12's command list was stale (`init`/`measure`/`render` as commands) and is now
+  the help's own surface — a run with no command, six commands, four modes, an answer for exactly four calls;
+  §13 now names all five exit codes and records that the tool writes into no project file; and §14's "tests
+  travel with the module" is wrong (the package carries none — `files` measured), with the minifier and
+  tokenizer checks named as they really are. §15 was compacted to what each non-breaking step established, §16
+  turned from open questions into **settled** ones with each answer's home, and §17's gzip row now says what the
+  registry holds. **Three promises true only with a code change went to `BLOCKERS.md` as note N17** (the schema,
+  the migration, the block written into a project's instructions), each with the file, the place and the evidence.
+- [ ] **Carried to M13–M15 (`BLOCKERS.md`):** the note keys are out of order and two of them are N11, and the
+  file now also holds **N17** — the three promises of `docs/module-design.md` §9 and §13 that need a decision
+  rather than a documentation edit.
 - [x] **Done at M11a — the guard's language dependence:** an unnamed `§N` reference is resolved to the
   requirements by a word, and the word is now read in **both languages** (`test/docs-commands.test.js`),
   so the seven unnamed references in `PLAN.md` (§4.3, §11.2, §7.3, §4.2 twice, §12, §3.3, §7.2, §8) stay

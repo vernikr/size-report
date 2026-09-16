@@ -279,220 +279,240 @@ with a dictionary and complicate it; deferred.
 
 ---
 
-## 8. Отчёт: интерактивная страница
+## 8. The report: the interactive page
 
-### 8.1. Устройство файла отчёта
+### 8.1. The report's file
 
-Отчёт — это **один файл**, который открывается двойным щелчком и без сервера.
-Внутри три части, собранные воедино:
+The report is **one file** that opens by double-click, with no server. Inside, four parts are assembled into one:
 
 ```html
 <!doctype html>
-<html>
-<head> …стили… </head>
+<html lang="ru">
+<head> …the styles… </head>
 <body>
-  <div id="app"></div>                          <!-- сюда рисуется всё -->
-  <script type="application/json" id="data">…данные (§6)…</script>  <!-- данные -->
-  <script>…программа отчёта…</script>            <!-- поведение -->
+  <div id="app"></div>                                                <!-- everything is drawn here -->
+  <script type="application/json" id="data">…the data (§6)…</script>   <!-- the data -->
+  <script type="application/json" id="ui">…the printed words…</script> <!-- the words -->
+  <script>…the page's program…</script>                               <!-- the behaviour -->
 </body>
 </html>
 ```
 
-Программа отчёта — это собранный заранее небольшой скрипт (без внешних библиотек,
-чтобы работало офлайн), который модуль «вклеивает» в файл вместе с данными.
+The program is a small script assembled from the package's own chapters, with no external libraries (so that it
+works offline) and with module syntax already stripped: the build takes out the `import` lines and the `export`
+keywords. The printed words travel as a block of their own (`id="ui"`), which is why the report reads in the
+language of the run rather than in the browser's.
 
-### 8.2. Элементы управления (что просил пользователь)
+### 8.2. The controls (what the user asked for)
 
-1. **Переключатели метрик** — какие числа показывать в таблице: сырой размер,
-   токены, минифицированный. Каждая метрика включается/выключается отдельно;
-   столбцы таблицы подстраиваются.
-2. **Левая панель — дерево файлов.** Отражает реальную структуру папок проекта.
-   У каждого файла — чекбокс. Снятый чекбокс убирает файл из таблицы **и из
-   расчёта общей суммы**.
-3. **Быстрые кнопки-переключатели по категориям** — включить/выключить сразу все
-   файлы категории: документация, служебные, ресурсы (и «код/прочее»). Кнопка
-   действует на чекбоксы дерева, не на сами данные.
-4. ~~**Переключатель семейства моделей** для метрики токенов (среди
-   предвычисленных).~~ ❌ **Отменено 2026-09-14** (`PLAN.md` §4.8.4, шаг 4): страница
-   получает готовые числа и сама не считает ничего, а словарь другого семейства
-   ей нечем применить; предвычислить все семейства — платить временем сборки за
-   числа, о которых могут и не спросить. Выбор живёт в настройках запуска
-   (`tokens.family`, `tokens.encoding`), а страница его **называет**: способ
-   каждой метрики виден под переключателями текстом, рядом с переключателем —
-   точное число или приближение.
+1. **Metric switches** — which numbers the table shows: the raw size, tokens, the size without ballast. Each
+   metric goes on and off on its own, and the columns follow.
+2. **The panel is the file tree** — the project's real folder structure, a checkbox per file. An unchecked file
+   leaves the table **and the sum**.
+3. **Quick buttons by category** — all files of a category at once: docs, chore, assets (and code). A button
+   works the tree's checkboxes, never the data itself.
+4. ~~**A switch of the model family** for the token metric (among the precomputed ones).~~ ❌ **Cancelled
+   2026-09-14** (`PLAN.md` §4.8.4, step 4): the page receives ready numbers and counts nothing itself, and a
+   dictionary of another family is not something it could apply; precomputing every family would pay build time
+   for numbers nobody may ask about. The choice lives in the settings (`tokens.family`, `tokens.encoding`), while
+   the page **names** it: the way each metric was obtained stands under the switches in words, and beside the
+   number — whether it is exact or an approximation.
 
-### 8.3. Как устроен пересчёт
+### 8.3. How the recount works
 
-Правило: **«итого» и дельты всегда считаются по текущему выбору** (какие файлы
-включены × какие метрики включены):
+The rule: **the total and the deltas are always counted over the current choice** (which files are on × which
+metrics are on):
 
-- значение файла в строке — из «точек изменения» (§6);
-- дельта файла в строке — разность его значения в этой строке и в предыдущей;
-- общая сумма — сумма по всем *включённым* файлам;
-- выключение файла или целой категории немедленно пересчитывает и сумму, и дельты,
-  и «текущий размер» в верхней строке.
+- a file's value in a row is that row's absolute number (§6);
+- a file's delta is the difference between its value in this row and in the previous one, and it comes from one
+  shared calculation rather than from the row's own code — two ways of counting one row would be two answers;
+- the total is the sum over the *enabled* files;
+- switching off a file or a whole category recounts the total, the deltas and the sizes of the "now" row at once.
 
-Всё это происходит мгновенно в браузере (данные уже загружены), без повторного
-обращения к git.
+All of it happens in the browser (the data is already there), with no second look at git.
 
-### 8.4. Память настроек просмотра
+### 8.4. The memory of the view
 
-Выбор пользователя (какие метрики и файлы включены) запоминается **в браузере**
-(между открытиями). Это «настройки просмотра», а не настройки проекта: они не
-влияют на файл настроек и не попадают в git (отчёт и так вне git).
+The reader's choice (which metrics and files are on) is remembered **in the browser** between openings. It is one
+record rather than two: the same record goes into the memory and into the address. The record's key is the
+report's passport — the tool's name, the schema, the artifact's path, the title and the column labels in the
+report's order — so a choice made in someone else's report is not picked up. The package version and the top of
+the history are absent from the passport on purpose: updating the tool does not change what a column means,
+while a grown history is the very report the reader comes back to. What is written down is what is switched
+**off**, by name; a record with nothing to say is removed rather than kept.
+
+These are view settings rather than project settings: they do not touch the settings file and never reach git.
 
 ---
 
-## 9. Настройки модуля
+## 9. The module's settings
 
-Настройки — это единственное, что проект знает о модуле. Они:
+The settings are the only thing the project knows about the module. The file is `size-table.config.json` in the
+project's root — and a project may have none at all: with no file the settings are derived from the project, and
+`--init` pins the derived ones. The draft in the package (`templates/size-report.config.json`) is copied under
+the name the tool reads.
 
-- имеют **формальную схему** (редактор и агент получают подсказки и проверку);
-- генерируются командой инициализации, а не пишутся вручную;
-- поддерживают миграцию при обновлении формата.
+What the settings must satisfy is checked in the code (`validateConfig`): a value that does not fit is a refusal
+naming the file and the fix. The design's formal schema for an editor and the migration of an older file did
+**not** become code — a wrong file is answered with a hint rather than converted (recorded in `BLOCKERS.md`,
+note N17).
 
-Смысловые разделы настроек:
+The semantic sections of the settings:
 
-| Раздел | Что задаёт |
+| Section | What it sets |
 |---|---|
-| что следить | правила включения/исключения файлов, порог «не учитывать слишком большие» |
-| категории | правила классификации файлов по категориям (для быстрых кнопок) |
-| метрики | какие датчики считать: сырой размер, минифицированный, токены |
-| минификация | выбор минификатора и его точных настроек |
-| токены | какое семейство моделей (или несколько) считать |
-| отчёт | куда класть файл отчёта, заголовок, язык |
-| журнал | (опционально) связь коммитов с разделами журнала проекта |
+| what to watch | `columns` — a label and a column's chain of paths — and `skip`, the declared exceptions |
+| categories | a column may name its category; otherwise the extension table decides (§5.2) |
+| metrics | `metrics` — which sensors are counted: `raw`, `min`, `tok` (and `gzip`, where asked) |
+| minification | `minify.engine` (stripping or esbuild), `minify.ext` per extension, `minify.guard` |
+| tokens | `tokens.family` and `tokens.encoding` |
+| the report | `output`, `title`, `heading`, `locale`, `fixCommand` |
+| the journal | `journal` — optionally, tying commits to sections of the project's journal |
+| the rest | `hooks.enabled`, `links.commitUrl`, `rows.merges`, `rows.sha` |
 
 ---
 
-## 10. Производительность и кэш
+## 10. Performance and the cache
 
-- **«Сырой» размер** не требует чтения содержимого — дешевле всего.
-- **Минификация и токенизация** требуют содержимого и стоят дороже. Результат
-  кэшируется по ключу **«содержимое файла + датчик + версия алгоритма»**. Так как
-  содержимое в git адресуется своим хешем, одинаковые версии файла не считаются
-  повторно (откаты, повторные слияния, файл, не менявшийся в сотне коммитов).
-- Версия алгоритма в ключе кэша гарантирует: если мы обновили минификатор или
-  токенизатор, старые «закешированные» числа не подмешаются к новым.
-- Минификатор вызывается **внутри процесса** (как библиотека), а не внешней
-  командой — это снимает накладные расходы на запуск.
-- Для крупных историй предусмотрен кэш на диске (в служебной папке, вне git), чтобы
-  повторный запуск был быстрым.
-
----
-
-## 11. Обновление отчёта: автоматически, с защитой от зацикливания
-
-- Отчёт обновляется **автоматически при каждом коммите** (через штатный механизм
-  git, запускающий действие после коммита — «хук»), который устанавливается одной
-  командой.
-- **Зацикливание в норме невозможно** по двум причинам: (1) отчёт исключён из git,
-  поэтому его пересборка не порождает нового коммита; (2) хук **никогда сам не
-  создаёт коммиты** — он только пересобирает локальный файл отчёта.
-- **Элементарная страховка всё равно предусмотрена**: защита от повторного входа
-  (если обновление уже идёт, второе не запускается) и от вложенного запуска самого
-  себя. Автоматику можно отключить и пересобирать отчёт явной командой.
+- **The raw size** needs no reading of the content — the cheapest of all.
+- **Minification and tokenization** need the content and cost more. The result is cached by the blob's sha, which
+  is how git addresses a version, so identical versions are never counted twice (a rollback, a repeated merge, a
+  file unchanged through a hundred commits). The cache lives for one run — nothing is kept between runs — and it
+  has no version key: the way a number was obtained is named in `method` (§6), so a reader sees which minifier
+  or tokenizer produced it.
+- The measurements are **batched**: one run makes ten git calls on a three-commit history, and the same ten for
+  three files as for ninety (measured with `GIT_TRACE=1`), because blobs are read in chunks rather than by a call
+  per file.
+- The minifier is called as a library through its JS API rather than as an external command, and it keeps one
+  service process for the whole run; the module parser behind the stripping guard keeps one worker per run
+  (`src/parse.js`). Both remove the price of a process per cell.
+- There is **no on-disk cache**: the price of a rebuild is one pass over the history, and the cost grows with the
+  length of the history rather than with the number of measures.
 
 ---
 
-## 12. Команды модуля (поверхность для человека и агента)
+## 11. Refreshing the report: automatic, with no loop possible
+
+- The report is refreshed **after every commit and every merge** by the git hooks (`post-commit`, `post-merge`).
+  They are installed by the package's own installation and by the first run in a project, and an explicit command
+  (`install-hook`) names the cause where the silent path stays quiet; `uninstall-hook` returns the project to its
+  previous behaviour.
+- **A loop is impossible by construction rather than by a promise**: the report's commit is assembled with git's
+  plumbing (`commit-tree`), which calls no hooks at all, and the report's own path gets no row — so the same
+  rebuild produces the same bytes and there is no second commit to make. A lock covers the remaining case: two
+  hooks running at once.
+- Where the report is tracked by git, the hook commits it **as a commit of its own**: the tree comes from `HEAD`
+  with exactly the report's path replaced, so neither the index nor anyone's uncommitted work can enter the
+  commit. Where it is untracked, a rebuild leaves the history alone.
+- **The automation can be switched off**: `"hooks": {"enabled": false}` in the settings, the environment lever
+  `SIZE_REPORT_NO_HOOK` (and CI, which is such an environment by itself), or `uninstall-hook` — after which the
+  report is rebuilt by an explicit command.
+
+---
+
+## 12. The module's commands (the surface for a person and an agent)
 
 ```text
-size init            найти файлы, создать настройки, исключить отчёт из git,
-                     предложить команды запуска; повторный запуск = «уже настроено»
-
-size measure         посчитать данные (выдать как JSON — для агента/CI)
-
-size render          собрать самодостаточный файл отчёта
-
-size check           проверить настройки и окружение: полная ли история,
-                     покрыты ли все файлы, установлены ли минификатор/токенизатор
-
-size doctor          диагностика одним JSON-ответом (для агента)
-
-size explain <id>    почему у конкретного коммита нет строки
+(no command)         check that the report matches the history
+check [--json]       completeness: the settings, the history, the paths, the sensors
+                     (code 1 — an untracked path not declared an exception)
+explain <commit>     why a commit has no row (a revision name, a sha or its start)
+doctor [--json]      one answer: the environment, the dependencies, the settings, coverage
+install-hook         put the post-commit and post-merge hooks in place
+uninstall-hook       take the hook and its state away
+hook-run             what the hook calls: a rebuild and the report's commit
 ```
 
-Команда `check` в новой схеме проверяет не «совпадает ли отчёт с историей» (отчёт
-больше не хранится в git), а **готовность окружения и корректность настроек** —
-это то, что нужно ИИ-агенту, чтобы не «гадать».
+Modes: `--init [file]` (pin the settings), `--write [file]` (assemble the report), `--data` (the data contract in
+stdout) and `--json` (the former shape). One run carries either a command or a mode and never both, and `--json`
+is an answer's format rather than a mode: an answer exists for exactly four calls, and anywhere else it is a
+refusal rather than silence.
+
+`check` answers "is anything wrong": whether the history is complete, whether every path is a column or a
+declared exception, whether the sensors are in place. The comparison of the artifact with the history exists as
+well — it is the run with no command — and it is what CI uses where the report is tracked.
 
 ---
 
-## 13. Связь с ИИ-агентами
+## 13. Talking to AI agents
 
-Поскольку проект ведёт ИИ-агент, модуль обязан «разговаривать» с ним машиночитаемо:
+Since an agent drives the project, the module has to speak to it in machine-readable form:
 
-- данные — как JSON, агент читает числа, а не вёрстку;
-- понятные коды завершения (всё хорошо / плохие настройки / неполная история /
-  не установлен минификатор), чтобы агент ветвился по коду, а не по тексту ошибки;
-- текст ошибки содержит **готовую команду починки**;
-- при установке модуль **сам вписывает в файл инструкций проекта** (для агентов)
-  короткий блок «здесь подключён size-report, команда проверки — …, починки — …»,
-  чтобы агент в следующей сессии узнал об инструменте из уже читаемого им файла;
-- команда `doctor` даёт агенту одним вызовом ответы, которые иначе он искал бы
-  полчаса.
-
----
-
-## 14. Тестирование
-
-Тесты модуля **едут вместе с модулем** (не копируются в проект). Ключевые подходы:
-
-- **Синтетическая история.** В тестах строится маленький временный репозиторий с
-  заданной историей (коммиты, переименования, слияния, удаления), и на нём
-  проверяется весь движок — быстро и без реального проекта.
-- **Эталонные («золотые») результаты.** Для фиксированных входов хранятся эталонные
-  числа и даже эталонный файл отчёта; тест ловит любое «незаметное» изменение.
-- **Тесты на ловушки:** не-английские имена файлов, переносы строк, двоичные файлы,
-  комментарии, похожие на деление, слияния, «обрезанная» история.
-- **Тесты минификатора:** что переименование переменных действительно происходит,
-  что результат воспроизводим от версии к версии, что для незнакомого формата
-  ставится пометка «приближение».
-- **Тесты токенизатора:** точное совпадение с эталонными подсчётами для того
-  семейства, где точность возможна; явная пометка «приближение» для остальных.
+- the data as JSON — an agent reads numbers rather than markup (`--data`, `--json`);
+- clear exit codes (0 everything is well · 1 a violation · 2 the call, the settings or the environment ·
+  3 an incomplete history · 4 a lost sensor · 5 an internal error), so that an agent branches by the code rather
+  than by the text of a message;
+- a refusal carries a **ready fix command** as its last line;
+- the module does **not** write into the project's own files: it edits no ignore list and refuses to touch a hook
+  that is not ours, so the design's block written into the project's instructions at installation did not become
+  code. What the package carries instead is a note for that (`templates/README.md`), to be put where the project
+  wants it — recorded in `BLOCKERS.md`, note N17;
+- the `doctor` command gives an agent in one call the answers it would otherwise look for half an hour.
 
 ---
 
-## 15. План переноса (по шагам, каждый — самостоятельная ценность)
+## 14. Testing
 
-1. **Вынести движок в пакет как есть** (без новых метрик): git-чтение, «сырой»
-   размер, текущее «косметическое» упрощение, сборка статичного отчёта. Проект
-   начинает пользоваться пакетом вместо файла внутри себя.
-2. **Разделить «данные» и «отображение»:** движок начинает выдавать JSON, отчёт
-   становится интерактивной страницей с деревом файлов, чекбоксами, переключателями
-   метрик и пересчётом суммы. На этом шаге «минифицированный» — пока упрощение.
-3. **Подключить настоящую минификацию** (esbuild) с пометкой способа; старое
-   упрощение переводится в запасной режим с пометкой «приближение».
-4. **Подключить токенизацию** с выбором семейства моделей и честной пометкой
-   точности.
-5. **Довести интеграцию:** автоматическое обновление по коммиту, `check`/`doctor`,
-   блок для агентов, шаблон CI.
+The module's tests live in its own repository and are not copied into a project; the package carries none of
+them. The key approaches:
 
-Каждый шаг — отдельный выпуск, ничего не ломающий.
-
----
-
-## 16. Открытые вопросы (не блокируют, решаются по ходу)
-
-- **Точное имя пакета** и стоит ли публиковать его в публичный реестр или держать
-  приватно.
-- **Конкретный токенизатор для DeepSeek/Claude** — использовать ли точные словари
-  там, где они появятся, или оставить честное приближение.
-- **Считать ли токены для всех трёх семейств сразу** по умолчанию или только для
-  выбранного (влияет на время сборки).
-- **Границы категории «ресурсы»**: что относить к «строковым» ресурсам в проектах,
-  где файлы локализации устроены по-разному.
-- **Порог «слишком большие файлы не минифицировать»** — значение по умолчанию.
+- **A synthetic history.** A small temporary repository with a given history (commits, renames, merges,
+  removals) is built in the checks, and the whole engine is checked on it — quickly and with no real project.
+- **Reference ("golden") results.** For fixed inputs the reference numbers are kept, and with them the reference
+  report file; a check catches any quiet change.
+- **Traps:** non-English file names, line endings, binary files, comments that look like division, merges, a
+  truncated history.
+- **The minifier** (§7.3): that renaming really happens, that a file the minifier cannot parse is a refusal, that
+  a format without a minifier is marked an approximation, that a lost optional dependency both falls back and
+  says so — and that the numbers taken against the frozen fixture do not move.
+- **The tokenizer** (§7.4): that the dictionary asked for is the one used, that a format for which tokens make
+  no sense is not given a count, that without a dictionary the number is a length estimate and is marked, and
+  that a foreign family or encoding is a refusal.
 
 ---
 
-## 17. Что сознательно НЕ делаем в первой версии
+## 15. The plan of the move (step by step, each of value on its own)
 
-- Сжатый размер (gzip/brotli) — зарезервировано, но не реализуем (решение
-  пользователя «на развитие»).
-- Ограничения/блокировки роста (только показываем; уведомления — на будущее).
-- Токенизация в самом браузере (считаем на этапе сборки — см. §7.4).
-- Централизованное управление многими проектами (первая версия — один проект).
-- Поддержка платформ, отличных от основной (закладываем переносимость, но
-  реализуем основную платформу).
+The move went in five non-breaking steps, each of them a release:
+
+1. **The engine left for a package as it was** (no new metrics): reading git, the raw size, the then current
+   cosmetic simplification, assembling a static report. The project started using the package instead of a file
+   inside itself.
+2. **Data and display were separated:** the engine began to hand over JSON, and the report became an interactive
+   page with the file tree, checkboxes, metric switches and a recounted sum. The minified size was still a
+   simplification at that point.
+3. **Real minification (esbuild) arrived, with the way marked**; the old simplification became the fallback,
+   marked an approximation.
+4. **Tokenization arrived**, with the family chosen and the honesty of the number marked.
+5. **The integration was finished:** refreshing after a commit, `check`/`doctor`, the note for agents, the CI
+   description.
+
+The journal holds the dates and the numbers of each step; this document keeps what the steps established.
+
+---
+
+## 16. Questions the first version has settled
+
+These were open and block nothing now; the answer to each lives where the code does:
+
+- **The package's name and the registry:** published as `@vernikr/size-report` in the public registry, with an
+  installation pinned to a tag of the release.
+- **The tokenizer for DeepSeek/Claude:** no dictionary is wired for them. A family is an entry of the registry
+  (`src/tokens.js`), and where there is no dictionary the count is an estimate by length, marked an approximation.
+- **Counting tokens for every family or only for the chosen one:** only for the chosen one (decided 2026-09-14,
+  `PLAN.md` §4.8.4) — precomputing all of them would pay build time for numbers nobody may ask about.
+- **The bounds of the "assets" category:** the extension table decides, and a column may name its category in the
+  settings — which is how localization files are placed whatever way they are arranged.
+- **The threshold for "a file too large":** a file over 512 KB cannot be a column and is excluded by a rule; there
+  is no separate threshold for minification.
+
+---
+
+## 17. What the first version deliberately does NOT do
+
+- Compressed size for delivery (gzip/brotli): the registry carries `gzip` alone and counts it when the settings
+  ask, but it is not part of the first version's set.
+- Growth limits and blocking (the tool only shows; notifications are for later).
+- Tokenization in the browser itself (it happens at build time — see §7.4).
+- Managing many projects centrally (the first version is one project).
+- Platforms other than the main one (portability is laid down, not implemented).
