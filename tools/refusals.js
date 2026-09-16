@@ -125,9 +125,9 @@ export function adviceOf(out) {
  *     into the project), `inEmpty` in an empty repository, `env` gives it its own environment.
  *     `args` is the shape of the call (`cliCommand`), `text` a ready line from the output (that is
  *     how git and a command from the project's settings are called).
- *   - `template` — a shape with a substitution (`<файл>`, `<коммит>`): there is nothing to run, a
- *     person does the substituting, and what is checked is that the names of commands and flags in
- *     the shape exist.
+ *   - `template` — a shape with a substitution (`<файл>`, `<коммит>` — Russian, as the advice prints
+ *     it): there is nothing to run, a person does the substituting, and what is checked is that the
+ *     names of commands and flags in the shape exist.
  *   - `manual` — the advice is not a command but an action of a person: `why` says why it cannot be
  *     run. When the advice names a checkable alternative, the field `works` checks it — in the same
  *     words as `run`.
@@ -201,8 +201,8 @@ export const CASES = [
     advice: [
       { kind: 'manual', text: 'правьте @broken',
         why: 'правка файла настроек — действие человека: что в нём было задумано, инструмент не знает' },
-      // Совет «образец настроек даёт … --init в пустом каталоге» проверен там же, где он и
-      // сказан: черновик в пустом репозитории — без колонок и без отказа (знак «!» и код 0).
+      // The advice about `--init` in an empty directory is verified where it is given: a draft there
+      // comes out without columns and without a refusal (the "!" mark and code 0).
       { kind: 'run', args: ['--init'], expect: 0, inEmpty: true }
     ] },
   { key: 'настройки неверны', scenario: 'fixture', args: ['--config', '@empty'], code: 2,
@@ -227,8 +227,8 @@ export const CASES = [
   { key: 'конфиг уже есть', scenario: 'draft-twice', args: ['--init', '@draft'], code: 2,
     must: ['конфиг уже есть', 'перезапишите черновиком: ', '--force'],
     truth: 'сказано и как править, и как перезаписать — потому что решает человек',
-    // Совет назван про тот же файл, о котором шла речь: черновик в @draft уже есть,
-    // и именно `--force` его перезаписывает.
+    // The advice names the very file under discussion: the draft in @draft already exists, and it is
+    // `--force` that overwrites it.
     advice: [{ kind: 'run', args: ['--init', '@draft', '--force'], expect: 0 }] },
 
   { key: 'нет такого коммита', scenario: 'fixture', args: ['--config', '@config', 'explain', 'maser'], code: 2,
@@ -275,8 +275,8 @@ export const CASES = [
     advice: [{ kind: 'manual', text: 'поставьте пакет зависимостью проекта',
       why: 'установка — сеть и чужой проект: исполняет её человек, а проверено то, что можно — совет называет ссылку из манифеста, а не имя из реестра' }] },
 
-  /* Гард разбора и минификатор требуют своего коммита в клоне — их стережёт
-   * `test/module.test.js`, где тот же случай доведён до конца. */
+  /* The parse guard and the minifier need a commit of their own in a clone — `test/module.test.js`
+   * guards them, carrying the same case to the end. */
   { key: 'файл не JavaScript', coveredBy: 'test/module.test.js',
     must: ['не JavaScript'],
     truth: 'сказано, что дело в исходном тексте, а не в стриптере, и что правится',
@@ -286,7 +286,7 @@ export const CASES = [
     truth: 'назван и файл, и минификатор, и выход, который этой причине и отвечает: расширение под упрощение, а не смена минификатора (та передала бы файл гарду)',
     advice: [{ kind: 'coveredBy', file: 'test/module.test.js', text: 'задайте этому расширению упрощение в minify.ext' }] },
 
-  /* Сверка с деревом требует потерянной правки — её стережёт `test/disk.test.js`. */
+  /* Comparing with the tree needs a lost edit — `test/disk.test.js` guards it. */
   { key: 'EXIT.VIOLATION', coveredBy: 'test/disk.test.js',
     must: ['перенос состояния между коммитами пропустил правку'],
     truth: 'сказано, что потерялась правка при переносе, и что пересборка тут ни при чём: разбор назван',
@@ -296,12 +296,12 @@ export const CASES = [
     truth: 'сказано, что правка не потерялась, а не закоммичена, и как её вернуть',
     advice: [{ kind: 'coveredBy', file: 'test/disk.test.js', text: 'git checkout -- ' }] },
 
-  /* Отказы, которые печатаются и возвращают код (карта `PRINTED`). */
+  /* Refusals that print and return a code (the `PRINTED` map). */
   { id: 'нет файла таблицы', scenario: 'fixture', args: ['--config', '@notable'], code: 1,
     must: ['таблица размеров: нет файла docs/nope.html', 'соберите её: '],
     truth: 'назван файл, который не найден, и команда, которая его соберёт',
-    // Совет цитирует `fixCommand` из настроек, поэтому в самом случае стоит настройка,
-    // называющая настоящую команду (@fixNotable): иначе проверять было бы нечего.
+    // The advice quotes `fixCommand` from the settings, so the case itself carries a setting naming
+    // the real command (@fixNotable): otherwise there would be nothing to check.
     advice: [{ kind: 'run', text: '@fixNotable', expect: 0, mustFix: true, inClone: true }] },
   { id: 'таблица разошлась с историей', scenario: 'drift', args: ['--config', '@drift'], code: 1,
     must: ['расходится с историей git', 'починка: ', 'закоммитить'],
@@ -323,8 +323,8 @@ export const CASES = [
     env: { SIZE_REPORT_NO_OPTIONAL: '1' },
     must: ['метрика «min» считает упрощением', 'метрика «tok» считает оценкой', 'починка: '],
     truth: 'приближение названо приближением и не уезжает как успех',
-    // Оба совета — проза: поставить зависимости инструмент за человека не может. Но
-    // названная в каждом альтернатива — настройка, и она проверяется прогоном.
+    // Both pieces of advice are prose: the tool cannot install dependencies for a person. But the
+    // alternative each names is a setting, and a run checks it.
     advice: [
       { kind: 'manual', text: 'поставьте необязательные зависимости заново или задайте "minify": {"engine": "strip"}',
         why: 'установка зависимостей — сеть и чужой проект: её исполняет человек',

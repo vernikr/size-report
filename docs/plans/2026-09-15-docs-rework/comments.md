@@ -257,13 +257,24 @@ comment diff stays under the commit budget, otherwise it is split by file groups
   as its verdict (`tools/gates/deps.js` puts the rule comment into `reports/deps.json`), and verdicts
   and other printed strings are out of scope.
 
-- [ ] **Leftover, found 2026-09-16 by pass M17 of `markdown.md`:** a re-scan of comment lines holding
-  Cyrillic over `src bin tools test` finds **22 lines of Russian prose in five files the modules above
-  had declared done** — `src/parse.js` 39, 40, 42 (M3a); `tools/docs-facts.js` 28–30, 35 (M9b, touched
-  again by M7 of `markdown.md`); `tools/parity-freeze.js` 91–92 (M9c); `tools/refusals.js` 204–205,
-  230–231, 278–279, 289, 299, 303–304, 326–327 (M9b); `test/minify.test.js` 268 (M10d). They are prose
-  rather than data — two of them quote the tool's printed advice, and inside a sentence — so they were
-  in scope. Cost: one pass over five files (22 comment lines, ≈90 changed source lines), no code.
+- [x] **Leftover, found 2026-09-16 by pass M17 of `markdown.md` and closed the same day** — the 22 comment
+  lines in five files the modules above had declared done were prose, so they were in scope, and every one is
+  now English and verified against the file it speaks for. **29 added / 24 removed = 53 changed source lines**
+  in five files at the 600 budget, **no line of code touched** (the diff is comment lines alone, measured).
+  `src/parse.js` 39, 40, 42 (three trailing comments on the worker's state) and one line added to name the
+  printed fallback reason `'модуль не разбирается'`, which stays Russian as output; `tools/docs-facts.js`
+  28–30 and 35; `tools/parity-freeze.js` 91–92 — its new text also names why the description below stays
+  Russian: it is written into the fixture's own README, that is the standard's data, and `check:standards`
+  compares `data.json`, `config.json` and `artifact.sha256` byte for byte while the description is deliberately
+  left out; the seven comment blocks in `tools/refusals.js` (the catalogue's own `must`/`truth` strings are its
+  data, named by the file's header); and `test/minify.test.js` 268. **Named reasons, line by line, for what was
+  left in these five files:** the catalogue's Russian keys and phrases (the printed causes, quoted word for word
+  by the checks and by `src/refusal.js`), the advice markers and the advice's placeholder shapes (printed
+  output), the generated standard's description, the tool's own error and progress messages, and the test names
+  and assertion messages — the same call the rules above already recorded for verdicts and printed strings.
+  `verify:fast` green (5 steps, 72 of 177) with the refusals catalogue and the doc guards re-run; no release: the
+  change is comments in files that ship, but the released revision and the attached copy carry the same code and
+  the same numbers, and the release decision stays with the user. `worklog/0132`.
 
 Order within a module: the file a reader opens first (entry, then what it calls), so the
 diffs read in the same order as the code.

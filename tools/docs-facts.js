@@ -25,14 +25,14 @@ import { ROOT, gitIn } from './harness.js';
 import { USAGE } from '../src/size-table.js';
 import { TOOL_PKG } from '../src/tool.js';
 
-/* Имя пакета — из манифеста, а не литералом. Сторож обязан называть то же имя,
- * которым зовёт инструмент: иначе переименование пакета молча ослабляет проверку
- * (старый шаблон перестаёт совпадать, и «плохих зовов» становится ноль). */
+/* The package's name comes from the manifest rather than a literal: a guard has to name the very name the
+ * tool is called by, or a rename would weaken the check in silence — the old pattern stops matching and the
+ * count of bad calls drops to zero. */
 export const PKG = TOOL_PKG.name;
 const ESC = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const CALL = ESC('node node_modules/' + PKG + '/bin/size.js');
 
-/* Документы, которые описывают **сегодняшнее** состояние репозитория. */
+/* The documents describing the repository's state **today**. */
 export const DOCS = ['README.md', 'PLAN.md', 'REFACTOR.md', 'BLOCKERS.md', 'templates/README.md', 'CHANGELOG.md'];
 
 /* Paths a document may name although the tree has no such file: the consumer project's, the
@@ -161,8 +161,9 @@ export function calledCommands() {
 }
 
 /* The commands of the pinned revision's help: the file is read from git history rather than from
- * the tree, because that help is a different one. The «Команды» section is a list of string
- * literals, and the first word of each is a command's name. */
+ * the tree, because that help is a different one. The section `Команды` of that file is a list of
+ * string literals — Russian, because it is the help the tool prints — and the first word of each
+ * literal is a command's name. */
 export function commandsAt(rev) {
   const src = gitIn(ROOT, ['show', rev + ':src/refusal.js']);
   const section = src.split("'Команды:'")[1];

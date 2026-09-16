@@ -36,10 +36,10 @@ const WORKER_FILE = fileURLToPath(new URL('./parse-worker.js', import.meta.url))
 const FLAGS = ['--experimental-vm-modules', '--no-warnings'];
 const WAIT_MS = 2000;
 
-let parser = null;      // живой поток { worker, port, sig } или null
-let hopeless = false;   // поток не поднялся: второй раз не пробуем
+let parser = null;      // the live thread { worker, port, sig } or null
+let hopeless = false;   // the thread did not come up: no second try
 let seq = 0;
-let mode = null;        // 'thread' | 'node' — чем разобран последний модуль
+let mode = null;        // 'thread' | 'node' — how the last module was parsed
 
 /* The reason the text does not parse as a module, or null if it does. "Could not check"
  * never leaves this function: without a worker the parse goes to `node --check`, which
@@ -126,6 +126,7 @@ function onNodeCheck(text) {
   } catch (e) {
     const lines = String((e && e.stderr) || (e && e.message) || e).split('\n')
       .map((l) => l.trim()).filter((l) => l !== '');
+    // The fallback reason travels into a printed refusal, so it is Russian like the rest of the output.
     return lines.find((l) => /^\w*Error\b/.test(l)) || lines[0] || 'модуль не разбирается';
   } finally {
     fs.rmSync(tmp, { force: true });

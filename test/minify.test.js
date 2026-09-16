@@ -265,7 +265,7 @@ test('черновик --init ведёт новый проект на насто
   assert.equal(made.code, 0, 'черновик не собрался: ' + made.stderr.trim());
   const file = path.join(dir, 'size-table.config.json');
   assert.equal((readJson(file).minify || {}).engine, 'esbuild', 'черновик не ведёт на настоящее сжатие');
-  loadConfig(file); // проверка настроек обязана принимать то, что выдаёт подсказка
+  loadConfig(file); // the settings check has to accept what the hint gives out
 
   const data = JSON.parse(runSize(dir, ['--data']).stdout);
   const min = data.metrics.find((m) => m.key === 'min');

@@ -88,8 +88,11 @@ function parseArgs(args) {
   return out;
 }
 
-/* Описание эталона для человека: что лежит рядом и что с этим делать. Пересъём не
- * требует аргументов — проект и ревизия записаны в манифесте. */
+/* A description of the standard for a person: what lies beside it and what to do with it. Its text goes into
+ * the fixture's own README, so it is the standard's data rather than this file's documentation and stays Russian
+ * as the fixture holds it — `check:standards` compares `data.json`, `config.json` and `artifact.sha256` byte for
+ * byte and deliberately leaves the description alone (it records the path the fixture was taken from). Re-taking
+ * needs no arguments: the project and the revision are recorded in the manifest. */
 function manifestNote(ctx) {
   return [
     '# Эталон паритета',
