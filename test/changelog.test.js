@@ -1,5 +1,5 @@
-/* The promise that **the version in `CHANGELOG.md` is the one in the manifest, and the "what will
- * change in the numbers" section is a measurement rather than a retelling**.
+/* The promise that **the version in `CHANGELOG.md` is the one in the manifest, and the "What changes in
+ * the numbers" section is a measurement rather than a retelling**.
  *
  * The defect class is the same as for the other guards (`tools/docs-facts.js`): a document asserts what
  * the repository does not have. For a release that costs more than for an instruction: the promise
@@ -44,14 +44,14 @@ function release() {
  * compression, tokens. It is parsed rather than read by eye: otherwise there would be nothing to check
  * against. */
 function numbersTable() {
-  const section = TEXT.match(/^### Что изменится в числах$[\s\S]*?(?=\n#{2,3} |(?![\s\S]))/m);
-  assert.notEqual(section, null, 'в CHANGELOG нет раздела «Что изменится в числах» — выпуск не отвечает,'
+  const section = TEXT.match(/^### What changes in the numbers$[\s\S]*?(?=\n#{2,3} |(?![\s\S]))/m);
+  assert.notEqual(section, null, 'в CHANGELOG нет раздела «What changes in the numbers» — выпуск не отвечает,'
     + ' у кого числа поедут и почему');
   const rows = [];
   section[0].split('\n').forEach((line) => {
     if (line.indexOf('|') !== 0) return;
     const cells = line.split('|').slice(1, -1).map((c) => c.replace(/\*\*/g, '').trim());
-    if (cells.length !== 5 || cells[0] === 'Файл' || /^-+$/.test(cells[0])) return;
+    if (cells.length !== 5 || cells[0] === 'File' || /^-+$/.test(cells[0])) return;
     const nums = cells.slice(1).map(Number);
     assert.ok(nums.every((n) => Number.isInteger(n) && n >= 0),
       'строка «' + cells[0] + '»: числа не разобрались (' + cells.slice(1).join(' ') + ')');
@@ -92,7 +92,7 @@ test('версия выпуска в CHANGELOG — версия пакета, и
   assert.equal(top.version, manifest.version,
     'CHANGELOG рассказывает про ' + top.version + ', а в манифесте ' + manifest.version
       + ' — установка по тегу дала бы не то, что описано');
-  assert.match(top.text, /^### Что изменится в числах$/m,
+  assert.match(top.text, /^### What changes in the numbers$/m,
     'у выпуска ' + top.version + ' нет раздела про числа: обновляющийся не узнает, что поедет');
 });
 
@@ -102,7 +102,7 @@ test('числа выпуска совпадают с прогоном на фи
   const strip = nowState(dir, configAs('strip', ['raw', 'min'], 'strip'), 'упрощение');
   const full = nowState(dir, configAs('full', ['raw', 'min', 'tok'], 'esbuild'), 'сжатие и токены');
 
-  assert.deepEqual(rows.map((r) => r.label), strip.map((f) => f.label).concat(['ИТОГО']),
+  assert.deepEqual(rows.map((r) => r.label), strip.map((f) => f.label).concat(['TOTAL']),
     'таблица выпуска называет не те колонки, что фикстура (или называет их в другом порядке)');
 
   const total = [0, 0, 0, 0];

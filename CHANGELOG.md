@@ -1,61 +1,51 @@
 # CHANGELOG
 
-История выпусков `@vernikr/size-report`. Версии — SemVer (`PLAN.md` §8.2); версия данных —
-`schema: 1`, она заморожена выпуском 1.0.0 и меняется только вместе с MAJOR.
+The release history of `@vernikr/size-report`. Versions are SemVer (`PLAN.md` §8.2); the version of the data
+is `schema: 1` — frozen by the 1.0.0 release and changed only together with a MAJOR.
 
-## Что значит «изменились числа»
+## What “the numbers changed” means
 
-Числа этого инструмента — его продукт, а не отладочная печать: у каждой метрики есть
-источник (`raw` — размер объекта git, `min` — сжатая форма, `tok` — токены) и есть
-честность (точный счёт или приближение с пометкой). Поэтому у выпуска обязателен
-раздел «Что изменится в числах»: он отвечает, **у кого числа поедут и почему**.
-Выпуск, после которого число меняется молча, — дефект этого инструмента, а не выпуск.
+The numbers of this tool are its product rather than debug output: every metric has a source (`raw` — the size of
+the git object, `min` — the compressed form, `tok` — tokens) and an honesty — an exact count or an estimate that
+says so. That is why a release carries a section “What changes in the numbers”: it answers **whose numbers will
+move and why**. A release after which a number moves in silence is a defect of this tool rather than a release.
 
-Замеры в этих разделах сняты на фикстуре пакета — `fixtures/synthetic/history.bundle`,
-16 коммитов и 10 колонок, состояние на её верхушке. Таблица выпуска не пересказ: её
-сверяет с живым прогоном инструмента `test/changelog.test.js`, а повторить замер
-руками можно, склонировав бандл и прогнав `node bin/size.js --config <настройки> --data`,
-где за основу взяты `fixtures/synthetic/config.json`, метрики — `raw`, `min`, `tok`, а
-способ минификации — `strip` или `esbuild`.
+The measurements in those sections are taken on the package's fixture — `fixtures/synthetic/history.bundle`,
+**16 commits and 10 columns**, the state at its tip. A release's table is not a retelling: `test/changelog.test.js`
+checks it against a live run of the tool, and it can be repeated by hand — clone the bundle and run
+`node bin/size.js --config <settings> --data`, taking `fixtures/synthetic/config.json` as the base, the metrics
+`raw`, `min` and `tok`, and the minification way `strip` or `esbuild`.
 
 ## 2.4.0 — 2026-09-15
 
-Вид дерева и порядок колонок: чего в отчёте нет — после остальных и со снятой
-галочкой, колонки последнего коммита — впереди, складка папки не считает числа.
+The look of the tree and the order of the columns: what is not in the report comes after the rest with its
+checkbox cleared, the columns the last commit touched stand in front, and folding a folder counts no numbers.
 
-- **Файл вне отчёта был подписью без галочки, а папка, где измерять нечего, —
-  без неё вовсе.** Один и тот же вопрос — «почему у этого нет числа» — читался
-  по-разному в двух строках подряд, а рядом с колонками такие строки выбивались из
-  ряда. Теперь у всего, что вне отчёта, галочка **стоит на месте, снята и
-  недоступна**: ряд строк ровный (глаз сравнивает одно с одним), а недоступность
-  говорит, что это не выбор читателя, — причина во всплывающей строке, как и
-  раньше. Заодно всё, чего в отчёте нет (и папки, и листья), идёт **после** того,
-  что в нём есть: в списке, где половина строк не переключается, отчёт виден сразу,
-  а не среди чужого.
-- **Складывание папки считало числа, которых не меняет.** Клик по знаку пересобирал
-  панель и таблицу целиком — то есть платил за всю таблицу (в этом репозитории 97
-  строк × 136 колонок, 39 576 клеток) ради того, чтобы спрятать строки. Замер в
-  настоящем Chrome на этой же странице: **107 + 380 мс** перерисовки — столько же,
-  сколько стоит переключение одного файла. Стало **0,6 мс** в обработчике (и 6 мс на
-  перекладку страницы, которая прячет 42 строки): поддерево лежит в разметке и
-  прячется классом на строке, а клик меняет только то, что читатель и видит, —
-  класс, знак и запись в памяти.
-- **Колонки, которых коснулся последний коммит, идут впереди остальных.** Отчёт
-  пересобирается после каждого коммита, и первый вопрос читателя — что принесла эта
-  правка. Знак приходит из истории (`last` в контракте `--data`), а не из чисел:
-  правка без изменения размера — тоже правка. Берётся последний коммит, задевший
-  хотя бы одну колонку: коммиты мимо колонок (и прежде всего сам отчёт, который
-  коммитит хук) пропускаются — иначе знак зависел бы от собственного коммита
-  отчёта, тот же прогон давал бы другие байты, и хук коммитил бы отчёт второй раз
-  на пустом месте. Внутри каждой части порядок прежний, из настроек.
+- **A file outside the report was a caption without a checkbox, and a folder with nothing to measure had no
+  checkbox at all.** One and the same question — “why has this no number” — read differently in two neighbouring
+  rows, and beside the columns such rows broke the line. Now everything outside the report has its checkbox **in
+  place, cleared and out of reach**: the rows run evenly (the eye compares like with like), and being out of
+  reach says that this is not the reader's choice — the reason is in the tooltip, as before. Along with that,
+  everything absent from the report (folders and leaves alike) comes **after** what is in it: in a list where
+  half the rows cannot be switched, the report is visible at once rather than among strangers.
+- **Folding a folder counted numbers it does not change.** A click on the sign rebuilt the panel and the table
+  whole — paying for the entire table in order to hide rows. Now the subtree lies in the markup and a class on
+  the row hides it, while the click changes only the three things the reader sees — the class, the sign and the
+  record in the memory — so the price of a fold no longer grows with the table.
+- **Columns touched by the last commit come in front of the rest.** The report is rebuilt after every commit, and
+  a reader's first question is what this edit brought. The mark comes from the history (`last` in the `--data`
+  contract) rather than from the numbers: an edit that moved no size is an edit too. The commit taken is the one
+  that touched at least one column, counting back from the top — commits past the columns (and above all the
+  report itself, which the hook commits) are skipped; otherwise the mark would depend on the report's own commit,
+  the same run would yield other bytes, and the hook would commit the report a second time over nothing. Inside
+  each part the order is the one from the settings.
 
-### Что изменится в числах
+### What changes in the numbers
 
-**Ничего.** Числа считает тот же движок теми же датчиками: выпуск про то, что и в
-каком порядке видно на странице, а не про измерение. Таблица та же, что у 2.3.0, до
-последней клетки.
+**Nothing.** The same engine counts with the same sensors: the release is about what is visible on the page and
+in what order rather than about measurement, so the table is the one of 2.3.0 to the last cell.
 
-| Файл | raw | min со strip | min с esbuild | tok |
+| File | raw | min with strip | min with esbuild | tok |
 |---|---|---|---|---|
 | code.js | 735 | 276 | 185 | 168 |
 | modern.js | 246 | 51 | 45 | 44 |
@@ -67,48 +57,40 @@
 | table.toml | 300 | 299 | 299 | 52 |
 | empty.js | 0 | 0 | 0 | 0 |
 | WORKLOG.md | 446 | 439 | 439 | 101 |
-| **ИТОГО** | **2511** | **1597** | **1483** | **540** |
+| **TOTAL** | **2511** | **1597** | **1483** | **540** |
 
 ## 2.3.0 — 2026-09-15
 
-Отчёт описывает проект целиком: колонкой идёт каждый отслеживаемый файл, а дерево
-складывается.
+The report describes the whole project: every tracked file becomes a column, and the tree folds.
 
-- **Колонками была выборка из проекта.** Без файла настроек инструмент брал
-  двенадцать крупнейших файлов — по одному от каждого расширения — и называл
-  прочие исключениями. Отчёт при этом считал «общий объём» по горсти файлов, и
-  читатель принимал это за объём проекта (в этом репозитории — 12 файлов из 148).
-  Теперь колонка — **каждый отслеживаемый git файл, который можно измерить**, и
-  `skip` называет только то, что колонкой быть не может: сам отчёт, замки
-  зависимостей, карты, собранное, незнакомый формат, файл сверх 512 КБ — и путь,
-  которого на HEAD нет (он живёт только в истории: измерять в нём нечего).
-- **Цена названа замером** (этот же репозиторий, 149 коммитов, 135 колонок против
-  12): сборка отчёта 2,4 с → **6,3 с**, файл отчёта 122 КБ → **417 КБ**, `check` —
-  6,1 с. Отчёт пересобирает хук после каждого коммита, поэтому столько теперь стоит
-  и каждый коммит; кому это дорого — колонки задают файлом настроек (`size --init`
-  даёт черновик, дальше его правят: прежний выбор воспроизводится списком из
-  двенадцати файлов).
-- **Дерево складывается.** У каждой папки свой знак (▾/▸): он отвечает за то,
-  сколько дерева видно, а галочка — за то, что считается, и потому это две разные
-  цели нажатия, а не одна. Сложенное помнится между заходами и **не уезжает в
-  ссылку**: ссылку отправляют ради чисел, а не ради того, как у кого разложено
-  дерево. Запись у складывания своя (тот же паспорт отчёта), разворот всех папок её
-  убирает — как и возврат галочек. На 148 путях проекта это единственный способ
-  добраться до его середины.
-- **Вклейка программы страницы получила сторож.** Модульный синтаксис снимается
-  построчно, поэтому многострочный `import` оставлял в странице хвост и ломал её
-  целиком — теперь проверка ищет в вклеенной программе и имя модуля, а не только
-  начало строки.
+- **The columns were a sample of the project.** With no settings file the tool took the twelve largest files —
+  one per extension — and called the rest exceptions. The report counted its “total volume” over a handful of
+  files, and a reader took that for the volume of the project. Now a column is **every tracked git file that can
+  be measured**, and `skip` names only what cannot be one: the report itself, dependency locks, maps, built
+  output, an unknown format, a file over 512 KB — and a path that is not at HEAD (it lives in the history alone,
+  and there is nothing to measure in it).
+- **The price is named, and it is structural** (measured then on this repository, 149 commits, 135 columns
+  against 12): building the report went 2,4 s → **6,3 s** and the file 122 KB → **417 KB**; `check` — 6,1 s. The
+  hook rebuilds the report after every commit, so that is the price of every commit too, and the report grows
+  with the project, since every file is a row. Whoever finds it too much sets the columns by a settings file
+  (`--init` gives a draft to edit: the former choice is reproduced by a list of twelve files).
+- **The tree folds.** Every folder has a sign of its own (▾/▸): it answers how much of the tree is visible, while
+  the checkbox answers what is counted, so they are two different targets rather than one. A fold is remembered
+  between visits and **does not travel in the link**: a link is sent for the numbers, not for how someone's tree
+  is laid out. The fold has a record of its own (the same report passport), and unfolding every folder removes it
+  — as returning the checkboxes does.
+- **The pasting of the page's program got a guard.** Module syntax is removed line by line, so a multi-line
+  `import` left a tail in the page and broke it whole — the check now looks for the module's **name** in the
+  pasted program rather than only for the start of a line.
 
-### Что изменится в числах
+### What changes in the numbers
 
-**Колонка — каждый отслеживаемый файл, поэтому там, где настройки не заданы, колонок
-станет больше** (в этом репозитории 12 → 135), а вместе с ними вырастут «общий объём»
-(он и раньше считался по колонкам) и время прогона — оно названо выше. Числа ниже
-замерены на фикстуре, где колонки заданы файлом настроек: такой проект замер видит
-точно так же, как 2.2.0, — до последней клетки.
+**A column is every tracked file, so where no settings are given there will be more columns** (12 → 135 in this
+repository), and with them grow the “total volume” (it was counted by columns before too) and the time of a run —
+named above. The numbers below are measured on the fixture, where the columns are set by a settings file: such a
+project is seen by the measurement exactly as 2.2.0 sees it, to the last cell.
 
-| Файл | raw | min со strip | min с esbuild | tok |
+| File | raw | min with strip | min with esbuild | tok |
 |---|---|---|---|---|
 | code.js | 735 | 276 | 185 | 168 |
 | modern.js | 246 | 51 | 45 | 44 |
@@ -120,43 +102,42 @@
 | table.toml | 300 | 299 | 299 | 52 |
 | empty.js | 0 | 0 | 0 | 0 |
 | WORKLOG.md | 446 | 439 | 439 | 101 |
-| **ИТОГО** | **2511** | **1597** | **1483** | **540** |
+| **TOTAL** | **2511** | **1597** | **1483** | **540** |
 
 ## 2.2.0 — 2026-09-15
 
-Дерево страницы — дерево проекта: видно всё, числа есть у измеряемых.
+The page's tree is the project's tree: everything is visible, and the numbers belong to what is measured.
 
-- **В дереве было видно только то, что стало колонками.** В проекте со 147 файлами
-  и выведёнными настройками колонок двенадцать — дерево и показывало двенадцать
-  листьев, а про остальные молчало: читатель видел не дерево проекта, а список
-  измеренного, и решить, что файлы потерялись, было проще всего. Теперь в контракте
-  (`--data`) едет **каталог** — все пути, которые видит git (`ls-files`), — и дерево
-  строится по нему.
-- **Числа — только у колонок, и это видно, а не подразумевается.** Лист вне отчёта
-  стоит на своём месте, но подписью без галочки, а причина — во всплывающей строке,
-  и причин две: `rule` — такой файл колонкой быть не может (сам отчёт, замок
-  зависимостей, собранное, слишком крупный или формат без текста), `choice` — мог бы,
-  но в набор колонок не выбран (его задают настройки). Знак причины движок ставит
-  **теми же** правилами, по которым выбирает колонки, — иначе подсказка говорила бы
-  одно, а выбор делал другое. Сам отчёт в дереве назван **всегда** — и пока не
-  собран, и когда он вне git: его отслеживаемость это свойство момента, и зависеть
-  от неё отчёт не должен (иначе первая же пересборка в свежем клоне даёт другие
-  байты, и хук коммитит отчёт второй раз на пустом месте).
-- **Счётчик папки со смешанным составом — доля** («2/5»: два файла в отчёте из
-  пяти в папке), а целиком измеряемая папка считает как раньше («5»). Папка, где
-  измеряемых нет вовсе, галочки не получает: включать в ней нечего, но на месте она
-  остаётся — дерево не должно врать о том, что в проекте есть.
-- **Цена названа:** набор колонок этим не меняется, поэтому прогон не подорожал.
-  Замер на этом же проекте (162 колонки × 79 строк против 12): с токенами 16,1 с
-  вместо 2,4 с, а на живой истории полный набор ещё и отказывает (перенос состояния
-  теряет правку пути, которого нет на HEAD) — поэтому «мерить всё» решением не стало.
+- **Only what had become a column was visible in the tree.** With the settings derived and a dozen columns, the
+  tree showed a dozen leaves and was silent about the rest: a reader saw a list of the measured rather than the
+  project's tree, and deciding that files had gone missing was the easiest thing. The contract (`--data`) now
+  carries a **catalogue** — every path git sees (`ls-files`) — and the tree is built from it.
+- **Numbers belong to columns only, and that is visible rather than implied.** A leaf outside the report stands in
+  its place but as a caption without a checkbox, and the reason is in the tooltip — of two kinds: `rule` — such a
+  file cannot be a column (the report itself, a dependency lock, built output, one too large, or a format without
+  text), and `choice` — it could, but was not chosen as a column (the settings choose that). The engine sets the
+  mark of the reason by **the same** rules it uses to pick columns; otherwise the hint would say one thing while
+  the choice did another. The report itself is named in the tree **always** — both while it is not built and while
+  it is out of git: whether it is tracked is a property of the moment, and the report must not depend on it,
+  otherwise the first rebuild in a fresh clone would yield other bytes and the hook would commit the report a
+  second time over nothing.
+- **A folder of mixed composition gets a fraction** (“2/5”: two files of the folder's five are in the report),
+  while a folder that is measured whole counts as before (“5”). A folder with nothing measurable gets no
+  checkbox — there is nothing to switch on in it — but it stays in place: the tree must not lie about what the
+  project has.
+- **The price was named, and it is what kept this release from measuring every path.** The set of columns does not
+  change here, so a run did not become more expensive; what was measured then on this repository (162 columns ×
+  79 rows against 12) is the price of the third metric: **16,1 s** with tokens instead of 2,4 s without. On the
+  live history the full set refused then, losing an edit of a path that is not at HEAD — and that refusal turned
+  out to be a defect of its own rather than a property of measuring everything (`BLOCKERS.md` §B3, closed
+  2026-09-14). The next release made the change anyway (2.3.0) and named its own price there.
 
-### Что изменится в числах
+### What changes in the numbers
 
-**Ничего.** Числа считает тот же движок теми же датчиками: выпуск про то, что видно в
-дереве панели, а не про измерение. Таблица та же, что у 2.1.0, до последней клетки.
+**Nothing.** The same engine counts with the same sensors: the release is about what is visible in the panel's
+tree rather than about measurement, so the table is the one of 2.1.0 to the last cell.
 
-| Файл | raw | min со strip | min с esbuild | tok |
+| File | raw | min with strip | min with esbuild | tok |
 |---|---|---|---|---|
 | code.js | 735 | 276 | 185 | 168 |
 | modern.js | 246 | 51 | 45 | 44 |
@@ -168,45 +149,41 @@
 | table.toml | 300 | 299 | 299 | 52 |
 | empty.js | 0 | 0 | 0 | 0 |
 | WORKLOG.md | 446 | 439 | 439 | 101 |
-| **ИТОГО** | **2511** | **1597** | **1483** | **540** |
+| **TOTAL** | **2511** | **1597** | **1483** | **540** |
 
 ## 2.1.0 — 2026-09-15
 
-Вид страницы на десктопе: числам — вся оставшаяся высота, панели — своя прокрутка.
+The look of the page on a desktop: the numbers take the whole remaining height, the panel scrolls on its own.
 
-- **Под таблицей была пустота, а список файлов задавал высоту страницы.** На широком
-  экране оба столбца шли каждый со своей высотой (`align-items: start`), поэтому
-  высота страницы равнялась тому, что вышло у панели: замер до правки при окне
-  1440×900 — панель 883 px, страница 1097 при окне 900, под таблицей 195 px пустоты,
-  а нижние файлы дерева — за нижним краем окна (список при этом ещё и резался своим
-  потолком в 62vh). Теперь страница целиком укладывается в окно: строки сетки
-  названы по предмету, тянется одна рабочая — таблица берёт всю оставшуюся высоту
-  (1440×900: 1060 × 735 вместо 602), панель — не больше неё и прокручивается сама
-  (содержимое 804 при высоте 785). Список файлов на широком экране больше не режется:
-  все 23 подписи дерева видны сразу.
-- **Клик по галочке возвращал список к началу.** Панель рисуется заново, и вместе с
-  ней терялось место, до которого докурили: до нижних файлов дерева было не
-  добраться. Прокрутка панели и списка теперь часть вида — запоминается перед
-  пересборкой и ставится обратно (подтверждено в Chrome: при окне 1440×500
-  `panel.scrollTop` = 421 до клика и 421 после).
-- **Строка категорий липнет** к верху панели, пока листается дерево. Чтобы под
-  липкой строкой не читались проезжающие файлы, верхний отступ панели переехал в
-  первое поле: прокручиваемое видно и в отступе прокрутки (в полосе 13 px читались
-  `parity/` и `data.json` — теперь там сама строка).
-- **Расшифровка под деревом убрана**, а шрифт подписей файлов стал как у чисел
-  таблицы (12,5 px): расшифровка отодвигала числа, а её смысл стоит у того, что
-  объясняет — цвет дельты называет знак числа, способ и точность стоят под
-  переключателями метрик, знак пропуска — в подсказке клетки.
-- **Граница широкой раскладки — 899 px.** При ровно 900 px обе половины оформления
-  применялись к одной странице, и от «узкой» в «широкой» оставался потолок высоты
-  таблицы: те же пустые 179 px под ней на одном размере окна.
+- **There was emptiness under the table, and the file list set the page's height.** In a wide window both columns
+  ran each with its own height (`align-items: start`), so the page's height equaled whatever the panel came to —
+  measured before the fix at a window of 1440×900: the panel 883 px, the page 1097 in a 900 window, 195 px of
+  emptiness under the table, and the lower files of the tree below the bottom edge (the list was moreover cut by
+  its own cap of 62vh). Now the page fits the window whole: the grid's rows are named after their subject, one
+  working row stretches, and the table takes the whole remaining height while the panel grows no taller than it
+  and scrolls itself. On a wide screen the file list is no longer cut, so every caption of the tree is visible at
+  once.
+- **A click on a checkbox sent the list back to its beginning.** The panel is drawn anew, and the place one had
+  scrolled to went with it, so the lower files of the tree could not be reached at all. The panel's scroll and
+  the list's are now part of the view: both are remembered before a rebuild and put back after it (`panel.scrollTop`
+  and its twin; confirmed in Chrome at a 1440×500 window).
+- **The row of categories sticks** to the top of the panel while the tree is scrolled. So that passing files are
+  not read under the sticky row, the panel's top padding moved into its first field: what scrolls is seen in the
+  scroll padding too, and the band there holds the row itself rather than the names of files going by.
+- **The explanation under the tree is gone**, and the font of the file captions became the one of the table's
+  numbers (12,5 px): the explanation pushed the numbers away, while its meaning stands where it explains — the
+  colour of a delta names the sign of a number, the way and the precision stand under the metric switches, and
+  the mark of a skip is in the cell's tooltip.
+- **The boundary of the wide layout is 899 px.** At exactly 900 px both halves of the styling applied to one page,
+  and the cap on the table's height survived from the “narrow” half into the “wide” one — the same emptiness under
+  it at one and the same window size.
 
-### Что изменится в числах
+### What changes in the numbers
 
-**Ничего.** Правка — про вид страницы и прокрутку; движок тот же, что у 2.0.2, а
-страница получает от него готовые числа.
+**Nothing.** The fix is about the page's look and scrolling; the engine is the one of 2.0.2, and the page takes
+numbers ready-made from it.
 
-| Файл | raw | min со strip | min с esbuild | tok |
+| File | raw | min with strip | min with esbuild | tok |
 |---|---|---|---|---|
 | code.js | 735 | 276 | 185 | 168 |
 | modern.js | 246 | 51 | 45 | 44 |
@@ -218,27 +195,26 @@
 | table.toml | 300 | 299 | 299 | 52 |
 | empty.js | 0 | 0 | 0 | 0 |
 | WORKLOG.md | 446 | 439 | 439 | 101 |
-| **ИТОГО** | **2511** | **1597** | **1483** | **540** |
+| **TOTAL** | **2511** | **1597** | **1483** | **540** |
 
 ## 2.0.2 — 2026-09-15
 
-Инструкция перестала обещать лишний ручной шаг и назвала платформенную разницу.
+The instruction stopped promising an extra manual step and named the difference between platforms.
 
-- **README учил ставить хук руками.** В §6 осталась строка прежнего выпуска — «хуки
-  ставятся только командой `install-hook`, ни один обычный запуск их не создаёт», — а с
-  2.0.0 постановка своя (`bin/postinstall.js` и первый запуск). Текст теперь говорит то,
-  что делает код, и называет единственное исключение: pnpm 10 не исполняет скрипты
-  зависимостей («Ignored build scripts») — там хук ставит первый запуск, либо сборка
-  разрешается `pnpm.onlyBuiltDependencies` в манифесте потребителя.
-- **Названа одна ручная ступень, которая была невидимой.** Первый отчёт создаётся, но не
-  коммитится (новый файл в чужой истории — решение человека): это сказано в §6 и в
-  шаблоне `templates/README.md`, дальше отчёт обновляется отдельными коммитами сам.
+- **README taught installing the hook by hand.** §6 kept a line of an earlier release — “the hooks are installed
+  only by `install-hook`, no ordinary run creates them” — while since 2.0.0 the installation is its own
+  (`bin/postinstall.js` and the first run). The text now says what the code does and names the single exception:
+  pnpm 10 does not run the scripts of dependencies (“Ignored build scripts”) — there the hook is installed by the
+  first run, or the build is allowed by `pnpm.onlyBuiltDependencies` in the consumer's manifest.
+- **One manual step that was invisible is named.** The first report is created but not committed (a new file in
+  another's history is a person's decision): both §6 and the template `templates/README.md` say so, and from
+  there on the report updates itself in commits of its own.
 
-### Что изменится в числах
+### What changes in the numbers
 
-**Ничего.** Правка — только текст инструкции; движок тот же, что у 2.0.1.
+**Nothing.** The fix is the text of the instruction alone; the engine is the one of 2.0.1.
 
-| Файл | raw | min со strip | min с esbuild | tok |
+| File | raw | min with strip | min with esbuild | tok |
 |---|---|---|---|---|
 | code.js | 735 | 276 | 185 | 168 |
 | modern.js | 246 | 51 | 45 | 44 |
@@ -250,26 +226,26 @@
 | table.toml | 300 | 299 | 299 | 52 |
 | empty.js | 0 | 0 | 0 | 0 |
 | WORKLOG.md | 446 | 439 | 439 | 101 |
-| **ИТОГО** | **2511** | **1597** | **1483** | **540** |
+| **TOTAL** | **2511** | **1597** | **1483** | **540** |
 
 ## 2.0.1 — 2026-09-15
 
-Место отчёта в свежем проекте: `docs/size-report.html`, и каталог создаётся сам.
+Where the report lands in a fresh project: `docs/size-report.html`, and the directory is created on its own.
 
-- **Отчёт больше не ложится в корень.** Первая редакция вывода выбирала «рядом с
-  доками, если каталог `docs` есть, иначе в корне»: в проекте, который только что
-  поставил пакет, каталога ещё нет — и отчёт оказывался там, где его не ищут (замер:
-  свежий клон, установка из реестра, `docs/` не появился, файл лёг в корень). Теперь
-  адрес один: `docs/size-report.html`; каталог — часть адреса, а создаёт его тот, кто
-  пишет файл. Имя из настроек по-прежнему перебивает вывод.
-- Стережёт это проверка: проект без настроек и без каталога `docs` — отчёт в `docs/`,
-  в корне его нет, контрольный режим зелёный.
+- **The report no longer lands in the root.** The first edition of the output chose “beside the docs if the
+  directory `docs` exists, otherwise in the root”: in a project that has just installed the package there is no
+  directory yet, and the report turned up where nobody looks for it (measured: a fresh clone, an install from the
+  registry, `docs/` absent, the file in the root). Now there is one address — `docs/size-report.html`; the
+  directory is part of the address, and the one who writes the file creates it. A name from the settings still
+  overrides the output.
+- A check guards this: a project without settings and without `docs/` gets the report in `docs/`, has none in the
+  root, and the control mode is green.
 
-### Что изменится в числах
+### What changes in the numbers
 
-**Ничего.** Правка — про путь файла, а не про измерение. Таблица та же, что у 2.0.0.
+**Nothing.** The fix is about the file's path rather than about measurement, so the table is the one of 2.0.0.
 
-| Файл | raw | min со strip | min с esbuild | tok |
+| File | raw | min with strip | min with esbuild | tok |
 |---|---|---|---|---|
 | code.js | 735 | 276 | 185 | 168 |
 | modern.js | 246 | 51 | 45 | 44 |
@@ -281,7 +257,7 @@
 | table.toml | 300 | 299 | 299 | 52 |
 | empty.js | 0 | 0 | 0 | 0 |
 | WORKLOG.md | 446 | 439 | 439 | 101 |
-| **ИТОГО** | **2511** | **1597** | **1483** | **540** |
+| **TOTAL** | **2511** | **1597** | **1483** | **540** |
 
 ## 2.0.0 — 2026-09-15
 
@@ -307,7 +283,7 @@
   идёт (он меняется от коммита самого отчёта), и хук не коммитит его бесконечно;
   читателю этот список по-прежнему доступен: `--data`, `--json`, `size explain`.
 
-### Что изменится в числах
+### What changes in the numbers
 
 **Ничего.** Измерение не тронуто: те же датчики, те же способы, те же колонки. Что
 меняется у потребителя — **форма файла и его путь**: `size` (проверка) на прежнем
@@ -315,7 +291,7 @@
 получат отказ с названным ключом. Таблица ниже та же, что у 1.3.1, до последней
 клетки.
 
-| Файл | raw | min со strip | min с esbuild | tok |
+| File | raw | min with strip | min with esbuild | tok |
 |---|---|---|---|---|
 | code.js | 735 | 276 | 185 | 168 |
 | modern.js | 246 | 51 | 45 | 44 |
@@ -327,7 +303,7 @@
 | table.toml | 300 | 299 | 299 | 52 |
 | empty.js | 0 | 0 | 0 | 0 |
 | WORKLOG.md | 446 | 439 | 439 | 101 |
-| **ИТОГО** | **2511** | **1597** | **1483** | **540** |
+| **TOTAL** | **2511** | **1597** | **1483** | **540** |
 
 ## 1.3.1 — 2026-09-15
 
@@ -344,13 +320,13 @@
 - Ни поведение, ни артефакт, ни данные не тронуты — правка только в оформлении
   страницы (`--page`); статический артефакт (`--write`) этот выпуск не касается.
 
-### Что изменится в числах
+### What changes in the numbers
 
 **Ничего.** Этот выпуск не трогает ни измерение, ни форму отчёта: изменилась
 раскладка страницы, а числа считает тот же движок теми же датчиками. Таблица ниже та
 же, что у 1.3.0, до последней клетки.
 
-| Файл | raw | min со strip | min с esbuild | tok |
+| File | raw | min with strip | min with esbuild | tok |
 |---|---|---|---|---|
 | code.js | 735 | 276 | 185 | 168 |
 | modern.js | 246 | 51 | 45 | 44 |
@@ -362,7 +338,7 @@
 | table.toml | 300 | 299 | 299 | 52 |
 | empty.js | 0 | 0 | 0 | 0 |
 | WORKLOG.md | 446 | 439 | 439 | 101 |
-| **ИТОГО** | **2511** | **1597** | **1483** | **540** |
+| **TOTAL** | **2511** | **1597** | **1483** | **540** |
 
 ## 1.3.0 — 2026-09-15
 
@@ -396,7 +372,7 @@
 - Номер **1.3.0** — по SemVer: появилась возможность, которой не было; схема данных
   (`schema: 1`) та же.
 
-### Что изменится в числах
+### What changes in the numbers
 
 **У кого настройки есть — ничего.** Этот выпуск не трогает ни форму отчёта, ни счёт:
 таблица ниже та же, что у 1.2.0.
@@ -406,7 +382,7 @@
 же профиль, только записанный. Повторить замер можно только по закреплённому: без файла
 профиль выводится заново каждый запуск.
 
-| Файл | raw | min со strip | min с esbuild | tok |
+| File | raw | min with strip | min with esbuild | tok |
 |---|---|---|---|---|
 | code.js | 735 | 276 | 185 | 168 |
 | modern.js | 246 | 51 | 45 | 44 |
@@ -418,7 +394,7 @@
 | table.toml | 300 | 299 | 299 | 52 |
 | empty.js | 0 | 0 | 0 | 0 |
 | WORKLOG.md | 446 | 439 | 439 | 101 |
-| **ИТОГО** | **2511** | **1597** | **1483** | **540** |
+| **TOTAL** | **2511** | **1597** | **1483** | **540** |
 
 ## 1.2.0 — 2026-09-15
 
@@ -445,7 +421,7 @@
 - Номер **1.2.0** назван владельцем пакета; по строгому SemVer содержимое —
   исправление (PATCH): новых возможностей в поставке нет.
 
-### Что изменится в числах
+### What changes in the numbers
 
 **Ничего.** Таблица ниже та же, что у 1.1.0 и 1.1.1, до последней клетки: этот
 выпуск меняет текст под расхождением, а не числа. Замер на фикстуре — тот же
@@ -453,7 +429,7 @@
 (59 376 Б) и оба замороженных эталона не переснимались, а `--json` и артефакт
 побайтово равны эталону на фикстуре и на живой истории проекта-потребителя.
 
-| Файл | raw | min со strip | min с esbuild | tok |
+| File | raw | min with strip | min with esbuild | tok |
 |---|---|---|---|---|
 | code.js | 735 | 276 | 185 | 168 |
 | modern.js | 246 | 51 | 45 | 44 |
@@ -465,7 +441,7 @@
 | table.toml | 300 | 299 | 299 | 52 |
 | empty.js | 0 | 0 | 0 | 0 |
 | WORKLOG.md | 446 | 439 | 439 | 101 |
-| **ИТОГО** | **2511** | **1597** | **1483** | **540** |
+| **TOTAL** | **2511** | **1597** | **1483** | **540** |
 
 ## 1.1.1 — 2026-09-15
 
@@ -489,7 +465,7 @@
 - В поставку добавлен `LICENSE` (MIT) — манифест называл лицензию, а файла в
   тарболле не было.
 
-### Что изменится в числах
+### What changes in the numbers
 
 **Ничего.** Это не обещание, а замер: таблица ниже снята выпуском 1.1.1 и
 совпадает с таблицей 1.1.0 до последней клетки — измерение этот выпуск не трогает
@@ -498,7 +474,7 @@
 эталону на фикстуре и на живой истории проекта-потребителя, а его закоммиченная
 таблица пересобирается в те же байты (`sha256 863ce3e9…`).
 
-| Файл | raw | min со strip | min с esbuild | tok |
+| File | raw | min with strip | min with esbuild | tok |
 |---|---|---|---|---|
 | code.js | 735 | 276 | 185 | 168 |
 | modern.js | 246 | 51 | 45 | 44 |
@@ -510,7 +486,7 @@
 | table.toml | 300 | 299 | 299 | 52 |
 | empty.js | 0 | 0 | 0 | 0 |
 | WORKLOG.md | 446 | 439 | 439 | 101 |
-| **ИТОГО** | **2511** | **1597** | **1483** | **540** |
+| **TOTAL** | **2511** | **1597** | **1483** | **540** |
 
 Разрезы те же, что у 1.0.0 и 1.1.0, и читаются так же: `raw` — размер объекта
 git; `min` со `strip` — упрощение, под которым снят эталон паритета; `min` со
@@ -545,7 +521,7 @@ git; `min` со `strip` — упрощение, под которым снят �
   ни токена, ни шага в CI: `github:` pnpm разрешает в архив `codeload.github.com`
   по HTTPS (`WORKLOG.md` §44).
 
-### Что изменится в числах
+### What changes in the numbers
 
 **Ничего.** Это не обещание, а замер: таблица ниже снята выпуском 1.1.0 и совпадает
 с таблицей 1.0.0 до последней клетки — метрики, настройки по умолчанию и датчики те
@@ -555,7 +531,7 @@ git; `min` со `strip` — упрощение, под которым снят �
 истории проекта-потребителя, а его закоммиченная таблица (211 КБ) тем же выпуском
 пересобирается в те же байты (`sha256 863ce3e9…`).
 
-| Файл | raw | min со strip | min с esbuild | tok |
+| File | raw | min with strip | min with esbuild | tok |
 |---|---|---|---|---|
 | code.js | 735 | 276 | 185 | 168 |
 | modern.js | 246 | 51 | 45 | 44 |
@@ -567,7 +543,7 @@ git; `min` со `strip` — упрощение, под которым снят �
 | table.toml | 300 | 299 | 299 | 52 |
 | empty.js | 0 | 0 | 0 | 0 |
 | WORKLOG.md | 446 | 439 | 439 | 101 |
-| **ИТОГО** | **2511** | **1597** | **1483** | **540** |
+| **TOTAL** | **2511** | **1597** | **1483** | **540** |
 
 Разрезы те же, что у 1.0.0, и читаются так же: `raw` — размер объекта git (ни от
 чего, кроме него, не зависит); `min` со `strip` — умолчание, под которым снят
@@ -592,12 +568,12 @@ gzip в выпуск по-прежнему не входит (`PLAN.md` §10, D4
 это числа с `esbuild 0.28.2` и `gpt-tokenizer 4.0.0` в тех разрезах, где они
 задействованы.
 
-### Что изменится в числах
+### What changes in the numbers
 
 Замер на фикстуре, состояние на HEAD (`now`), метрики `raw`, `min`, `tok`, словарь
 `o200k_base`:
 
-| Файл | raw | min со strip | min с esbuild | tok |
+| File | raw | min with strip | min with esbuild | tok |
 |---|---|---|---|---|
 | code.js | 735 | 276 | 185 | 168 |
 | modern.js | 246 | 51 | 45 | 44 |
@@ -609,7 +585,7 @@ gzip в выпуск по-прежнему не входит (`PLAN.md` §10, D4
 | table.toml | 300 | 299 | 299 | 52 |
 | empty.js | 0 | 0 | 0 | 0 |
 | WORKLOG.md | 446 | 439 | 439 | 101 |
-| **ИТОГО** | **2511** | **1597** | **1483** | **540** |
+| **TOTAL** | **2511** | **1597** | **1483** | **540** |
 
 - **У проекта с прежними настройками не поедет ничего.** Существующие конфиги
   `minify.engine` не задают, а умолчание — `strip`: те же комментарии и отступы, те

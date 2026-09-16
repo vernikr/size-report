@@ -405,10 +405,11 @@ files). The parts below are the order to work in; each is one commit.
   classifying the 95 unnamed `§N` references that today resolve nowhere **by design** (a document citing
   its own sections, addresses of plans and journals) — a blind replacement of the rule would redden the
   tree on them.
-- [ ] **Carried into M23–M24 (the CHANGELOG part):** `test/changelog.test.js` holds two **Russian** words of
-  the document — it requires the heading `### Что изменится в числах` (an assert, so loud) and skips the table's
-  header row by the cell `Файл` (translated, that row would go into the number parser and fail — also loud).
-  Both must be changed in the same commit as the translation; neither goes blind in silence.
+- [x] **Settled at M23 — the guard held three Russian words, not two:** besides the heading
+  `### Что изменится в числах` (an assert, loud) and the header cell `Файл` it also compared the table's
+  last row with `concat(['ИТОГО'])`. All three now read the English document (`What changes in the numbers`,
+  `File`, `TOTAL`), the check itself is unchanged, and the red was shown by experience: the old form on the
+  translated document fails on the section, the new form is 2 of 2 green.
 - [ ] **Known coupling, not a defect:** three places in `tools/docs-facts.js` read the **engine's printed
   output** in Russian — `USAGE.split('\nКоманды:\n')`, the `'Команды:'`/`'Режимы:'` split in `commandsAt`, and
   `'Причины отказа кодом 2'` in the commands check. Documents quote that output as data, so translating
@@ -816,10 +817,21 @@ files). The parts below are the order to work in; each is one commit.
   what exists, measured: requirements §3/§4/§6/§7/§9/§11/§12/§13, module-design §2–§9 and §15, the two registries
   (**all three blockers closed, 14 notes open** — N1, N3–N7, N9, N11, N12, N14–N18), the frozen fixtures, and the
   archive's sections §16–§18, §21, §26–§27, §30, §35–§36, §40–§41, §44, §53–§57.
-- [ ] **M23 CHANGELOG 1–222** — 148 Russian: the framing of "what changes in numbers" and the
-  releases 2.4.0 … 2.1.0. Numbers and tables are facts and stay.
-- [ ] **M24 CHANGELOG 223–422** — 114 Russian: 2.0.2 … 1.3.0.
-- [ ] **M25 CHANGELOG 423–691** — 190 Russian: 1.2.0 … 1.0.0.
+- [x] **M23 CHANGELOG 1–261** — done 2026-09-16 (the cut line in the slicing was approximate; the real
+  boundary is 261, just before `## 2.0.0`). 184 added / 208 removed = **392 changed lines in `CHANGELOG.md`**,
+  7 / 7 = 14 in `test/changelog.test.js` — 406 of the 600 budget, two files. Cyrillic in the file 452 → **260**
+  lines, of which 13 are the fixture's data rows in the numbers tables (`заметки.md`, unchanged in every
+  release) — so **no prose is left in the part**. Passed: the framing of "what changes in numbers" and the
+  releases 2.4.0, 2.3.0, 2.2.0, 2.1.0, 2.0.2, 2.0.1. The numbers and the tables are facts and stay; they are
+  now held by the guard against a live run on the fixture, and none was rewritten. Verified against the code:
+  `bin/postinstall.js` → `autoInstall` (`src/hook.js`) with the platform exception named in it, the default
+  report address `docs/size-report.html` (`src/project.js:94`) and its directory made by the writer
+  (`src/artifact.js:21`), README §6 naming `install-hook` and `pnpm.onlyBuiltDependencies`, and
+  `templates/README.md` telling about the first report.
+- [ ] **M24 CHANGELOG 262–422** — 2.0.0 … 1.3.0. The framing "what changes in numbers" below the first
+  release is already English (the heading of every section was translated at M23).
+- [ ] **M25 CHANGELOG 423–666** — 1.2.0 … 1.0.0. The last release's file is the only one with the extra
+  sections `### Что вошло`, `### Исправлено` and `### Не входит в 1.0.0`.
 - [ ] **M26 the plan files themselves** — 10 Russian lines in `docs/plans/**` (quotations of the
   tool's own words). Last, because the subplan's own completion criterion
   (`rg -l '[А-Яа-яЁё]' -g '*.md' -g '!worklog/**'` finds nothing) has to hold after it.
@@ -839,7 +851,8 @@ files). The parts below are the order to work in; each is one commit.
   them breaks the standards; they must leave the criterion. (2) **Quoted tool data inside translated documents** —
   the §1 rule of `REFACTOR.md` keeps a cause name, a printed refusal and a printed report line verbatim Russian:
   `REFACTOR.md` 16 lines now and `BLOCKERS.md` 10, each named at its place. (3) Other documents have their
-  quotations still to be named as this rework reaches them: `README.md` 4 lines, `CHANGELOG.md` 452 (untranslated),
+  quotations still to be named as this rework reaches them: `README.md` 4 lines, `CHANGELOG.md` 260 lines
+  (13 of them the fixture's own data rows in the numbers tables, part of the file not yet passed),
   the plan files — `markdown.md` 34, `plan.md` 3, `comments.md` 2 lines. **`PLAN.md` left this list on
   2026-09-16: it is translated whole and holds zero Cyrillic lines.** M26 decides the wording of the criterion:
   either it excludes the frozen fixtures and counts named quotations apart, or each quotation is listed. Left as
