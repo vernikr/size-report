@@ -257,6 +257,14 @@ comment diff stays under the commit budget, otherwise it is split by file groups
   as its verdict (`tools/gates/deps.js` puts the rule comment into `reports/deps.json`), and verdicts
   and other printed strings are out of scope.
 
+- [ ] **Leftover, found 2026-09-16 by pass M17 of `markdown.md`:** a re-scan of comment lines holding
+  Cyrillic over `src bin tools test` finds **22 lines of Russian prose in five files the modules above
+  had declared done** — `src/parse.js` 39, 40, 42 (M3a); `tools/docs-facts.js` 28–30, 35 (M9b, touched
+  again by M7 of `markdown.md`); `tools/parity-freeze.js` 91–92 (M9c); `tools/refusals.js` 204–205,
+  230–231, 278–279, 289, 299, 303–304, 326–327 (M9b); `test/minify.test.js` 268 (M10d). They are prose
+  rather than data — two of them quote the tool's printed advice, and inside a sentence — so they were
+  in scope. Cost: one pass over five files (22 comment lines, ≈90 changed source lines), no code.
+
 Order within a module: the file a reader opens first (entry, then what it calls), so the
 diffs read in the same order as the code.
 

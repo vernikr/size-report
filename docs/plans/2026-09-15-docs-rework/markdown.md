@@ -603,14 +603,41 @@ files). The parts below are the order to work in; each is one commit.
   metrics, 23 with one, the choice written into the address); `R-5.8`'s budgets are gone from the code and
   `test/docs-numbers.test.js` reads no seconds. 58 distinct `R-` addresses cited from outside resolve; nothing
   renumbered. No release — the file is not in the tarball.
-- [ ] **M17 PLAN §1–§3** (21–165) — 111 Russian.
-- [ ] **M18 PLAN §4** (166–471) — 206 Russian: the target architecture, the load-bearing part.
-- [ ] **M19 PLAN §5, steps 0–2** (472–597) — 161 Russian.
-- [ ] **M20 PLAN §5, steps 3–6** (598–845) — 140 Russian.
-- [ ] **M21 PLAN §6–§9** (846–1030) — 129 Russian.
-- [ ] **M22 PLAN §10–§14** (1031–1219) — 155 Russian. The plan of a finished move: what the
-  steps settled is kept, the steps themselves go (the architecture is what is still
-  load-bearing). PLAN is a `§`-reference target, so its numbering stays.
+- [x] **M17 PLAN head and §1–§3** (1–175) — done 2026-09-16, and the head (1–20) belonged to no part of
+  the split, so it went here. 145 added / 134 removed = **279 changed lines in one file** (1218 → 1228
+  lines), Cyrillic in the file 910 → **788** with **not one line left in the passed range** (the first
+  Cyrillic line is 176 — §4, the next pass). `verify:fast` green (5 steps, 72 of 177), no gate files, no
+  release — the file is not in the tarball. **The inventory was re-measured against the consumer's own
+  history** (`git show 58cd786^:…`, read-only): 1145 / 472 lines, 27 columns, 161 lines of the artifact —
+  all four figures hold, and the five flags of the old tool are in its source (`--help` did not exist
+  then, R-0.3). **The list of "keys to be moved" named `minify` and `tokens`, which did not exist then** —
+  the plan's own steps 3 and 4 added them; replaced by the eleven keys of that day, measured, pointing at
+  §4.6. **§1.4's promise column became a measurement of the live consumer**, and three rows did not hold
+  as promises: `.gitignore` gained nothing (the consumer commits the report, and `--init` does not edit
+  `.gitignore`, R-4.8), the two harness steps became one, and the two tools were deleted while the
+  settings kept their name. **§2 named the settings file wrongly** — it is `size-table.config.json`
+  (`CONFIG_NAME` in `src/config.js`) and the consumer kept that very name, so `size-report.config.json`
+  was never the answer; the "block for AI agents" row is corrected too (deliberately not made, R-4.11).
+  **§3's fourteen invariants were read against the code:** item 3's "not one `git show` per pass" control
+  does not exist — the rule is held by `test/git-pins.test.js`; item 4's key is the blob's sha plus the
+  metric (`measurer` in `src/history.js`), the versioned cache being §4.4's plan (`REFACTOR.md` 185 says
+  it is not made); item 5's mechanism is named (`showSha` in `src/data.js`); item 10's guard is the worker
+  that lives for the run (R-5.4); **item 14 cited `test/contract.test.js`, which does not exist** — the
+  set of fields is held by `test/contract-data.test.js`. In §1.6 every reference into the requirements and
+  the design was verified to exist (§3.1, §4.2, §6.1, §7.1, §7.2, §12 of `requirements.md`; §7.3, §8.2 of
+  `module-design.md`), and the abolished 12.2 s gave way to what closed the gap (R-5.7, R-5.8). **A guard
+  caught this pass's own defect** — `PLAN.md: §4.9 → requirements.md`, a bare `§4.9` on a line whose
+  nearest document name was `requirements.md` — fixed in the document, no guard weakened. Addresses
+  measured: 69 section keys before and 69 after, none lost or added, and of the 112 references the guard
+  resolves not one points into `PLAN.md` past a heading that exists. **Carried out of this pass:**
+  `comments.md` gets the 22 Russian prose comments left in five files it had declared done.
+- [ ] **M18 PLAN §4** (177–482) — 206 Russian: the target architecture, the load-bearing part.
+- [ ] **M19 PLAN §5, steps 0–2** (483–682) — 161 Russian.
+- [ ] **M20 PLAN §5, steps 3–6** (683–856) — 140 Russian.
+- [ ] **M21 PLAN §6–§9** (857–1041) — 128 Russian (13 + 18 + 83 + 14 by section).
+- [ ] **M22 PLAN §10–§14** (1042–1230) — 153 Russian (82 + 9 + 11 + 39 + 12 by section). The plan of a
+  finished move: what the steps settled is kept, the steps themselves go (the architecture is what is
+  still load-bearing). PLAN is a `§`-reference target, so its numbering stays.
 - [ ] **M23 CHANGELOG 1–222** — 148 Russian: the framing of "what changes in numbers" and the
   releases 2.4.0 … 2.1.0. Numbers and tables are facts and stay.
 - [ ] **M24 CHANGELOG 223–422** — 114 Russian: 2.0.2 … 1.3.0.
@@ -634,7 +661,7 @@ files). The parts below are the order to work in; each is one commit.
   them breaks the standards; they must leave the criterion. (2) **Quoted tool data inside translated documents** —
   the §1 rule of `REFACTOR.md` keeps a cause name, a printed refusal and a printed report line verbatim Russian:
   `REFACTOR.md` 16 lines now and `BLOCKERS.md` 10, each named at its place. (3) Other documents have their
-  quotations still to be named as this rework reaches them: `README.md` 4 lines, `PLAN.md` 910 (untranslated),
+  quotations still to be named as this rework reaches them: `README.md` 4 lines, `PLAN.md` 788 (untranslated),
   `CHANGELOG.md` 452 (untranslated), the plan files 3 + 2 + 31 lines. M26 decides the wording of the criterion:
   either it excludes the frozen fixtures and counts named quotations apart, or each quotation is listed. Left as
   is, the criterion would forbid the very rule three passes were built on.

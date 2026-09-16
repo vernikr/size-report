@@ -1,165 +1,176 @@
-# PLAN.md — вынос учёта объёма в пакет `size-report`
+# PLAN.md — moving volume accounting into the package `size-report`
 
-Дата: 2026-09-14. Роль документа: рабочий план переноса, доработки и оформления
-инструмента учёта объёма (сейчас — `tools/size-table.js` внутри плагина
-Select Safe Resets) в самостоятельный npm-пакет.
+Date: 2026-09-14. Role of the document: the working plan for moving, refining and packaging the
+volume tool (then `tools/size-table.js` inside the Select Safe Resets plugin) into a package of
+its own. The move is done and the package is released, so what this document still carries is the
+architecture (§4), the invariants (§3) and the boundaries (§2), while §5 is the record of how the
+steps went.
 
-Источники (лежат в `docs/` этого репозитория):
+Sources (`docs/` of this repository):
 
-- `docs/requirements.md` — продуктовые требования заказчика (что и зачем).
-- `docs/module-design.md` — архитектурный проект выноса (как устроить модуль).
-- Проект-потребитель: `../figma/safe-resets` (`tools/size-table.js`,
-  `tests/size-table.js`, `size-table.config.json`, `docs/ROADMAP.md` §33–§35,
-  §54–§56, `docs/TESTING.md`, `WORKLOG.md`).
+- `docs/requirements.md` — what the product is for.
+- `docs/module-design.md` — how the module is designed.
+- The consumer project, `../figma/safe-resets`, where the tool used to live; since the move it
+  holds a dependency, a settings file and two commands.
 
-В документе три части, как и просили: **перенос** (§5), **доработка** (§4, §5
-шаги 2–6), **оформление в пакет** (§8). Разделы §1–§3 — то, без чего план был бы
-фантазией: инвентаризация фактов, границы и инварианты.
+The document has three parts: **the move** (§5), **the refinement** (§4, §5 steps 2–6) and
+**the packaging** (§8). §1–§3 are what keeps the plan from being a fantasy: the inventory of
+facts, the boundaries and the invariants.
 
 ---
 
-## 1. Инвентаризация: что есть сейчас
+## 1. Inventory: what there was before the move
 
-### 1.1. Файлы
+Measured 2026-09-14 on the consumer project, at the revision before the package replaced the tool
+there (`58cd786^`). The move is done, so the section is a record of what the boundaries were drawn
+from rather than a description of today.
 
-| Файл в `safe-resets` | Объём | Роль |
+### 1.1. Files
+
+| File in `safe-resets` | Volume | Role |
 |---|---|---|
-| `tools/size-table.js` | 1145 строк | Весь движок: git-история, метрики, стрипперы, журнал, рендер статичного HTML, режимы CLI |
-| `tests/size-table.js` | 472 строки | Проверки генератора: конфиг, стрипперы, реестр метрик, рендер на синтетике, якоря, числа против `--json` и `git cat-file`, чтение пачкой, вёрстка, «проверка обязана падать» |
-| `size-table.config.json` | 27 колонок | Проектное: колонки с алиасами путей, метрики `raw`/`min`, локаль `ru`, журнал `WORKLOG.md`, вывод `docs/size-table.html` |
-| `docs/size-table.html` | 161 строка | Артефакт отчёта, **лежит в git** и обновляется отдельным коммитом |
+| `tools/size-table.js` | 1145 lines | The whole engine: git history, metrics, strippers, the journal, the static HTML, the CLI modes |
+| `tests/size-table.js` | 472 lines | The engine's checks: settings, strippers, the registry of metrics, rendering on a synthetic history, anchors, numbers against `--json` and `git cat-file`, batched reads, layout, "a check must be able to fail" |
+| `size-table.config.json` | 27 columns | The project's own: columns with path aliases, `raw`/`min`, locale `ru`, the journal `WORKLOG.md`, the report `docs/size-table.html` |
+| `docs/size-table.html` | 161 lines | The report artifact: **committed**, refreshed by a commit of its own |
 
-### 1.2. Поверхность CLI (сегодня)
+### 1.2. The CLI surface then
+
+Modes and flags only: no `--help` and no word commands, which is the gap R-0.3 closed. Today's
+surface is §4.7's.
 
 ```text
-node tools/size-table.js                 контрольный режим: артефакт ↔ история git
-node tools/size-table.js --write         перегенерировать отчёт
-node tools/size-table.js --json          строки как JSON в stdout
-node tools/size-table.js --init [файл]   черновик конфига для нового проекта
-node tools/size-table.js --config <путь>  другой файл настроек (нужен для чужого проекта)
-node tools/size-table.js --force         перезаписать конфиг при --init
+node tools/size-table.js                  the check: the artifact against git history
+node tools/size-table.js --write          rebuild the report
+node tools/size-table.js --json           rows as JSON on stdout
+node tools/size-table.js --init [file]    draft settings for a new project
+node tools/size-table.js --config <path>  another settings file (for a foreign project)
+node tools/size-table.js --force          overwrite the settings when --init meets them
 ```
 
-### 1.3. Конфиг: ключи, которые надо перенести
+### 1.3. Settings of that day
 
-`output`, `locale` (`ru`/`en`), `title`, `heading`, `fixCommand`,
-`metrics` (`raw`/`min`/`gzip`), `columns[{label, paths[]}]`,
-`minify{ext{}, guard[]}`, `journal{path, url, pattern, anchor}|null`,
-`links{commitUrl}`, `rows{merges, sha}`, `skip[]`.
+The eleven keys of the consumer's file: `output`, `locale`, `title`, `heading`, `fixCommand`,
+`metrics`, `columns`, `journal`, `links`, `rows`, `skip` — measured on the same revision as the
+table above. `minify` and `tokens` did not exist then: the plan's own steps 3 and 4 added them,
+and §4.6 holds the schema as it stands.
 
-### 1.4. Точки интеграции в проекте-потребителе (что придётся править)
+### 1.4. Integration points in the consumer
 
-| Место | Что там сейчас | Что произойдёт при выносе |
+The third column was a promise and is now a measurement (2026-09-16):
+
+| Place | Then | Now |
 |---|---|---|
-| `package.json` → `scripts.sizes`, `test:sizes`, `test:all` | `node tools/size-table.js [--write]` | Команды переезжают на `size` из пакета |
-| `tests/harness.js` → `STEPS` | Два шага волны 1 (`tools/size-table.js` — контроль, `tests/size-table.js` — снятый прогон `capture` с `inputs` и меткой `HEAD`) | Шаги уходят вместе с инструментом; входной список снятого прогона и `HEAD_INPUT` больше не про размеры |
-| `tests/doc-sync.js` | Читает `runCounts('tests/size-table.js')`, требует `fail === 0`, сверяет счётчики трёх наборов с `docs/TESTING.md` | Зависимость снимается: счётчиков размера в проекте не остаётся |
-| `docs/TESTING.md` §`tools/size-table.js`, §`tests/size-table.js` | Описание механики и легенда | Переезжает в документацию пакета; в проекте остаётся одна ссылка «объём считает size-report» |
-| `AGENTS.md` §0, §2, §4, §5 | Карта документации, команды `sizes`/`test:sizes`, правило «таблицу не правим руками» | Правится на «инструмент поставлен пакетом, отчёт вне git» |
-| `README.md` §«Объём кода» | Ссылка на `docs/size-table.html` | Ссылка на новый путь отчёта + «открыть двойным щелчком» |
-| `docs/ROADMAP.md` §33–§35 | История трёх релизов таблицы | Остаётся историей; пункты §54–§56 уезжают в пакет (они уже отложены «вместе с ней») |
-| `.github/workflows/ci.yml` | `fetch-depth: 0` с комментарием «таблица объёма собирается по всей истории» | Полная история нужна только job'у отчёта (если он останется); шаг `test:sizes` уходит |
-| `.gitignore` | Отчёта нет | Появляется `.size-report/` |
-| `tools/size-table.js`, `tests/size-table.js`, `size-table.config.json` | В репозитории | Удаляются из проекта (кроме конфига — он либо переносится в новый формат, либо остаётся под новым именем) |
+| `package.json` → `scripts.sizes`, `test:sizes` | `node tools/size-table.js [--write]` | `size --write` and `size`: two commands of the package |
+| `tests/harness.js` → `STEPS` | two steps of wave 1 (the engine's check and its captured run) | one step calling the package's entry point |
+| `tests/doc-sync.js` | read `runCounts('tests/size-table.js')` | no counters of size left in the project |
+| `docs/TESTING.md` | sections about the engine's mechanics and the legend | one section about the package |
+| `AGENTS.md` | the document map, the commands `sizes`/`test:sizes`, "the table is not edited by hand" | "the tool came as a package, the report is derived" |
+| `README.md` | a link to `docs/size-table.html` | unchanged: the report stayed where it was |
+| `docs/ROADMAP.md` §33–§35 | the history of three releases of the table | history, untouched |
+| `.github/workflows/ci.yml` | `fetch-depth: 0` for the whole history | kept, and the step calls the package |
+| `.gitignore` | nothing about the report | unchanged: the consumer commits the report, and whether it is committed is the project's own business (`--init` does not edit `.gitignore`, R-4.8) |
+| `tools/size-table.js`, `tests/size-table.js`, `size-table.config.json` | in the repository | the two tools **deleted**, the settings kept under their own name |
 
-### 1.5. Что уже сделано «под переезд»
+### 1.5. What was already in place
 
-- Генератор **уже не знает о проекте ничего**: ни имён файлов, ни журнала, ни
-  локали, ни пути вывода — всё в конфиге (§«Проектное — в конфиге, механика —
-  здесь»), есть режим `--init`, подбирающий черновик конфига в чужом проекте.
-- Инвариант «строка про коммит не может лежать внутри самого коммита» уже
-  отработан: `rows.sha: false` делает артефакт неподвижной точкой сборки.
-- В `docs/ROADMAP.md` зафиксировано, что три работы по ускорению теста
-  (§54–§56: контрольные прогоны на крошечном временном репозитории, `--json` из
-  снятого прогона, разделение набора на быстрый и медленный) **отложены вместе с
-  таблицей** — то есть уже считаются работой нового репозитория, а не плагина.
+The engine already knew nothing about the project — file names, the journal, the locale and the
+report's path all lived in the settings, and `--init` drafted them in a foreign project. The
+invariant "a commit's row cannot sit inside the commit itself" was worked out too: with
+`rows.sha: false` a row does not name its commit (`showSha` in `src/data.js`), so the artifact is
+a fixed point of the assembly. Both are why the move was a move rather than a rewrite.
 
-### 1.6. Слабые места, которые план закрывает
+### 1.6. The weak spots the plan closes
 
-1. **`min` — не минификация.** Сейчас это «снятие комментариев и отступов»
-   (`stripJs` + `stripLines`), переименования имён нет. Требование §7.3
-   `module-design.md` — настоящий минификатор (esbuild), а упрощение остаётся
-   только для незнакомых форматов и обязано быть помечено.
-2. **Нет токенов.** Требование §3.1 `requirements.md` — третья метрика, «вес для
-   ИИ-агента», с выбором семейства моделей и честной пометкой точности.
-3. **Отчёт статичен.** Суммы и дельты посчитаны на сборке; в таблице нет
-   возможности выключить файл или категорию. Требование §8.2 `module-design.md`
-   — дерево файлов, чекбоксы, переключатели метрик, пересчёт суммы на лету.
-4. **Единственный контроль — «артефакт ↔ история».** Он держится на том, что
-   отчёт лежит в git. Требование §6.1 `requirements.md` убирает отчёт из git —
-   значит, нужен другой контроль полноты (см. §4.5).
-5. **Нет проверки «коммит тронул неподслеживаемый файл».** Требование §4.2
-   `requirements.md`: это должно быть нарушением, а не молчанием.
-6. **Нет автоматического обновления по коммиту** (§7.1 `requirements.md`) и
-   защиты от зацикливания (§7.2).
-7. **`gzip` в реестре метрик** — в v1 не нужен (требование §12: сжатый размер
-   вне рамок), держать его в поставке незачем.
-8. **Цена прогона.** Тест таблицы — 12,2 с из 12,2 с всего набора (пять полных
-   проходов по истории). При переезде это уже не чужая боль, а наша.
+Each was a gap rather than a defect, and each is closed today — the step of §5 and the row of
+`REFACTOR.md` are named:
+
+1. **`min` was not minification** — comments and indentation off (`stripJs` + `stripLines`), no
+   renaming, while requirement §7.3 `module-design.md` asks for a real minifier and a marked
+   approximation for the rest. Closed by §5 step 3 (R-5.5).
+2. **No tokens** — the third measure, "the weight for an AI agent", with a named family and an
+   honest mark of exactness (requirement §3.1 `requirements.md`). Closed by §5 step 4 (R-5.6).
+3. **The report was static** — sums and deltas counted at assembly time, no way to switch a file
+   or a category off (requirement §8.2 `module-design.md`: a tree of files, checkboxes, switches
+   of metrics, the total recounted on the fly). Closed by §5 step 2 (R-2.6).
+4. **The only control was "artifact ↔ history"** — and it holds while the report is in git, which
+   requirement §6.1 `requirements.md` takes away; another control of completeness was needed
+   (§4.5). Closed by the coverage check (R-4.12).
+5. **Nothing noticed a commit that touched an untracked file** — requirement §4.2
+   `requirements.md` wants a violation rather than silence. Closed by `size check` (R-4.12).
+6. **No refresh on a commit** and no protection from a loop (`requirements.md` §7.1 and §7.2).
+   Closed by the hook (`PLAN.md` §4.9).
+7. **`gzip` sat in the registry of metrics** — the compressed size is out of the first version
+   (requirement §12 `requirements.md`). Closed by **D4**: the metric stays in the package, the
+   default set does not carry it.
+8. **The price of a run** — the table's checks were the whole suite's time (five full passes over
+   the history), and after the move that was our pain rather than someone else's. Closed by the
+   split of the suite (R-5.7); the targets by time were abolished afterwards (R-5.8).
 
 ---
 
-## 2. Границы: что уезжает, что остаётся в проекте
+## 2. Boundaries: what leaves, what stays in the project
 
-| Уезжает в пакет `size-report` | Остаётся в `safe-resets` |
+| Leaves for the package `size-report` | Stays in `safe-resets` |
 |---|---|
-| Чтение git-истории, метрики (raw/min/tok), минификаторы, токенизаторы, кэш | Исходники плагина и документация — это **входные данные** для замера |
-| Сборка данных (`measure`) и интерактивная страница отчёта (`render`) | Файл настроек `size-report.config.json` |
-| Тесты и фикстуры инструмента | Строка зависимости в `package.json` и 2–3 команды в `scripts` |
-| Схема настроек, шаблоны CI и git-хука, блок для ИИ-агентов | Строка `.size-report/` в `.gitignore` |
+| Reading git history, the metrics (`raw`/`min`/`tok`), minifiers, tokenizers, the memory of a run | The plugin's sources and documents — they are the **input** of the measurement |
+| The assembly of data (`measure`) and the interactive report page (`render`) | The settings file, still `size-table.config.json` (`CONFIG_NAME` in `src/config.js`) |
+| The tests and fixtures of the tool | The dependency line in `package.json` and two commands in `scripts` |
+| The settings schema and the templates (settings, CI, a note; a block for `AGENTS.md` was deliberately not made, R-4.11) | The report's path and whether the report is committed (`--init` does not edit `.gitignore`) |
 
-**Принцип:** «механика не копируется в проект». Проект знает про инструмент
-ровно три вещи: зависимость, файл настроек, команду запуска.
+**The principle:** "the mechanics are never copied into a project". A project knows three things
+about the tool: the dependency, the settings file, the command.
 
 ---
 
-## 3. Инварианты, которые переносим без изменений
+## 3. The invariants that move unchanged
 
-Это контракт пакета, а не детали реализации — каждый пункт уже оплачен
-проблемой в проекте-потребителе.
+This is the package's contract rather than an implementation detail — every item was paid for by a
+problem in the consumer project.
 
-1. **Источник правды — git**, а не рабочее дерево: размеры берутся из блобов
-   коммитов, отчёт не зависит от того, что открыто в редакторе.
-2. **Пересборка по всей истории, а не дозапись.** Идемпотентность и
-   самовосстановление дороже экономии.
-3. **Чтение версий файлов пачками.** `git cat-file --batch-check` по 1000 спек
-   за вызов + `--batch` только для тех блобов, которым нужно содержимое; дедуп
-   по спеке и по sha. Контроль в тесте: **ни одного `git show`** за проход.
-4. **Кэш по содержимому.** Ключ «sha блоба + датчик + версия алгоритма»;
-   одинаковые версии файла (откаты, повторные слияния, неменявшиеся файлы) не
-   пересчитываются.
-5. **Строка-коммит не может описывать сам коммит.** Коммиты, тронувшие только
-   артефакт отчёта (и всё из `skip`), строки не получают.
-6. **Полнота истории.** На shallow-клоне — отказ с готовой командой починки
-   (`git fetch --unshallow` / `fetch-depth: 0`), а не молча короткая таблица.
-7. **`%ad` в зоне автора** (не машины и не UTC): иначе CI и локальная сборка
-   расходятся.
-8. **Слияния — обычные коммиты** (`--diff-merges=first-parent`): правки
-   разрешения конфликта обязаны попасть и в строку, и в перенос состояния.
-9. **Детерминированное форматирование** чисел (`\u2009` вручную, без
-   `toLocaleString`) и никаких «плавающих» полей в данных: повторный расчёт на
-   той же истории даёт тот же файл байт-в-байт.
-10. **Гард стриппера**: результат упрощения JavaScript обязан компилироваться
-    (`vm.Script`, для модулей — `vm.SourceTextModule` в одном рабочем потоке на
-    прогон, см. `REFACTOR.md` R-5.4).
-    Упрощение не имеет права молча выбросить что-то кроме комментариев и отступов.
-11. **Сверка с рабочим деревом** (`assertMatchesDisk`) — двусторонняя, и обе
-    стороны сравнивают содержимое, а не размеры. Состояние на HEAD обязано совпасть
-    с деревом коммита, и по содержимому, и по составу, — это ловит потерю правки
-    при переносе состояния между коммитами. Файл на диске обязан соответствовать
-    тому же содержимому с точностью до переводов строк, которые git возвращает не
-    всегда; файлы, изменённые в дереве, выпадают (`BLOCKERS.md` §B2).
-12. **Ссылка строки ведёт в раздел журнала**, а якорь повторяет адресную строку
-    GitHub (`anchor()`), а не «примерно похож на неё».
-13. **Настройки git закреплены на границе вызова.** Вывод не зависит от настроек
-    машины: `core.quotePath`, раскраска, блок подписи, кодировка подписей и локаль
-    задаются явно в одном сборщике аргументов, а не в каждом вызове — иначе числа
-    верны на одной машине и неполны на другой (`BLOCKERS.md` §B1).
-14. **Данные против производных.** Движок отдаёт абсолютные значения и устройство
-    таблицы (`reportData`), а дельты, суммы, «сейчас» и фильтры считает страница:
-    она одна знает, что включено в просмотр. Производной величины в контракте нет
-    ни одной, и это стережёт проверка по составу полей (`test/contract.test.js`),
-    а не договорённость.
+1. **The source of truth is git**, not the working tree: sizes come from the blobs of commits, so
+   the report does not depend on what is open in the editor.
+2. **Rebuild over the whole history rather than append to it.** Idempotence and self-repair are
+   worth more than the saving.
+3. **Read file versions in batches.** `git cat-file --batch-check` answers about 1000 specs per
+   call and `--batch` is asked only for the blobs whose content is needed, with dedup by spec and
+   by sha; `raw` needs the object's size alone and never asks for content. Held by
+   `test/git-pins.test.js`: no direct git call anywhere may go around the shared list of pins.
+4. **Measure each content once.** The key is the blob's sha plus the metric and the memory lives
+   for the run, so identical versions of a file (a revert, a repeated merge, a file that did not
+   change) are not measured twice. A content cache with a version of the algorithm is §4.4's plan
+   rather than a fact.
+5. **A commit's row cannot describe the commit itself.** Commits that touched only the report
+   artifact (and everything in `skip`) get no row, and with `rows.sha: false` a row does not name
+   its commit (`showSha` in `src/data.js`), so the artifact is a fixed point of the assembly.
+6. **Coverage of the history.** A shallow clone is a refusal with a ready fix (`git fetch
+   --unshallow` locally, `fetch-depth: 0` in CI) rather than a silently short table.
+7. **`%ad` in the author's zone** (not the machine's and not UTC): otherwise CI and a local build
+   disagree.
+8. **Merges are ordinary commits** (`--diff-merges=first-parent`): an edit made while resolving a
+   conflict must reach both the row and the carried state.
+9. **Deterministic formatting of numbers** (thin spaces made by hand rather than by
+   `toLocaleString`) and no floating fields in the data: the same history counted again gives the
+   same file byte for byte.
+10. **The stripper's guard:** a simplified JavaScript file must still compile — `vm.Script` for a
+    script and `vm.SourceTextModule` in a worker that lives for the run (`REFACTOR.md` R-5.4).
+    Simplification has no right to drop anything but comments and indentation in silence.
+11. **The comparison against the working tree** (`assertMatchesDisk`) is two-way, and both sides
+    compare content rather than sizes. The state at HEAD must match the commit's tree in content
+    and in composition — that catches an edit lost while state was carried between commits — and
+    the file on disk must match the same content up to the line endings git does not always
+    return; files edited in the tree drop out (`BLOCKERS.md` §B2).
+12. **A row's link leads to a section of the journal**, and the anchor repeats GitHub's address
+    line (`anchor()`) rather than roughly resembling it.
+13. **The git settings are pinned at the boundary of the call.** The output does not depend on the
+    machine: `core.quotePath`, colouring, the signature block, the encoding of signatures and the
+    locale are set explicitly in one argument builder rather than in every call — otherwise the
+    numbers are right on one machine and short on another (`BLOCKERS.md` §B1).
+14. **Data against derived values.** The engine hands over absolute values and the shape of the
+    table (`reportData`), while deltas, totals, "now" and filters are counted by the page, which
+    alone knows what is switched on. Not one derived quantity may appear in the contract, and that
+    is held by a check of the set of fields (`test/contract-data.test.js`) rather than by
+    agreement.
 
 ---
 
