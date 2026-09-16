@@ -628,3 +628,13 @@ files). The parts below are the order to work in; each is one commit.
 - `wc -l` before/after and the deleted claims recorded in the worklog entry of that turn.
 - The whole subplan is done when
   `rg -l '[А-Яа-яЁё]' -g '*.md' -g '!worklog/**' -g '!docs/size-report.html'` finds nothing.
+  **As written that cannot hold, and the measurement is here (2026-09-16):** three kinds of Russian text are
+  data rather than documentation. (1) **The frozen fixtures** — `fixtures/synthetic/README.md` (32 lines) and
+  `fixtures/parity/README.md` (15) are among the files `check:standards` compares byte for byte, so translating
+  them breaks the standards; they must leave the criterion. (2) **Quoted tool data inside translated documents** —
+  the §1 rule of `REFACTOR.md` keeps a cause name, a printed refusal and a printed report line verbatim Russian:
+  `REFACTOR.md` 16 lines now and `BLOCKERS.md` 10, each named at its place. (3) Other documents have their
+  quotations still to be named as this rework reaches them: `README.md` 4 lines, `PLAN.md` 910 (untranslated),
+  `CHANGELOG.md` 452 (untranslated), the plan files 3 + 2 + 31 lines. M26 decides the wording of the criterion:
+  either it excludes the frozen fixtures and counts named quotations apart, or each quotation is listed. Left as
+  is, the criterion would forbid the very rule three passes were built on.
