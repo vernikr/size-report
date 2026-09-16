@@ -622,3 +622,33 @@ references stayed the same after the fix.
   path and no guard reads it as one. No action needed: the name still resolves, and the file's own location is in
   the README.
 
+- **N24. The frozen `--json` carries Russian of its own: the skip words are part of the contract.** Measured
+  2026-09-16 while planning subplan S1 of the string work: `SKIP_WORDS` in `src/history.js` prints the reason a
+  commit got no row, and two of the three are Russian in the shipped answer —
+  `{ merge: 'merge', report: 'только таблица', flat: 'без изменения объёма' }`. They are baked into both
+  references: `fixtures/parity/data.json` holds `только таблица` 49 times and `без изменения объёма` 5 times
+  (measured with `rg -o '\([а-яё ]+\)'`), `fixtures/synthetic/golden.json` holds two of them, and
+  `test/parity.test.js` compares `--json` with that reference **byte for byte**. The rest of the printed
+  surface is not frozen: `rg -c 'починка|Команды|Режимы|Коды выхода'` over `fixtures/**` answers nothing, so
+  the help, the causes and the mode texts of S1 move no reference.
+
+  **The consequence.** A translation of `SKIP_WORDS` (subplan S4) reddens `test/parity.test.js` and
+  `pnpm run check:standards` on the spot, and the red is mechanical: the frozen answers are the very thing
+  being compared. It is the same class as N21 (the fixture builders), met from the shipped side rather than
+  from the generator's side.
+
+  **Options and their price.** (1) Re-take both references: `golden.json`, `data.json` and the artifact hashes
+  change — the numbers keep their values; but a re-take is a statement about today's engine rather than about
+  the parity the references exist to prove, so it has to be one commit with the translation, and the worklog
+  entry has to say plainly that the numbers were re-measured rather than moved. (2) Move the three words into
+  the locale dictionaries (`src/locales.js`): they are printed text, so a dictionary is their proper home, and
+  with the fixtures pinning `locale: "ru"` the references keep the very bytes they hold today — the cheapest
+  way to stay honest, at the price of touching the source of the `--json` contract (its values and their
+  number do not change) and of adding a locale-keyed path where a constant stands today. (3) Leave
+  `SKIP_WORDS` Russian and name it in the allow-list beside the `ru` dictionary: the `--json` answer keeps one
+  Russian word per reason, and the criterion of the work has a named exception instead of a plan it cannot
+  afford.
+
+  **For the user to decide:** (1), (2) or (3) — best together with N21, since both ask the same question from
+  two sides: whether the frozen layer may move.
+

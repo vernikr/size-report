@@ -33,6 +33,7 @@ report.
 | `fixtures/**` | Frozen references: `pnpm run check:standards` re-takes them and compares byte for byte, and `test/frozen.test.js` holds their hashes. Inventories: the consumer's `history.bundle` (2 270 lines of the tool's own output, frozen in September), `fixtures/parity/data.json` (214), `fixtures/*/config.json` (`title`, `heading`, column labels — the sample data being measured), `fixtures/*/golden.json` (commit subjects of the synthetic history) and the fixtures' `README.md` (written by the generator, compared byte for byte). Touching any of them means re-taking both references — a decision with a price, `BLOCKERS.md` N21. |
 | Russian sample data (`docs/заметки.md`, subjects, file names, labels) | It is what the measurement is measured **on**: the traps of the synthetic fixture exist to prove that a non-ASCII path, a quoted subject and an HTML-escaped signature survive. |
 | Quotes of old output in records (`BLOCKERS.md`, the archived plans, `worklog/`) | A record of what a reader saw then is true of then; `BLOCKERS.md` states the rule in its own header. |
+| `docs/plans/2026-09-16-i18n-english/**` | A subplan quotes the strings it translates and carries the counter's own pattern; without the quotation a reader cannot see what is meant, and the guard `G1` therefore skips this folder. |
 
 ## Current state — measured 2026-09-16
 
@@ -79,10 +80,10 @@ checks, `D*` — the declarative files, `G*` — the guard. Sums are the measure
 | # | Subplan | Owns | Lines | Status |
 |---|---|---|---|---|
 | T0 | `plan.md` | this tracker: the map, the allow-list, the criterion, the order | — | **written 2026-09-16** |
-| S1 | `surface.md` | `src/refusal.js` (46), `src/args.js` (26), `src/cli.js` (4), `src/modes.js` (13), `src/locales.js` (45) — the help, the cause registry, CLI refusals, and the **default-locale decision** (today `locale: 'ru'`) | 134 | not started |
+| S1 | `surface.md` | `src/refusal.js` (46), `src/args.js` (26), `src/cli.js` (4), `src/modes.js` (13) — the help, the cause registry, the CLI refusals and what the modes print; `src/locales.js` (45) is named there as staying Russian (**default locale** = `BLOCKERS.md` N19, not decided) | 89 | **written 2026-09-16** |
 | S2 | `settings.md` | `src/config.js` (35), `src/project.js` (4), `src/init.js` (18) — what a settings file says when it is wrong, and what `--init` prints | 57 | not started |
 | S3 | `measurement.md` | `src/metrics.js` (20), `src/minify.js` (4), `src/strip.js` (1), `src/strip/guard.js` (6), `src/parse.js` (1), `src/optional.js` (1) — metric captions, the method and accuracy marks, the guard's verdicts | 33 | not started |
-| S4 | `diagnostics.md` | `src/git.js` (3), `src/history.js` (12), `src/check.js` (12), `src/doctor.js` (33), `src/explain.js` (24) — `check`, `explain`, `doctor` and the skip reasons | 84 | not started |
+| S4 | `diagnostics.md` | `src/git.js` (3), `src/history.js` (12), `src/check.js` (12), `src/doctor.js` (33), `src/explain.js` (24) — `check`, `explain`, `doctor` and the skip reasons; **`SKIP_WORDS` in `src/history.js` is frozen into both references** (`BLOCKERS.md` N24), so it depends on the N21 decision | 84 | not started |
 | S5 | `automation.md` | `src/hook.js` (40), `src/page/panel.js` (3), `bin/postinstall.js` (2) — the installed hook's text and its commit subject, the panel's service words | 45 | not started |
 | W1 | `tools.md` | the 12 instruments: `tools/refusals.js` (169), `parity-live.js` (35), `parity-freeze.js` (31), `run-tests.js` (25), `pack-check.js` (21), `check-standards.js` (21), `make-fixture.js` (17), `harness.js` (13), `yaml.js` (10), `docs-facts.js` (4), `page-harness.js` (3) | 349 | not started |
 | W2 | `sensors.md` | `tools/gates/**` (77) and the `why` of every entry in `tools/suites.js` (38) — **gate files: `Gate-Change:` trailer required** | 115 | not started |
@@ -183,3 +184,11 @@ other's texts. The order is a choice (the reader who pays is first), not a depen
   and price: `BLOCKERS.md` N21.
 - **Releases.** A portion that changes a shipped literal changes the package's bytes. Release a
   PATCH per portion, or batch the releases and say so in the commits: `BLOCKERS.md` N20.
+- **The `--json` contract carries Russian of its own.** Measured 2026-09-16 while planning S1: the
+  skip words of `src/history.js` (`SKIP_WORDS`: `только таблица` 49 times and `без изменения
+  объёма` 5 times inside `fixtures/parity/data.json`, twice in `fixtures/synthetic/golden.json`)
+  are part of the frozen contract, and `test/parity.test.js` compares `--json` byte for byte with
+  the synthetic reference. So S4's skip reasons are the one place where a translation moves a
+  reference already — the options are `BLOCKERS.md` N24, and the decision belongs with N21
+  (may the frozen layer move). S1's own claim of an untouched reference is checked in
+  `surface.md` and holds: neither reference carries the help, the causes or the mode texts.
