@@ -46,7 +46,7 @@ test('храповик: своё покрытие зелено, просадка
 
   const down = verdict('down', summary({ 'src/x.js': point(50, 70, 60) }), base);
   assert.equal(down.code, 1, 'падение строк ниже базы прошло молча:\n' + down.out);
-  assert.match(down.out, /src\/x\.js — lines: было 80, стало 50/,
+  assert.match(down.out, /src\/x\.js — lines: was 80, now 50/,
     'просадка названа не по файлу и метрике:\n' + down.out);
 
   const branch = verdict('branch', summary({ 'src/x.js': point(80, 40, 60) }), base);
@@ -60,7 +60,7 @@ test('новый непокрытый исходник красный, новы�
     'src/x.js': point(80, 70, 60), 'src/new.js': point(0, 0, 0)
   }), base);
   assert.equal(blind.code, 1, 'новый исходник без единого выполнения прошёл молча:\n' + blind.out);
-  assert.match(blind.out, /src\/new\.js — lines: было не в базе, стало 0/,
+  assert.match(blind.out, /src\/new\.js — lines: was not in the baseline, now 0/,
     'новый непокрытый файл назван не по файлу:\n' + blind.out);
 
   const covered = verdict('covered', summary({

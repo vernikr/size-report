@@ -17,7 +17,7 @@ rg -cP '[\p{Cyrillic}]' tools/suites.js dup-baseline.json coverage-baseline.json
 |---|---|---|
 | `tools/gates/run.js` | 21 | the eleven step labels of `STEPS` (35–45), the `:hermetic` mark of a step's name (72), the unknown-profile refusal (87–88) and the profile's own words — the summary header, the `s`/`steps` of the total, the red-steps verdict and its advice (109–123) — **done 2026-09-16, 21 → 0** |
 | `tools/gates/dup.js` | 20 | the sensor's verdicts, its advice lines, the names of its two looks, and the baseline's `note` (128–129) — **done 2026-09-16, 20 → 0**, with the `note` inside `dup-baseline.json` (its 1 line) moved with it |
-| `tools/gates/coverage.js` | 18 | the verdicts, the regression lines, the advice, and the baseline's `note` (81–84) |
+| `tools/gates/coverage.js` | 18 | the verdicts, the totals line, the regression lines, the advice, the gone/new lines and the baseline's `note` (81–84) — **done 2026-09-16, 18 → 0**, with the `note` inside `coverage-baseline.json` (1 line) moved by hand |
 | `tools/gates/gatefiles.js` | 7 | the guard's verdicts (94, 98–99, 103, 110, 117) |
 | `tools/gates/metrics.js` | 6 | two verdicts, the refusal of a failed run, the overflow line and the advice (37, 63–71) — **done 2026-09-16, 6 → 0** |
 | `tools/gates/deps.js` | 5 | the verdicts, the refusal of a failed run, the advice and the "for information" line (26, 47, 51, 53, 56) — **done 2026-09-16, 5 → 0** |
@@ -48,7 +48,7 @@ different from W1, and the list is exact:
 | `'✓ gatefiles: коммит можно ставить (…)'` (`gatefiles.js:~103`) | `test/gates-files.test.js:106` (`/коммит можно ставить/`) |
 | `'dup: новых клонов N (…)'` (`dup.js:197`) | `test/gates-dup.test.js:72` (`/новых клонов 1/`) — **moved 2026-09-16 to `'dup: new clones N (…)'` / `/new clones 1/`** |
 | `'dup: базы нет (…)'` (`dup.js:139`) | `test/gates-dup.test.js:88` (`/базы нет/`) — **moved 2026-09-16 to `'dup: there is no baseline (…)'` / `/no baseline/`** |
-| `'<файл> — <метрика>: было X, стало Y'` and `'не в базе'` (`coverage.js:115-116`) | `test/gates-coverage.test.js:49`, `:63` |
+| `'<файл> — <метрика>: было X, стало Y'` and `'не в базе'` (`coverage.js:115-116`) | `test/gates-coverage.test.js:49`, `:63` — **moved 2026-09-16 to `… : was X, now Y` / `was not in the baseline` and `/… was 80, now 50/`, `/… was not in the baseline, now 0/`** |
 | `'deps: находок нет (…)'` (`deps.js:53`) | `test/gates-deps.test.js:48` (`/находок нет/`) — **moved 2026-09-16 to `'deps: no findings (…)'` / `/no findings/`** |
 | `'metrics: новых нарушений N (…)'` (`metrics.js:63`) | `test/gates-metrics.test.js:144` (`/новых нарушений 1/`) — **moved 2026-09-16 to `'metrics: new violations N (…)'` / `/new violations 1/`** |
 
@@ -65,8 +65,13 @@ updated, and not editing the JSON by hand. **For `dup` that turned out to be wro
 says why** (`BLOCKERS.md` **N31**): the script writes `current.counts`, the committed baseline holds 15
 fingerprints while the tree produces 8, so a re-take would prune seven of them — a composition change
 rather than a wording one. The `note` was therefore moved by hand, with the fingerprints byte-identical
-and the text proved equal to the script's own literals; the pruning is the user's decision. The same
-question is measured for `coverage-baseline.json` in step 4 rather than assumed to be the same.
+and the text proved equal to the script's own literals; the pruning is the user's decision. **The same
+question was measured for `coverage-baseline.json` in step 4, and the answer is a different one:** its
+scripted re-take would neither add nor drop a key (39 keys in, 39 out) but would move **20** metric
+values (13 falls and 7 rises over 4 files), so
+there too the `note` was moved by hand — and that baseline is already red on the tree, which is
+`BLOCKERS.md` **N32**. Two baselines, two failure modes: one would lose keys, the other would rewrite
+values.
 
 **4. `tools/suites.js`'s `why`** (38) — one reason per check in `FAST` and `SLOW`, read by
 `test/suites.test.js` for its **presence** (`:51`: a file in the full run without a named reason is
@@ -179,11 +184,27 @@ not a mark). The `commit-msg` hook answers at once; the `pre-push` hook re-reads
    to the user). The sensor answers as before: `✓ dup: no new clones (clones 8, lines 47, the baseline holds
    15 fingerprints; looks 2: the baseline file, against origin/main)` — **the translation moved no finding**,
    which is the step's own acceptance.
-4. **`tools/gates/coverage.js`** — the verdicts, the regression lines, the advice, the `note`, the two
-   probe reads (`test/gates-coverage.test.js:49`, `:63`) and `coverage-baseline.json` re-taken with
-   `pnpm run baseline:coverage` (which needs `pnpm run cover` first). Red first: translate
-   `'было … стало …'` alone → `:49` red. The re-take is the slowest step of this owner and the reason
-   the profile's `cover` step exists.
+4. **`tools/gates/coverage.js` — done 2026-09-16, 18 → 0**, with `coverage-baseline.json`'s `note` (1
+   line) and the two probe reads (`test/gates-coverage.test.js:49` → `/… was 80, now 50/`, `:63` →
+   `/… was not in the baseline, now 0/`) in the same commit. The eighteen lines: the fallback reason
+   (`'no report'`), the refusal of a run that produced no coverage, the baseline's `note`, the re-take
+   verdict and its advice, the refusal when there is no baseline, the totals line (`lines 80.6%,
+   branches 89.05%, functions 92.37%`), the regressions verdict and its detail lines, the advice, the
+   green verdict and the gone/new lines. **Red first, one printed message at a time:** exactly **one**
+   reddens anything — the regression detail line, which carries both probe reads — while the other twelve
+   (both refusals, the note, the re-take verdict and advice, the totals line, the regressions verdict, the
+   advice, the green verdict, the gone and new lines) leave the probe green.
+
+   **The baseline is where this step differs from step 3, and the difference is the finding.** The scripted
+   re-take was measured into a temporary file, never over the repository: it would keep the same **39**   keys (0 new, 0 gone) but change **20** metric values — thirteen falls and seven rises over four files —
+   because the ratchet is
+   already red without this work: `pnpm run cover` answered `✗ cover: regressions 13 (the baseline holds 39
+   files)` **before** the translation and answers the same thirteen and the same totals after it. So the
+   `note` was moved by hand (one-line diff, `files` byte-identical, the text proved equal to the script's
+   four literals), and the red is recorded as **N32** with the thirteen values, the baseline's age (261
+   commits since `202c768`) and the price of each answer. Unlike N31, no key would move — the two baselines
+   fail in two different ways, which is why the step's own acceptance reads "the sensor answers the same
+   way": 13 regressions, 39 files, the totals unchanged.
 5. **`tools/gates/gatefiles.js`** — the guard's verdicts (94, 98–99, 103, 110, 117) and the three
    reads in `test/gates-files.test.js:77`, `:106`, `:115`. Red first: this is the one sensor whose red
    is cheap to produce by hand — commit a gate change without a trailer and read the message; the

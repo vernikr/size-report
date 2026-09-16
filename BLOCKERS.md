@@ -963,3 +963,39 @@ references stayed the same after the fix.
   has 8, which a reader of the file has to notice for themselves. Nothing else moves either way, and the same
   question will be measured for `coverage-baseline.json` in W2's step 4 rather than assumed to be identical.
 
+- **N32. The coverage ratchet is red on the tree: 13 regressions, and the baseline is 261 commits old.**
+  Measured 2026-09-16 in W2's step 4, **before** anything was translated: `pnpm run cover` answers
+  `✗ cover: regressions 13 (the baseline holds 39 files)` with the totals `lines 80.6%, branches 89.05%,
+  functions 92.37%` and **0** new and **0** gone files — the key set of the baseline is intact, the values
+  are behind. The thirteen: `src/cli.js` 91.95 → 91.66, `src/config.js` 95.79 → 95.72, `src/data.js`
+  branches 91.66 → 89.47, `src/derived.js` 75.86 → 75, `src/doctor.js` 98.93 → 98.91, `src/explain.js`
+  97.69 → 97.67, `src/git.js` 98.19 → 98.14, `src/hook.js` 88.16 → 87.64, `src/metrics.js` 99.25 → 98.88,
+  `src/modes.js` 98.34 → 98.31, `src/parse.js` 79.41 → 78.35, `src/strip.js` 98.27 → 98.18,
+  `src/strip/guard.js` 96.61 → 94.82. After the sensor's own translation the same run answers the same
+  thirteen and the same totals — so the red is pre-existing and this portion moved no measurement.
+
+  **The age, measured.** The baseline was last written on 2026-09-15 (`202c768`, the page-and-hook release)
+  and **261 commits** have landed since, 34 of them touching `test/**` and 33 `src/**`; each of the thirteen
+  files was last touched either by a campaign translation commit (eleven of them) or by that very commit
+  (`src/data.js`, `src/derived.js`). A hypothesis is worth naming rather than asserting: a translated
+  literal that becomes a two-line concatenation adds a line to the file's total, so a share falls without a
+  lost check. **Why nobody saw it:** `cover` lives in the slow profile, CI runs that only on a schedule
+  (`Проверки по расписанию`, cron `17 4 * * 1`), and that workflow — landed `10c9e43`, 2026-09-15 — has no
+  runs at all yet: the first scheduled run is still ahead, and it will meet this red.
+
+  **What was done instead of a re-take.** The baseline's `note` was moved by hand, as in N31: the JSON diff
+  is one line, `files` is byte-for-byte what it was (39 keys, same values, compared with `git show HEAD:`),
+  and the text was proved equal to the script's own four literals. The re-take itself was measured but not
+  taken — it would keep the same 39 keys (0 added, 0 gone) and move **20** metric values: the thirteen
+  falls listed above and seven rises over four files (measured by comparing the coverage summary the sensor
+  had just written with the baseline): `src/history.js` lines 95.06 → 95.31 and
+  branches 96.8 → 96.96, `src/journal.js` lines 89.39 → 89.7, `src/optional.js` lines 93.54 → 93.93,
+  `src/project.js` lines 96.22 → 96.63, branches 91.78 → 92.22, functions 94.44 → 95.
+
+  **For the user to decide:** re-take the baseline (one `pnpm run baseline:coverage` with the
+  `Gate-Change:` trailer) or fix the coverage. Price of the re-take: it accepts the thirteen falls **and**
+  the four rises without asking why the falls happened — the ratchet then starts from today. Price of
+  waiting: the slow profile is red locally and its first scheduled CI run will be red too. Unlike N31 this
+  is **not** a composition change (no key would appear or vanish), which is the difference between the two
+  baselines, and the reason the two questions are recorded separately.
+
