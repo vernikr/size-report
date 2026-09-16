@@ -109,228 +109,173 @@ the engine, which stays stable.
 
 ---
 
-## 4. Структура модуля (файлы и папки)
+## 4. The module's structure (files and folders)
 
-Один пакет, без внутренних «под-пакетов» (на первый релиз проще):
+One package, no inner packages. What came out is flatter than the first sketch: a folder per layer did not
+happen, and the two seams that turned out to be real are stripping and the page's program.
 
 ```text
-size-report/
-├── package.json            # имя, команда запуска, зависимости, что экспортировать
-├── bin/size.js             # точка входа из терминала
-├── src/
-│   ├── cli.js              # разбор аргументов, режимы (init/measure/render/check/doctor/…)
-│   ├── config/
-│   │   ├── schema.json     # формальная схема настроек (для подсказок и проверки)
-│   │   ├── defaults.js     # значения по умолчанию
-│   │   └── load.js         # чтение + проверка + миграция старых настроек
-│   ├── git/
-│   │   └── history.js      # история коммитов, чтение версий пакетами, проверка полноты
-│   ├── inventory/
-│   │   ├── discover.js     # найти все файлы проекта (по git), что исключить
-│   │   └── classify.js     # разложить файлы по категориям (док / служебные / ресурсы / прочее)
-│   ├── metrics/
-│   │   ├── registry.js     # общий интерфейс «датчика»
-│   │   ├── raw.js          # сырой размер (без чтения содержимого)
-│   │   ├── minify/
-│   │   │   ├── registry.js # выбор минификатора по типу файла
-│   │   │   ├── esbuild.js  # настоящая минификация (JS/TS/CSS/JSON)
-│   │   │   ├── html.js     # минификация разметки
-│   │   │   └── fallback.js # «косметическое» упрощение для незнакомых форматов
-│   │   └── tokens/
-│   │       ├── registry.js # выбор токенизатора по семейству моделей
-│   │       ├── openai.js   # ChatGPT (точный подсчёт)
-│   │       ├── claude.js   # Claude (приближение — см. §7)
-│   │       └── deepseek.js # DeepSeek (приближение/по словарю — см. §7)
-│   ├── measure/
-│   │   ├── engine.js       # проход по истории, перенос состояния, замер
-│   │   └── cache.js        # кэш «содержимое + датчик + версия → число»
-│   ├── model/
-│   │   └── data.js         # каноническая структура данных (§6)
-│   ├── render/
-│   │   ├── html.js         # собирает самодостаточный файл отчёта
-│   │   ├── json.js         # выдача данных как JSON (для агента/CI)
-│   │   └── app/            # программа отчёта (см. §8), собирается в один бандл
-│   └── doctor.js           # диагностика окружения и настроек
-├── templates/              # вставка в AGENTS.md, готовый шаблон CI
-└── test/                   # фикстуры и эталонные тесты
+@vernikr/size-report/
+├── bin/          size.js — the entry point from a terminal; postinstall.js — installing the hook
+├── src/          flat, one subject per file:
+│                   cli.js, args.js, modes.js     reading the call, its plan, what each mode does
+│                   config.js, project.js         settings: reading and checking / deriving from the project
+│                   refusal.js, locales.js        exit codes and causes / the printed words
+│                   git.js, history.js, journal.js  reads with pinned settings / walking the history / the journal's sections
+│                   metrics.js, strip.js, strip/, minify.js, tokens.js  the sensors and the ways to count
+│                   data.js, derived.js           the page's contract / the derived text (totals, the state at HEAD)
+│                   artifact.js, css.js, table.css, page/  assembling the one file, styling, the program
+│                   check.js, explain.js, doctor.js, init.js, hook.js  the commands
+│                   tool.js, size-table.js, optional.js, parse.js, parse-worker.js  the package's identity, the help, the lazy loading, the parser behind the stripping guard
+├── templates/    size-report.config.json, README.md, ci.yml — what lands in a consumer project
+└── test/         the checks of this repository (they do not travel in the package)
 ```
 
-Ключевой принцип границ: **ядро (git + замер) не содержит никакого знания о
-конкретном проекте и не делает ввод/вывод с диском напрямую** — оно получает
-«источник истории» как параметр. Это позволяет тестировать ядро на синтетической
-истории за миллисекунды и, при желании, подставить другой источник (не только git).
+The boundary principle: **the core — git and measuring — knows nothing about a concrete project, and it reads
+git through one module with its settings pinned** (`src/git.js`); that pinning, rather than an injectable
+automation source, is what makes a number the same on any machine. The sketch's other idea — handing the core a
+"history source" as a parameter so that it could run on a synthetic one — did not become code: the checks get
+their speed from building a real repository in a temporary directory (`tools/synthetic/`, `fixtures/`), and git
+is the only source the core has.
 
 ---
 
-## 5. Файлы и категории (открытие и классификация)
+## 5. Files and categories (discovery and classification)
 
-### 5.1. Поиск файлов
+### 5.1. Discovery
 
-Движок сам находит файлы проекта: берёт список всех отслеживаемых git-файлов и
-отбрасывает заведомо неинтересное (картинки и прочие нетекстовые файлы, результаты
-сборки, временные файлы, служебные файлы зависимостей). Ничего не перечисляется
-вручную.
+The engine finds the project's files itself: the paths git reports as tracked, minus what cannot be a column.
+Nothing is listed by hand. What is left out is excluded by rule and named in the report's catalog with the
+reason it stands there: the report itself, dependency locks, built output, an extension the engine does not
+know, and a file over the size threshold (512 KB — the guard against generated files). With no settings file
+the profile is derived from the project itself, and `--init` pins the derived one.
 
-### 5.2. Классификация по категориям
+### 5.2. Classification by category
 
-Каждый файл попадает ровно в одну категорию. Категории нужны для быстрых кнопок
-на странице. Набор категорий настраивается, по умолчанию:
+Every file falls into exactly one category, and the categories are what the quick buttons on the page are made
+of. The set of names is fixed to four, what an extension means is a table the settings may overrule:
 
-| Категория | Примеры (по умолчанию) | Назначение |
+| Category | Default extensions | What it stands for |
 |---|---|---|
-| **документация** | `.md` и подобные | описания, планы, журналы |
-| **служебные** | `.mjs`, `.yaml`, `.yml`, `.toml`, `.json`, конфиги CI, файлы блокировок зависимостей | настройки, инфраструктура |
-| **ресурсы** | `.svg`, шрифты, файлы локализации/строк | статические материалы |
-| **код** (или «прочее») | всё остальное | исходники продукта |
+| **docs** | `.md`, `.markdown`, `.rst`, `.txt`, `.adoc` | descriptions, plans, journals |
+| **chore** | `.json`, `.yaml`, `.yml`, `.toml`, `.ini`, `.cfg`, `.conf`, `.lock`, `.editorconfig` | settings, infrastructure |
+| **assets** | `.svg`, images, fonts | static material |
+| **code** | everything else | the product's sources |
 
-Правило классификации — это простая таблица «признак файла → категория»
-(по расширению и по пути), которую можно переопределить в настройках.
-«Строковые» ресурсы (файлы локализации) попадают в «ресурсы» по умолчанию, но
-границу можно сдвинуть.
+A column may name its category in the settings, and then the extension table is not consulted at all; otherwise
+the extension decides and an extension the table does not know is `code`.
 
-### 5.3. Полнота и ручное вмешательство
+### 5.3. Completeness and a hand on the wheel
 
-- Движок гарантирует, что **ни одно изменение не пройдёт незамеченным**: если
-  коммит затронул файл, которого движок не знает, это считается нарушением
-  (явная ошибка), а не молчаливым пропуском.
-- При этом **пользователь может вручную включить или исключить любой файл**
-  (в настройках — навсегда; на странице — на время просмотра).
+- The engine guarantees that **no change goes unnoticed**: a commit that touched a path the engine does not
+track and the settings do not declare an exception is a violation (an explicit failure), never a silent skip.
+- A person can still **add or drop any file by hand** — in the settings for good, on the page for the length of
+  a look.
 
 ---
 
-## 6. Канонические данные (что именно выдаёт движок)
+## 6. The canonical data (what exactly the engine hands over)
 
-Движок отдаёт одну структуру данных — она и есть «источник истины», из которой
-строится и отчёт, и вывод для ИИ-агента:
+The engine hands over one structure — the source of truth from which both the report and an agent's output are
+built. The keys of the contract (`--data` hands over the contract itself, `--json` the former shape):
 
-```jsonc
-{
-  "schema": 1,
-  "tool": "size-report", "toolVersion": "1.0.0",
+| Key | What it holds |
+|---|---|
+| `schema` | the contract's version |
+| `tool` | the package's name and version |
+| `report` | the passport: locale, title, heading, the artifact's path, the fix command, the journal, whether the sha is shown |
+| `metrics[]` | per metric: `key`, `label`, `note`, `method`, `accuracy` |
+| `categories[]` | the categories that are present, with their labels |
+| `files[]` | per column: `label`, `path`, the chain of renames `paths`, `category` and how it was decided (`categoryBy`) |
+| `catalog[]` | every path outside the report with the reason it is not a column (`why`: a rule, a declared exception, or null for a column) |
+| `rows[]` | per commit: `sha`, `when`, `subject`, the journal's `section` or null, the commit's `href`, and `values` — one object per column with the absolute numbers |
+| `now`, `last` | the state at `HEAD`, and which cells are the last change of their column |
+| `approx` | which cells are approximations: a bit string per metric over the cells of `rows` and of `now` |
+| `skipped[]` | the commits that got no row, each with the reason in words |
 
-  "files": [
-    { "path": "src/code.js", "category": "code" },
-    { "path": "README.md",   "category": "docs" }
-  ],
+Notes:
 
-  "commits": [
-    { "sha": "…", "when": "…", "subject": "…", "section": { "id": "21", "head": "…" } }
-  ],
+- **Absolute values rather than deltas.** The engine keeps sizes, not differences: a difference is the display's
+task, and it depends on which files the reader switched on. There is no compression into "points of change"
+either: every row carries a number per column, and the page reads the ones it needs.
+- **`method` and `note`** are the promised mark of information: beside every number it is visible *how* it was
+obtained — which minifier version, which tokenizer, or the word "approximation".
+- **Honesty is per cell, not only per column** (`approx`): the metric's `accuracy` speaks about the **worst in
+the column** (one format without a minifier makes the metric approximate as a whole), while `approx` shows
+which cells are approximations and which are not — under stripping `package.json` is exact, `code.js` is not.
+The marks are set by the engine where the number is counted, by the same rule as the label (`pointExact`), so
+the page never derives accuracy from paths and formats of its own: there is no second rule of accuracy in the
+package.
 
-  "metrics": {
-    "raw":  { "label": "raw", "method": "размер объекта git" },
-    "min":  { "label": "min", "method": "esbuild 0.24.2 --minify" },
-    "tok":  { "label": "tok", "method": "tiktoken o200k (GPT-4o)" }
-  },
-
-  "series": [
-    { "file": 0, "points": [
-      { "at": 0,  "raw": 8120,  "min": 3114, "tok": 2140 },
-      { "at": 17, "raw": 9334,  "min": 3580, "tok": 2412 }
-    ] }
-  ]
-}
-```
-
-Пояснения:
-
-- **«series» — это компактная форма.** Для каждого файла хранятся не значения на
-  каждый коммит (это раздуло бы данные), а только **точки изменения**: «в таком-то
-  коммите файл стал таким-то». Значение в любой строке таблицы вычисляется как
-  «последняя точка изменения не позже этой строки». Пустая клетка «не менялось»
-  и дельта «к предыдущему коммиту» выводятся из этих точек.
-- **Абсолютные значения, а не дельты.** Движок хранит размеры, а не разности:
-  разность — это уже задача отображения (и она зависит от того, какие файлы
-  включены пользователем).
-- **Поле `method`** — это и есть обещанный «значок информации»: рядом с каждым
-  числом видно, *чем именно* оно получено (какая версия минификатора, какой
-  токенизатор, или пометка «приближение»).
-- **Честность числа — по клетке, а не только по колонке** (`approx` в `--data`):
-  подпись метрики говорит про **худшее в колонке** (один формат без минификатора
-  делает её приближённой целиком), а рядом знаков `approx` видно, какие клетки
-  приближённые, а какие нет — `package.json` под снятием балласта точен, `code.js`
-  — нет. Знаки ставит движок там же, где считает число, и одним правилом с подписью
-  (`pointExact`), поэтому страница не выводит точность из путей и форматов сама:
-  второго правила точности в пакете нет.
-
-Этот же JSON отдаётся команде «выдать данные» — им пользуется ИИ-агент, не разбирая
-вёрстку.
+An agent reads the same data through the "hand over the data" mode rather than parsing the layout.
 
 ---
 
-## 7. Метрики: минификация и токенизация
+## 7. The metrics: minification and tokenization
 
-### 7.1. Общий интерфейс «датчика»
+### 7.1. The sensor's interface
 
-Каждая метрика — это объект, который объявляет:
+A sensor is an entry of the registry declaring:
 
-- что ему нужно (только размер версии файла — или содержимое);
-- как посчитать число;
-- версию своего алгоритма (важно для воспроизводимости и кэша, см. §10);
-- человекочитаемое описание способа (`method`).
+- what it needs (only the size of a version of the file, or its content);
+- how the number is counted;
+- the human-readable way it was obtained (`method`, with the tool's version inside where there is one — esbuild,
+  the tokenizer), which is what makes the number reproducible;
+- how honest the number is (`accuracy`, plus a `note` for the reader).
 
-Три датчика входят в первую версию:
+The first version's set is three of them (`raw`, `min`, `tok`); the registry holds a fourth, `gzip`, which the
+settings may switch on — a sensor is an entry rather than an edit to the core.
 
-### 7.2. `raw` — сырой размер
+### 7.2. `raw` — the raw size
 
-Размер файла как есть. Берётся из размера объекта git — содержимое не читается,
-это самая дешёвая метрика.
+The file as it is. Taken from the size of the git object: the content is not read, which makes it the cheapest
+metric.
 
-### 7.3. `min` — настоящая минификация
+### 7.3. `min` — the size without ballast
 
-**Исправляем главную неточность текущей версии:** сейчас «минифицированный»
-размер — это не минификация, а «косметическое» удаление комментариев и отступов
-(переменные не переименовываются). Новое требование — настоящая минификация,
-с переименованием названий в 1–2 символа.
+The first version's "minified" size is not minification but a cosmetic removal of comments and indentation
+(names are not shortened), so the metric is counted in two ways and **says which one it used**:
 
-- Основной минификатор — **esbuild** (вызов как библиотека, в одном процессе, без
-  запуска внешних команд). Для JavaScript/TypeScript он даёт и удаление
-  комментариев/пробелов, и переименование переменных. Он же умеет CSS и JSON.
-- Для разметки (HTML) — отдельный минификатор разметки.
-- Для незнакомых форматов — «косметическое» упрощение (как сейчас), **но оно
-  обязано быть помечено**: в поле `method` и на странице рядом с числом пишется,
-  что это упрощение, а не настоящая минификация. Это убирает ложное ощущение
-  точности.
+- **the default is stripping** — comments and indentation go, names stay. For JavaScript the stripping is
+  guarded: the result has to parse, or the guard refuses rather than hand over a count of something that is no
+  longer the same program.
+- **real compression by esbuild** is switched on in the settings per extension: the library is called through
+  its JS API (`transformSync`, `minify: true`, UTF-8, no legal comments), which keeps one service process for
+  the whole run instead of paying for a start per cell. Its loaders are `js`, `ts` and `css`; there is **no
+  markup minifier**, so HTML goes through stripping and is marked as an approximation.
+- An unfamiliar format is stripped the same way — **but it has to say so**: the word goes into `method` and
+  stands beside the number on the page, which is what keeps a simplification from passing as real compression
+  (§6, §7.1).
 
-Важные следствия:
+Consequences:
 
-- esbuild и токенизаторы — это зависимости пакета (устанавливаются вместе с ним).
-  Сам движок при этом остаётся без них работоспособным: если минификатор не
-  установлен, «минифицированная» метрика честно сообщает об этом, а «сырой»
-  размер работает всегда.
-- Минификация считается **пофайлово** (без объединения файлов в бандл) — это
-  соответствует смыслу «объём исходника».
-- Точные настройки минификатора (что переименовывать, кодировка) фиксируются в
-  настройках и входят в «версию» метрики, чтобы цифры были воспроизводимы.
+- esbuild and the tokenizers are **optional** dependencies of the package. The engine stays usable without them:
+  the count falls back to stripping and the lost sensor is reported (exit code 4), so an approximation never
+  travels as an exact number; `raw` works always.
+- Minification is counted **per file** (files are never bundled into one): what is measured is the size of a
+  source.
+- The minifier's settings (`minify.engine`, `minify.ext`, `minify.guard`) are part of what a number means, and
+  the engine's version is named in `method`.
 
-### 7.4. `tok` — токены с выбором семейства моделей
+### 7.4. `tok` — tokens with the model family chosen
 
-Токены считаются **по исходному тексту** (по тому, что модель реально видит), а не
-по минифицированному. Пользователь выбирает **семейство моделей**:
+Tokens are counted **by the source text** — what a model really reads — and not by the minified one. The family
+is chosen in the settings (`tokens.family`, `tokens.encoding`); one family is wired today:
 
-| Семейство | Как считаем | Честность результата |
+| Family | How it is counted | How honest the number is |
 |---|---|---|
-| **ChatGPT (OpenAI)** | точный токенизатор, официально выложенный (в виде библиотеки со словарём) | точный |
-| **Claude (Anthropic)** | официального публичного токенизатора нет → приближение по эвристике | **приблизительный** (помечается) |
-| **DeepSeek** | токенизатор семейства, к которому близка модель (BPE со словарём); при отсутствии точного словаря — приближение | точный или приблизительный (помечается) |
+| **openai** (`gpt-tokenizer`, `o200k_base` / `cl100k_base`) | by the tool's dictionary | exact |
+| without the dictionary | an estimate by length (about 3 characters per token, measured on this repository's own texts) | **approximate** (marked), and for Latin script it overstates |
+| binary formats (a picture, a font) | counted by bytes, since a tokenizer would split them into anything at all | **approximate** (marked) |
 
-Принципиальная позиция: **инструмент не должен выдавать приближение за точное
-число.** У каждой токенизации есть уровень достоверности, и он выводится рядом
-с числом (как и способ минификации). Если для семейства доступен точный словарь —
-используем его; иначе честно пишем «приближение».
+The position is the load-bearing part: **the tool must not pass an approximation off as an exact number.** Every
+count carries its level of trust beside the number, just as the way of minification does.
 
-Выбор семейства делается:
-
-- в **настройках** (какое семейство считается по умолчанию и какие вообще
-  предвычислять);
-- на **странице** — переключателем между семействами (среди тех, что уже
-  посчитаны движком).
-
-Это сознательный выбор: токенизация выполняется **на этапе сборки**, а не в
-браузере. Так отчёт остаётся полностью автономным (открывается двойным щелчком,
-без сети и без «тяжёлой» программы внутри). Альтернатива — встроить токенизатор в
-саму страницу и считать в браузере — возможна, но раздувает файл отчёта словарём
-и усложняет его; откладываем на будущее.
+Adding a family is adding an entry to the registry, which is why the settings name a family rather than a flag.
+The family is chosen in the settings rather than on the page: tokenization happens **at build time**, so the
+report stays self-contained (it opens by double-click, with no network and no heavy program inside). The
+alternative — a tokenizer inside the page, counting in the browser — is possible, but would inflate the report
+with a dictionary and complicate it; deferred.
 
 ---
 

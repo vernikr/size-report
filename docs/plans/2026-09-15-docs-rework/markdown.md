@@ -335,9 +335,30 @@ files). The parts below are the order to work in; each is one commit.
   on-disk `.size-report/cache/` anywhere in the tree. §2.1, §2.2, §2.5, §2.6 and §3 were checked and kept
   (the engine emits absolute values, the page counts sums — the contract of `src/data.js`; the engine's own
   text totals are a fixed view, added as a caveat).
-- [ ] **M11b `docs/module-design.md` §4–§7** — 137 Russian lines (≈288 changed): the bigger half, and
-  invariants to check rather than retell, so it is a pass of its own. Numbers stay — the document is a
-  `§`-reference target.
+- [x] **M11b `docs/module-design.md` §4–§7** — 137 Russian lines → **311 changed lines in one file**
+  (`worklog/0111`); the document went 552 → 497 lines, and the Cyrillic left in the file (147 lines) is now
+  **exactly** §8–§17, the bounds of M12. Incoming references measured before and after: `PLAN.md` names §6
+  explicitly, and §4, §6, §7 and §15 in its document list are unnamed (the guard does not resolve them), while
+  inside the document §8–§17 point at §6 (thrice), §7 (twice), §7.4, §8 and §10 — no number touched,
+  boundaries only shifted (5 → 143, 6 → 177, 7 → 214, 8 → 282), doc guards 8 of 8. **Ten claims rewritten by
+  code and measurement:** the module's tree is not the sketch's (`config/`, `git/`, `inventory/`, `metrics/`,
+  `measure/`, `model/`, `render/` and `config/schema.json` do not exist — one package, flat `src/` with two
+  real seams, `strip/` and `page/`); the "history source as a parameter" idea never became code (the checks
+  get their speed from a real repository built in a temp directory, `tools/synthetic/`), and the boundary
+  principle is the **pinned** git settings of one module rather than injection — not a `BLOCKERS.md` entry,
+  since the promise was internal and the goal is met another way; §5.1's exclusions are the real rules (the
+  report, locks, built output, an unknown extension, the 512 KB guard); §5.2's categories are four fixed names
+  with a real extension table and a per-column override; **§6's data shape was invented wholesale** — no
+  `toolVersion`, no `commits[]`, no `series[]` of change points: the contract taken from a live `--data` run is
+  `schema`, `tool{name,version}`, `report{…}`, `metrics[{key,label,note,method,accuracy}]`,
+  `categories[{key,label}]`, `files[{label,path,paths,category,categoryBy}]`, `catalog[{path,why}]`,
+  `rows[{sha,when,subject,section,href,values[…]}]`, `now`, `last`, `approx`, `skipped`, and there is no
+  compaction of rows — measured on a two-column, three-commit repository; `approx` is a **bit string per
+  cell** (measured `"111111"` over 3 rows × 2 columns); a sensor has no algorithm-version field (it lives in
+  `method`); the minifier goes through esbuild's JS API with loaders `js`/`ts`/`css`, so **there is no markup
+  minifier** (HTML is stripped) and JSON is stripped too; esbuild and the tokenizers are **optional**
+  dependencies reported as a lost sensor (code 4); and `tok` has **one** family today (`openai`), with the
+  three-vendor table replaced by dictionary / length estimate / bytes, each marked.
 - [ ] **Carried into M17–M22, measured:** `PLAN.md`'s row "Три датчика v1: `raw`, `min`, `tok`; `gzip` не
   поставляется" contradicts the code — gzip is in the registry (`src/metrics.js`) and ships with `src/`.
 - [ ] **M12 `docs/module-design.md` §8–§17** (lines 337–552 now, 147 Russian, measured) — a document about
@@ -351,6 +372,15 @@ files). The parts below are the order to work in; each is one commit.
   classifying the 95 unnamed `§N` references that today resolve nowhere **by design** (a document citing
   its own sections, addresses of plans and journals) — a blind replacement of the rule would redden the
   tree on them.
+- [ ] **Carried into M23–M24 (the CHANGELOG part):** `test/changelog.test.js` holds two **Russian** words of
+  the document — it requires the heading `### Что изменится в числах` (an assert, so loud) and skips the table's
+  header row by the cell `Файл` (translated, that row would go into the number parser and fail — also loud).
+  Both must be changed in the same commit as the translation; neither goes blind in silence.
+- [ ] **Known coupling, not a defect:** three places in `tools/docs-facts.js` read the **engine's printed
+  output** in Russian — `USAGE.split('\nКоманды:\n')`, the `'Команды:'`/`'Режимы:'` split in `commandsAt`, and
+  `'Причины отказа кодом 2'` in the commands check. Documents quote that output as data, so translating
+  documentation cannot touch them; only a change of the tool's printed language would. Recorded so that the
+  coupling is not discovered by an accident later.
 - [ ] **M13 `BLOCKERS.md` B1–B3** (18–208) — 128 Russian. Per item: these three are closed, so
   what stays is the class of defect and the witness — the story belongs to the journal, and the
   journal is not this subplan's scope.
