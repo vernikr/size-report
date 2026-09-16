@@ -174,309 +174,258 @@ problem in the consumer project.
 
 ---
 
-## 4. Целевая архитектура пакета
+## 4. The architecture of the package
 
-### 4.1. Решения, принятые этим планом
+Where a decision of the plan was carried out differently, the decision says so and points at the code
+or at the record: the section describes what is built rather than what was intended.
 
-| Вопрос | Решение | Почему |
+### 4.1. The decisions this plan made
+
+| Question | The decision as it stands | Why |
 |---|---|---|
-| Модульная система | **ESM** (`"type": "module"`), Node `>=20.19` | Новый пакет, `require` больше ничем не оправдан; динамический `import()` остаётся для тяжёлых датчиков |
-| Ядро и диск | Ядро (git + замер) получает «источник истории» параметром и не пишет на диск | Тесты на синтетической истории за миллисекунды; возможность подставить не-git источник |
-| Тяжёлые датчики | `esbuild` и токенизаторы — **`optionalDependencies`**, подключаются динамическим импортом | Требование «движок работает без них»; `raw` доступен всегда, остальные честно сообщают о недоступности |
-| Программа отчёта | Собирается **на этапе публикации пакета** (пре-собранный бандл в `dist/app.js`), а не в браузере и не при запуске | Отчёт остаётся автономным и лёгким, а `esbuild` в рантайме нужен только метрике `min` |
-| Зависимости тестов | `jsdom` — devDependency; сам движок остаётся без обязательных зависимостей | Чем открывается отчёт (браузером), тем и проверяется: без DOM-теста потребляемость контракта ничем не доказать. `jsdom@26` требует Node ≥ 18, поэтому `engines` пакета не менялись |
-| Настройки | `size-report.config.json` (+ `$schema`), миграция со старого `size-table.config.json` | Требования §9, §6: схема, подсказки, миграция форматов |
-| Артефакты | `.size-report/report.html`, `.size-report/data.json`, `.size-report/cache/` — **по умолчанию вне git** | Требования §6.1, §11.6: отчёт выводим и пересобираем, кэш не в истории |
-| Метрики | Три датчика v1: `raw`, `min`, `tok`; `gzip` не поставляется | Требование §12: сжатый размер вне рамок; реестр оставляет дверь открытой |
-| Оплата по факту | Отчёт не блокирует и не «уведомляет» — только показывает | Требование §8 |
-| Коды выхода | `0` успех · `1` нарушение (неполнота/расхождение) · `2` плохие настройки · `3` неполная история · `4` нет датчика (деградация) · `5` внутренняя ошибка | Требование §13: агент ветвится по коду, а не по тексту ошибки |
-| Версия данных | `schema: 1` в данных + `schemaVersion` в конфиге | Миграции и совместимость |
+| Module system | **ESM** (`"type": "module"`), `engines.node >= 20.19` | A new package, where `require` is not justified; `import()` stays for the heavy sensors |
+| The core and the disk | The engine writes nothing to disk and the report becomes a file in one module (`src/artifact.js`); the commits already read can be passed in (`known` in `measureHistory`, used by `check` and `explain`), while blobs always come from git | Tests over a history for milliseconds, and the write is separable from the count. The plan's "a non-git source can be substituted" was not needed: the checks drive the tool over a clone of the frozen bundle |
+| Heavy sensors | `esbuild` and `gpt-tokenizer` are **`optionalDependencies`**, loaded lazily but **synchronously** through `createRequire` (`src/optional.js`) | A measurement is a synchronous pass, so a dynamic `import()` cannot be awaited; absence comes back as an answer rather than an exception, and `raw` is always available |
+| The report's program | Ordinary modules pasted into the page when the report is written (`src/page/build.js`, the module syntax stripped line by line — R-2.1) | The program became code a linter sees while the page stayed self-contained. The plan's pre-built `dist/app.js` was not made: there is no `dist/` in the package |
+| Test dependencies | `jsdom` is a devDependency and the package itself has no mandatory dependency | The report is checked in the very thing that opens it; without a DOM check the contract's usability is unproven |
+| Settings | The file is `size-table.config.json` (`CONFIG_NAME` in `src/config.js`); there is no `$schema` and no migration command — `--init` derives the settings from the project (`src/project.js`) | The old tool's keys are a subset of today's, so the consumer's file needed no conversion; a settings schema, a migration and a block for agents were all left unbuilt (`BLOCKERS.md` §N17) |
+| Artifacts | One file at `cfg.output` (`docs/size-report.html` in the derived profile); the contract is printed on demand by `--data`; the package keeps no state on disk | The report is an output and is rebuilt; a cache or a data file beside it would be state to keep in order |
+| Metrics | `raw`, `min` and `tok` in the default set; `gzip` is in the registry and ships, while the first release's set does not carry it (**D4**) | The compressed size is out of the first version (requirement §12 `requirements.md`), and the registry leaves the door open |
+| Paying by fact | The report neither blocks nor notifies — it only shows | Requirement §8 `requirements.md` |
+| Exit codes | `0` success · `1` a violation (incompleteness or a disagreement) · `2` bad settings · `3` an incomplete history · `4` a sensor missing (degradation) · `5` an internal error (`EXIT` in `src/refusal.js`) | An agent branches by the code rather than by the text (requirements §2.2 and §6.3 `requirements.md`, with §11.3 naming the code for a truncated history); the codes are described in `README.md` |
+| The version of the data | `schema: 1` in the data (`src/data.js`); the settings carry no version key | The shape of the data is what other tools read, so that is the thing to version |
 
-### 4.2. Структура репозитория
+### 4.2. The repository
 
 ```text
 size-report/
-├── package.json
-├── README.md               # быстрый старт: установить, init, открыть отчёт
-├── CHANGELOG.md
-├── LICENSE
-├── .gitignore              # .size-report/, node_modules/, dist/app.js — нет, dist едет в пакет
-├── bin/
-│   └── size.js             # тонкая обёртка: import('../src/cli.js').then(run)
-├── src/
-│   ├── index.js            # публичный API (только для встраивания, не для пользователя)
-│   ├── cli.js              # разбор аргументов, режимы, коды выхода
-│   ├── config/
-│   │   ├── schema.json     # формальная схема (JSON Schema) — то, на что смотрит $schema
-│   │   ├── defaults.js
-│   │   └── load.js         # чтение, проверка, миграция старых настроек
-│   ├── git/
-│   │   └── history.js      # история, чтение блобов пачками, полнота, состояние дерева
-│   ├── inventory/
-│   │   ├── discover.js     # что отслеживается (из git), что исключено и почему
-│   │   └── classify.js     # категории: док / служебные / ресурсы / код
-│   ├── metrics/
-│   │   ├── registry.js     # реестр датчиков (id, version, method, accuracy, needs)
-│   │   ├── raw.js
-│   │   ├── min/
-│   │   │   ├── index.js    # выбор минификатора по файлу
-│   │   │   ├── esbuild.js  # JS/TS/CSS/JSON — настоящая минификация
-│   │   │   ├── markup.js   # HTML
-│   │   │   └── fallback.js # упрощение для незнакомых форматов + пометка
-│   │   └── tokens/
-│   │       ├── index.js    # выбор семейства моделей
-│   │       ├── openai.js
-│   │       ├── claude.js
-│   │       └── deepseek.js
-│   ├── measure/
-│   │   ├── engine.js       # проход по истории, перенос состояния, замер
-│   │   └── cache.js        # «sha + датчик + версия → число» (память + диск)
-│   ├── model/
-│   │   └── data.js         # канонические данные (§4.3) и их версия
-│   ├── render/
-│   │   ├── html.js         # самодостаточный отчёт (данные + программа + стили)
-│   │   ├── json.js         # данные для агента и CI
-│   │   └── app/            # программа отчёта (ESM-исходники) → dist/app.js при публикации
-│   ├── check.js            # полнота, настройки, датчики; человеческий и JSON-вывод
-│   └── doctor.js           # диагностика одним JSON
-├── tools/
-│   ├── build-app.js              # сборка программы отчёта в dist/app.js (на публикации)
-│   ├── parity-freeze.js          # снять эталон паритета с проекта-потребителя
-│   └── make-fixture.js           # собрать синтетическую фикстуру и эталон к ней
-├── templates/
-│   ├── size-report.config.json   # черновик настроек (есть)
-│   ├── ci.yml                    # описания проверки в CI (есть)
-│   └── README.md                 # куда что кладётся (есть)
-│                                 # блока для AGENTS.md нет намеренно: требования его не просят
-├── dist/
-│   └── app.js              # собирается `pnpm run build`, попадает в пакет
-├── fixtures/               # эталоны и замороженные копии — рядом с `test/`, а не внутри
-│   ├── legacy/             # замороженная копия текущей реализации (сверяется по sha256)
-│   ├── parity/             # эталон с живого проекта: --json, конфиг, хеш артефакта
-│   └── synthetic/          # фикстура-бандл с ловушками и эталон к ней
-└── test/
-    └── *.test.js           # наборы: паритет и (дальше) история, датчики, модель, CLI, полнота
+├── bin/size.js               # a thin wrapper: import('../src/cli.js') and run
+├── bin/postinstall.js        # puts the hook up after an install
+├── src/                      # the engine: one module per subject
+│   ├── cli.js, args.js, modes.js, refusal.js, locales.js     # the surface and its texts
+│   ├── config.js, project.js, init.js, doctor.js             # the settings: derivation, reading, diagnostics
+│   ├── git.js, history.js, journal.js                        # git: the boundary, the pass, the journal
+│   ├── metrics.js, minify.js, tokens.js, optional.js         # the measurements
+│   ├── strip.js, strip/, parse.js, parse-worker.js           # taking the ballast off, and the guard
+│   ├── data.js, derived.js, artifact.js, css.js, table.css   # the report: data, calculation, styling
+│   ├── page/                                                 # the page: one chapter per subject
+│   └── check.js, explain.js, hook.js, tool.js, size-table.js # coverage, the skip, the hook, the entry
+├── templates/                # settings, CI and a note for a project being wired up (three files)
+├── fixtures/                 # live (the consumer's frozen history), parity (its standard), synthetic
+├── tools/                    # the repository's own instruments, `tools/gates/` being the sensors
+└── test/                     # the suites, one file per subject; the runner's list is tools/suites.js
 ```
 
-Эталоны лежат не в `test/`, а рядом с ним: штатный раннер Node считает тестом
-**любой** JS-файл под каталогом `test/` (шаблон `**/test/**/*.js`) и запустил бы
-замороженную копию движка как набор проверок. Данные эталонов (`.json`, бандл)
-безопасны и так, но держать их порознь, когда один из них — код, дороже, чем
-держать всё вместе снаружи.
+The fixtures sit beside `test/` rather than inside it. The rule comes from the day a frozen copy of
+the old implementation lived in the tree as a `.cjs` of the engine: a stock Node runner takes every
+`.js` under a `test/` directory as a suite (`**/test/**/*.js`), and such a copy would have run as
+checks. The copy has left the tree, and the convention stays — the package's own run goes by a
+declared list (`tools/suites.js`), so nothing depends on it but the reading of the tree.
 
-Фикстуры и эталоны не публикуются в npm (`files` их не включает): они нужны тому,
-кто работает с исходниками пакета, а не тому, кто поставил его зависимостью.
+The fixtures and the standards are not published: `files` names `bin`, `src`, `templates`,
+`README.md`, `CHANGELOG.md` and `LICENSE`. They are needed by whoever works with the sources rather
+than by a project that installed the package as a dependency.
 
-### 4.3. Канонические данные
+### 4.3. The canonical data
 
-Форма — как в `module-design.md` §6 (`schema`, `files`, `commits`, `metrics`,
-`series` с точками изменения), плюс уточнения, без которых она не сходится с
-требованиями:
+The contract between the engine and the page (`src/data.js`; printed by `--data` and embedded in the
+report): `schema`, `tool {name, version}`, `report {locale, title, heading, artifact, fixCommand,
+journal, showSha}`, `metrics[]`, `categories[]`, `files[]`, `catalog[]`, `rows[]`, `now[]`, `last[]`,
+`approx{}`, `skipped[]` — one truth laid out in fields.
 
-```jsonc
-{
-  "schema": 1,
-  "reportId": "safe-resets:9f1c…",          // id для настроек просмотра (см. §4.8)
-  "tool": "size-report", "toolVersion": "1.0.0",
-  "repo": { "name": "safe-resets", "head": "…", "shallow": false },
+Where the plan's form (`module-design.md` §6: `schema`, `files`, `commits`, `metrics`, `series` with
+points of change) went its own way: `commits` became `rows` — one per commit that got a row, with a
+cell per column — and `series` did not appear at all: a file's numbers are read down a column of
+`rows`, while `now` and `last` carry the present and the columns the last commit touched. The
+decisions that hold the form:
 
-  "files":    [{ "path": "src/code.js", "category": "code" }],
-  "excluded": [{ "path": "pnpm-lock.yaml", "why": "lock", "by": "авто" }],
-  "commits":  [{ "sha": "…", "when": "…", "subject": "…",
-                 "section": { "id": "21", "head": "…", "added": true } }],
+- **Three states of a file rather than two.** A cell is `null` when the file is not there, `0` when
+  it is there and empty, and a number otherwise; the page draws the first as `—` and the total stops
+  counting the file. The plan's `gone: true` point was not needed — the absence is that same `null`
+  in the carried state (`src/history.js`).
+- **Absolute values only.** Deltas and totals are counted by the page, because they depend on what a
+  person switched on (requirement §4.3 `requirements.md`); that no derived quantity enters the
+  contract is held by a check of the set of fields (`test/contract-data.test.js`) rather than by
+  agreement.
+- **`method` and `accuracy` are the promised honesty mark** (requirement §3.3 `requirements.md`):
+  beside a number one sees what produced it and whether it is exact or approximate. It is kept per
+  metric rather than per file, and a mark per cell comes beside it (`approx`: one string per metric
+  over the rows and one over "now"), so a caption speaks about the worst in the column and a cell
+  about itself (R-2.7); the plan's `fallback: true` per point became that mark.
+- **`catalog` is the tree with reasons** — every path of the project appears, and the ones that are
+  not measured say why (`why` empty means the path is measured). That is the material for
+  completeness (`PLAN.md` §4.5) and for transparency (requirement §11.2 `requirements.md`).
+- **Escaping into markup.** The JSON that goes into the page passes `<` → `\u003c`
+  (`src/page/build.js`), which is also what keeps a `</script` inside a path or a commit subject
+  from ending the data block. The page's self-sufficiency — one file, no external reference — is
+  held by `test/page-view.test.js`; the plan's "a separate test for the escape" did not appear as a
+  check of its own.
 
-  "metrics": {
-    "raw": { "label": "raw", "method": "размер объекта git", "accuracy": "exact" },
-    "min": { "label": "min", "method": "esbuild 0.24.2 (rename, minify)", "accuracy": "exact",
-             "fallback": "упрощение: без комментариев и отступов" },
-    "tok": { "label": "tok", "family": "openai", "method": "gpt-tokenizer o200k_base",
-             "accuracy": "exact" }
-  },
+### 4.4. The sensors: the registry, the version, the cache
 
-  "series": [{ "file": 0, "points": [
-    { "at": 0, "raw": 8120, "min": 3114, "tok": 2140 },
-    { "at": 17, "raw": 9334, "min": 3580, "tok": 2412 }
-  ]}]
-}
-```
+A sensor declares `label`, `needsText` (`raw` lives on the object's size alone), `method` — a text
+per locale naming the tool and the version the number was taken with — and `accuracy`; `pointExact`
+answers the same question about one file's cell rather than about the whole column (R-2.7). The
+registry holds four: `raw`, `min`, `tok`, `gzip`.
 
-Решения, которые надо зафиксировать в реализации:
+**What the plan promised and the code does not do:** there is no `version` field and no cache keyed
+`blob sha + id + version`. The run's memory is keyed by the blob's sha and the metric and lives for
+the run (§3 item 4); a cache that outlives the run is this section's plan rather than a fact —
+`REFACTOR.md` §7 names it as a capability the refactoring did not take.
 
-- **Три состояния файла, а не два.** «Ещё нет» (клетка `—`), «есть» (числа),
-  «уже нет» (файл удалён) — третье сейчас неотличимо от первого. В `points`
-  добавляем точку `{"at": N, "gone": true}`; страница рисует её как `—`, а сумма
-  просто перестаёт учитывать файл.
-- **Только абсолютные значения.** Дельты и «итого» считает страница — они зависят
-  от того, что включил пользователь (требование §4.3).
-- **`method` + `accuracy` — и есть обещанная пометка честности** (§3.3, §7.4
-  требований): рядом с числом видно, чем оно получено и точное оно или
-  приближённое. Храним на метрику, а не на файл, плюс флаг `fallback: true` в
-  той точке, где минификатор не справился (незнакомый формат).
-- **`excluded` с причиной** — материал для §4.5 (полнота) и для прозрачности
-  (§11.2 требований).
-- **Экранирование при вклейке в HTML:** JSON внутри
-  `<script type="application/json">` обязан пройти замену `<` → `\u003c`,
-  `\u2028`/`\u2029` и `</script` — иначе отчёт ломается на первом же файле с
-  разметкой в имени или в заголовке коммита. Это отдельный тест.
+- **Degradation is not an error.** With no minifier (or one that did not install on the platform)
+  the `min` metric becomes an approximation with a named mark rather than passing stripping off as
+  real minification (requirement §7.3 `requirements.md`); with no dictionary the `tok` metric counts
+  an estimate by length with a named coefficient. Neither passes an approximation off as a success:
+  both answer **code 4** instead (R-5.5, R-5.6).
+- **The "file too large" threshold** is a constant of the derived profile — 512 KiB (`MAX_BYTES` in
+  `src/project.js`), where it also keeps a huge file out of the columns — rather than a settings key,
+  so what the plan called an open question about its default (§10) was settled by that constant.
 
-### 4.4. Датчики: реестр, версия, кэш
+### 4.5. Classification and completeness
 
-Каждый датчик объявляет:
+- **Discovery** is from git (`ls-files` at HEAD and, where completeness asks, the union over the
+  history), never by hand.
+- **Categories** — `code`, `docs`, `chore`, `assets` — come from a table of extensions
+  (`CATEGORY_EXTS`), one category per file; a column's own `category` outranks the table, and the
+  data says which of the two spoke (`categoryBy`). The plan's name `service` became `chore`.
+- **Exclusions.** The derived profile puts the report itself, dependency locks, maps and built
+  output, an unknown format and a file over the threshold into `skip`, naming them there
+  (`src/project.js`); a binary file is recognised by its contents (`isBinary` in `src/tokens.js`).
+  Every exclusion has a reason, and the reason travels in `catalog`.
+- **Completeness (requirement §4.2 `requirements.md`).** `size check` takes the union of every path
+  the history touched and requires each of them to be a column or a declared exception. An unknown
+  path is a violation: code `1`, with the path, the commit that brought it and a ready fix read from
+  the settings. That is what replaces the control "artifact against history", which needs the report
+  to be in git.
 
-```js
-{ id: 'min', label: 'min', needs: 'text',          // 'size' | 'text'
-  version: '4',                                     // меняется вместе с алгоритмом и версией зависимости
-  method: (cfg) => 'esbuild ' + version + ' (minify, rename)',
-  accuracy: 'exact' | 'approximate',
-  measure: (blob, ctx) => number | { unavailable: why } }
-```
+### 4.6. The settings
 
-- **Ключ кэша** — `blobSha + ':' + id + ':' + version`. Обновление минификатора
-  или токенизатора меняет `version`, старые числа не подмешиваются.
-- **Деградация — не ошибка.** Нет `esbuild` (или он не встал на платформе) —
-  метрика `min` переходит в `fallback` с пометкой, а не молча выдаёт упрощение
-  как настоящую минификацию (§7.3 требований). Нет токенизатора для семейства —
-  метрика честно недоступна.
-- **Порог «слишком большой файл»**: минификацию и токенизацию не считаем выше
-  настраиваемого размера (`metrics.maxBytes`), такие точки помечаются
-  `skipped: "too-big"`. Значение по умолчанию — открытый вопрос (§10).
+The keys, measured on `src/config.js`: `output`, `locale`, `title`, `heading`, `fixCommand`,
+`metrics`, `columns`, `minify {engine, ext, guard}`, `tokens`, `hooks {enabled}`, `journal`, `links`,
+`rows`, `skip`.
 
-### 4.5. Классификация и полнота
+Where there is no settings file, the tool derives one from the project and writes it (`--init`,
+`src/project.js`): columns by extensions and size, their categories, `skip`, the journal, the commit
+link from the origin address. That is the profile a fresh project starts from.
 
-- **Поиск файлов** — из git (`ls-files` на HEAD и, если нужно, объединение по
-  истории), без ручного перечисления.
-- **Категории** — таблица «признак → категория»: расширение, имя, glob, префикс
-  пути. По умолчанию: `docs` (`.md`, `.txt`, `.rst`), `service` (`.mjs`, `.yaml`,
-  `.yml`, `.toml`, `.json`, `.lock`, CI-конфиги), `assets` (`.svg`, шрифты, файлы
-  локализации), `code` (всё остальное). Ровно одна категория на файл; переопределение
-  — в настройках.
-- **Исключения** — бинарные (определяются по «нулевому байту» в первых 8 КБ и по
-  расширению), результаты сборки (`dist/`, `build/`, `*.min.*`, `*.map`),
-  lock-файлы, служебные каталоги (`node_modules/`, `.git/`), сам отчёт.
-  **Каждое исключение имеет причину** и попадает в `excluded`.
-- **Полнота (главное новое правило, требование §4.2).** `size check` строит
-  объединение всех путей, тронутых историей, и требует, чтобы каждый путь был
-  либо отслеживаемым, либо исключённым **с причиной**. Незнакомый путь — это
-  нарушение: код выхода `1`, в сообщении — путь, коммит, который его завёл, и
-  готовая команда (`size init --update` или явная строка в `exclude`).
-  Это и есть замена утраченному контролю «артефакт ↔ история»: новый тип файла
-  больше не просочится, но и не потребует держать отчёт в git.
+**What the plan promised and the code does not do:** there are no `files`/`categories`/`report`
+sections and no `--migrate`. The old tool's keys are a subset of these — so much so that the
+consumer's file kept its name (`size-table.config.json` is `CONFIG_NAME`) and needed no conversion —
+and what the plan called migration became the derivation above: guessed settings are written for a
+person to keep or edit rather than converted silently (`BLOCKERS.md` §N17).
 
-### 4.6. Настройки
-
-Разделы: `files` (include/exclude/классификация, `maxBytes`),
-`categories`, `metrics` (какие датчики), `minify` (минификатор и его точные
-настройки, попадающие в `version`), `tokens` (семейства моделей для предвычисления),
-`report` (путь, заголовок, язык, `view` по умолчанию), `hooks` (ставить ли
-`post-commit`), `journal` (шаблон разделов, URL, якорь — как сейчас),
-`links` (шаблон ссылки на коммит), `rows` (`merges`, `sha` — как сейчас).
-
-Миграция: `size-table.config.json` → `size-report.config.json` умеет `size init
---migrate`: колонки превращаются в `files.focus` (или просто в список
-отслеживаемого), `journal`/`links`/`rows` переносятся дословно, `metrics`
-пересобираются.
-
-### 4.7. CLI
+### 4.7. The CLI
 
 ```text
-size init [--migrate] [--update]   найти файлы, создать/обновить настройки,
-                                   вписать .size-report/ в .gitignore,
-                                   предложить хук и шаблон проверки в CI
-size measure [--json] [--out F]    посчитать данные (JSON — для агента и CI)
-size render                        собрать самодостаточный отчёт
-size update                        measure + render (то, что делает хук)
-size check [--json]                настройки, полнота, полнота истории, датчики
-size doctor [--json]               диагностика одним ответом: окружение, git,
-                                   история, датчики, кэш, версии
-size explain <sha|prefix>          почему у коммита нет строки
-size install-hook / uninstall-hook
-size version
+size                                  the check: the artifact against the history
+size --write [file]                   rebuild the report (the directory is created if missing)
+size --data                           the contract on stdout, for an agent and for CI
+size --json                           the former rows-as-JSON shape (frozen by the parity standard)
+size --init [file]                    derive the settings from the project and write them
+size check [--json]                   settings, the history, the paths, the sensors (code 1 on an uncovered path)
+size explain <commit>                 why a commit has no row
+size doctor [--json]                  one answer: the environment, dependencies, settings, coverage
+size install-hook / uninstall-hook    put the hook up, or take it away together with its state
+size hook-run                         what the hook calls: rebuild the report and commit it
 ```
 
-✅ `size check`, `size explain` (`REFACTOR.md` R-4.12) и `size doctor`
-(`WORKLOG.md` §35) сделаны 2026-09-14; `init`/`measure`/`render` пока ключи,
-`install-hook` не сделан.
-Два решения этого прохода: (1) **команда — слово, а не ключ**, потому что это
-вопрос, а не режим вывода, и читается она любым аргументом, который не ключ и не
-значение ключа (`size check --config x` и `size --config x check` — одно и то же),
-а неизвестное слово — код 2 с указанием на `--help`; (2) **объявленные исключения
-полноты — тот же `skip`**, что и «пути, которые колонками быть не могут»: второй
-ключ не заводился, потому что разницы между «не считаем» и «исключено» у
-инструмента нет, а расширенное значение ключа названо в `README`.
+**What the plan promised and the code does not do:** there are no `measure`, `render`, `update` or
+`version` words — `--write` is measure and render at once, and the version travels in the data's
+`tool`. `check`, `explain` and `doctor` landed 2026-09-14 (R-4.12; the
+version in `worklog/archive/WORKLOG.md` §35), `install-hook` and `hook-run` later (`PLAN.md`
+§4.9).
 
-Второе, что важно для совместимости: причина пропуска внутри движка стала ключом
-(`merge` / `report` / `flat`), но строка в контракте `--json` и `--data` — та же,
-что и была (эталон заморожен); различие «числа не сдвинулись» и «мимо колонок»
-проводит только `explain`, потому что только там оно и есть суть вопроса.
+Two decisions of that pass stand. **A command is a word** rather than a flag, read from any argument
+that is neither a key nor a value of one (`size check --config x` and `size --config x check` are the
+same), an unknown word being code 2 with a pointer to `--help`. And **the declared exclusions of
+completeness are the same `skip`** as the paths that cannot be columns: no second key, because the
+tool draws no difference between "not counted" and "excluded".
 
-Свойства, обязательные по требованиям: `--json` у всех диагностических команд,
-тексты ошибок содержат готовую команду починки, выходные коды стабильны и
-описаны в `README`, ни одна команда не пишет в git-историю.
+Inside the engine the reason a commit was skipped became a key (`merge` / `report` / `flat`), while
+the line of the `--json` and `--data` contracts stayed as it was (that standard is frozen); the
+difference between "the numbers did not move" and "outside the columns" is drawn by `explain`
+alone, because that is the question there.
 
-### 4.8. Интерактивный отчёт
+The properties the requirements ask for hold: `--json` on every diagnostic command, a refusal that
+names a ready fix, stable codes described in `README.md` (requirement §2.2 `requirements.md`). **One
+command writes to the git history — `hook-run`**, deliberately and as a commit of its own (§4.9).
 
-Один файл `report.html`, внутри: стили, `<script type="application/json"
-id="size-report-data">` с данными и пре-собранная программа `dist/app.js`.
-Никаких внешних запросов — открывается двойным щелчком с `file://`, работает
-офлайн (требования §6.2, §11.6).
+### 4.8. The interactive report
 
-Что умеет страница (требование §8.2 `module-design.md`):
+One file (`report.html`; `docs/size-report.html` in the derived profile): the styling and the
+program inside, the data in a `<script type="application/json" id="data">` block and the texts of
+the interface in a second one (`id="ui"`), no external reference — it opens from `file://` with a
+double click and works offline (requirements §6.2, §11.6 `requirements.md`).
 
-1. **Переключатели метрик** — `raw` / `min` / `tok`, каждый независимо; столбцы
-   перестраиваются, «итого» пересчитывается.
-2. **Левая панель — дерево файлов** по реальной структуре каталогов, у каждого
-   узла чекбокс с тремя состояниями; снятый чекбокс убирает файл из таблицы и из
-   суммы немедленно.
-3. **Быстрые кнопки категорий** — «документация / служебные / ресурсы / код»:
-   включают-выключают группу чекбоксов.
-4. **Выбор семейства моделей** для токенов — среди предвычисленных движком
-   (переключение между готовыми числами, а не подсчёт в браузере).
-   ❌ **Отменено 2026-09-14** (шаг 4, срез 2): страница получает готовые числа и
-   сама не считает ничего, а словаря другого семейства у неё нет. Предвычислить
-   все семейства — платить временем сборки за числа, о которых могут и не
-   спросить (решение строки ниже в §10), поэтому выбор живёт в настройках
-   запуска, а страница его называет: способ каждой метрики виден текстом.
-5. **Пометка честности** у метрики и у подозрительных точек: способ, версия,
-   «приближение», «файл слишком велик» — по требованию §3.3.
-6. **Состояние просмотра запоминается** (§8.4 `module-design.md`): основное —
-   `localStorage` под ключом `reportId` (у него есть `toolVersion` и `head`,
-   чтобы старые настройки не липли к новым данным), плюс поддержка
-   `location.hash` — так выбор можно передать коллегой ссылкой и он работает
-   даже там, где `localStorage` недоступен (`file://` в приватном окне: обёртка
-   `try/catch`, при отказе — только память).
+What the page can do (requirement §8.2 `module-design.md`):
 
-Правило пересчёта (требование §3 `module-design.md`): движок отдаёт абсолютные
-значения, страница считает дельты к предыдущей **включённой** строке и «итого» по
-включённому набору. Пустая клетка = «не менялось», `—` = «файла нет», `0` = «файл
-есть и он пуст» — три разных ответа, и подпись страницы их объясняет.
+1. **Switches of metrics** — `raw` / `min` / `tok`, each independently; the columns are rebuilt and
+   the total recounted.
+2. **The left panel is the tree of files** as the directories really are, every node carrying a
+   three-state checkbox; an unchecked file leaves the table and the total at once.
+3. **A row of categories** — `code`, `docs`, `chore`, `assets` under the labels of the locale —
+   switches a whole group of checkboxes.
+4. **The choice of the model family for tokens** ❌ **cancelled 2026-09-14** (step 4, cut 2): the page
+   takes finished numbers and counts nothing of its own, and it has no dictionary of another family.
+   Precomputing every family would pay the assembly time for numbers nobody may ask about, so the
+   family lives in the run's settings and the page names the method of every metric as text.
+5. **The honesty mark** at a metric and at a suspicious cell: the method, its version,
+   "approximate", "the file is too large" (requirement §3.3 `requirements.md`).
+6. **The view's state is remembered** (`module-design.md` §8.4): the main path is `localStorage`
+   under a key chosen by the report's passport — the tool's name, the data schema, the artifact's
+   path, the title and the column labels in order — so a choice made in someone else's report is not
+   picked up. The package version and the top of the history are left out on purpose: an update does
+   not change what a column means, and a grown history is the very history the reader comes back to.
+   Only what is switched off is kept, by name. `location.hash` comes beside it, so a choice can be
+   sent to a colleague by a link and works where `localStorage` is not there (`file://` in a private
+   window: a `try/catch`, and a link is applied on `hashchange` — R-2.6).
 
-Порядок и группировка строк, свечение «сейчас», липкая левая колонка,
-`tabular-nums`, пара `Canvas`/`CanvasText` — переезжают из текущей вёрстки как
-есть: эти решения уже оплачены (тёмная схема, скролл вправо, выравнивание чисел).
+The rule of the recount (requirement §3 `module-design.md`): the engine hands absolute values, and
+the page counts deltas to the previous **switched-on** row and the total over the switched-on set.
+An empty cell means "did not change", `—` "the file is not there", `0` "the file is there and
+empty" — three different answers, explained by the page's legend.
 
-### 4.9. Хук и автообновление
+Row order and grouping, the "now" glow, the sticky left column, `tabular-nums` and the
+`Canvas`/`CanvasText` pair moved over from the former layout as they were: those decisions are
+already paid for (a dark scheme, scrolling to the right, aligned numbers).
 
-- `size install-hook` прописывает `post-commit` (или `core.hooksPath`, если в
-  проекте уже есть свои хуки; тогда — аккуратная вставка вызывающей строки).
-- Хук делает **только** `size update` локально: не коммитит, не пушит, не
-  трогает индекс (требование §7.2).
-- Защита от зацикливания, три уровня: (1) отчёт вне git — его пересборка коммита
-  не создаёт; (2) хук не создаёт коммиты; (3) техническая страховка — флаг
-  окружения `SIZE_REPORT_IN_HOOK=1`, который наследуется дочерними процессами, и
-  lock-файл с pid в `.size-report/`, чтобы второй запуск не стартовал, а
-  завершился кодом `0` с сообщением.
-- Автоматику можно выключить: `hooks.enabled: false` в настройках и
-  `size uninstall-hook`; поведение хука видно в `size doctor`.
+### 4.9. The hook and the self-refresh
 
-### 4.10. Платформа GitHub — тонкая оболочка
+- The hook **installs itself**: after a package install (`bin/postinstall.js`) and on the first run
+  in a project (`autoInstall` in `src/hook.js`); `size install-hook` does it by hand and
+  `size uninstall-hook` takes it away together with its state, returning the project to what it was.
+- The installed file calls one line — the package's entry point with `hook-run` — and is written for
+  `post-commit` and for a merge as well: git runs no `post-commit` when it makes the merge commit
+  itself and calls `post-merge` instead (measured on git 2.50.1; the finding stands in
+  `BLOCKERS.md`).
+- **`hook-run` rebuilds the report and, if git tracks it, commits it as a commit of its own** whose
+  subject names the report and the commit it was rebuilt after; where the report is not tracked, it
+  is only rebuilt (`storeReport` in `src/hook.js`). The commit is assembled with plumbing
+  (`hash-object`, `write-tree`, `commit-tree`, `update-ref`) in an index of its own
+  (`GIT_INDEX_FILE`), so the real index and the working tree stay untouched.
+- **A loop cannot start**, for two reasons rather than the plan's three (requirement §7.2
+  `requirements.md`): `commit-tree` calls no hooks at all, and the measurement ignores a commit that
+  touched nothing but the report, so the artifact is a fixed point — its own commit cannot change
+  its bytes. A lock with a pid in the hook's state directory keeps a second run out (`runLocked`).
+- The automation is switchable: `hooks.enabled: false` in the settings, and what the hook did is
+  visible in `size doctor`.
+- **What the plan promised and the code does not do:** the plan had the hook doing "only
+  `size update` locally" and never committing — the code does commit the report, which is how it
+  stays refreshed where the report is in git; and the plan's environment flag
+  `SIZE_REPORT_IN_HOOK` was not made, because the construction above makes nesting impossible rather
+  than unlikely.
 
-Ядро о платформе не знает. Надстройка v1:
+### 4.10. GitHub as a thin shell
 
-- шаблон job'а: `size check` (полнота), `size render`, отчёт — артефактом,
-  при неполноте — код `1` и понятный текст в логе;
-- `fetch-depth: 0` — только в этом job'е;
-- комментарий в PR со сводкой изменений — **не в v1**, вынести в шаблон как
-  заготовку (требование §8, §12).
+The engine knows nothing about the platform. The v1 superstructure is `templates/ci.yml` (put it at
+`.github/workflows/size-report.yml` and it needs no edits): a checkout with `fetch-depth: 0`, an
+install, then `size` — the artifact against the history — and two `size --data` snapshots compared
+by `diff`, one ordinary and one with `GIT_CONFIG_GLOBAL=/dev/null`, because a number must not depend
+on the machine's git settings (`BLOCKERS.md` §B1). Where the report is deliberately not in git, the
+template's header tells the reader to put `size --write` in place of the check: the artifact then
+proves it can be built. The template needs no secrets. A comment in a pull request with a summary of
+the changes is **not in v1** (requirements §8, §12 `requirements.md`).
 
 ---
 

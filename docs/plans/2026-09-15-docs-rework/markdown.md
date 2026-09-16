@@ -631,8 +631,31 @@ files). The parts below are the order to work in; each is one commit.
   measured: 69 section keys before and 69 after, none lost or added, and of the 112 references the guard
   resolves not one points into `PLAN.md` past a heading that exists. **Carried out of this pass:**
   `comments.md` gets the 22 Russian prose comments left in five files it had declared done.
-- [ ] **M18 PLAN §4** (177–482) — 206 Russian: the target architecture, the load-bearing part.
-- [ ] **M19 PLAN §5, steps 0–2** (483–682) — 161 Russian.
+- [x] **M18 PLAN §4** (177–430) — done 2026-09-16, and §4 is English throughout. 240 added / 291 removed =
+  **531 changed lines in one file** at the 600 budget; the file 1229 → **1178** lines, Cyrillic in it
+  788 → **582**, none left in §4 (the first Cyrillic line is 432 — §5). `verify:fast` green (5 steps, 72 of
+  177), no gate files, no release — the file is not in the tarball. **§4.2's tree and §4.3's JSON example
+  gave way to measurement:** `src/` is flat by subject, `fixtures/` holds `live`/`parity`/`synthetic`, and
+  the frozen copy of the engine is not in the tree (R-2.1's remainder); the contract is `schema` /`tool`
+  /`report` /`metrics[]` /`categories[]` /`files[]` /`catalog[]` /`rows[]` /`now[]` /`last[]` /`approx{}`
+  /`skipped[]`, with `series` absent and `commits` become `rows`, the three states of a file carried by
+  `null` rather than by a `gone` point, and the `<`-escaping held by the page's own rule
+  (`src/page/build.js`, guarded by the self-contained page of `test/page-view.test.js`). **Where the plan
+  promised what the code does not do, the text now says so and names the source:** no `version` field and
+  no versioned cache, the run memory being keyed by the blob's sha plus the metric (`REFACTOR.md` §7
+  names the versioned cache an ability the rework did not take); the "file too large" bound is `MAX_BYTES`
+  (512 KiB) in the derived profile, not a settings key; no `files`/`categories`/`report` sections and no
+  `--migrate`, the old keys being a subset of the new (`BLOCKERS.md` §N17); no `measure`/`render`/
+  `update`/`version` words, and **§4.9's "the hook never commits" is false** — `hook-run` commits the
+  report with plumbing in an index of its own, which is why the loop argument needs two reasons rather
+  than three, and no `SIZE_REPORT_IN_HOOK` flag exists while the lock does. §4.10's CI template was read
+  and does what the text says. **Corrected citations:** the exit codes answer requirements §2.2/§6.3 with
+  §11.3 naming code 3, and the honesty mark is §3.3 — **the plan's `§7.4 requirements.md` is a section
+  that does not exist, and the guard cannot see it**, because the name and the reference sit on different
+  lines (the guard resolves a name within its own line). Two more guard hits were the same class —
+  `§4.5`→requirements, `§4.9`→worklog — fixed in the document, no guard weakened. 69 section keys before
+  and after, none moved; 192 references resolve, none into a section that is gone. No release.
+- [ ] **M19 PLAN §5, steps 0–2** (432–682) — 161 Russian.
 - [ ] **M20 PLAN §5, steps 3–6** (683–856) — 140 Russian.
 - [ ] **M21 PLAN §6–§9** (857–1041) — 128 Russian (13 + 18 + 83 + 14 by section).
 - [ ] **M22 PLAN §10–§14** (1042–1230) — 153 Russian (82 + 9 + 11 + 39 + 12 by section). The plan of a
