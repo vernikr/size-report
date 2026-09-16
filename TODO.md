@@ -72,15 +72,10 @@ Opened 2026-09-16 with the string-translation work (`docs/plans/2026-09-16-i18n-
   (`'the module does not parse'`). How it shows: a reader is told the language of the line by a comment
   that argues for the other one. It is prose rather than a literal, so the string work leaves it alone
   (`AGENTS.md`'s frame) and records it here; the literal it explains moved because the reason lands in a
-  refusal that became English. Fix it in a portion of its own (one comment, no code) — comfortably in
-  the same pass as the `tools/refusals.js:134` comment below.
-- **`tools/refusals.js:134` — the `template` doc comment names Russian placeholders.** Seen
-  2026-09-16 while translating the settings draft (subplan S2, step 2): it reads "a shape with a
-  substitution (`<файл>`, `<коммит>` — Russian, as the advice prints it)", while the shapes have been
-  `<file>`/`<commit>` since S1's step 2 (measured: `rg -n "'<" tools/refusals.js` finds `<file>` and
-  `<commit>` only). How it shows: a reader of the catalogue is told a Russian placeholder is the
-  convention when the printed text has none. It is prose rather than a literal, so the translation
-  work leaves it alone; fixing it is one comment, in a portion of its own.
+  refusal that became English. Fix it in a portion of its own (one comment, no code).
+  (The `tools/refusals.js:134` comment that stood beside this one was fixed 2026-09-16 in W1's step 8,
+  together with the rest of the catalogue's prose: it now names `<file>`/`<commit>`, as the advice
+  prints them. A fixed entry is deleted rather than struck through.)
 - **`src/metrics.js:61-63` — the last Russian comment in `src/`.** Seen 2026-09-16 while measuring
   the measurement layer for subplan S3 (`docs/plans/2026-09-16-i18n-english/measurement.md`): the
   comment above `METRICS` explains why a metric declares `needsText`, and it is the only comment

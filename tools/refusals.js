@@ -104,17 +104,18 @@ export const PLACEHOLDER = '@';
  * advice inside an existing refusal is visible to a check rather than to an eye alone: a case that
  * printed advice owes a declaration.
  *
- * **The Russian markers stay while the modules still print them** (the string work translates a
- * module at a time, `docs/plans/2026-09-16-i18n-english/`): the tolerance is a fact about the tree
- * rather than a debt marker, and the subplan that translates the last module printing advice
- * removes the Russian alternatives. The English ones carry a word boundary: without it the marker
- * `fix` would be found inside `prefix:` and a message with no advice would look as if it had one.
+ * **The markers are English only, and the tolerance is spent** (W1's step 8 of the string work,
+ * 2026-09-16): the Russian alternatives stood here while the modules still printed them, and none
+ * does any more — measured over `src`, `bin` and `tools`, the only Russian advice markers left are
+ * the two sensors of `tools/gates/**`, whose output the extractor never reads. The markers carry a
+ * word boundary: without it `fix` would be found inside `prefix:` and a message with no advice
+ * would look as if it had one.
  *
  * The border is said out loud: no marker, no line to check. So advice added without a marker has to
  * be written with one, and the advice of **non**-refusals (a successful `explain`, the `--init`
  * hint, `doctor` findings) never enters the catalogue: their own checks, named in the header of
  * `test/refusals.test.js`, hold them. */
-const ADVICE_LINE = /(?:починка|создайте его|соберите её|локально|в CI|\bfix|\bcreate it|\bbuild it|\blocally|\bin CI): (.+)$/;
+const ADVICE_LINE = /(?:\bfix|\bcreate it|\bbuild it|\blocally|\bin CI): (.+)$/;
 
 export function adviceOf(out) {
   return out.split('\n').map((l) => (l.match(ADVICE_LINE) || [])[1])
@@ -131,7 +132,7 @@ export function adviceOf(out) {
  *     into the project), `inEmpty` in an empty repository, `env` gives it its own environment.
  *     `args` is the shape of the call (`cliCommand`), `text` a ready line from the output (that is
  *     how git and a command from the project's settings are called).
- *   - `template` — a shape with a substitution (`<файл>`, `<коммит>` — Russian, as the advice prints
+ *   - `template` — a shape with a substitution (`<file>`, `<commit>` — English, as the advice prints
  *     it): there is nothing to run, a person does the substituting, and what is checked is that the
  *     names of commands and flags in the shape exist.
  *   - `manual` — the advice is not a command but an action of a person: `why` says why it cannot be
@@ -142,206 +143,206 @@ export function adviceOf(out) {
 export const CASES = [
   { key: 'unknown flag', scenario: 'fixture', args: ['--wite'], code: 2,
     must: ['unknown flag "--wite"', '--help'],
-    truth: 'названо то слово, которое человек набрал, а не похожее, и есть команда',
+    truth: 'the word the person actually typed is named rather than a similar one, and there is a command',
     advice: [{ kind: 'run', args: ['--help'], expect: 0 }] },
   { key: 'repeated flag', scenario: 'fixture', args: ['--config', '@config', '--write', '--write'], code: 2,
     must: ['the flag "--write" is named twice'],
-    truth: 'назван именно повторённый ключ',
+    truth: 'the very flag that was repeated is named',
     advice: [{ kind: 'run', args: ['--help'], expect: 0 }] },
   { key: 'flag without a value', scenario: 'fixture', args: ['--config'], code: 2,
     must: ['the flag "--config" has no value', '--config <file>'],
-    truth: 'сказано, что не хватает значения, и как его задать',
+    truth: 'it says the value is missing and how to give it',
     advice: [{ kind: 'template', args: ['--config', '<file>'] }] },
   { key: 'two modes at once', scenario: 'fixture', args: ['--config', '@config', '--write', '--data'], code: 2,
     must: ['two modes at once: "--write" and "--data"', 'fix: '],
-    truth: 'названы оба режима, потому что выбор из них — выбор человека',
+    truth: 'both modes are named, because choosing between them is up to the person',
     advice: [{ kind: 'run', args: ['--config', '@config', '--write'], expect: 0, inClone: true }] },
   { key: 'incompatible flag', scenario: 'fixture', args: ['--config', '@config', '--force'], code: 2,
     must: ['"--force" works only with "--init"', 'fix: '],
-    truth: 'сказано, с чем ключ работает, и это верно',
+    truth: 'it says what the flag works with, and it is true',
     advice: [{ kind: 'run', args: ['--init', '--force'], expect: 0, inClone: true }] },
   { key: 'incompatible flag', scenario: 'fixture', args: ['--init', '@draft', '--config', '@config'], code: 2,
     must: ['"--init" has a file of its own', '"--config" names the settings of the project'],
-    truth: 'объяснена разница между двумя файлами, а не просто «нельзя»',
+    truth: 'the difference between the two files is explained rather than a plain "not allowed"',
     advice: [{ kind: 'template', args: ['--init', '<file>'] }] },
   { key: 'extra word', scenario: 'fixture', args: ['--config', '@config', '--write', 'out.html', 'extra'], code: 2,
     must: ['the extra word "extra"', '"--write" takes one value'],
-    truth: 'лишним названо слово человека, а не значение режима',
+    truth: 'the extra word named belongs to the person rather than to a mode value',
     advice: [{ kind: 'run', args: ['--config', '@config', '--write', 'out.html'], expect: 0, inClone: true }] },
   { key: 'extra word', scenario: 'fixture', args: ['--config', '@config', 'check', 'extra'], code: 2,
     must: ['the command "check" takes no arguments', '"extra" is extra'],
-    truth: 'виновато лишнее слово, и оно названо',
+    truth: 'the extra word is the culprit, and it is named',
     advice: [{ kind: 'run', args: ['--config', '@config', 'check'], expect: 1, inClone: true }] },
   { key: 'extra word', scenario: 'fixture', args: ['--config', '@config', 'explain', 'HEAD', 'HEAD~1'], code: 2,
     must: ['"explain" takes one commit', 'fix: '],
-    truth: 'сказано, что коммит один, а не «слишком много слов»',
+    truth: 'it says one commit is wanted rather than "too many words"',
     advice: [{ kind: 'template', args: ['--config', '@config', 'explain', '<commit>'] }] },
   { key: 'unknown command', scenario: 'fixture', args: ['sizes'], code: 2,
     must: ['unknown command "sizes"', '--help'],
-    truth: 'слово названо командой не зря: человек звал именно команду, и ему нужен их список',
+    truth: 'the word is named as a command for a reason: the person called a command and needs the list of them',
     advice: [{ kind: 'run', args: ['--help'], expect: 0 }] },
   { key: 'command and mode', scenario: 'fixture', args: ['--config', '@config', 'check', '--write'], code: 2,
     must: ['the command "check" and the mode "--write"', 'fix: '],
-    truth: 'названы оба виновника: человек считает их одним и тем же, а они разное',
+    truth: 'both culprits are named: a person takes them for one thing while they are two',
     advice: [{ kind: 'run', args: ['--config', '@config', 'check'], expect: 1 }] },
   { key: 'no commit', scenario: 'fixture', args: ['--config', '@config', 'explain'], code: 2,
     must: ['the command "explain" needs a commit', 'a revision name'],
-    truth: 'сказано, чем коммит можно назвать, а не только «нужен коммит»',
+    truth: 'it says how a commit may be named rather than only "a commit is wanted"',
     advice: [{ kind: 'template', args: ['--config', '@config', 'explain', '<commit>'] }] },
   { key: 'no JSON answer', scenario: 'fixture', args: ['--config', '@config', 'install-hook', '--json'], code: 2,
     must: ['the command "install-hook" has no answer in JSON', 'fix: '],
-    truth: 'сказано, что ответа нет именно у этой команды',
+    truth: 'it says that this very command has no answer',
     advice: [{ kind: 'run', args: ['--config', '@config', 'install-hook'], expect: 0, inClone: true }] },
   { key: 'two answers at once', scenario: 'fixture', args: ['--config', '@config', '--write', '--json'], code: 2,
     must: ['"--json" and the mode "--write"'],
-    truth: 'сказано, что «--json» — форма ответа, а режим — то же самое своими словами',
+    truth: 'it says "--json" is a form of the answer while a mode is the same thing in other words',
     advice: [{ kind: 'run', args: ['--config', '@config', '--write'], expect: 0, inClone: true }] },
 
   { key: 'no settings file', scenario: 'fixture', args: ['--config', '@missing'], code: 2,
     must: ['no settings file', 'create it: ', '--init'],
-    truth: 'назван путь, по которому искали, и команда, которая файл создаст',
+    truth: 'the path that was searched is named, and the command that will create the file',
     advice: [{ kind: 'run', args: ['--init', '@missing'], expect: 0, mustFix: true }] },
   { key: 'settings not parsed', scenario: 'fixture', args: ['--config', '@broken'], code: 2,
     must: ['cannot parse', 'fix: edit'],
-    truth: 'причина от синтаксиса JSON, а не «что-то не так с настройками»',
+    truth: 'the cause is the JSON syntax rather than "something is wrong with the settings"',
     advice: [
       { kind: 'manual', text: 'edit @broken',
-        why: 'правка файла настроек — действие человека: что в нём было задумано, инструмент не знает' },
+        why: 'editing the settings file belongs to the person: the tool does not know what was meant in it' },
       // The advice about `--init` in an empty directory is verified where it is given: a draft there
       // comes out without columns and without a refusal (the "!" mark and code 0).
       { kind: 'run', args: ['--init'], expect: 0, inEmpty: true }
     ] },
   { key: 'settings invalid', scenario: 'fixture', args: ['--config', '@empty'], code: 2,
     must: ['no columns are given', 'fix: edit'],
-    truth: 'названо, какой именно ключ неверен, а не «настройки плохие»',
+    truth: 'it names the very key that is wrong rather than "the settings are bad"',
     advice: [{ kind: 'manual', text: 'edit @empty',
-      why: 'правка настроек — за человеком: какие файлы важны, знает только проект' }] },
+      why: 'editing the settings belongs to the person: only the project knows which files matter' }] },
   { key: 'settings invalid', scenario: 'fixture', args: ['--config', '@badtype'], code: 2,
     must: ['has to be {label, paths:', 'fix: '],
-    truth: 'путь, который не имя файла, — отказ, а не колонка с нулём строк за успех',
+    truth: 'a path that is not a file name is a refusal rather than a column of zero rows counted as success',
     advice: [{ kind: 'manual', text: 'edit @badtype',
-      why: 'правка настроек — за человеком: что вместо числа он имел в виду, инструмент не знает' }] },
+      why: 'editing the settings belongs to the person: the tool does not know what was meant instead of a number' }] },
   { key: 'not a git repository', scenario: 'barren', args: [], code: 2,
     must: ['git sees no repository here', 'the directory I look in is ', 'git init'],
-    truth: 'сказано, куда смотрел инструмент и что делать, если истории ещё нет',
+    truth: 'it says where the tool looked and what to do when there is no history yet',
     advice: [{ kind: 'run', text: 'git init', expect: 0, mustFix: true }] },
   { key: 'git missing', scenario: 'no-git', args: [], code: 2, env: { PATH: '/nonexistent' },
     must: ['git did not start: it is not in PATH', 'install git'],
-    truth: 'два разных тупика — «git не нашёлся» и «репозитория нет» — названы врозь, а не одним текстом с оговоркой «или»',
+    truth: 'two different dead ends — "no git" and "no repository" — are named apart rather than in one sentence with an "or"',
     advice: [{ kind: 'manual', text: 'install git (https://git-scm.com)',
-      why: 'установка программы — действие вне проекта: git в этой среде есть, а убирать его значило бы убирать то, чем живёт сам набор' }] },
+      why: 'installing a program is an action outside the project: git is here, and removing it would remove what the suite itself lives on' }] },
   { key: 'config already exists', scenario: 'draft-twice', args: ['--init', '@draft'], code: 2,
     must: ['config already exists', 'overwrite it with a draft: ', '--force'],
-    truth: 'сказано и как править, и как перезаписать — потому что решает человек',
+    truth: 'it says both how to edit and how to overwrite, because the person decides',
     // The advice names the very file under discussion: the draft in @draft already exists, and it is
     // `--force` that overwrites it.
     advice: [{ kind: 'run', args: ['--init', '@draft', '--force'], expect: 0 }] },
 
   { key: 'no such commit', scenario: 'fixture', args: ['--config', '@config', 'explain', 'maser'], code: 2,
     must: ['is not a revision name and not the start of a sha', 'git log'],
-    truth: 'отказ говорит про имя, а не про коммит: коммита тут никто не терял',
+    truth: 'the refusal speaks of a name rather than a commit: no commit was lost here',
     advice: [{ kind: 'run', text: 'git log --oneline', expect: 0 }] },
   { key: 'ambiguous commit', scenario: 'fixture', args: ['--config', '@config', 'explain', '9'], code: 2,
     must: ['is ambiguous', 'fix: name more characters'],
-    truth: 'показаны подходящие коммиты: выбрать из них может только человек',
+    truth: 'the fitting commits are shown: only a person can choose among them',
     advice: [{ kind: 'manual', text: 'name more characters',
-      why: 'подставить за человека один из подходящих коммитов значило бы угадать: какой из них он звал, знает только он' }] },
+      why: 'substituting one of the fitting commits for the person would be guessing: only the person knows which one was meant' }] },
   { key: 'commit outside the history', scenario: 'side-branch', args: ['--config', '@config', 'explain', 'side'], code: 2,
     must: ['not in the history of the report', 'fix: '],
-    truth: 'сказано, что коммит есть и он в другой ветке, а не «такого коммита нет»',
+    truth: 'it says the commit exists and sits on another branch rather than "there is no such commit"',
     advice: [{ kind: 'run', text: 'git log --oneline', expect: 0 },
       { kind: 'run', text: 'git log --all', expect: 0 }] },
   { key: 'EXIT.SHALLOW', scenario: 'shallow', args: ['--config', '@config', '--write'], code: 3,
     must: ['the history is truncated (shallow clone)', 'git fetch --unshallow', 'fetch-depth: 0'],
-    truth: 'названы обе починки: для себя и для CI',
+    truth: 'both fixes are named: for oneself and for CI',
     advice: [
       { kind: 'run', text: 'git fetch --unshallow', expect: 0, mustFix: true },
       { kind: 'manual', text: 'fetch-depth: 0',
-        why: 'правка файла CI — за человеком; сама строка лежит в шаблоне и её стережёт `test/templates.test.js`' }
+        why: 'editing the CI file belongs to the person; the line itself lies in the template and `test/templates.test.js` guards it' }
     ] },
 
   { key: 'foreign hook', scenario: 'foreign-hook', args: ['--config', '@config', 'install-hook'], code: 2,
     must: ['is already there and was not put there by this tool', 'the tool deliberately does not rewrite what it did not write'],
-    truth: 'объяснено, почему инструмент не перезаписывает, и что сделать вместо этого',
+    truth: 'it explains why the tool does not overwrite, and what to do instead',
     advice: [{ kind: 'coveredBy', file: 'test/hook.test.js', text: 'hook-run' }] },
   { key: 'foreign hook', scenario: 'foreign-hook', args: ['--config', '@config', 'uninstall-hook'], code: 2,
     must: ['was not put there by this tool — I leave it alone', 'fix: '],
-    truth: 'сказано, что снятие тоже не трогает чужое',
+    truth: 'it says removal touches what belongs to nobody else either',
     advice: [{ kind: 'manual', text: 'take the line with "hook-run" out of it',
-      why: 'правка чужого хука — за человеком: инструмент его намеренно не трогает, а совет говорит, что оттуда убрать' }] },
+      why: 'editing a hook of someone else belongs to the person: the tool deliberately leaves it alone, and the advice says what to take out of it' }] },
   { key: 'foreign core.hooksPath', scenario: 'hooks-path', args: ['--config', '@config', 'install-hook'], code: 2,
     must: ['the project sets core.hooksPath', 'fix: '],
-    truth: 'назван каталог из настроек и причина, по которой в него не лезут',
+    truth: 'the directory from the settings is named, and the reason nobody goes into it',
     advice: [{ kind: 'coveredBy', file: 'test/hook.test.js', text: 'hook-run' }] },
   { key: 'no way to invoke the tool', scenario: 'src-copy', args: ['--config', '@config', 'install-hook'], code: 2,
     must: ['nothing to call the tool with', 'install the package as a dependency'],
-    truth: 'сказано, что хук ставить нечем (а не «хук будет молчать»: его ещё нет)',
+    truth: 'it says there is nothing to install the hook with (rather than "the hook will be silent": it does not exist yet)',
     // The advice names an install inside the project rather than the package name: a call by the
     // name goes to the registry, which serves a revision the project never pinned.
     advice: [{ kind: 'manual', text: 'install the package as a dependency of the project',
-      why: 'установка — сеть и чужой проект: исполняет её человек, а проверено то, что можно — совет называет ссылку из манифеста, а не имя из реестра' }] },
+      why: 'installing is the network and a project of someone else: a person runs it, and what could be checked was checked — the advice names the link from the manifest rather than a name from the registry' }] },
 
   /* The parse guard and the minifier need a commit of their own in a clone — `test/module.test.js`
    * guards them, carrying the same case to the end. */
   { key: 'file is not JavaScript', coveredBy: 'test/module.test.js',
     must: ['is not JavaScript'],
-    truth: 'сказано, что дело в исходном тексте, а не в стриптере, и что правится',
+    truth: 'it says the source text is to blame rather than the stripper, and what is to be fixed',
     advice: [{ kind: 'coveredBy', file: 'test/module.test.js', text: 'remove this extension from minify.guard' }] },
   { key: 'minifier did not parse', coveredBy: 'test/module.test.js',
     must: ['esbuild did not parse'],
-    truth: 'назван и файл, и минификатор, и выход, который этой причине и отвечает: расширение под упрощение, а не смена минификатора (та передала бы файл гарду)',
+    truth: 'the file, the minifier and the exit that answers this cause are named: an extension for simplification rather than another minifier (which would have handed the file to the guard)',
     advice: [{ kind: 'coveredBy', file: 'test/module.test.js', text: 'give this extension a simplification in minify.ext' }] },
 
   /* Comparing with the tree needs a lost edit — `test/disk.test.js` guards it. */
   { key: 'EXIT.VIOLATION', coveredBy: 'test/disk.test.js',
     must: ['carrying the state between commits lost an edit'],
-    truth: 'сказано, что потерялась правка при переносе, и что пересборка тут ни при чём: разбор назван',
+    truth: 'it says an edit was lost in the port, and that a rebuild is not the cure: the parsing is named',
     advice: [{ kind: 'coveredBy', file: 'test/disk.test.js', text: 'a rebuild does not cure this' }] },
   { key: 'EXIT.VIOLATION', coveredBy: 'test/disk.test.js',
     must: ['the edit exists on disk only'],
-    truth: 'сказано, что правка не потерялась, а не закоммичена, и как её вернуть',
+    truth: 'it says the edit was not lost but uncommitted, and how to bring it back',
     advice: [{ kind: 'coveredBy', file: 'test/disk.test.js', text: 'git checkout -- ' }] },
 
   /* Refusals that print and return a code (the `PRINTED` map). */
   { id: 'no size table file', scenario: 'fixture', args: ['--config', '@notable'], code: 1,
     must: ['size table: no file docs/nope.html', 'build it: '],
-    truth: 'назван файл, который не найден, и команда, которая его соберёт',
+    truth: 'the file that was not found is named, and the command that will build it',
     // The advice quotes `fixCommand` from the settings, so the case itself carries a setting naming
     // the real command (@fixNotable): otherwise there would be nothing to check.
     advice: [{ kind: 'run', text: '@fixNotable', expect: 0, mustFix: true, inClone: true }] },
   { id: 'size table diverged from the history', scenario: 'drift', args: ['--config', '@drift'], code: 1,
     must: ['diverged from the git history', 'fix: ', 'in a commit of its own'],
-    truth: 'сказано, где именно расходится, и что после сборки нужен отдельный коммит',
+    truth: 'it says where exactly they diverge, and that the build needs a commit of its own',
     advice: [
       { kind: 'run', text: '@fixDrift', expect: 0, mustFix: true },
       { kind: 'manual', text: 'and commit docs/size-table.html',
-        why: 'коммит отчёта — за человеком: инструмент не коммитит за него (кроме хука, а тот ставится отдельной командой)' }
+        why: 'committing the report belongs to the person: the tool does not commit for them (except the hook, and it is installed by a command of its own)' }
     ] },
-  { id: 'покрытие неполно', scenario: 'fixture', args: ['--config', '@few', 'check'], code: 1,
+  { id: 'coverage is incomplete', scenario: 'fixture', args: ['--config', '@few', 'check'], code: 1,
     must: ['coverage:', 'fix: add these paths as a column or to "skip"'],
-    truth: 'названы пути и коммиты, которые их завели, и готовое действие',
+    truth: 'the paths and the commits that introduced them are named, and a ready action',
     advice: [
       { kind: 'manual', text: 'add these paths as a column or to "skip" of size-table.config.json',
-        why: 'правка настроек проекта — за человеком: какие пути важны, знает только проект' },
+        why: 'editing the settings of the project belongs to the person: only the project knows which paths matter' },
       { kind: 'run', args: ['--init', 'draft.json'], expect: 0, inClone: true }
     ] },
-  { id: 'приближение вместо точного счёта', scenario: 'fixture', args: ['--config', '@sensor', '--write'], code: 4,
+  { id: 'an estimate instead of an exact count', scenario: 'fixture', args: ['--config', '@sensor', '--write'], code: 4,
     env: { SIZE_REPORT_NO_OPTIONAL: '1' },
     must: ['the metric "min" counts by simplification', 'the metric "tok" counts by an estimate', 'fix: '],
-    truth: 'приближение названо приближением и не уезжает как успех',
+    truth: 'an estimate is called an estimate and does not leave as a success',
     // Both pieces of advice are prose: the tool cannot install dependencies for a person. But the
     // alternative each names is a setting, and a run checks it.
     advice: [
       { kind: 'manual', text: 'install the optional dependencies again or set "minify": {"engine": "strip"}',
-        why: 'установка зависимостей — сеть и чужой проект: её исполняет человек',
+        why: 'installing dependencies is the network and a project of someone else: a person runs it',
         works: { args: ['--config', '@strip', '--write'], env: { SIZE_REPORT_NO_OPTIONAL: '1' }, expect: 0, inClone: true } },
       { kind: 'manual', text: 'install the optional dependencies again or remove "tok" from metrics',
-        why: 'то же действие человека, и та же проверка его половины: без «tok» в метриках жалобы на словарь нет',
+        why: 'the same action of a person, and the same check of its half: without "tok" among the metrics there is no complaint about the dictionary',
         works: { args: ['--config', '@notok', '--write'], env: { SIZE_REPORT_NO_OPTIONAL: '1' }, expect: 0, inClone: true } }
     ] },
 
-  { id: 'internal error', uncatchable: 'чтобы уронить инструмент, нужно испортить его самого;'
-    + ' проверка, держащая в наборе заведомо сломанный движок, стерегла бы своё, а не отказ',
+  { id: 'internal error', uncatchable: 'to bring the tool down one has to break the tool itself; '
+    + 'a check holding a deliberately broken engine in the set would be guarding its own thing rather than a refusal',
   advice: []
   }
 ];

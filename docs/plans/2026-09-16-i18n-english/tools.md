@@ -51,14 +51,15 @@ them) and `docs-facts.js` 4 → 3. Of the 235:
   `tools/docs-facts.js:170`;
 - **210 are this owner's own**; step 1 lands 10 of them and **three are blocked** (`BLOCKERS.md`
 - **210 are this owner's own**; step 1 lands 10 of them and **three are blocked** (`BLOCKERS.md`
-  N29), step 2 lands 13, step 3 lands 23, step 4 lands 74, step 6 lands 29 and step 7 lands 1, so **60
-  minus what N29 and N30 settle** is left for step 8 and the twelve files read **85** now (`tools/**` as
-  a whole reads 288). Step 5 was closed by measurement without editing anything. What remains by file:
-  `refusals.js` 55 and the 30 lines of the two builders that N21 keeps (`parity-freeze.js` 16 +
-  `make-fixture.js` 3), exactly the two halves of the allow-list — plus `harness.js` 3 and
-  `parity-live.js` 3 (both N29) and the three prose comments (`run-tests.js` 2, `docs-facts.js` 1).
-  Every one of the 85 is named; after step 8 the counter should answer **31** (28 of them allow-listed
-  and 6 of them N29's, minus N29's six when repair (1) lands).
+  N29), step 2 lands 13, step 3 lands 23, step 4 lands 74, step 6 lands 29, step 7 lands 1 and step 8
+  lands 55, so **every step is done** and the twelve files read **30** (`tools/**` as a whole reads
+  **233**). Step 5 was closed by measurement without editing anything. The measurement expected **31**
+  and got 30, and the missing line is named: the catalogue's own comment at `:134`, which step 8
+  translated instead of leaving it as prose — so the prose comments are three (`run-tests.js:22,40`,
+  `docs-facts.js:170`) rather than four. The 30 by file: `parity-freeze.js` 16 + `make-fixture.js` 3
+  (N21, permanent), `harness.js` 3 + `parity-live.js` 3 (N29, the user's decision), `docs-facts.js` 2
+  section names of the pinned revision (gone with the release that moves the pin, N20) + its comment,
+  and the two comments of `run-tests.js`. Nothing else in this owner is left to translate.
 
 And the same measurement for step 8: `tools/refusals.js`'s 55 Cyrillic lines are `truth` **37** +
 `advice.why` **12** + the case `id`s **2** + the `uncatchable` prose **2** + `ADVICE_LINE` **1** +
@@ -306,6 +307,27 @@ No reader at all, measured:
    prints a Russian marker since S5, and the two sensors' markers are never parsed by the extractor),
    the tree is green around it, and N29/N30 touch `firstDiff` and `plural` rather than the catalogue —
    so the step is waiting on a portion, not on a decision.
+   **DoNE 2026-09-16, and W1 with it: 55 → 0.** The prose was translated line by line (49
+   `truth`/`why` lines, the two case `id`s, the two lines of the one `uncatchable` reason) and the
+   stale `template` comment now names `<file>`/`<commit>`, as the advice prints them. **The narrowing
+   landed** — `ADVICE_LINE` keeps only the English markers — and the price was measured: the extractor
+   has one call site (`test/refusals.test.js:245`), it reads the tool's output alone, and the only
+   Russian advice markers left anywhere are W2's two sensors. The plan's red experiment was run
+   **twice**: on the shallow case it did **not** redden (that refusal prints two advice lines, and the
+   extractor asserts about texts rather than about markers — green, which is a finding rather than a
+   failure), and on `config already exists`, which prints one line, it reddened exactly as promised:
+   `«settings and the project / config already exists»: отказ ничего не советует, а каталог объявил
+   совет`. Which of the 55 the tolerance was worth is recorded as narrower than it looked: an advice
+   that loses its marker while a second advice line stays is invisible to the catalogue either way.
+   **What the step asked about the machine-read lines:** of the 55, only the two `id`s and the
+   `uncatchable` text are read by a check — the `id`s inside failure messages
+   (`test/refusals.test.js:301`, `test/refusals-catalog.test.js:94,104,107,113,116,126,130`, and the
+   `deepEqual` at `:113` names `'internal error'`, which is not one of them) and the `uncatchable`
+   text only by its length (`:116`, more than 40 characters — kept at ~150). `truth` and `advice.why`
+   are read by no machine at all (measured). The counts stand untouched: `SITES` 27, `PRINTED`
+   2/2/1/2/4, `CASES` 38, and both catalogue checks green. `pnpm run dup` answered no new twin;
+   `tools/refusals.js` is **not** a gate file (`tools/gates/gatefiles.js`), so the commit carries no
+   `Gate-Change:` trailer — the hook says it itself: “гейт-файлов 0”.
 
 **Why the tree is green between the commits.** Every instrument here talks through its **exit code**
 to the profile runner, and no test reads a verdict (both measured above), so a step can land alone;
@@ -318,13 +340,15 @@ W2's), so no step needs a `Gate-Change:` trailer.
 
 ## Acceptance
 
-- The counter over the twelve files answers **exactly 31**, and every one of them is named: the **six**
+- The counter over the twelve files answers **exactly 30** — the plan expected 31, and the difference is
+  the catalogue's comment at `:134`, which step 8 translated rather than leaving it as prose (one prose
+  comment fewer). Every one of the 30 is named: the **six**
   `firstDiff` literals — three in `tools/harness.js` and three in `tools/parity-live.js` (`BLOCKERS.md`
-  N29; they go if repair (1) is chosen, and then the number is **25**), the 16
+  N29; they go if repair (1) is chosen, and then the number is **24**), the 16
   lines of `manifestNote` (`parity-freeze.js:98-118`) and the 3 config values of the fixture
   (`make-fixture.js:56,57,64`), permanent since N21 was decided; the 2 section names of
-  `docs-facts.js`, which N20's release moves; and the 4 prose comments (`refusals.js:134`,
-  `run-tests.js:22,40`, `docs-facts.js:170`). The command:
+  `docs-facts.js`, which N20's release moves; and the 3 prose comments (`run-tests.js:22,40`,
+  `docs-facts.js:170`). The command:
   `rg -cP '[\p{Cyrillic}]' tools/refusals.js tools/parity-live.js tools/parity-freeze.js tools/run-tests.js tools/pack-check.js tools/check-standards.js tools/make-fixture.js tools/harness.js tools/yaml.js tools/docs-facts.js tools/page-harness.js tools/synthetic/repo.js`.
 - The counts and the keys are untouched — `test/refusals-catalog.test.js` says so, and it is the
   sensor that would catch a renamed cause or a lost `✗ `.

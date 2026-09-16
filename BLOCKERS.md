@@ -777,9 +777,10 @@ references stayed the same after the fix.
   exception is unreadable at a glance and hides the reason inside the pattern, while a list of paths and reasons
   is what a person can check by eye — which is the whole point of a guard that exists to be trusted.
 
-- **N28. S1's wash-up (`ADVICE_LINE`) is deferred: the Russian markers are still printed.** Deferred
-  2026-09-16 at the end of subplan S1 (`docs/plans/2026-09-16-i18n-english/surface.md`, step 5) — not
-  dropped, and with its condition measured rather than guessed.
+- **N28. S1's wash-up (`ADVICE_LINE`) is deferred: the Russian markers are still printed — CLOSED
+  2026-09-16 in W1's step 8.** Deferred 2026-09-16 at the end of subplan S1
+  (`docs/plans/2026-09-16-i18n-english/surface.md`, step 5) — not dropped, and with its condition
+  measured rather than guessed. The closing measurement is at the end of this note.
 
   **What S1 has already done.** The counter half of the wash-up holds: `rg -cP '[\p{Cyrillic}]'
   src/refusal.js src/args.js src/cli.js src/modes.js` answers nothing. The help, the cause registry,
@@ -798,11 +799,25 @@ references stayed the same after the fix.
   marker** — that is S2, S3, S4 and S5 finished — and it belongs to **W1's step 8**, which owns
   `tools/refusals.js`. The red-first experiment is written there already: put `починка: ` back into one
   refusal's text after the narrowing and the catalogue's advice assertion goes red, because `adviceOf`
-  returns nothing for it.
-
-  **The price of deferring.** While four owners still print the Russian markers, a translated module
-  could print one again and the extractor would accept it without the catalogue noticing  the difference — acceptable while the tolerance is a fact about the tree, and the reason the narrowing is
+  returns nothing for it.  **The price of deferring.** While four owners still print the Russian markers, a translated module
+  could print one again and the extractor would accept it without the catalogue noticing the
+  difference — acceptable while the tolerance is a fact about the tree, and the reason the narrowing is
   the last step of the instrument's own work rather than of the runtime's.
+
+  **Closed 2026-09-16, in W1's step 8, and the price was paid twice over rather than assumed.** The
+  condition held: measured over `src`, `bin` and `tools`, the only Russian advice markers left are
+  `tools/gates/dup.js:139` and `tools/gates/coverage.js:93` (W2's sensors), and `adviceOf` — the single
+  call site is `test/refusals.test.js:245` — is applied to the tool's output alone, so nobody else needs
+  the tolerance. `ADVICE_LINE` now reads `/(?:\bfix|\bcreate it|\bbuild it|\blocally|\bin CI): (.+)$/`
+  and the comment above it says so instead of promising a tolerance that no longer exists. The red
+  experiment was run twice, and the first result is worth keeping: putting `починка: ` back into the
+  **shallow** case's printed advice (the case the plan named) left the catalogue **green**, because that
+  refusal prints two advice lines and the extractor's assertions are about the texts being named, not
+  about the marker. Putting it into `config already exists` — one advice line — reddened exactly as the
+  plan promised: `«settings and the project / config already exists»: отказ ничего не советует, а
+  каталог объявил совет`. What the tolerance was buying is therefore narrower than it looked, and what
+  it cost is now visible: an advice that loses its marker while a second advice line stays is invisible
+  to the catalogue either way.
 
 - **N29. Three literals of `tools/harness.js` cannot be translated while `tools/parity-live.js` keeps its copy
   of the same function — the pair is a clone the baseline accepts.** Found 2026-09-16 in W1's step 1, and it is
