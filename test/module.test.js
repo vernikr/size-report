@@ -255,7 +255,7 @@ test('совет называет путь внутри проекта, а не 
   const res = runTool(engine, dir, []);
   assert.notEqual(res.code, 0, 'без настроек инструмент не отказал');
 
-  const hint = (res.stderr.match(/закрепить их файлом[^:]*: (.+)$/m) || [])[1];
+  const hint = (res.stderr.match(/pin them with a file of their own[^:]*: (.+)$/m) || [])[1];
   assert.notEqual(hint, undefined, 'подсказка не называет команду починки:\n' + res.stderr);
   assert.match(hint, new RegExp('^node ' + INSTALL_RE + ' --init$'),
     'совет ведёт не путём внутри проекта: ' + hint);
@@ -281,7 +281,7 @@ test('совет называет путь внутри проекта, а не 
 test('совет выполним рядом с пакетом и отказывает на месте без него', () => {
   const { dir, engine } = installEngine('installed-run');
   const res = runTool(engine, dir, []);
-  const hint = (res.stderr.match(/закрепить их файлом[^:]*: (.+)$/m) || [])[1];
+  const hint = (res.stderr.match(/pin them with a file of their own[^:]*: (.+)$/m) || [])[1];
   assert.notEqual(hint, undefined, 'подсказка не называет команду починки:\n' + res.stderr);
 
   // The advice is runnable: the same line in the same project does what it promises.

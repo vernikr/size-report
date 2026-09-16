@@ -61,7 +61,7 @@ test('свежий проект без настроек: работает на �
   const res = runSize(dir, ['doctor']);
   assert.equal(res.code, 0, 'проект без настроек не собрался: ' + firstLine(res.stdout + res.stderr));
   assert.equal(hasStack(res.stdout + res.stderr), false, 'ответ пришёл стеком вместо объяснения');
-  assert.match(res.stdout + res.stderr, /настройки выведены из проекта/,
+  assert.match(res.stdout + res.stderr, /settings derived from the project/,
     'ответ умолчал, откуда взялись настройки:\n' + res.stdout + res.stderr);
   assert.match(res.stdout + res.stderr, /--init/, 'нет команды, которой настройки закрепляются');
   assert.match(res.stdout, /покрытие:/, 'покрытие не сосчитано, хотя настройки есть:\n' + res.stdout);

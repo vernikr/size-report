@@ -48,7 +48,12 @@ Opened 2026-09-16 with the string-translation work (`docs/plans/2026-09-16-i18n-
   whichever answer the tool gives: green either way, before and after the rename (measured: the
   phrase appears in the registry alone, now as the English `no such commit`). Fixing it means
   matching the message's own words or the other cause's sentence — a check's behaviour rather than a
-  literal, hence a portion of its own.
+  literal, hence a portion of its own. **A second instance of the same class, measured 2026-09-16**
+  (subplan S2, step 3): `test/cli.test.js:69` is the negative half of a phrase pair
+  (`assert.equal(/…/.test(again.stderr), false)`) and was left in Russian while the message beside it
+  became English — green either way, measured by running that file alone (9 checks green). So a
+  negative match has to move with the text (the rule C2 wrote down), and a check that reads
+  "the phrase is gone" cannot tell you when it has stopped holding.
 - **`src/init.js` — nothing reads what the settings draft prints.** Seen 2026-09-16 while
   translating it (subplan S2, step 2), and it is a measurement rather than an impression: putting
   four of the draft's lines back into Russian (the `columns:` line, the `min` metric, the `!` note's

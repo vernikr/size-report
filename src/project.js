@@ -283,15 +283,15 @@ export function sniffColumns(root) {
  * finding: two answers about one thing must not drift apart in words. */
 export function derivedSummary(cfg) {
   const labels = cfg.columns.map((c) => c.label);
-  return 'настройки выведены из проекта (файла нет): колонок ' + cfg.columns.length
+  return 'settings derived from the project (no file): columns ' + cfg.columns.length
     + ' (' + labels.slice(0, 5).join(', ') + (labels.length > 5 ? ', …' : '') + '),'
-    + ' исключено путей ' + cfg.skip.length;
+    + ' paths skipped ' + cfg.skip.length;
 }
 
 export function derivedLines(cfg) {
   return [
     '! ' + derivedSummary(cfg),
-    '  закрепить их файлом (дальше правьте как удобно; иначе состав колонок меняется'
-      + ' от прогона к прогону): ' + cliCommand('--init')
+    '  pin them with a file of their own (then edit it as you like; otherwise the set of columns'
+      + ' changes from run to run): ' + cliCommand('--init')
   ];
 }

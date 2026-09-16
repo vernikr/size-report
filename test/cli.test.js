@@ -42,7 +42,7 @@ test('--help отвечает справкой, кодом 0 и без наст�
 test('без настроек инструмент работает на выведенных и говорит, чем их закрепить', () => {
   const dir = cloneFixture(path.join(tmp, 'no-config'));
   const res = runSize(dir, []);
-  assert.match(res.stderr, /настройки выведены из проекта/,
+  assert.match(res.stderr, /settings derived from the project/,
     'запуск без настроек не сказал, откуда они взялись: ' + firstLine(res.stderr));
 
   const cmd = commandIn(res.stderr);
@@ -66,7 +66,7 @@ test('без настроек инструмент работает на выв�
     'команда из вывода завершилась успехом, но настроек не создала');
 
   const again = runSize(dir, []);
-  assert.equal(/настройки выведены из проекта/.test(again.stderr), false,
+  assert.equal(/settings derived from the project/.test(again.stderr), false,
     'после закрепления настроек про них всё ещё говорится как о выведенных: ' + firstLine(again.stderr));
 
   // An advice is closed only when it is really followed: what was pinned has to pass the very check

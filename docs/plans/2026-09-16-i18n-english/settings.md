@@ -105,6 +105,16 @@ the phrasing rather than the baseline (`AGENTS.md`).
 | `test/templates.test.js:49,150` | the draft | reads the draft's **keys** and assembles a real report with it — no message text, but the draft has to keep passing `validateConfig` |
 | `test/api.test.js` | the freeze | the public list of 55 names: none may be added or lost while these files are edited |
 
+**Which profile these readers sit in — measured 2026-09-16 while landing step 3.** All three readers
+of step 3's text (`test/cli.test.js`, `test/doctor.test.js`, `test/module.test.js`) are files of the
+**full** run only (`tools/suites.js`), so `pnpm run verify:fast` cannot see step 3 at all: with
+`derivedSummary` and the `--init` hint both put back into Russian, the fast profile answered **70
+checks green** while those three files held **four red checks** (`test/cli.test.js` "без настроек
+инструмент работает на выведенных…", `test/doctor.test.js` "свежий проект без настроек…", and both
+`test/module.test.js` "совет называет путь внутри проекта…" and "совет выполним рядом с пакетом…").
+That is the price of the joint edit being invisible to the hook: the full profile is what has to be
+run by hand, as the subplan's own acceptance says.
+
 ## Order of work — four steps and a wash-up, one commit each
 
 Budget and habits as in S1: ≤ 600 lines and ≤ 10 files per commit, `pnpm run verify:fast` green
@@ -144,26 +154,46 @@ refusal text put back to Russian while the catalogue stayed English,
 `test/refusals.test.js` answered «settings and the project / config already exists»: в отказе нет
 «config already exists».
 
-**Step 3 — `src/project.js`.** `derivedSummary` and the `--init` hint of `derivedLines`. Joint
-edits: `test/cli.test.js:45,69` and `test/module.test.js:258,284` (the hint's regex is the second
-machine reader of a phrase in this subplan, after the advice extractor). Note in the commit that the
-words are this file's while the printing is `src/doctor.js`'s (S4) and `src/cli.js`'s (S1) — no edit
-there, only the visible output changes.
+**Step 3 — `src/project.js` — done 2026-09-16** (`src/project.js` 4 → 0; commit
+`feat(i18n): translate what is said about derived settings`). `derivedSummary` — `settings derived
+from the project (no file): columns N (<labels>, …), paths skipped N` — and the `--init` hint of
+`derivedLines` — `pin them with a file of their own (then edit it as you like; otherwise the set of
+columns changes from run to run): <command>`. Joint edits: `test/cli.test.js:45,69`,
+`test/doctor.test.js:64` and `test/module.test.js:258,284`. The words are this file's while the
+printing is `src/doctor.js`'s (S4) and `src/cli.js`'s (S1) — no edit there, only the visible output
+changes; one consequence is named on purpose: `doctor` now prints an English finding sentence with a
+Russian `fix:` line (`закрепите их файлом: `, S4), the same mixed state N25 records for the panel.
+The two phrasings of the advice stay visibly different from S4's (`pin them with a file of their
+own` against `закрепите их файлом: `), which is what keeps `pnpm run dup` quiet.
 
-**Step 4 — the cause arguments, or a statement that there is nothing to do.** If S1's step 3 has
-landed, the six arguments of S2's files are already English: run the counter and record that the
-step was empty. If it has not, this step stays empty anyway and the worklog entry says which commit
-will carry the arguments (S1's step 3) and why the split is safe (the catalogue keys on the cause,
-which keeps its name until the whole vocabulary moves in one commit).
+**Measured, string by string** (each line put back into Russian with the rest English): the
+`derivedSummary` sentence reddens `test/cli.test.js` and `test/doctor.test.js`; the hint's first words
+redden `test/module.test.js` twice (its regex finds no hint and the check fails on `undefined`); the
+`paths skipped ` tail reddens **nothing at all** — with it back in Russian the whole profile stayed
+green, eight steps, because no reader reads the second half of that sentence. And the negative match
+`assert.equal(/…/.test(again.stderr), false)` in `test/cli.test.js:69` went **vacuous** rather than
+red when left behind (measured: green with the old Russian pattern against the English source), which
+is the second instance of the class recorded in `TODO.md`.
 
-**Wash-up.** The counter over the three files must answer nothing:
+**Step 4 — the cause arguments: empty, and measured so — 2026-09-16.** S1's step 3 (`a7c869b`) landed
+first, so the arguments of S2's files are already English: `refuseCause('git missing', …)`,
+`'not a git repository'`, `'no settings file'`, `'settings not parsed'`, `'settings invalid'`,
+`'config already exists'` (`src/config.js` five, `src/init.js` one; `src/project.js` raises none).
+Nothing was edited for this step, and that is the record: the split was safe because the catalogue
+keys on the cause, which kept its name until the whole vocabulary moved in one commit.
+
+**Wash-up — done 2026-09-16.** The counter over the three files answers nothing:
 
 ```bash
 rg -cP '[\p{Cyrillic}]' src/config.js src/init.js src/project.js
+# (no output)
 ```
 
-Leave `ADVICE_LINE`'s tolerance alone if any other subplan still prints a Russian marker, and say so
-in the commit. No reflowing, no renames of keys or fields, no "while I am here".
+`ADVICE_LINE`'s tolerance stays: S3, S4 and S5 still print Russian markers (`починка: ` in
+`src/minify.js` and `src/strip/guard.js`, `локально:`/`в CI:` in `src/history.js`, `src/git.js`,
+`src/check.js`, `src/doctor.js`, `src/explain.js` and `src/hook.js`), so narrowing the pattern here
+would redden the catalogue; it belongs to W1's step 8 (**N28**). No reflowing, no renames of keys or
+fields, no "while I am here".
 
 ## What proves each step (the sensors that already exist)
 
@@ -200,7 +230,8 @@ in the commit. No reflowing, no renames of keys or fields, no "while I am here".
 
 ## Acceptance
 
-- `rg -cP '[\p{Cyrillic}]' src/config.js src/init.js src/project.js` answers **nothing**.
+- `rg -cP '[\p{Cyrillic}]' src/config.js src/init.js src/project.js` answers **nothing** — met
+  2026-09-16.
 - `pnpm run verify` green (fast after every commit, full before the portion is pushed).
 - **Behaviour is provably untouched, and the proofs are cheap:** `SITES` and `PRINTED` counts
   unchanged (`test/refusals-catalog.test.js`); the public API list unchanged (`test/api.test.js`);
