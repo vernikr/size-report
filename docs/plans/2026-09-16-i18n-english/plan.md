@@ -31,7 +31,8 @@ report.
 | `worklog/**` | The journal is the record of the request and of the work; it is read in the language of the request and is not a product. |
 | The `ru` sides of the dictionaries in `src/locales.js` and `src/metrics.js` | A locale is **data**: it is the Russian interface of the report, and deleting it deletes a feature. Its counterpart `en` is the target of every other string. `src/metrics.js` holds a dictionary of its own (the metric notes, methods and the degradation wordings) picked by `cfg.locale`, measured while planning S3. |
 | The Russian comment at `src/metrics.js:61-63` | Prose rather than a literal: a comment, left by the prose pass, out of this work's scope by definition. Recorded in `TODO.md` so that the next prose pass finds it (`measurement.md`, S3). |
-| `fixtures/**` | Frozen references: `pnpm run check:standards` re-takes them and compares byte for byte, and `test/frozen.test.js` holds their hashes. Inventories: the consumer's `history.bundle` (2 270 lines of the tool's own output, frozen in September), `fixtures/parity/data.json` (214), `fixtures/*/config.json` (`title`, `heading`, column labels — the sample data being measured), `fixtures/*/golden.json` (commit subjects of the synthetic history) and the fixtures' `README.md` (written by the generator, compared byte for byte). Touching any of them means re-taking both references — a decision with a price, `BLOCKERS.md` N21. |
+| `fixtures/**` | Frozen references: `pnpm run check:standards` re-takes them and compares byte for byte, and `test/frozen.test.js` holds their hashes. Inventories: the consumer's `history.bundle` (2 270 lines of the tool's own output, frozen in September), `fixtures/parity/data.json` (214), `fixtures/*/config.json` (`title`, `heading`, column labels — the sample data being measured), `fixtures/*/golden.json` (commit subjects of the synthetic history) and the fixtures' `README.md` (written by the generator, compared byte for byte). Touching any of them means re-taking both references — and that price is not paid: **`BLOCKERS.md` N21 was decided 2026-09-16, the references stay Russian.** |
+| The builders that write the frozen layer | `tools/synthetic/note.js` 37, `content.js` 31, `history.js` 20 and the instrument lines that write into a reference (`tools/parity-freeze.js:98-118` 16, `tools/make-fixture.js:56,57,64` 3) — **107 lines**. The reference's text is the reference's data: a translated builder changes the bytes `pnpm run check:standards` compares, so this row is part of N21's decision rather than a second one. |
 | Russian sample data (`docs/заметки.md`, subjects, file names, labels) | It is what the measurement is measured **on**: the traps of the synthetic fixture exist to prove that a non-ASCII path, a quoted subject and an HTML-escaped signature survive. |
 | Quotes of old output in records (`BLOCKERS.md`, the archived plans, `worklog/`) | A record of what a reader saw then is true of then; `BLOCKERS.md` states the rule in its own header. |
 | `docs/plans/2026-09-16-i18n-english/**` | A subplan quotes the strings it translates and carries the counter's own pattern; without the quotation a reader cannot see what is meant, and the guard `G1` therefore skips this folder. |
@@ -86,9 +87,9 @@ checks, `D*` — the declarative files, `G*` — the guard. Sums are the measure
 | S3 | `measurement.md` | `src/metrics.js` (20), `src/minify.js` (4), `src/strip.js` (1), `src/strip/guard.js` (6), `src/parse.js` (1), `src/optional.js` (1) — the sensor note, the two refusals of the measurement, the internal errors; **18 of the 33 lines are in scope**, 12 are the `ru` dictionary of `src/metrics.js` and 1 is a comment (`TODO.md`) | 18 | **written 2026-09-16** |
 | S4 | `diagnostics.md` | `src/git.js` (3), `src/history.js` (12), `src/check.js` (12), `src/doctor.js` (33), `src/explain.js` (24) — `check`, `explain`, `doctor`, the git boundary and the skip reasons. **`SKIP_WORDS` (`src/history.js:18`) is the only frozen literal of the runtime** (`BLOCKERS.md` N24) and has a step of its own, gated on that decision; everything else lands green without touching a reference | 84 (83 free + 1 gated) | **written 2026-09-16** |
 | S5 | `automation.md` | `src/hook.js` (40), `src/page/panel.js` (3), `bin/postinstall.js` (2) — the installed hook's text and its commit subject, the panel's service words. The panel's three strings are **not localized** (`BLOCKERS.md` N25): a report whose `locale` is `ru` gets English chrome, and this project's own report is such a report | 45 | **written 2026-09-16** |
-| W1 | `tools.md` | the 11 instruments: `tools/refusals.js` (169), `parity-live.js` (35), `parity-freeze.js` (31), `run-tests.js` (25), `pack-check.js` (21), `check-standards.js` (21), `make-fixture.js` (17), `harness.js` (13), `yaml.js` (10), `docs-facts.js` (4), `page-harness.js` (3) — **no hole in this owner**: every file under `tools/**` belongs to W1, W2 or W3, and `gate-probe.js`/`gates/common.js` carry no Cyrillic (measured). The catalogue's `must` phrases and cause names are **not** W1's (the owner of the printed text); `manifestNote` and the fixture config values stay Russian (allow-list, measured); the numbers' decimal comma is `BLOCKERS.md` N26 | 349 | **written 2026-09-16** |
+| W1 | `tools.md` | the 11 instruments: `tools/refusals.js` (169), `parity-live.js` (35), `parity-freeze.js` (31), `run-tests.js` (25), `pack-check.js` (21), `check-standards.js` (21), `make-fixture.js` (17), `harness.js` (13), `yaml.js` (10), `docs-facts.js` (4), `page-harness.js` (3) — **no hole in this owner**: every file under `tools/**` belongs to W1, W2 or W3, and `gate-probe.js`/`gates/common.js` carry no Cyrillic (measured). The catalogue's `must` phrases and cause names are **not** W1's (the owner of the printed text); `manifestNote` and the fixture config values stay Russian — **19 lines**, allow-listed by N21's decision, so 330 are this owner's own (measured); the numbers' decimal comma is `BLOCKERS.md` N26 | 330 (19 allowed) | **written 2026-09-16** |
 | W2 | `sensors.md` | `tools/gates/**` (77: `run.js` 21, `dup.js` 20, `coverage.js` 18, `gatefiles.js` 7, `metrics.js` 6, `deps.js` 5, `common.js` 0), the `why` of every entry in `tools/suites.js` (38), `.githooks/**` (4) and the two baselines' `note` the sensors write (2) — **121 holds by measurement, and every commit of this owner is a gate-file commit: `Gate-Change:` trailer required**. Seven verdicts are read word for word by the sensors' own probes (`test/gates-*.test.js`), so each moves with its assertion | 121 | **written 2026-09-16** |
-| W3 | `fixture-builders.md` | `tools/synthetic/note.js` (37), `content.js` (31), `history.js` (20), `repo.js` (1) — the fixture's note and subjects; **decides whether the frozen layer is re-taken** (`BLOCKERS.md` N21) | 89 | not started |
+| W3 | `fixture-builders.md` | `tools/synthetic/note.js` (37), `content.js` (31), `history.js` (20) — the fixture's note and subjects: **N21 was decided 2026-09-16 (the references stay Russian), so these 88 lines are the reference's data, allow-listed** — and `repo.js` (1): an internal error thrown when the fixture's merge succeeds unexpectedly, written into no file | 1 (88 allowed) | not started |
 | C1 | `tests-page.md` | the checks of the page and the contract (355 lines, confirmed file by file): `page-view` 72, `page-choice` 67, `module` 66, `page-tree` 55, `contract-data` 51, `contract-derived` 18, `guard` 11, `runner` 11, `api` 4. **The first owner whose lines are read by two other subplans at once**, and one of those reads is `assert.equal(/стриппер/.test(res.stderr), false, …)` — a *negative* match that stops checking, green, the moment S3's sentence changes; `test/module.test.js:163` is a reader of the internal error that S3's plan counted as unread (corrected in `measurement.md`) | 355 | **written 2026-09-16** |
 | C2 | `tests-cli.md` | the checks that drive the tool (739 lines): `hook` 113, `check` 84, `doctor` 83, `cli` 79, `minify` 75, `disk` 68, `tokens` 54, `release` 41, `templates` 33, `cli-paths` 31, `refusals-catalog` 26, `refusals` 25, `environment` 18, `crlf` 9 | 739 | not started |
 | C3 | `tests-guards.md` | the checks of the repository itself (226 lines, confirmed file by file): `gates-verify` 26, `gates-files` 26, `docs-commands` 23, `gates-metrics` 22, `suites` 16, `parity` 16, `frozen` 16, `gates-coverage` 16, `docs-pin` 14, `gates-dup` 13, `git-pins` 12, `docs-numbers` 12, `gates-deps` 8, `docs-paths` 6. **Six of them are gate files** (111 lines) and those commits carry the trailer; the eight assertion lines W2's steps move with their verdicts; **no negative match in this owner** (measured); one kept tolerance (`требовани|requirements?`, dead in the tree) named as its exception for G1; and the finding that `README.md`'s code table is a contract parsed by `readmeCauses()`, not a quotation | 226 | **written 2026-09-16** |
@@ -115,11 +116,12 @@ they are **gate files** (`tools/gates/gatefiles.js`), so they belong to W2 and n
   dotfiles are gate files.
 
 With those two corrected the map is **complete** and the sum is exact: the instrument's 5 512 lines
-split into the allow-list — the frozen layer 2 602, the archived plans 15, `docs/plans/**` 165 →
-**2 782** — and everything else → **2 730**, held by the map's owners: `src/**` 351, `bin/**` 2,
-`tools/**` 387, `tools/gates/**` 77, `tools/synthetic/**` 89, `test/**` 1 320, `templates/**` 35,
+split into the allow-list — the frozen layer 2 602, the archived plans 15, `docs/plans/**` 165, the
+builders that write a reference 107 → **2 889** (re-measured 2026-09-16, when N21 was decided) — and
+everything else → **2 623**, held by the map's owners: `src/**` 351, `bin/**` 2, `tools/**` 368,
+`tools/gates/**` 77, `tools/synthetic/**` 1, `test/**` 1 320, `templates/**` 35,
 `.github/**` 78, `.githooks/**` 4, the declarative dotfiles and the baselines' `note` 19,
-`package.json` 1, the allowed quotations 18, the built report 349 (2 730 = 5 512 − 2 782). Every
+`package.json` 1, the allowed quotations 18, the built report 349 (2 623 = 5 512 − 2 889). Every
 line the instrument names has an owner, and the rows above are gross of the 58 allow-listed
 dictionary lines inside `src/**`.
 
@@ -128,15 +130,16 @@ dictionary lines inside `src/**`.
 The rows below are unwritten (C1–C3 are written: 355 + 739 + 226 = 1 320, which is the whole of
 `test/**`). The numbers are the counter's, not a subtraction: the map's rows now
 sum **exactly** to the instrument's reading — `src/**` 351 (of which the allow-listed dictionaries 57
-and one comment of 3), `bin/**` 2, the `tools/**` family 559 (W1 349 + W2 121 + W3 89), `test/**` 1 320
+and one comment of 3), `bin/**` 2, the `tools/**` family 452 (W1 330 + W2 121 + W3 1), `test/**` 1 320
 (C1 355 + C2 739 + C3 226), D1 131, the allowed quotations 18, the built report 349 — and with the
-allow-list (the frozen layer 2 602 + `docs/plans/**` 165 + the archive 15) the sum is 5 512, today's
-reading. Written so far: S1–S5 293 (net of the dictionary lines), W1 349, W2 121, C1 355.
+allow-list (the frozen layer 2 602 + `docs/plans/**` 165 + the archive 15 + the builders 107 = 2 889)
+the sum is 5 512, today's reading. Written so far: S1–S5 293 (net of the dictionary lines), W1 330,
+W2 121, C1 355.
 
 | # | Subplan | Lines | Note |
 |---|---|---|---|
 | D1 | `configs.md` | 131 | `.github/workflows/**` 78, `templates/**` 35, `package.json` 1, the declarative dotfiles 17 — two of them gate files; its step edits the two workflow step names `test/release.test.js:62,66` reads (C2) |
-| W3 | `fixture-builders.md` | 89 | `tools/synthetic/**`; **decides whether the frozen layer is re-taken** (N21) |
+| W3 | `fixture-builders.md` | 1 | `tools/synthetic/repo.js:74` — the internal error; the other 88 lines of this owner are the reference's data and sit in the allow-list (N21, decided 2026-09-16) |
 | G1 | `guard.md` | — | the guard itself does not exist yet, so it has no counter reading; two exceptions to name: W1's `commandsAt` tolerance and C3's `требовани|requirements?` resolver |
 
 **The order has been respected, and is now decided once.** The table's row order has been followed
@@ -161,7 +164,9 @@ measurement, and this one by a decision written down rather than left to the rea
    they are the last of the non-test files whose text a check reads — `test/release.test.js:62,66`
    reads two workflow step names, and those two lines move with D1's own commit (the rule: a
    reader inside another owner's file follows the text, so the order cannot break it).
-5. **W3** — the fixture builders, with the decision about the frozen layer taken first (N21).
+5. **W3** — the fixture builders: with N21 decided 2026-09-16 one line is left to translate
+   (`tools/synthetic/repo.js:74`) and the other 88 are the reference's data. Whether that one line is
+   worth a portion of its own or folds into W1's is the mission agent's call, not this file's.
 6. **G1** — the guard that closes the allowance: last, when the tree allows a green run.
 
 Nothing in this order is a prerequisite in substance: S*, W*, C* and D1 do not import each other's
@@ -208,8 +213,7 @@ order of the table above is what a portion follows.
 
 ## Definition of done
 
-- `rg -lP '[\p{Cyrillic}]'` over the tree names **only** the allow-list: `worklog/**`, the `ru`
-  dictionary, `fixtures/**`, the Russian sample data of the fixtures and the quoted old output of
+- `rg -lP '[\p{Cyrillic}]'` over the tree names **only** the allow-list:  `worklog/**`, the `ru` dictionary, `fixtures/**`, the builders that write them, the Russian sample data of the fixtures and the quoted old output of
   `BLOCKERS.md` and the archived plans. The measurement is quoted per subplan, before and after,
   with the file list.
 - Every subplan's own acceptance holds, and `pnpm run verify:fast` is green after every commit and
@@ -224,7 +228,8 @@ order of the table above is what a portion follows.
 - The consumer project `safe-resets`, which holds its own repository and its own report.
 - The package's public API: a name in `src/size-table.js`'s re-export list is frozen by
   `test/api.test.js` and does not change.
-- The parts of the frozen layer named in the allow-list, until N21 is decided.
+- The frozen layer, the builders that write it and the Russian sample data of the fixtures — allow-listed,
+  `BLOCKERS.md` N21 decided 2026-09-16.
 
 ## Open questions
 
@@ -232,10 +237,9 @@ order of the table above is what a portion follows.
   a Russian report and a fresh install prints Russian. Making the package English by default
   means changing a default — a behaviour change, so it is a decision rather than a step: S1 owns
   it, the options and their price are `BLOCKERS.md` N19.
-- **The frozen layer.** `tools/synthetic/**` writes the fixture's note and subjects, and the
-  fixtures are compared byte for byte; so a translated generator re-takes both references
-  (`artifact.sha256`, `golden.json`, the manifests and the `README.md` of each fixture). Options
-  and price: `BLOCKERS.md` N21.
+- ~~**The frozen layer.**~~ **Decided 2026-09-16: it stays Russian** (`BLOCKERS.md` N21, option 1), and
+  the 107 lines that write it — `tools/synthetic/note.js`/`content.js`/`history.js` and the two
+  instrument ranges — are in the allow-list with it. The decision is what makes W3 a one-line owner.
 - **Releases.** A portion that changes a shipped literal changes the package's bytes. Release a
   PATCH per portion, or batch the releases and say so in the commits: `BLOCKERS.md` N20.
 - **The numbers stay Russian while the words turn English.** `tools/run-tests.js:43,64` and
@@ -251,6 +255,9 @@ order of the table above is what a portion follows.
   объёма` 5 times inside `fixtures/parity/data.json`, twice in `fixtures/synthetic/golden.json`)
   are part of the frozen contract, and `test/parity.test.js` compares `--json` byte for byte with
   the synthetic reference. So S4's skip reasons are the one place where a translation moves a
-  reference already — the options are `BLOCKERS.md` N24, and the decision belongs with N21
-  (may the frozen layer move). S1's own claim of an untouched reference is checked in
+  reference already — the options are `BLOCKERS.md` N24, and  the decision belongs with N21
+  (may the frozen layer move) — and N21 is now decided: the references do not move, so N24's option (2)
+  (translate and re-take) is excluded by the same decision and **two** options remain: move the three words
+  into the `ru`/`en` dictionaries (nothing reddens, a source change) or leave them Russian as the frozen
+  layer is left (allow-list). N24 itself is **not decided** — the choice is the mission agent's. S1's own claim of an untouched reference is checked in
   `surface.md` and holds: neither reference carries the help, the causes or the mode texts.

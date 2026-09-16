@@ -32,7 +32,8 @@ git ls-files tools | while read -r f; do printf '%5s %s\n' "$(rg -cP '[\p{Cyrill
 | `tools/page-harness.js` | 3 | **W1** |
 | `tools/gate-probe.js`, `tools/gates/common.js` | 0 | — |
 
-The eleven W1 files sum to **349**, the tracker's row, and every file under `tools/**` is named by
+The eleven W1 files sum to **349** — **330 of this owner's own** and the 19 fixture-writing lines N21's
+decision keeps Russian — and every file under `tools/**` is named by
 one of W1, W2 or W3: **no hole in this owner**. `tools/gate-probe.js` and `tools/gates/common.js`
 were measured too and carry no Cyrillic at all.
 
@@ -88,7 +89,9 @@ the page checks when they fail.
 **7. The part that writes into the frozen layer** — `tools/parity-freeze.js:98-118` (`manifestNote`)
 writes `fixtures/parity/README.md`, and `tools/make-fixture.js:56-64` writes the synthetic fixture's
 `config.json` values (`title`, `heading`, the column label `заметки.md`). Both are **allow-listed
-data, not this owner's text**: `tools/parity-freeze.js:92` says it in its own words ("it is the
+data, not this owner's text** — permanently, since `BLOCKERS.md` N21 was decided 2026-09-16 as "the
+references stay Russian", which is what this step now is: a proof that the console lines around them
+are this owner's and the writing lines are not: `tools/parity-freeze.js:92` says it in its own words ("it is the
 standard's data rather than this file's documentation and stays Russian"), and
 `fixtures/synthetic/config.json` holds the same title string (measured, 1 line). The **console** lines
 around them (`parity-freeze.js:205-211`, `make-fixture.js:197-206`) are W1's and freeze nothing.
@@ -97,7 +100,7 @@ around them (`parity-freeze.js:205-211`, `make-fixture.js:197-206`) are W1's and
 
 | Item | Why |
 |---|---|
-| `manifestNote` (`parity-freeze.js:98-118`) and the fixture config values (`make-fixture.js:56-64`) | The fixture's own data, named in T0's allow-list. Translating them re-takes a reference (N21) **and** changes data the allow-list keeps Russian. `parity-freeze.js:92` is the file's own statement of the rule. |
+| `manifestNote` (`parity-freeze.js:98-118`, 16 lines) and the fixture config values (`make-fixture.js:56,57,64`, 3) | The fixture's own data, named in T0's allow-list, and **permanent since 2026-09-16**: `BLOCKERS.md` N21 was decided as "the references stay Russian", so translating these would re-take `parity` and `synthetic` and their hashes. `parity-freeze.js:92` is the file's own statement of the rule. |
 | `<файл>` and `<коммит>` in the `template` shapes (`:146-184`) | Placeholders **of the printed advice**, whose literals are S1's (`src/args.js:39,92,129,133`, `src/config.js:144`, `src/refusal.js:101,117`) and whose `must` phrases are the catalogue's. They move with S1's step 2, not here. |
 | The cause names (`SITES` keys) and every `must` phrase | The owner of the printed text, per the table above. |
 | Six comments (prose, not literals): `tools/refusals.js` 3, `tools/run-tests.js` 2 (`:22` quotes a command with a Russian test-name pattern, `:40` explains the Russian numbers), `tools/docs-facts.js` 1 (`:170`) | Leftovers of the prose pass, out of this work's scope by definition. `TODO.md` (like S3's `src/metrics.js:61-63`). The `docs-facts.js` one is the exception: step 5 aligns its wording if the tolerance is chosen, since the comment would otherwise claim the wrong thing — prose, no behaviour. |
@@ -152,8 +155,9 @@ No reader at all, measured:
 0. **Re-measure before starting.** By the map's order S1–S5 have landed: the cause names, the
    `must` phrases and the marker family of `tools/refusals.js` are English, and
    `tools/docs-facts.js:135` already carries the English section name. Take the counter's baseline
-   for the eleven files and write it into the journal — the expectation is 349 minus whatever S1's
-   joint edit moved, and it is a measurement rather than a guess.
+   for the eleven files and write it into the journal — the expectation is **330 of this owner's own**
+   (349 measured, minus the 19 lines of step 7 that N21's decision keeps Russian, minus whatever S1's
+   joint edit moved), and it is a measurement rather than a guess.
 1. **`tools/harness.js`** — the two names and the messages. Red first: none is read by a check
    (measured), so the experiment is the counter plus `pnpm test` staying green; the names' two
    duplicates (`test/refusals.test.js:169`, `test/parity.test.js`'s test names) are left to C1/C2 and
@@ -199,9 +203,9 @@ W2's), so no step needs a `Gate-Change:` trailer.
 
 ## Acceptance
 
-- The counter over the eleven files answers **only** the two named exceptions — the fixture-writing
-  texts of steps 5 and 6 (`parity-freeze.js:98-118` and `make-fixture.js:56-64`) and the six
-  comments, minus the two that step 5/its journal record as prose:
+- The counter over the eleven files answers **only** the named exceptions — the 19 fixture-writing
+  lines of steps 5 and 6 (measured: `parity-freeze.js:98-118` 16, `make-fixture.js:56,57,64` 3, permanent
+  since N21 was decided) and the six comments, minus the two that step 5/its journal record as prose:
   `rg -cP '[\p{Cyrillic}]' tools/refusals.js tools/parity-live.js tools/parity-freeze.js tools/run-tests.js tools/pack-check.js tools/check-standards.js tools/make-fixture.js tools/harness.js tools/yaml.js tools/docs-facts.js tools/page-harness.js`.
 - The counts and the keys are untouched — `test/refusals-catalog.test.js` says so, and it is the
   sensor that would catch a renamed cause or a lost `✗ `.

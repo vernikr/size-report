@@ -214,4 +214,5 @@ portion owes a release; how to batch releases is N20 and is not decided here. If
 decided as "batch", the commits say in words that nothing is released by them.
 
 **Not in scope:** the `ru` dictionaries (`src/locales.js`, `src/metrics.js`), `SKIP_WORDS` (S4,
-N24), the default locale (S1, N19), the frozen layer (N21) and every test file's own Russian (C2).
+N24), the default locale (S1, N19), the frozen layer (N21 — **decided 2026-09-16: it stays Russian**)
+and every test file's own Russian (C2).

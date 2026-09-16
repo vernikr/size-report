@@ -584,7 +584,16 @@ references stayed the same after the fix.
   statement about today's engine, not about parity. (3) Translate only the note (`note.js`), which is prose in the
   fixture's `README.md` and not trap data: still a re-take, since that file is compared byte for byte too.
 
-  **For the user to decide:** whether the frozen layer is allowed to move, and with what witness.
+  **Decided 2026-09-16 by the mission agent: option (1) — the references stay Russian and are recorded as an
+  exception.** Nothing is re-taken, and the builders stay Russian with the references, because a translated
+  builder changes the bytes `pnpm run check:standards` compares. Measured for the allowance (by counting the
+  cyrillic lines of the ranges, not by subtraction): **107 lines** — the builders that write the fixture
+  (`tools/synthetic/note.js` 37, `content.js` 31, `history.js` 20 = 88) and the instrument lines that write
+  into a reference (`tools/parity-freeze.js:98-118` **16**, `tools/make-fixture.js:56,57,64` 3 = 19; the last
+  item is the column label `заметки.md`). All 107 are now an **entry of the tracker's allow-list**, and its
+  arithmetic is corrected with them: the allow-list 2 782 → **2 889**, the owners' side 2 730 → **2 623**
+  (`tools/**` 387 → 368, `tools/synthetic/**` 89 → 1), the whole reading unchanged at 5 512. What stays free of this owner is **one line**: `tools/synthetic/repo.js:74` — an
+  internal error thrown when the fixture's merge succeeds unexpectedly, written into no file (W3).
 
 - **N22. The release guard left the tree with `CHANGELOG.md` — a promise nobody holds now.** Done 2026-09-16 on
   request: `CHANGELOG.md`, whose per-release numbers were already recorded in the journal, was deleted, and
@@ -606,7 +615,16 @@ references stayed the same after the fix.
   releasing reads it anyway. (3) Keep the release notes in a file of its own under a new name: the guard returns
   unchanged, at the price of the file the user asked to remove.
 
-  **For the user to decide:** whether the numbers half of the promise is held by a check again, and where.
+  **Decided 2026-09-16 by the mission agent: the table of numbers with sizes in a markdown file is not needed —
+  a person has `docs/size-report.html` — and whatever is still tied to it may go.** Measured afterwards:
+  **nothing is left to remove.** `CHANGELOG.md` and `test/changelog.test.js` went with the request itself, no
+  markdown file in the tree carries the fixture's sizes (`rg -n '1597|1483|2 511' README.md docs/*.md` answers
+  nothing), and the one entry that still names the guard — `tools/docs-facts.js:58`, in the list of paths a
+  document may name — is **load-bearing for the archived plans**, which cite the path: the documentation guards
+  read `plans/archive/PLAN.md` and `REFACTOR.md` (`DOCS`, `tools/docs-facts.js:37`), and dropping the entry would
+  redden `test/docs-paths.test.js` on a record that is true. So this question closes as its own option (2): the
+  numbers half of the promise is deliberately held by no check — the journal is where a release is described,
+  and the numbers a person wants are in the page.
 
 - **N23. `plans/archive/` holds the two finished plans — the paths in old records point at the root.**
   Done 2026-09-16 on request: `PLAN.md` and `REFACTOR.md` moved to `plans/archive/`. The readers were updated in
@@ -621,6 +639,10 @@ references stayed the same after the fix.
   updated documents — `docs/module-design.md` writes `PLAN.md` without a directory, so it is a name rather than a
   path and no guard reads it as one. No action needed: the name still resolves, and the file's own location is in
   the README.
+
+  **Closed without action 2026-09-16 by the mission agent.** The decision is "do nothing", and this note is what
+  stands in place of a change — re-measured before closing: the two readers named above are updated, and no guard
+  reads `docs/module-design.md`'s bare `PLAN.md`.
 
 - **N24. The frozen `--json` carries Russian of its own: the skip words are part of the contract.** Measured
   2026-09-16 while planning subplan S1 of the string work: `SKIP_WORDS` in `src/history.js` prints the reason a
