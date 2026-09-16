@@ -775,188 +775,181 @@ two runs and between two machines (§6, `test/environment.test.js`, 4 checks).
 
 ---
 
-## 6. Паритет и приёмка переноса
+## 6. Parity and the acceptance of the move
 
-| Гарантия | Чем доказана |
+The six guarantees this section was written for, and what holds each of them **today** — the records of step 0
+are history, the holders are files of the tree:
+
+| Guarantee | Held today by |
 |---|---|
-| Перенос не изменил вывод | `artifact.sha256` (статичный HTML) и `data.json` шага 0 — сравнение побайтово на шаге 1 |
-| Числа не «уехали» | Независимый источник: сумма дельт по колонке = размер блоба в `git cat-file -s` на HEAD (проверка переезжает из `tests/size-table.js`) |
-| Чтение истории осталось пакетным | Монки-патч `execFileSync` в тесте: ноль спавнов `git show`, число `cat-file` ≤ `2·ceil(commits/1000) + 2` |
-| Детерминированность | Два прогона подряд → одинаковый sha256 данных и отчёта; в данных нет времени запуска и абсолютных путей |
-| Полнота | `size check` на фикстуре с неподслеживаемым файлом краснеет (код `1`), после правки настроек — зелёный |
-| Устойчивость к обрезанной истории | `git clone --depth 1` в тесте → код `3` и текст с готовой командой |
+| The move changed no output | `test/parity.test.js` (3 checks): the package's `--json` is the fixture's golden **byte for byte**, `--write` assembles a report that passes its own control mode, and the numbers do not depend on the locale |
+| The frozen copy is the one the standard was taken with | `test/frozen.test.js` (4 checks): the copy is that revision, the manifests agree with the files of the standards, and it yields the recorded numbers |
+| The numbers cannot drift | `raw` reads object sizes from git itself (`cat-file --batch-check`, `src/project.js`) rather than from the working tree, and a column's deltas follow one rule (`deltaOf`, `src/derived.js`) whose exception is named — a file deleted and brought back has two cells of growth (`BLOCKERS.md` §N4, asserted by `test/contract-derived.test.js`) |
+| Reading history stays batched | one or two git processes for the blobs of a run (`BLOB_CHUNK = 1000`, `src/git.js`); the boundary of git calls and its pinned settings are held by `test/git-pins.test.js` (2 checks) |
+| Determinism | `test/environment.test.js` (4 checks): the output depends on neither the machine's git settings nor the locale, and the pinned engine cannot be overridden from the environment |
+| Completeness and a truncated history | `size check`: a path outside the columns is a violation (**code 1**) with the path, the commit and a ready fix, while a shallow clone is **code 3** with the command to fix it (`test/check.test.js`, `test/refusals.test.js`, `test/cli-paths.test.js`) |
 
-Урок текущего проекта, который переносим: «зелёные тесты ≠ покрытие».
-Фикстура-бандл из шага 0 должна содержать ровно те ловушки, на которых ломались:
-слияние с правкой конфликта, `export` в `.mjs`, `//` внутри строки, регексп с
-`\/`, не-английское имя файла, CRLF, файл, удалённый и возвращённый, коммит
-«только отчёт».
+The lesson the move carried — **green checks are not coverage** — became the fixture's list of traps: the history
+is built to break on them (`tools/make-fixture.js`, `fixtures/synthetic`), and they are the very cases the live
+project had stumbled on: `//` inside a string, a regexp with an escaped slash, `.mjs` with `export`, a
+non-English file name, CRLF, a rename with an edit before it, a mixed commit, a commit of the report alone, a
+merge with the resolution of a conflict, a same-size replacement, a file deleted and returned, `<` and `&` in a
+commit subject, a journal section, an unknown extension, an empty file, markup with its styling.
+`fixtures/synthetic/README.md` names them all in one table, and the file is one of the standards compared byte
+for byte.
 
 ---
 
-## 7. Тестирование модуля (едет вместе с пакетом)
+## 7. The suite (it travels with the package)
 
-| Набор | Что проверяет | Крайние случаи |
+The plan listed thirteen sets; the suite exists, and it is organised by subject rather than by that list. What
+the plan asked of a set and what holds it today:
+
+| Wanted then | Held today by |
+|---|---|
+| `history`: the order of commits, the state carried between them, reading in batches — over synthetic repositories in temp dirs | `test/disk.test.js` (the comparison with the working tree, both of its sides), `test/crlf.test.js` (the CRLF witness of `BLOCKERS.md` §B2), `test/check.test.js` (the real commits of the fixture), `test/git-pins.test.js` (the boundary of the git calls and the pinned settings) |
+| `config`: the schema, the defaults, refusals, the migration of an old file | `test/cli.test.js`, `test/cli-paths.test.js`, `test/refusals.test.js`, `test/refusals-catalog.test.js` — the migration and the settings schema **never arrived** (`BLOCKERS.md` §N17) |
+| `metrics-raw`: the size from the git object rather than from the content | `test/contract-data.test.js` (8 checks) |
+| `metrics-min`: real compression, a marked fallback | `test/minify.test.js` (9) |
+| `metrics-tok`: exactness where it is possible, a mark where it is not | `test/tokens.test.js` (7) |
+| `model`: the points of change, “not yet”/“no more”, `schema: 1` | `test/contract-data.test.js` (8), `test/contract-derived.test.js` (5) |
+| `render`: self-sufficiency, escaping, `reportId`, no external reference | `test/page-view.test.js` (8) |
+| `app`: the tree, the switches, the sum, the memory of a choice | `test/page-tree.test.js` (5), `test/page-choice.test.js` (6) |
+| `cli`: the commands, the exit codes, `--json`, a ready fix in a refusal | `test/cli.test.js`, `test/cli-paths.test.js`, `test/refusals.test.js`, `test/refusals-catalog.test.js` |
+| `check`: coverage, settings, history, sensors | `test/check.test.js`, `test/doctor.test.js` |
+| `golden`: a run on the fixture against the reference data and report | `test/parity.test.js` (3), `test/frozen.test.js` (4) |
+| `git-pins`, `docs` | as the plan had them: ✅ (`test/git-pins.test.js`; the four `test/docs-*.test.js`) |
+| `bench` (not in CI): time on a history of one or two thousand commits | **not made** — step 6 lists it as an item of its own |
+
+The runner is Node's own (`node:test`), as the plan wanted — the package keeps no `ok — …` format of its own.
+What was not in the plan and stands today: the run is a command of its own (`tools/run-tests.js`), which counts
+the checks of every file against the declarations, and the split into a fast and a full run (**20 files and 72
+of 177 checks**; the full one — all **38** files, 177) with a reason for every expensive file (`tools/suites.js`,
+held by `test/suites.test.js`).
+
+---
+
+## 8. Shaping the package
+
+### 8.1. The manifest
+
+The draft this section carried was written before the first line of the package, and the manifest today differs
+from it in every field that mattered. What became of each promise:
+
+| Draft | Today |
+|---|---|
+| `name: size-report` | `@vernikr/size-report` — the un-scoped name belongs to someone else (§8.4) |
+| `version: 0.1.0` | `2.4.0`; the move released **`1.0.0`** (§8.2) |
+| `exports`: `.` and `./schema` | `.` alone, pointing at `src/size-table.js` — the entry point of re-exports; a settings schema never arrived (`BLOCKERS.md` §N17) |
+| `files`: `bin`, `src`, `dist`, `templates`, `README.md`, `CHANGELOG.md`, `LICENSE` | the same **without `dist`**: the report is one self-contained page, so there is no built output to ship; `templates` and `LICENSE` did arrive, and the list is held in both directions by `pnpm run pack:check` |
+| `engines: >=20.19`, `sideEffects: false`, `type: module` | kept as they stand |
+| `optionalDependencies: esbuild ^0.2x` | `esbuild 0.28.2` and `gpt-tokenizer 4.0.0` — **exact** versions, because a number depends on them (R-5.5, R-5.6) |
+| `scripts.build` / `prepack` (`dist/app.js`) | never made — there is no `dist/` and no `src/render/app`; the page is assembled at report time |
+| `scripts.test: node --test test/`, `test:golden`, `lint: eslint .` | `test` (the fast run of §7), `test:all`, `suites:measure`, and `lint:strict` beside an advisory `lint`; the golden subject lives in `test/parity.test.js` and `test/frozen.test.js` |
+| — | `postinstall`, which is how the hook installs itself (§4.9), and the gate commands (`verify`, `metrics`, `dup`, `deps`, `cover`, `pack:check`, `check:standards`, `parity:live`) |
+
+The engine has **no mandatory dependency at all**: both of its tools are optional, loaded lazily and
+synchronously, and their absence is an honest degradation rather than a failure (R-5.5, R-5.6). The list of what
+ships is the file table's business in `README.md`; here it is enough that the manifest and the tarball cannot
+disagree — `pack:check` reads both.
+
+### 8.2. Versioning and compatibility
+
+- **The plan's `0.1.0` for the move never existed.** The first release was **`1.0.0`** (2026-09-14), and the
+  package is at **`2.4.0`** today; every release's numbers are in `CHANGELOG.md`, and `test/changelog.test.js`
+  ties its version to the manifest. New sensors are MINOR and a change of the data format is MAJOR with a
+  migration.
+- `schema: 1` rides in the data (§4.3) and is frozen; `schemaVersion` in the settings and `--migrate` **never
+  arrived** (`BLOCKERS.md` §N17) — a change of the settings' shape has no migration path today, which is why the
+  promise of “a refusal with a ready migration command” belongs to the note rather than to the tree.
+- The version of an optional dependency **does** reach the reader: it comes from the package itself and is part
+  of the metric's method (`src/optional.js`, R-5.6). The plan's sensor `version` and its place in the cache key
+  belong to the cache, which does not exist (step 6).
+
+### 8.3. The package's documents
+
+| Promised | Today |
+|---|---|
+| `README.md` — “in three minutes”: install, initialise, open the report, what next, plus a short section for an AI agent | The section “Wiring it into your project” — **eight steps** walked command by command (`REFACTOR.md` R-4.2) — and the section “For an AI agent” with the commands and exit codes |
+| `docs/METHODS.md` — how every number is counted and how an approximation is marked | **not written**: the method lives in the code and its caption reaches the report as text (§4.3, R-2.7) |
+| `docs/DATA-FORMAT.md` — `schema: 1`, for agents first | **not written**; the contract is documented in §4.3 and held by `test/contract-data.test.js` |
+| `docs/ARCHITECTURE.md` — the core's boundaries, the sensors, the cache, how to add a metric | **not written**; the design is `docs/module-design.md` and the tree itself |
+| `templates/` — a settings draft and a CI job | ✅ three files, held by `test/templates.test.js` (3 checks) and shipped byte for byte (`pack:check`); a block for `AGENTS.md` is deliberately absent — the requirements do not ask for such a file and the tool does not invent a foreign repository's format (`templates/README.md`, R-4.11) |
+| A guard over the documentation's own promises | ✅ the four `test/docs-*.test.js` (paths and the file table, commands and keys with the refusals and section addresses, the counts, the install pin) — machinable claims only, everything else stays with a person (`REFACTOR.md` R-4.1, R-4.15) |
+| `CHANGELOG.md`, `LICENSE` | both in the tree and in the tarball; the licence question the plan left open was answered — `MIT` in the manifest and the file shipped |
+
+The three design documents are worth naming plainly: the plan wanted them and they were never written, which is
+why they stand in the planned list of the path guard (`tools/docs-facts.js`) rather than in the tree.
+
+### 8.4. Publication and wiring
+
+**Where the package stands today.** It is published in the registry as **`@vernikr/size-report`**, publicly,
+and a release goes out from CI by a tag (R-4.24). The name carries the owner's scope because the un-scoped
+`size-report` belongs to someone else — re-checked 2026-09-16: `npm view size-report versions` ends at `1.0.2`.
+The install example in `README.md` names the tag of the current release (`installSpec()`, held by
+`test/docs-pin.test.js`), and a release can also be taken from the repository by tag — the consumer's manifest
+reads `"size-report": "github:vernikr/size-report#v1.2.0"` — or from a tarball with no network. The instruction
+was walked command by command (`README.md`, “Wiring it into your project”, R-4.2), and the protocol of that run
+with the divergences it found is in `worklog/archive/WORKLOG.md` §16 (R-4.5…R-4.8).
+
+**What became of the plan's three scenarios.** (1) The git-dependency was built and walked, and its one price
+was historical: while the repository was private, fetching required a key, and the consumer's CI carried a
+read-only deploy key; the repository went **public** on 2026-09-14 (`worklog/archive/WORKLOG.md` §44), the step
+left the `ci.yml` template (R-4.19) and nothing needs a key since. (2) GitHub Packages was not needed: with the
+owner's scope and the registry's public access it would only add an address to keep. (3) The public registry was
+**done** rather than postponed — under the very scope the plan named as the way out, which is also why the tool
+no longer advises `npx size-report` (R-4.21). The two obstacles the plan found standing in the way of a publish
+are both closed: the name by the scope, the account by `npm trust github` (R-4.24). One thing stays with a
+person: the terms of the BPE dictionaries inside `gpt-tokenizer`, which no machine reads.
+
+**Two claims of the draft, kept as history.** `private: true` does not block a publish in a single-package
+repository — npm checks that field for the members of workspaces — so it was measured then and is moot now; and
+the missing licence file is fixed both ways: `license: MIT` in the manifest and `LICENSE` in the shipped list,
+which `pack:check` reads.
+
+**Local work** — `pnpm link`, or a run with `--dir` from the package over a temporary fixture. The requirement
+(§5 `requirements.md`: the package rather than a copy) holds for all three ways.
+
+### 8.5. The package's CI
+
+✅ **Done 2026-09-14** (`worklog/archive/WORKLOG.md` §21), and since reduced to **one command**: the job is named
+`verify` — the name the branch protection requires — and after `pnpm install --frozen-lockfile` it runs
+`pnpm run verify`, the same profile a person runs by hand (the list of steps lives in one place,
+`tools/gates/run.js`, and `test/gates-verify.test.js` reads this file to keep the two in agreement). The checkout
+takes the whole history (`fetch-depth: 0`: the documentation guard reads the help of the revision the install pin
+names, and the duplication sensor looks at `main`), Node comes as 22 with pnpm from the `packageManager` field,
+and the actions are pinned by commit sha. **No secrets:** the consumer's history lies in the repository as a
+bundle at the reference revision (`fixtures/live/history.bundle`, 149 commits at `bd6ef9d`) and the profile hands
+it to `parity:live` (`--repo`, `tools/gates/run.js`), while the consumer project itself stays private and unread —
+which is why the seven steps the plan listed are history rather than a description.
+
+The three deliberate deviations from the plan still hold: no Node matrix (the package is ESM without a build, and
+someone else's environment is a step's `env` rather than a Node version), no `prepack` build of `dist/app.js`
+(there is no `dist/`), and the live history as a bundle instead of a run on the consumer's repository — its
+sources are not ours to publish for a smoke test.
+
+---
+
+## 9. The risks, and how each stands today
+
+The plan listed the risks it was going to close. Eight are closed, each with the file that holds it, one never
+materialised, one is held by the data — and **two are still open**. Saying so is the point of the table: a risk
+that quietly turned into a promise is worse than one that stays on the list.
+
+| Risk | What it threatened | How it stands today |
 |---|---|---|
-| `history` | Синтетические репозитории во временных каталогах: порядок, перенос состояния, чтение пачкой | Слияния, переименования, удаления, shallow |
-| `config` | Схема, значения по умолчанию, отказы, миграция старого конфига | Испорченный JSON, неизвестная метрика, отчёт колонкой |
-| `metrics-raw` | Размер из объекта git = `cat-file -s`, содержимое не читается | Пустой файл, файл без перевода строки, CRLF |
-| `metrics-min` | Реальное переименование имён, воспроизводимость, помеченный fallback | Незнакомое расширение, некомпилируемый результат, гигантский файл |
-| `metrics-tok` | Точность там, где возможна; пометка приближения | Пустая строка, эмодзи, кириллица, суррогатные пары |
-| `model` | Точки изменения, «ещё нет»/«уже нет», сериализация, `schema: 1` | Удаление и возврат файла, файл, не менявшийся сотню коммитов |
-| `render` | Самодостаточность, экранирование `</script>`/U+2028, `reportId`, отсутствие внешних ссылок | Заголовок коммита с `<`, имя файла с `&` |
-| `app` | Дерево, чекбоксы, пересчёт суммы, состояние в `localStorage`/hash, офлайн | Нет `localStorage`, пустой выбор, все выключены |
-| `cli` | Команды, коды выхода, `--json`, готовые команды починки в текстах; незнакомый ключ, ключ без значения и лишнее слово — отказ, а не молчаливый пропуск | Нет git, не git-репозиторий, нет файла настроек, `--wite`, `--config` без значения, `--force` без `--init`, слово после режима со значением |
-| `check` | Полнота, настройки, история, датчики | Новый тип файла, shallow, отсутствующий `esbuild` |
-| `golden` | Прогон на фикстуре-бандле ↔ эталонные данные и эталонный отчёт | Любое «незаметное» изменение вывода |
-| `git-pins` | ✅ есть: граница чтения git — прямой вызов без общего списка закреплений назван файлом и строкой, и закрепление показывается свидетелем (`test/git-pins.test.js`) | Настройки машины, локаль, не-английские пути |
-| `docs` | ✅ есть: утверждения документации о репозитории — пути и таблица файлов ↔ дерево (`test/docs-paths.test.js`), команды и ключи из справки, причины отказа против реестра движка и адреса разделов (`test/docs-commands.test.js`), число проверок (`test/docs-numbers.test.js`), а с R-4.13 — и пин в примере установки: он ведёт на ревизию **этого** репозитория, и её справка знает названные в тексте команды (`test/docs-pin.test.js`) | Обещания будущего, формулировки и смысл — вне проверки, названо в её шапке |
-| `bench` (не в CI) | Время на истории в 1–2 тысячи коммитов | Регрессия по времени |
-
-Инфраструктура: `node:test` (штатный раннер Node 22 — в пакете нет причин
-держать собственный формат `ok — …`, как в проекте-потребителе).
-
----
-
-## 8. Оформление пакета
-
-### 8.1. `package.json`
-
-```jsonc
-{
-  "name": "size-report",
-  "version": "0.1.0",
-  "type": "module",
-  "bin": { "size": "./bin/size.js" },
-  "exports": { ".": "./src/index.js", "./schema": "./src/config/schema.json" },
-  "files": ["bin", "src", "dist", "templates", "README.md", "CHANGELOG.md", "LICENSE"],
-  "engines": { "node": ">=20.19" },
-  "sideEffects": false,
-  "optionalDependencies": { "esbuild": "^0.2x" },
-  "scripts": {
-    "build": "node tools/build-app.js",          // dist/app.js из src/render/app
-    "test": "node --test test/",
-    "test:golden": "node --test test/golden.test.js",
-    "lint": "eslint .",
-    "prepack": "npm run build"
-  }
-}
-```
-
-Никаких обязательных зависимостей у движка: минификатор и токенизаторы —
-опциональные, подключаются динамическим импортом с честной деградацией.
-
-Сегодняшний манифест обещает только то, что в репозитории есть (`bin`, `src`,
-`templates`, `README.md`): `dist/`, `CHANGELOG.md` и `LICENSE` появляются здесь
-вместе с шагами ниже, а до тех пор их в `files` нет — за этим следит
-`pnpm run pack:check` (`REFACTOR.md` §3, `README.md`).
-
-### 8.2. Версионирование и совместимость
-
-- SemVer: перенос — `0.1.0`, новые датчики — MINOR, изменение формата данных —
-  MAJOR с миграцией.
-- `schema: 1` данных и `schemaVersion` настроек версионируются отдельно от
-  версии пакета; несовпадение — код `2` и текст с командой миграции.
-- Версии минификатора/токенизатора попадают в `version` датчика, а он — в ключ
-  кэша и в `method`: числа воспроизводимы между машинами и релизами.
-
-### 8.3. Документация пакета
-
-- `README.md` — «за 3 минуты»: установка, `size init`, открыть отчёт, что дальше;
-  отдельная короткая секция «для ИИ-агента» с командами и кодами выхода.
-- `docs/METHODS.md` — как считается каждое число, чем помечается приближение.
-- `docs/DATA-FORMAT.md` — `schema: 1` (в первую очередь для агентов).
-- `docs/ARCHITECTURE.md` — границы ядра, датчики, кэш, как добавить метрику.
-- `templates/` — ✅ есть: черновик настроек и job CI (блока в `AGENTS.md` нет
-  намеренно — требования его не просят, `templates/README.md`).
-- ✅ у обещаний самой документации есть сторож (`test/docs-paths.test.js`,
-  `test/docs-commands.test.js`, `test/docs-numbers.test.js`, `test/docs-pin.test.js`,
-  `REFACTOR.md` R-4.1): пути, таблица файлов, команды и ключи, причины отказа, числа,
-  адреса разделов и пин — машинно; остальное названо словами и остаётся человеку.
-- `CHANGELOG.md`, `LICENSE` (открытый вопрос §10).
-
-### 8.4. Публикация и подключение
-
-**Выбран и проверен сценарий 1 — git-зависимость** (проверка 2026-09-14, в свежем
-проекте): `pnpm add -D github:vernikr/size-report#<коммит>` ставится за секунды,
-пакет работает из `node_modules`, `--init` создаёт конфиг с `fixCommand` под
-менеджер пакетов проекта, а `test:sizes` в CI на свежем клоне даёт 0. Инструкция
-покомандно — `README.md`, раздел «Wiring it into your project» (она же рецепт
-для шага 5); протокол прогона и найденные расхождения — `WORKLOG.md` §16,
-`REFACTOR.md` R-4.5…R-4.8. Остальные два сценария остаются на потом:
-
-1. **git-зависимость** — `"size-report": "github:vernikr/size-report#<тег выпуска>"`
-   (действующий тег назван в `README.md` §1, где за ним следит сторож):
-   ноль инфраструктуры, ставится как обычный пакет. **Цена, найденная первым же
-   подключением (2026-09-14):** пока репозиторий был приватным, загрузка требовала
-   ключа у того, кто ставит, — у разработчика он есть, а в CI его нет, и job падал
-   на `pnpm install`; поэтому в `safe-resets` и появился шаг с read-only deploy
-   key. **Цены больше нет (2026-09-14):** репозиторий сделан публичным, и pnpm
-   разрешает `github:` в архив `codeload.github.com`, который тянется по HTTPS —
-   ни ключа, ни токена (`WORKLOG.md` §44: установка в пустом проекте, где у git не
-   было ни настроек, ни помощника учётных данных, — 3,4 с). Шаг с ключом из
-   шаблона `ci.yml` убран, а сценарии 2–3 нужны теперь не для доступа, а для
-   публикации в npm (штатное обновление версии вместо git-ссылки);
-2. **GitHub Packages (приватно)** — `@vernikr/size-report` + `registry` в
-   `.npmrc`: настоящий менеджер зависимостей, обновление версии штатное;
-3. **публичный npm** — если инструмент захочется показывать, требует **другого
-   имени**: `size-report` в реестре занят чужим пакетом (запись 2017-01-12, три
-   версии, последняя 1.0.2), поэтому под этим именем публикация невозможна, а
-   набранное руками `npx size-report` в проекте без установленного пакета
-   разрешается в чужой пакет из реестра (инструмент этого зова больше не
-   советует — `REFACTOR.md` R-4.21). Требования к поставке, названные здесь: сам
-   пакет закрытых зависимостей не тянет (`dependencies` пуст), а оба
-   необязательные объявляют MIT (esbuild 0.28.2 и gpt-tokenizer 4.0.0 — сверено по
-   манифестам 2026-09-15); за человеком остаётся одно: условия словарей BPE внутри
-   `gpt-tokenizer`, потому что машиной они не читаются. Заодно с публикацией
-   решается файл лицензии: поля `license: MIT` в манифесте для использования мало,
-   а в тарболле лицензионного файла нет («`npm pack --dry-run`: 37 файлов, среди них
-   `README.md`, `CHANGELOG.md`, `bin`, `src`, `templates` и ни одного лицензионного»).
-   Чего `private: true` в манифесте **не** делает — не блокирует публикацию: npm
-   проверяет это поле у пакетов-участников workspaces, а в односоставном репозитории
-   такой проверки нет (проверено пробой: `npm publish --dry-run` идёт до конца и с
-   `private: true`, и без него). Реально мешают две вещи, и обе проверяемы: имя
-   (занято — выше) и отсутствие учётной записи в npm у того, кто публикует
-   (`npm whoami` на этой машине: `ENEEDAUTH`). Отказ реестра на чужое имя без
-   своей записи не показать — это правило реестра, а не наш опыт.
-
-Локальная разработка — `pnpm link` или `--dir`-запуск из пакета по временной
-фикстуре. Требование §5 (пакет, а не копия) выполняется всеми тремя.
-
-### 8.5. CI пакета
-
-✅ **Сделано 2026-09-14** (`.github/workflows/ci.yml`, `WORKLOG.md` §21). Один job,
-по шагам: `pnpm install --frozen-lockfile`; `lint:strict`; `pnpm test:all`; тот же
-набор с `GIT_CONFIG_GLOBAL=/dev/null` (без настроек машины вовсе); `pack:check`;
-`parity:live` на истории потребителя; `check:standards` (пересъём обоих эталонов во
-временный каталог и сверка с закоммиченным). Секретов не требует: история
-потребителя лежит в репозитории бандлом на ревизии из эталона
-(`fixtures/live/history.bundle`), а сам проект приватный и CI его не читает.
-
-От плана отступили в трёх местах, и осознанно: матрицы по Node нет (пакет — ESM
-без сборки, а чужие среды проверяются не версией Node, а окружением шага); сборки
-`dist/app.js` на `prepack` нет, потому что `dist/` ещё не существует; вместо
-прогона на публичном репозитории — бандл той же живой истории, чтобы не публиковать
-чужие исходники ради дымового теста и обходиться без ключей.
-
----
-
-## 9. Риски и как закрываем
-
-| Риск | Чем грозит | Закрытие |
-|---|---|---|
-| Отчёт уходит из git — теряется контроль «артефакт ↔ история» | Ошибка в переносе состояния станет незаметной | `size check` (полнота + независимая сверка с `git cat-file -s`) + golden-фикстура; контроль перестаёт зависеть от наличия артефакта в истории |
-| `esbuild` — бинарная зависимость | Не встал на платформе/офлайне → падение вместо отчёта | `optionalDependency`, динамический импорт, честная деградация с кодом `4` и пометкой у числа |
-| Токенизаторы тяжёлые (словари, wasm) | Раздувание пакета и времени сборки | Не в `dependencies`; приближение вместо словаря там, где точность недостижима; предвычисленные семейства — по настройке |
-| Точность токенов выдаётся за факт | Тихо неверные числа «веса для модели» | `accuracy` у метрики и подпись у числа; тест, что приближение помечено |
-| Данные в `file://` и `localStorage` | Настройки просмотра не сохраняются или липнут к чужим данным | `reportId` + `try/catch` + запасной путь через `location.hash` |
-| Интерактивная страница «потянет» библиотеку | Офлайн-открытие сломается, файл раздуется | Только ванильный JS, бандл собирается на публикации, тест на отсутствие внешних ссылок |
-| Хук в чужом репозитории | Зацикливание, грязь в истории, конфликт с чужими хуками | Хук не коммитит; флаг окружения + lock-файл; `core.hooksPath` при чужих хуках; `hooks.enabled: false` |
-| Огромные истории | Автообновление начнёт раздражать | Кэш на диске по `sha + датчик + version`, `maxBytes`, замер в `bench`, `measure --json` без рендера |
-| Настройки git машины (`core.quotePath`, кодировки, локаль) | Числа верны на одной машине и неполны на другой — молча | Закрыто: закрепление на границе вызова git; сверка в четырёх чужих окружениях и на живом проекте в двух средах (`BLOCKERS.md` §B1) |
-| `core.autocrlf` в выкладке файлов | Ложный отказ «перенос состояния пропустил правку»: на машинах с настройкой по умолчанию (Git для Windows) инструмент не работает | Закрыто: сверка сравнивает содержимое в обе стороны, свидетель — клон с CRLF (`BLOCKERS.md` §B2) |
-| Миграция формата при обновлении | Настройки проекта ломаются молча | `schemaVersion`, `size init --migrate`, отказ с готовой командой |
-| Два проекта-потребителя с разными версиями | Числа несравнимы | Версии датчиков и `toolVersion` в данных; в отчёте видно, чем считали |
+| The report leaves git, and with it the control “artifact ↔ history” | A missed state carry-over would go unnoticed | **It did not happen** — the report stays in git here and in the consumer, the decision going that way deliberately — and the control of §6 does not depend on the artifact anyway: `size check` plus `raw` read from git objects, with the fixture's golden beside them (`REFACTOR.md` R-4.8) |
+| `esbuild` is a binary dependency | Absent on a platform or offline → a run falls over instead of reporting | closed: an optional dependency, a lazy synchronous load, **code 4** with a mark on the number, and the numbers byte-for-byte the standard under `strip` (step 3, R-5.5) |
+| Tokenizers are heavy (dictionaries, wasm) | A fat package and a slow build | closed: not in `dependencies`; an estimate by length where no dictionary exists; the family is chosen in the run's settings rather than precomputed on the page (§4.8.4, R-5.6) |
+| Token accuracy taken for a fact | Quietly wrong “weight for a model” numbers | closed: `accuracy` on the metric, the `approx` row of marks per cell, and a caption naming the dictionary, its encoding and its version (R-2.7) |
+| Data under `file://` and `localStorage` | A choice not remembered, or sticking to someone else's data | closed: a record tied to the report's **passport** and holding only what is switched off, by name, with `try/catch` around the storage and a link in `location.hash` as the way to pass a choice on (`src/page/state.js`, `test/page-choice.test.js` — 6 checks) |
+| The interactive page might pull in a library | Offline opening breaks and the file grows | closed: vanilla JS in **one self-contained file** with no external reference — checked in a DOM (`test/page-view.test.js`, 8 checks) |
+| The hook in a foreign repository | A loop, dirt in history, a clash with someone else's hooks | closed, **and not by “the hook does not commit”** — it does commit the report, and a loop is impossible by construction: the commit is assembled with plumbing, which calls no hooks, while the report's path gets no row, so the same rebuild yields the same bytes. Besides: a lock inside the git directory (`<git-dir>/size-report/hook.lock`), the environment `SIZE_REPORT_NO_HOOK`, `hooks.enabled: false`, `uninstall-hook`, and someone else's `core.hooksPath` refused with a ready line (`src/hook.js`, `test/hook.test.js` — 11 checks; requirements §7) |
+| Huge histories | Self-refresh becomes a nuisance | **still open:** no cache on disk and no `bench` (step 6). What stands between a history and a monstrous report is `MAX_BYTES = 512 KB` per file — a constant rather than the setting §10 names — and the profile's refusal to judge by time (R-5.8) |
+| The machine's git settings (`core.quotePath`, encodings, locale) | Numbers right on one machine and quietly incomplete on another | closed: the settings are pinned at the single boundary of the git calls, and the witness is a run with the machine's settings unreadable (`BLOCKERS.md` §B1, `test/git-pins.test.js`, `test/environment.test.js`) |
+| `core.autocrlf` in the layout of files | A false “the state carry-over missed an edit”, leaving the tool unusable on a default Windows git | closed: the comparison checks content in both directions, and the witness is a clone with CRLF (`BLOCKERS.md` §B2, `test/crlf.test.js`) |
+| A format change on an update | A project's settings break in silence | **still open:** the data's `schema: 1` is frozen and a change of it needs a MAJOR (§8.2), while `schemaVersion` in the settings and `--migrate` were never made (`BLOCKERS.md` §N17) |
+| Two consumer projects on different versions | Their numbers cannot be compared | the data carries `tool: {name, version}` (`src/data.js`) and the method names the version of the dependency, so a report says what counted it |
 
 ---
 

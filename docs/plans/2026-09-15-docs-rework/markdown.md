@@ -745,10 +745,49 @@ files). The parts below are the order to work in; each is one commit.
   `§`-reference of the six documents it holds (8 of 8). **Addresses carried forward:** §8.2 still plans the
   move as `0.1.0`, a label that never existed (M21); §11 still promises the `gzip` metric “is removed” while
   the registry holds it and the package ships it (§4.4, D4 — M22).
-- [ ] **M21 PLAN §6–§9** (857–1041) — 128 Russian (13 + 18 + 83 + 14 by section).
-- [ ] **M22 PLAN §10–§14** (1042–1230) — 153 Russian (82 + 9 + 11 + 39 + 12 by section). The plan of a
+- [x] **M21 PLAN §6–§9** (778–955 today) — done 2026-09-16: parity and acceptance, the suite, the shaping of the
+  package (manifest, versioning, documents, publication, CI) and the risks are English throughout. 160 added /
+  167 removed = **327 changed lines in one file** at the 600 budget; the file 1150 → **1143** lines and Cyrillic
+  in it 281 → **153**, none left in the range (the first Cyrillic line is 956 — §10, the neighbour). The four
+  doc guards 8 of 8, `verify:fast` green (5 steps, 72 of 177), and the full profile green after the edit, as
+  `PLAN.md` is one of the documents the guards read. `worklog/0126`.
+  **The two known addresses are closed by measurement.** §8.2 planned the move as `0.1.0` — a label that never
+  existed: the first release was **`1.0.0`** (2026-09-14) and the package is at **`2.4.0`**, every release's
+  numbers in `CHANGELOG.md`; of its other two promises, `schema: 1` rides in the data while `schemaVersion` in
+  the settings and `--migrate` were never made (`BLOCKERS.md` §N17). §8.4 described an unpublished private
+  package — today it is published and public as **`@vernikr/size-report`** (re-measured 2026-09-16:
+  `npm view size-report versions` ends at **1.0.2**, so the un-scoped name is still someone else's), releases go
+  out by tag (R-4.24) and the consumer's manifest reads `"size-report": "github:vernikr/size-report#v1.2.0"` —
+  **by tag, not by a commit**. §8.5 described **seven** steps — the job is one, named `verify`, running
+  `pnpm run verify`, with the plan's three deliberate deviations still standing (no Node matrix, no `dist/`, the
+  live history as a bundle); the profile hands `parity:live` that bundle by `--repo` (`tools/gates/run.js`),
+  which is why CI needs no secrets.
+  **Draft replaced by outcome, in every table.** §8.1's `package.json` draft gave way to what each field became
+  (one `exports` entry without the settings schema, six `files` without `dist`, exact-versioned optionals,
+  `postinstall` instead of a `prepack` build); §6's and §7's planned lists gave way to today's holders (parity /
+  frozen / environment checks, `BLOB_CHUNK`, the fast-and-full split — 20 files and 72 of 177); §9 gave way to
+  what actually closed: **eight** risks closed with the file that holds each, one that never materialised (the
+  report did not leave git, R-4.8), one held by the data (`tool: {name, version}`) and **two still open** (no
+  cache and no `bench`; no settings migration, §N17). **One false claim of the §4.9 class is gone:** §9 said
+  “the hook does not commit” — it does, and a loop is impossible by construction, with the lock in the git
+  directory and the three switches named.
+  **Guards:** one red of my own text — a bare `§8.2` on a line whose nearest name was `BLOCKERS.md` (read as a
+  citation of the registry, which has no §8.2) — fixed by reordering the row; two references were given their
+  documents (`BLOCKERS.md` beside `§B2` and `§N17`, `requirements.md` beside `§5`). **Addresses measured:**
+  every `§`-reference of the six documents resolves (8 of 8), the plan's section numbers 1–14 stand, the
+  registry holds 21 keys in `BLOCKERS.md` (B1–B3, N1–N18) and 59 `R`-addresses in `REFACTOR.md`, with **61
+  references to them and none unresolved**; the outside references to §6–§9 are by number and unmoved.
+  **Carried to M22:** §10 still promises `maxBytes` as a **setting** (§9 measured the same guard as the constant
+  `MAX_BYTES = 512 KB`) and repeats the migration the plan never made; §11 still promises that the `gzip` metric
+  “is removed” while the registry holds it and the package ships it (§4.4, D4).
+  **Outside this subplan, recorded as addresses only:** the manifest's `description` and the step labels of
+  `.github/workflows/ci.yml` are Russian — both are package and workflow fields rather than markdown, and
+  `package.json` is a gate file, so changing them is a decision of its own.
+- [ ] **M22 PLAN §10–§14** (956–1143) — 153 Russian (82 + 9 + 11 + 39 + 12 by section). The plan of a
   finished move: what the steps settled is kept, the steps themselves go (the architecture is what is
-  still load-bearing). PLAN is a `§`-reference target, so its numbering stays.
+  still load-bearing). PLAN is a `§`-reference target, so its numbering stays. **Addresses carried in:** §10's
+  `maxBytes` is a setting only in the promise (`MAX_BYTES = 512 KB`, §9), the settings migration it repeats was
+  never made (§N17), and §11's “the `gzip` metric is removed” contradicts the registry and the package (§4.4, D4).
 - [ ] **M23 CHANGELOG 1–222** — 148 Russian: the framing of "what changes in numbers" and the
   releases 2.4.0 … 2.1.0. Numbers and tables are facts and stay.
 - [ ] **M24 CHANGELOG 223–422** — 114 Russian: 2.0.2 … 1.3.0.
