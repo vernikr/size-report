@@ -43,16 +43,16 @@ const models = data.rows.map((row, r) => rowModel(row.values, r === 0 ? null : d
 
 const GAPS = ['crlf.txt'];
 
-test('итоги страницы сходятся с итогами артефакта', () => {
+test('the page totals agree with the artifact totals', () => {
   const metrics = keysOn({ metrics: allMetrics });
   const on = allOn();
   data.rows.forEach((row, r) => {
     assert.deepEqual(pageMath.totalsOf(row.values, metrics, on), golden.rows[r].totals,
-      'строка ' + (r + 1) + ': итог по контракту не совпал с итогом артефакта');
+      'row ' + (r + 1) + ': the total from the contract did not match the artifact total');
   });
 });
 
-test('сумма дельт по колонке сходится с текущим размером, если файл не исчезал', () => {
+test('the sum of the deltas over a column agrees with the current size when the file never vanished', () => {
   const metrics = keysOn({ metrics: allMetrics });
   const found = [];
   data.files.forEach((f, i) => {
@@ -65,21 +65,21 @@ test('сумма дельт по колонке сходится с текущи
       let sum = 0;
       models.forEach((model) => { sum += model.files[i][mi].delta || 0; });
       assert.equal(sum, data.now[i] === null ? 0 : data.now[i][m],
-        'колонка «' + f.label + '»/' + m + ': дельты не сходятся с текущим размером');
+        'column “' + f.label + '”/' + m + ': the deltas do not agree with the current size');
     });
   });
   assert.deepEqual(found, GAPS,
-    'состав колонок с возвратом файла изменился: правило дельт придётся пересмотреть');
+    'the set of columns with a returning file changed: the delta rule has to be reconsidered');
 });
 
-test('у возвращённого файла сумма дельт больше текущего размера — и это записано', () => {
+test('a returning file sums more deltas than its current size — and that is written down', () => {
   GAPS.forEach((label) => {
     const i = data.files.findIndex((f) => f.label === label);
     let sum = 0;
     models.forEach((model) => { sum += model.files[i][0].delta || 0; });
-    assert.equal(sum, 117, 'сумма дельт колонки «' + label + '» изменилась');
-    assert.equal(data.now[i].raw, 63, 'текущий размер колонки «' + label + '» изменился');
-    assert.ok(sum > data.now[i].raw, 'возврат файла обязан выглядеть как рост');
+    assert.equal(sum, 117, 'the sum of the deltas of column “' + label + '” changed');
+    assert.equal(data.now[i].raw, 63, 'the current size of column “' + label + '” changed');
+    assert.ok(sum > data.now[i].raw, 'a returning file has to look like growth');
   });
 });
 
@@ -87,7 +87,7 @@ test('у возвращённого файла сумма дельт больш�
  * one exception is a vanished file: its cell is "—" (no delta) while its volume leaves the total, so
  * on such a row the rule itself is checked: total delta = sum of deltas minus the vanished volume
  * (`BLOCKERS.md` §N4). */
-test('дельта итога равна сумме дельт по файлам', () => {
+test('the delta of a total equals the sum of the deltas over the files', () => {
   const metrics = keysOn({ metrics: allMetrics });
   const on = allOn();
   const withGone = [];
@@ -108,18 +108,18 @@ test('дельта итога равна сумме дельт по файлам
       model.files.forEach((cells) => { sum += cells[mi].delta || 0; });
       sum -= gone[m];
       assert.equal(model.total[mi].delta, sum,
-        'строка ' + (r + 1) + '/' + m + ': дельта итога разошлась с суммой дельт по файлам');
+        'row ' + (r + 1) + '/' + m + ': the delta of the total diverged from the sum of the deltas over the files');
     });
   });
   assert.deepEqual(withGone, ['fixture: удаление файла'],
-    'исчезновение файла изменило состав строк: правило дельты итога придётся пересмотреть');
+    'a vanished file changed the set of rows: the rule of the total’s delta has to be reconsidered');
 });
 
-test('выключенное не участвует ни в таблице, ни в сумме', () => {
+test('what is switched off takes part neither in the table nor in the total', () => {
   const metrics = keysOn({ metrics: { raw: true, min: false } });
   const on = allOn();
   on[0] = false;
-  assert.deepEqual(metrics, ['raw'], 'выключенная метрика осталась в выборке');
+  assert.deepEqual(metrics, ['raw'], 'a switched-off metric stayed in the selection');
 
   const totals = totalsOf(data.now, metrics, on);
   let expected = 0;
@@ -127,9 +127,9 @@ test('выключенное не участвует ни в таблице, н�
     if (!on[i] || data.now[i] === null) return;
     expected += data.now[i].raw;
   });
-  assert.equal(totals.raw, expected, 'итог считает выключенные файлы');
+  assert.equal(totals.raw, expected, 'the total counts switched-off files');
   assert.equal(rowModel(data.now, null, metrics, on).files.length, data.files.length - 1,
-    'выключенный файл остался в таблице');
+    'a switched-off file stayed in the table');
   assert.notEqual(totals.raw, totalsOf(data.now, metrics, allOn()).raw,
-    'выключение файла ничего не изменило: сумма не зависит от выбора');
+    'switching a file off changed nothing: the total does not depend on the choice');
 });

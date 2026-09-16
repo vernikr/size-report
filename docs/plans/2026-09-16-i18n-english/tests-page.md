@@ -30,10 +30,10 @@ done
 | `test/module.test.js` | 66 → **58** measured | the same, plus **five reads of other owners' texts** (below); the eight that left are those reads |
 | `test/page-tree.test.js` | 55 | the same, plus one read of the dictionary's data (`:128`) |
 | `test/contract-data.test.js` | 51 | the same, plus reads of the fixture's `golden.json`/`data.json` data |
-| `test/contract-derived.test.js` | 18 | the same |
+| `test/contract-derived.test.js` | 18 → **1** | the same, done 2026-09-16 (step 2): seventeen names and messages are English; the one that stays is `['fixture: удаление файла']` — the fixture's frozen commit subject, pinned in `fixtures/synthetic/golden.json:468` |
 | `test/guard.test.js` | 11 → **1** | the same, done 2026-09-16 (step 1): the ten names and messages are English, and the sample `'export const a = `текст;\n'` stays — it is the fixture's own text |
 | `test/runner.test.js` | 11 → **5** | the same, done 2026-09-16 (step 1): six names and messages are English; the five that stay are the fixture's payload — the multi-byte letter and the two sentinels the child prints |
-| `test/api.test.js` | 4 | the same, around the frozen list of exported names (identifiers) |
+| `test/api.test.js` | 4 → **0** | the same, done 2026-09-16 (step 2); the frozen list of exported names is data and untouched |
 
 ## Read by another owner — three kinds, named line by line
 
@@ -112,10 +112,18 @@ data, untranslated.
    The two sentinels (`из вывода`/`из ошибок`) and `guard.test.js`'s sample `текст` are the fixture's own
    text, written and compared by the same check. The counts are unchanged (2 and 3 checks), `pnpm test`
    green, `pnpm run dup` green — 19 messages is exactly where a twin could appear, and none did.
-2. **`test/api.test.js` + `test/contract-derived.test.js`** (4 + 18). Red first: the frozen name list
-   must stay byte for byte; translating **it** instead of the messages would redden
-   `test/api.test.js` itself in the next run (`pnpm test` answers it), which is the experiment worth
-   quoting — it is the one place in this owner where the wrong target looks like the right one.
+2. **`test/api.test.js` + `test/contract-derived.test.js` — done 2026-09-16**, 4 → **0** and 18 → **1**.
+   Twenty-two names and messages in all. **Red first, one phrase at a time:** all twenty-two went back to
+   Russian on their own and the two files' probe stayed green — no reader of a check's words. **Both
+   experiments this step asked for were made, and both redden:** editing one name in the frozen list
+   (`'CATEGORY_EXTS'` → `'CATEGORY_EXT'`) reddens `test/api.test.js` — the list is data compared with the
+   module's real exports, which is the one place in this owner where the wrong target looks like the right
+   one; and translating `['fixture: удаление файла']` reddens `test/contract-derived.test.js`, because that
+   string is the fixture's own commit subject, pinned in `fixtures/synthetic/golden.json:468` and
+   `manifest.json:64` and written by `tools/synthetic/history.js:91`. The one line that stays is therefore
+   **a pin on the frozen copy**, not a stale expectation — the distinction the mission asked to state.
+   No negative match over Cyrillic text in either file (measured), the counts are unchanged (1 and 5 checks),
+   and `dup` is green over twenty-two fresh messages.
 3. **`test/contract-data.test.js`** (51). Red first: `:47` is N24's gated line and is **not** touched;
    the step proves it by staying green while the messages around it change, and by
    `test/parity.test.js`'s byte-wise comparison continuing to pass.

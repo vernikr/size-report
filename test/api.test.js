@@ -19,11 +19,11 @@ const API = [
   'touchedSection', 'totalsOf', 'validateConfig', 'valueParts', 'writeMode'
 ];
 
-test('публичный API не изменился', () => {
+test('the public API did not change', () => {
   const now = Object.keys(api).sort();
   const lost = API.filter((name) => now.indexOf(name) < 0);
   const extra = now.filter((name) => API.indexOf(name) < 0);
-  assert.deepEqual(lost, [], 'из публичного API пропали имена: ' + lost.join(', '));
-  assert.deepEqual(extra, [], 'в публичный API попало лишнее: ' + extra.join(', '));
-  assert.equal(now.length, API.length, 'публичный API поехал: ' + now.length + ' имён вместо ' + API.length);
+  assert.deepEqual(lost, [], 'names disappeared from the public API: ' + lost.join(', '));
+  assert.deepEqual(extra, [], 'something extra got into the public API: ' + extra.join(', '));
+  assert.equal(now.length, API.length, 'the public API moved: ' + now.length + ' names instead of ' + API.length);
 });
