@@ -15,7 +15,7 @@ rg -cP '[\p{Cyrillic}]' tools/suites.js dup-baseline.json coverage-baseline.json
 
 | File | Lines | What the Russian is |
 |---|---|---|
-| `tools/gates/run.js` | 21 | the eleven step labels of `STEPS` (34–44) and the profile's own verdicts (118, 122) |
+| `tools/gates/run.js` | 21 | the eleven step labels of `STEPS` (35–45), the `:hermetic` mark of a step's name (72), the unknown-profile refusal (87–88) and the profile's own words — the summary header, the `s`/`steps` of the total, the red-steps verdict and its advice (109–123) — **done 2026-09-16, 21 → 0** |
 | `tools/gates/dup.js` | 20 | the sensor's verdicts, its advice lines, and the baseline's `note` (128–129) |
 | `tools/gates/coverage.js` | 18 | the verdicts, the regression lines, the advice, and the baseline's `note` (81–84) |
 | `tools/gates/gatefiles.js` | 7 | the guard's verdicts (94, 98–99, 103, 110, 117) |
@@ -114,13 +114,22 @@ Every commit here carries `Gate-Change: <reason — what changed, by which measu
 `AGENTS.md` asks for and `tools/gates/gatefiles.js` checks (a reason of at least twelve characters,
 not a mark). The `commit-msg` hook answers at once; the `pre-push` hook re-reads the range.
 
-0. **Re-measure before starting.** S1–S5 and W1 have landed, so the counter for the eleven files and
-   the twelve probe-read verdicts is taken again and written into the journal — measured, not
-   inherited.
-1. **`tools/gates/run.js`** — the eleven step labels and the profile's verdicts. Red first: the
-   measured absence of a reader (`--list` prints commands; a step's output is not captured), so the
-   experiment is `pnpm run verify:fast` still green and `pnpm run verify:fast --list` unchanged
-   command for command. The comma in the summary is gone (N26 decided 2026-09-16: the summary numbers go through
+0. **Re-measure before starting — done 2026-09-16.** The counter holds to the line: `run.js` 21,
+   `dup.js` 20, `coverage.js` 18, `gatefiles.js` 7, `metrics.js` 6, `deps.js` 5, `common.js` 0,
+   `pre-commit` 2, `pre-push` 2 (and `commit-msg`/`post-commit` 0, measured), `tools/suites.js` 38,
+   each baseline 1 — **121**, exactly the row's own number, and none of W1's decisions moved it.
+1. **`tools/gates/run.js` — done 2026-09-16, 21 → 0.** The eleven step labels of `STEPS`, the
+   `:hermetic` env mark on a step's name, the unknown-profile refusal, the summary's own words
+   (`profile summary “…”`, `total … s (…, steps N)`, `red steps N of M`, the advice to fix the code
+   rather than the sensor) and the green verdict. Red first: the absence of a reader was measured
+   again rather than inherited — `--list` prints commands and nothing else, the guard
+   (`test/gates-verify.test.js`, five checks) parses those command lines and the hooks' **call**
+   lines, and a step's output is not captured at all — so the experiment was the profile itself:
+   `pnpm run verify:fast` green with the English labels (`profile summary “fast” … total 16.3 s
+   (size-report, steps 5)`, `✓ verify: the “fast” profile is green throughout (5 steps)`) and
+   `node tools/gates/run.js nope` exiting 1 with `✗ verify: no profile was named, or the name is
+   unknown (there are: fast, full, slow)`. The commands are unchanged: `--list slow` still prints
+   the same ten lines, which is what CI is compared with. The comma in the summary is gone (N26 decided 2026-09-16: the summary numbers go through
    `localeNumber`, so they follow the machine's locale while the words stay English).
 2. **`tools/gates/deps.js` and `tools/gates/metrics.js`** — their verdicts and advice, with the two
    probe reads (`test/gates-deps.test.js:48`, `test/gates-metrics.test.js:144`) in the same commit.

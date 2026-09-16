@@ -32,17 +32,17 @@ import { localeNumber } from '../harness.js';
  * its own cannot carry: an environment key in `package.json` does not travel between shells. Hence a
  * profile entry is a script plus an optional environment. */
 const STEPS = {
-  'lint:strict': 'оформление: те же правила, что видны в диффе (существующий линтер пакета)',
-  metrics: 'раздувание: размер и сложность функций, размер модулей, дубли веток, вес тестов, пометки долга',
-  dup: 'дубли: новые клоны против базы отпечатков и против дерева `origin/main`',
-  deps: 'связи: циклы, сироты, направление слоёв',
-  test: 'быстрый набор проверок (то же, что `pnpm test`)',
-  'test:all': 'полный набор проверок',
-  'test:all:hermetic': 'полный набор в среде, где настроек git машины нет вовсе',
-  'parity:live': 'паритет с историей проекта-потребителя на клоне',
-  'check:standards': 'эталоны воспроизводятся, рабочее дерево остаётся чистым',
-  'pack:check': 'движок работает из собранного тарболла',
-  cover: 'покрытие: храповик по файлам (полный набор под c8)'
+  'lint:strict': 'formatting: the same rules the diff shows (the package’s existing linter)',
+  metrics: 'bloat: the size and complexity of functions, the size of modules, duplicated branches, the weight of checks, debt marks',
+  dup: 'duplicates: new clones against the fingerprint baseline and against the `origin/main` tree',
+  deps: 'relations: cycles, orphans, the direction of layers',
+  test: 'the fast set of checks (the same as `pnpm test`)',
+  'test:all': 'the whole set of checks',
+  'test:all:hermetic': 'the whole set in an environment with none of the machine’s git settings',
+  'parity:live': 'parity with the history of the consumer project, on a clone',
+  'check:standards': 'the references reproduce, the working tree stays untouched',
+  'pack:check': 'the engine works from the assembled tarball',
+  cover: 'coverage: the per-file ratchet (the whole set under c8)'
 };
 
 /* The step with no machine settings is the same full suite with one environment key: a script of its
@@ -69,7 +69,7 @@ const PROFILES = {
 const ARGS = { 'parity:live': ['--', '--repo', 'fixtures/live/history.bundle'] };
 
 function labelOf(entry) {
-  return entry.script + (entry.env === null ? '' : ':чистое-окружение');
+  return entry.script + (entry.env === null ? '' : ':hermetic');
 }
 
 const args = parseArgs(process.argv.slice(2), [], ['--list']);
@@ -84,8 +84,8 @@ function commandOf(entry) {
 }
 
 if (profile === undefined || PROFILES[profile] === undefined) {
-  bad('verify: профиль не назван или незнаком (есть: ' + Object.keys(PROFILES).join(', ') + ')\n'
-    + '    например: pnpm run verify:fast');
+  bad('verify: no profile was named, or the name is unknown (there are: '
+    + Object.keys(PROFILES).join(', ') + ')\n    for example: pnpm run verify:fast');
 } else if (args.flags['--list']) {
   /* The machine-readable view of the profile: one line per command. The local run and CI are compared
    * with it. */
@@ -106,20 +106,20 @@ if (profile === undefined || PROFILES[profile] === undefined) {
   });
 
   const failed = results.filter((r) => r.code !== 0);
-  console.log('\nсводка профиля «' + profile + '»:');
+  console.log('\nprofile summary “' + profile + '”:');
   results.forEach((r) => {
     console.log('  ' + (r.code === 0 ? '✓' : '✗') + ' ' + r.name.padEnd(18)
-      + localeNumber(r.seconds, 1) + ' с');
+      + localeNumber(r.seconds, 1) + ' s');
   });
   const total = results.reduce((sum, r) => sum + r.seconds, 0);
-  console.log('  всего ' + localeNumber(total, 1) + ' с ('
-    + path.basename(process.cwd()) + ', шагов ' + results.length + ')');
+  console.log('  total ' + localeNumber(total, 1) + ' s ('
+    + path.basename(process.cwd()) + ', steps ' + results.length + ')');
 
   if (failed.length > 0) {
-    bad('verify: красных шагов ' + failed.length + ' из ' + results.length + ': '
+    bad('verify: red steps ' + failed.length + ' of ' + results.length + ': '
       + failed.map((r) => r.name).join(', '));
-    console.error('    чинить найденное, а не датчик: пороги, базы и правила — не в этом коммите');
+    console.error('    fix what was found, not the sensor: thresholds, baselines and rules do not belong in this commit');
   } else {
-    ok('verify: профиль «' + profile + '» зелёный целиком (' + results.length + ' шагов)');
+    ok('verify: the “' + profile + '” profile is green throughout (' + results.length + ' steps)');
   }
 }
