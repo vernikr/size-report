@@ -147,32 +147,59 @@ test('причины отказа совпадают у движка, справ
     /причина отказа не объявлена/, 'refuseCause пропустил неназванную причину');
 });
 
+/* The document a reference names. On its own line: the name right after the reference ("§4.3
+ * `module-design.md`", also inside an opening bracket — "§8 (`PLAN.md` D4)"), the nearest name before
+ * it ("`PLAN.md` §5"), and with no name the word in both languages means the requirements
+ * ("requirement §4.2") — the documents are translated one by one, and a reference the check stops
+ * resolving would pass in silence (measured: the broken "§11.20 requirements" is caught while the line
+ * says "требования" and slips through once it is English).
+ *
+ * A citation also **wraps**, and that reading was missing: measured on pass M18 of the documentation
+ * rework, a `§7.4` whose word lay on the line below was green while the section does not exist. The
+ * name (or the word) may therefore stand across **one** line break, with nothing in the gap but
+ * whitespace, a comma or a bracket and the other references of the same list; prose in the gap, a
+ * second break, a name standing farther away and a comma-glued neighbour ("(§8.4, `WORKLOG.md` §44)" —
+ * two citations, not one) are all left alone. It is a reading rather than a guess that way: measured
+ * over the tree, the nearest name within three lines answers wrong on about a third of what it adds.
+ *
+ * A reference with no name at all is a § of the journal or of a plan, and there is nothing to resolve
+ * it against: anyone numbers as they like, and silence is more honest than a guess.
+ */
+function namedSection(sections, lines, i, m) {
+  const line = lines[i];
+  // The other references of one list are one gap: "(§3.3, §7.4 requirements)" carries one name for both.
+  const flat = (text) => text.replace(/§\s*(?:\d+(?:\.\d+)*|[BN]\d+)/g, ' ');
+  const after = flat(line.slice(m.index + m[0].length));
+  const before = flat(line.slice(0, m.index));
+  const wrapped = after + '\n' + flat(lines[i + 1] || '');
+  const above = flat(lines[i - 1] || '') + '\n' + before;
+  const known = (n) => (n === undefined || n === null || sections[n] === undefined ? null : n);
+  const hit = (text, re) => { const g = text.match(re); return g === null ? null : g[1]; };
+  const left = [...before.matchAll(/`?([\w.-]+\.md)`?/g)].map((g) => g[1]).reverse();
+  return known(hit(after, /^\s*[(:]?`?([\w.-]+\.md)`?/))
+    || known(left.find((n) => sections[n] !== undefined))
+    || (/(?:требовани|requirements?)/.test(line) ? 'requirements.md' : null)
+    || known(hit(wrapped, /^(?:[^\S\n]|[,;:()])*\n(?:[^\S\n]|[,;:()])*`?([\w.-]+\.md)`?/))
+    || known(hit(above, /`?([\w.-]+\.md)`?(?:[^\S\n]|[,;:()])*\n(?:[^\S\n]|[,;:()])*$/))
+    || (/^(?:[^\S\n]|[,;:()])*\n(?:[^\S\n]|[,;:()])*(?:требовани\w*|requirements?)/.test(wrapped)
+      ? 'requirements.md' : null)
+    || (/(?:требовани\w*|requirements?)(?:[^\S\n]|[,;:()])*\n(?:[^\S\n]|[,;:()])*$/.test(above)
+      ? 'requirements.md' : null);
+}
+
 test('ссылки на разделы ведут в существующие разделы', () => {
   const sections = {};
   TARGETS.forEach((f) => { sections[path.basename(f)] = sectionsOf(read(f)); });
 
   const bad = [];
   DOCS.forEach((doc) => {
-    read(doc).split('\n').forEach((line) => {
+    read(doc).split('\n').forEach((line, i, lines) => {
       [...line.matchAll(/§\s*(\d+(?:\.\d+)*|[BN]\d+)/g)].forEach((m) => {
-        const key = m[1];
-        const before = line.slice(0, m.index);
-        // The nearest document name: right after the reference ("§4.3 `module-design.md`") or before it
-        // ("`PLAN.md` §5"). With no name it is a reference to a section of the requirements — that is
-        // how they are referred to ("requirement §4.2"). The word is read in both languages: the
-        // documents are translated one by one, and a reference the check stops resolving would pass in
-        // silence (measured: the same broken "§11.20 requirements" is caught while the line says
-        // "требования" and slips through once it is English).
-        const after = line.slice(m.index + m[0].length).match(/^\s*`?([\w.-]+\.md)`?/);
-        const named = (after && sections[after[1]] !== undefined && after[1])
-          || [...before.matchAll(/`?([\w.-]+\.md)`?/g)].reverse().map((n) => n[1])
-            .find((n) => sections[n] !== undefined)
-          || (/(?:требовани|requirements?)/.test(line) ? 'requirements.md' : null);
-        // A reference with no document name is a § of the journal or of a plan, and there is nothing to
-        // resolve it against: anyone is free to plan and number as they like. Silence is more honest
-        // than a guess here.
-        if (named === null || sections[named] === undefined) return;
-        if (!sections[named].has(key)) bad.push(doc + ': §' + key + ' → ' + named);
+        const named = namedSection(sections, lines, i, m);
+        // A reference with no name anywhere near is a § of the journal or of a plan and is left alone:
+        // silence is more honest than a guess (the rule itself is the helper's comment).
+        if (named === null) return;
+        if (!sections[named].has(m[1])) bad.push(doc + ': §' + m[1] + ' → ' + named);
       });
     });
   });

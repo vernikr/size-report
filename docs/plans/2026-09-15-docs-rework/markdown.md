@@ -41,7 +41,7 @@ edit is allowed — but it belongs in the same diff, never as a silent follow-up
 | `tools/docs-facts.js` `NOT_TODAY`, `OWN_PROJECT` | README section titles | those headings are renamed — both were renamed (M6, M7). `NOT_TODAY` reddened the guard as predicted (`docs-commands` read `size init` from the "not yet" block as a call); **`OWN_PROJECT` did not** — see the M7 note below: today it only repeats what `FOREIGN` already covers |
 | `test/docs-commands.test.js` `readmeCauses` | the code-2 row of the README table, `**group** (cause, cause)` | the causes are translated — they are not: the registry's names are quoted as the tool prints them |
 | `test/docs-paths.test.js` | the README table under the heading `## Что в репозитории` | that heading is renamed |
-| `test/docs-commands.test.js` | a bare `§N` resolved to `requirements.md` by the word «требовани» | requirements are quoted without naming the file |
+| `test/docs-commands.test.js` `namedSection` | a bare `§N` resolved to `requirements.md` by the word «требовани» / `requirement`, and — since M18a — by a **wrapped citation**: the name (or the word) standing across one line break | requirements are quoted without naming the file, the name is carried to the neighbouring line, or a citation list loses its name |
 | `tools/docs-facts.js` `DOCS`, `TARGETS`, `FOREIGN` | file *names* (`README.md`, `WORKLOG.md`, …) | a document moves |
 | `test/docs-pin.test.js` | the install example `github:vernikr/size-report#<pin>` | never — the pin string comes from `src/tool.js` |
 | `test/release.test.js` | steps of `.github/workflows/*.yml` | workflow step names are translated (check before touching) |
@@ -661,6 +661,27 @@ files). The parts below are the order to work in; each is one commit.
   lines (the guard resolves a name within its own line). Two more guard hits were the same class —
   `§4.5`→requirements, `§4.9`→worklog — fixed in the document, no guard weakened. 69 section keys before
   and after, none moved; 192 references resolve, none into a section that is gone. No release.
+- [x] **M18a The guard of references sees a wrapped citation** — done 2026-09-16, one commit and no numbered
+  part: it closes the class M18 measured rather than translating another document. `namedSection` in
+  `test/docs-commands.test.js` resolves a name (or the word `требовани`/`requirement`) that stands across
+  **one** line break, when nothing but whitespace, a comma, a bracket and the other references of the same
+  list lies in the gap — and it takes a name in an opening bracket on the line ("§8 (`PLAN.md` D4)") too.
+  **Measured over the six documents the guard holds** (`DOCS`): 250 references, of which 170 resolve by the
+  rules as they stood (**the same 170** — the old chain was run beside the new one, so nothing was weakened),
+  **2 only by the new reading** (`PLAN.md` §4.9 → itself, on a line whose reference opens it and whose
+  previous line ends with the name; `REFACTOR.md` §8 → `PLAN.md`, in the bracket), and 78 left alone by
+  design. **Not one reference is broken today** — the instance that lived here (`PLAN.md` `§7.4` beside the
+  word on the line below) went with M18, and the class is closed prospectively: the historical line was put
+  back for the experiment and the guard reddened (`PLAN.md: §7.4 → requirements.md`, in both wordings), the
+  document was repaired, and the guards went green again. **What a wider window costs, measured:** the
+  nearest name within three lines resolves 22 more references and answers wrong on about a third of them (a
+  row naming `docs/ROADMAP.md` jumps to `module-design.md`; a paragraph listing requirements §6/§7/§11–§13
+  resolves half of them to the design) — hence one break and no prose in the gap. `worklog/0123`.
+  **What stays unchecked, with addresses** (the name is farther than one break, or is not a `.md` name, and
+  no form distinguishes it from prose): `BLOCKERS.md` §488–489 (`§9`, `§13` of `docs/module-design.md`, one
+  word `of` in the gap), `CHANGELOG.md` §227 and §234 (`§6`, the file named as `README` without the
+  extension), `PLAN.md` §509 (`§B1`, the note named nowhere near). All four resolve correctly by eye; a
+  wording pass (M26) may decide to carry the name beside the reference instead.
 - [ ] **M19 PLAN §5, steps 0–2** (432–682) — 161 Russian.
 - [ ] **M20 PLAN §5, steps 3–6** (683–856) — 140 Russian.
 - [ ] **M21 PLAN §6–§9** (857–1041) — 128 Russian (13 + 18 + 83 + 14 by section).
