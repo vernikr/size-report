@@ -16,16 +16,18 @@ guard reads **presence, the field's name and the size** of a reason, never its w
 
 **The split itself is unchanged, measured.** The file lists are identical to `HEAD` (19 + 18 entries,
 compared by importing both), every `why` is still longer than thirty characters, and `--list` prints the
-same commands as before this step (`fast` five lines, `full` eight, `slow` ten — the counts step 1 recorded;
-`tools/gates/run.js` was not touched either). The runs keep their size: 70 checks fast, 175 full.
+same commands as before this step (`fast` five lines, `full` eight, `slow` ten — the slow run's ten are the
+lines step 1 recorded, and `tools/gates/run.js` was not touched either, so the commands come from the same
+table as before). The runs keep their size: 70 checks fast, 175 full.
 
 **Counters.** `tools/suites.js` 38 → **0**; the owner W2 42 → **4** (only the two hooks' messages are left).
 Untouched: `GATE_FILES`, thresholds, both baselines, the profile split, `SITES` 27, `PRINTED` 2/2/1/2/4,
 `CASES` 38, 70 checks fast and 175 full. `dup` asked separately: green, 8 clones, 47 lines, 15 fingerprints,
 no new twin — the long English reasons produced no clone.
 
-**Trailer.** `tools/suites.js` is a gate file and so is the probe; the commit carries `Gate-Change:` and the
-hook confirmed it.
+**Trailer.** `tools/suites.js` is a gate file (the hook answered `gate files 1, the Gate-Change: trailer is
+there`); the probe, `test/suites.test.js`, is **not** in `GATE_FILES` — it needed no edit either, since it
+reads presence, field name and size rather than words.
 
 **W2 is not closed** — step 6 of seven. Left: the four hook messages (step 7), the last portion of this
 subplan. Then C1–C3 and D1. Nothing ships here, so no release is owed; N20 stays open, and N31 plus N32 wait
