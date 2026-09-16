@@ -59,14 +59,14 @@ export function gitRoot() {
     // are told apart by what git itself said rather than by a guess: ENOENT means the program was not
     // found. One text for both ("not a git repository, or git is unavailable") named neither of them.
     if (e.code === 'ENOENT') {
-      refuseCause('git missing', 'git не запустился: его нет в PATH (таблица собирается по его'
-        + ' истории, а смотрю я в ' + process.cwd() + ').\n'
-        + '  починка: поставьте git (https://git-scm.com) и повторите команду');
+      refuseCause('git missing', 'git did not start: it is not in PATH (the table is built from its'
+        + ' history, and the directory I look in is ' + process.cwd() + ').\n'
+        + '  fix: install git (https://git-scm.com) and run the command again');
     }
-    refuseCause('not a git repository', 'git не видит здесь репозитория: таблица собирается по его'
-      + ' истории (сейчас смотрю в ' + process.cwd() + ').\n'
-      + '  смотрите: запущена ли команда из каталога проекта\n'
-      + '  починка: если истории ещё нет — создайте её: git init');
+    refuseCause('not a git repository', 'git sees no repository here: the table is built from its'
+      + ' history (the directory I look in is ' + process.cwd() + ').\n'
+      + '  see: whether the command was run from the directory of the project\n'
+      + '  fix: if there is no history yet, create it: git init');
   }
 }
 
@@ -78,7 +78,7 @@ export function gitRoot() {
  * file, and "edit <path>" would lead the reader to something the project does not have. */
 export function derivedConfig(root) {
   const cfg = derivedProfile(root);
-  cfg.path = 'настройки, выведенные из проекта';
+  cfg.path = 'derived from the project';
   cfg.derived = true;
   validateConfig(cfg);
   return cfg;
@@ -112,16 +112,16 @@ export function loadConfig(file, root) {
     // out exactly when it is the default one anyway.
     const dflt = root !== undefined && path.resolve(root, CONFIG_NAME) === path.resolve(file);
     if (dflt) return derivedConfig(root);
-    refuseCause('no settings file', 'нет файла настроек ' + file
-      + '\n  создайте его: ' + cliCommand('--init ' + advicePath(file))
-      + '\n  смотрите: без «--config» настройки не нужны — они выводятся из проекта');
+    refuseCause('no settings file', 'no settings file ' + file
+      + '\n  create it: ' + cliCommand('--init ' + advicePath(file))
+      + '\n  see: without "--config" no settings are needed — they are derived from the project');
   }
   let raw;
   try {
     raw = JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch (e) {
-    refuseCause('settings not parsed', 'не разобран ' + file + ': ' + e.message
-      + '\n  починка: правьте ' + file + '; образец настроек даёт ' + cliCommand('--init') + ' в пустом каталоге');
+    refuseCause('settings not parsed', 'cannot parse ' + file + ': ' + e.message
+      + '\n  fix: edit ' + file + '; a sample of settings comes from ' + cliCommand('--init') + ' in an empty directory');
   }
   const cfg = withDefaults(raw);
   cfg.path = file;
@@ -133,19 +133,19 @@ export function loadConfig(file, root) {
  * or an object silently matches nothing, and the column reports zero rows as success. The refusal has
  * to happen here instead of turning into an empty report. */
 function checkColumns(cfg, fail) {
-  if (!cfg.columns || cfg.columns.length === 0) fail('не задано ни одной колонки (columns)');
+  if (!cfg.columns || cfg.columns.length === 0) fail('no columns are given (columns)');
   const labels = new Set();
   cfg.columns.forEach((c, i) => {
     const pathsAreNames = c && Array.isArray(c.paths)
       && c.paths.length > 0 && c.paths.every((p) => typeof p === 'string' && p !== '');
     if (!c || typeof c.label !== 'string' || c.label === '' || !pathsAreNames) {
-      fail('колонка №' + (i + 1) + ' должна быть {label, paths: [...]} из непустых строк: '
-        + JSON.stringify(c).slice(0, 90) + '\n  смотрите: черновик с готовыми колонками даёт '
-        + cliCommand('--init <файл>'));
+      fail('column #' + (i + 1) + ' has to be {label, paths: [...]} of non-empty strings: '
+        + JSON.stringify(c).slice(0, 90) + '\n  see: a draft with ready columns comes from '
+        + cliCommand('--init <file>'));
     }
-    if (labels.has(c.label)) fail('метка колонки «' + c.label + '» повторяется');
+    if (labels.has(c.label)) fail('the column label "' + c.label + '" repeats');
     if (c.category !== undefined && CATEGORY_ORDER.indexOf(c.category) < 0) {
-      fail('категория «' + c.category + '» у колонки «' + c.label + '» неизвестна: '
+      fail('the category "' + c.category + '" of the column "' + c.label + '" is unknown: '
         + CATEGORY_ORDER.join(', '));
     }
     labels.add(c.label);
@@ -153,27 +153,27 @@ function checkColumns(cfg, fail) {
 }
 
 function checkMetrics(cfg, fail) {
-  if (!Array.isArray(cfg.metrics) || cfg.metrics.length === 0) fail('не заданы метрики (metrics)');
+  if (!Array.isArray(cfg.metrics) || cfg.metrics.length === 0) fail('no metrics are given (metrics)');
   cfg.metrics.forEach((m) => {
-    if (!METRICS[m]) fail('неизвестная метрика «' + m + '» (есть: ' + Object.keys(METRICS).join(', ') + ')');
+    if (!METRICS[m]) fail('unknown metric "' + m + '" (there are: ' + Object.keys(METRICS).join(', ') + ')');
   });
 }
 
 function checkMinify(cfg, fail) {
   if (MINIFY_ENGINES.indexOf(cfg.minify.engine) < 0) {
-    fail('неизвестный способ минификации «' + cfg.minify.engine + '» (есть: ' + MINIFY_ENGINES.join(', ') + ')');
+    fail('unknown minification engine "' + cfg.minify.engine + '" (there are: ' + MINIFY_ENGINES.join(', ') + ')');
   }
 }
 
 function checkTokens(cfg, fail) {
   const family = TOKEN_FAMILIES[cfg.tokens.family];
   if (family === undefined) {
-    fail('неизвестное семейство токенизатора «' + cfg.tokens.family + '» (есть: '
+    fail('unknown tokenizer family "' + cfg.tokens.family + '" (there are: '
       + Object.keys(TOKEN_FAMILIES).join(', ') + ')');
   }
   if (family.encodings.indexOf(cfg.tokens.encoding) < 0) {
-    fail('неизвестная кодировка токенизатора «' + cfg.tokens.encoding + '» у семейства '
-      + cfg.tokens.family + ' (есть: ' + family.encodings.join(', ') + ')');
+    fail('unknown tokenizer encoding "' + cfg.tokens.encoding + '" of the family '
+      + cfg.tokens.family + ' (there are: ' + family.encodings.join(', ') + ')');
   }
 }
 
@@ -181,16 +181,16 @@ function checkTokens(cfg, fail) {
  * rows, that is, on itself. */
 function checkOutput(cfg, fail) {
   cfg.columns.forEach((c) => {
-    if (c.paths.indexOf(cfg.output) >= 0) fail('файл таблицы (' + cfg.output + ') не может быть колонкой');
+    if (c.paths.indexOf(cfg.output) >= 0) fail('the size table file (' + cfg.output + ') cannot be a column');
   });
-  if (!cfg.output) fail('не задан output');
+  if (!cfg.output) fail('output is not set');
 }
 
 function checkJournal(cfg, fail) {
   if (!cfg.journal) return;
-  if (!cfg.journal.path) fail('journal.path не задан');
-  if (!cfg.journal.pattern) fail('journal.pattern не задан');
-  try { new RegExp(cfg.journal.pattern); } catch (e) { fail('journal.pattern не компилируется: ' + e.message); }
+  if (!cfg.journal.path) fail('journal.path is not set');
+  if (!cfg.journal.pattern) fail('journal.pattern is not set');
+  try { new RegExp(cfg.journal.pattern); } catch (e) { fail('journal.pattern does not compile: ' + e.message); }
 }
 
 /* What the settings say about a path: `columns` — a column tracks it, `excluded` — it is declared an
@@ -213,21 +213,21 @@ export function pathRoles(cfg) {
  * branch, which is why nothing has to be guarded here: a commit with no files at all gets no fix — the
  * list being empty, nobody calls it (`fixFor` in `src/explain.js`). */
 export function outsideFix(paths) {
-  return 'допишите эти пути колонкой или в «skip» файла ' + CONFIG_NAME + ': ' + paths.join(', ');
+  return 'add these paths as a column or to "skip" of ' + CONFIG_NAME + ': ' + paths.join(', ');
 }
 
 export function validateConfig(cfg) {
   const fail = (msg) => refuseCause('settings invalid',
-    'конфиг ' + cfg.path + ': ' + msg + '\n  починка: правьте ' + cfg.path);
+    'config ' + cfg.path + ': ' + msg + '\n  fix: edit ' + cfg.path);
   checkColumns(cfg, fail);
   checkMetrics(cfg, fail);
   checkMinify(cfg, fail);
   checkTokens(cfg, fail);
-  if (!LOCALES[cfg.locale]) fail('неизвестная локаль «' + cfg.locale + '» (есть: ' + Object.keys(LOCALES).join(', ') + ')');
+  if (!LOCALES[cfg.locale]) fail('unknown locale "' + cfg.locale + '" (there are: ' + Object.keys(LOCALES).join(', ') + ')');
   // The hook switch is a yes/no rather than a truthy/falsy one: the tool has to tell `false` from a
   // stray string, or switched-off automation would stay switched on.
   if (typeof cfg.hooks.enabled !== 'boolean') {
-    fail('hooks.enabled — не «да/нет»: ' + JSON.stringify(cfg.hooks.enabled));
+    fail('hooks.enabled is not a yes/no: ' + JSON.stringify(cfg.hooks.enabled));
   }
   checkOutput(cfg, fail);
   checkJournal(cfg, fail);

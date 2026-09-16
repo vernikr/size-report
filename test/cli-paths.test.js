@@ -100,6 +100,6 @@ test('вне git-репозитория отказ объясняется, а н
   const res = runSize(tmp, ['--data']);
   refusal(res, 2, 'запуск вне репозитория');
   // The advice has to be a command: a refusal without a fix helps no reader.
-  assert.match(res.stderr, /^\s*починка: .*git init$/m,
+  assert.match(res.stderr, /^\s*fix: .*git init$/m,
     'отказ не назвал команду починки:\n' + res.stderr);
 });

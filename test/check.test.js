@@ -136,7 +136,7 @@ test('объяснение: коммит мимо колонок отличае�
   assert.equal(rep.reason, 'outside', 'коммит мимо колонок назван причиной не того вида: ' + rep.reason);
   assert.deepEqual(rep.touched.untracked, ['WORKLOG.md'], 'не назван путь, оставшийся мимо колонок');
   assert.deepEqual(rep.touched.columns, [], 'названы колонки, которых коммит не касался');
-  assert.match(rep.fix, /колонкой или в «skip»/, 'починка не говорит, что делать с таким путём');
+  assert.match(rep.fix, /as a column or to "skip"/, 'починка не говорит, что делать с таким путём');
 });
 
 /* One judgement about "outside the columns" and one phrase for it in two answers: `check` asks about the
@@ -148,7 +148,7 @@ test('мимо колонок: полнота и объяснение говор
     cfg.columns = [{ label: 'code.js', paths: ['src/code.js'] }];
     return cfg;
   });
-  const STEM = 'допишите эти пути колонкой или в «skip» файла size-table.config.json: ';
+  const STEM = 'add these paths as a column or to "skip" of size-table.config.json: ';
   const rep = JSON.parse(runSize(dir, ['--config', file, 'explain', '9dfe679', '--json']).stdout);
   assert.equal(rep.fix.slice(0, STEM.length), STEM,
     'объяснение говорит о таком пути своими словами:\n' + rep.fix);

@@ -129,7 +129,7 @@ test('нечитаемые настройки: код 2, причина назв
   const res = runSize(PLAIN, ['--config', bad, 'doctor']);
   assert.equal(res.code, 2, 'нечитаемые настройки обработаны не как отказ: '
     + firstLine(res.stdout + res.stderr));
-  assert.match(res.stdout, /неизвестная метрика/, 'ответ не назвал причину:\n' + res.stdout);
+  assert.match(res.stdout, /unknown metric/, 'ответ не назвал причину:\n' + res.stdout);
   assert.match(res.stdout, /нечитаемы/, 'ответ умолчал, что настроек нет:\n' + res.stdout);
 
   const rep = JSON.parse(runSize(PLAIN, ['--config', bad, 'doctor', '--json']).stdout);

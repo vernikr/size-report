@@ -45,12 +45,19 @@ were pinned by S1 (`surface.md`, "the vocabulary this subplan fixes"):
 
 | Cause today | S1's name | Emitted from |
 |---|---|---|
-| `нет git` | `no git` | `src/config.js` (`gitRoot`) |
+| `нет git` | `git missing` | `src/config.js` (`gitRoot`) |
 | `не git-репозиторий` | `not a git repository` | `src/config.js` (`gitRoot`) |
-| `нет файла настроек` | `settings file missing` | `src/config.js` (`loadConfig`) |
+| `нет файла настроек` | `no settings file` | `src/config.js` (`loadConfig`) |
 | `настройки не разобраны` | `settings not parsed` | `src/config.js` (`loadConfig`) |
 | `настройки неверны` | `settings invalid` | `src/config.js` (`validateConfig`) |
-| `конфиг уже есть` | `config already there` | `src/init.js` (`initMode`) |
+| `конфиг уже есть` | `config already exists` | `src/init.js` (`initMode`) |
+
+**Corrected 2026-09-16 by measurement, after S1's step 3 landed:** three of the names above were
+predicted differently while this subplan was being written (`no git`, `settings file missing`,
+`config already there`) and the registry holds the three in the left column of this table instead.
+S2 reads the names from `CONFIG_CAUSES` and writes no cause anywhere — that is what S1's step 3
+did, and the table is here only so that a reader of this subplan sees the words it will find in
+the messages.
 
 **The divergence to respect:** the rename of a cause argument belongs to **S1's step 3**, which
 edits the registry (`CONFIG_CAUSES`), the call sites, `tools/refusals.js`'s `SITES`/`CASES` and the
@@ -91,6 +98,7 @@ the phrasing rather than the baseline (`AGENTS.md`).
 | `test/check.test.js:139,151,165` | `outsideFix` and the advice marker | `/колонкой или в «skip»/`, the exact `STEM = 'допишите эти пути колонкой или в «skip» файла size-table.config.json: '` (compared with `String.prototype.slice(0, STEM.length)` and with `line.slice(head.length, head.length + STEM.length)`), and `head = '  починка: '` |
 | `test/cli.test.js:45,69` | `derivedLines` | `/настройки выведены из проекта/` and its absence once a file is pinned |
 | `test/cli.test.js:149,157` | the settings refusals | codes only (through `refusal()` in `tools/harness.js:165`, which reads code, stack and non-empty stderr) — the patterns are the assertion's own words, so nothing here has to follow the text |
+| `test/cli-paths.test.js:103` | the `git init` advice of the "no repository" refusal | `/^\s*починка: .*git init$/m` — a **machine** read of the marker **and** the command, **found by the full run rather than by this plan** (step 1 of S2 reddened it: the marker moved to `fix: ` and the check found no advice line at all). Its neighbour at `:94` reads `history.js`'s marker instead (S4), which is why only this one moves here |
 | `test/module.test.js:258,284` | `derivedLines`'s `--init` hint | `res.stderr.match(/закрепить их файлом[^:]*: (.+)$/m)` — a **machine** read of the phrase, used to extract the hint it quotes |
 | `test/doctor.test.js:64,132` | `derivedSummary` and `validateConfig`'s text through `doctor` | `/настройки выведены из проекта/` and `/неизвестная метрика/` over doctor's answer |
 | `test/minify.test.js:286` | `checkMinify` | `/strip, esbuild/` — identifiers, so unaffected, and named here as the proof that the list of engines must stay |
@@ -105,8 +113,16 @@ before each, the counter per file before and after.
 **Step 1 — `src/config.js`.** The two git dead ends, the two file readings (`нет файла настроек`,
 `настройки не разобраны`), the whole `fail` family of `validateConfig` with its prefix and tail, the
 value of `cfg.path`, and `outsideFix`. Joint edits: the `must`/`advice` lines of the seven cases in
-`tools/refusals.js`, `test/check.test.js:139,151,159,165`, `test/doctor.test.js:132`. The advice
-marker becomes `fix: ` and `create it: ` here, so `test/check.test.js:159`'s `head` moves with it.
+`tools/refusals.js`, `test/check.test.js:139,151`, `test/doctor.test.js:132`, and — found by walking
+the strings rather than by reading this plan — the quotation of one of them inside `src/init.js:49`
+(`«не задано ни одной колонки»` → `«no columns are given (columns)»`): the surrounding sentence is
+step 2's, the quoted fragment belongs to the text it quotes.
+
+The advice markers this step prints are `fix: ` (four sites) and `create it: ` (one). **Measured
+correction to the plan:** `test/check.test.js`'s `head = '  починка: '` does **not** move here — that
+line is printed by `src/check.js:119`, so the marker is S4's and the check's `head` moves with S4's
+step. What step 1 moves in that check is the two places where the shared phrase is sliced
+(`:139`, `:151`), because the phrase itself is `outsideFix` and this step owns it.
 Keep the prefix-and-tail shape (`<settings file> <path>: <what is wrong>` + `fix: <what to edit>`):
 two tests slice at a fixed length, and a reader's eye uses the same seam.
 

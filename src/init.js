@@ -46,7 +46,7 @@ function noteNoColumns(root, target, cfg) {
   console.error('! в проекте не нашлось путей, которые можно взять колонками'
     + ' (история пуста или в ней нет знакомых расширений): черновик записан без колонок'
     + '\n  впишите их руками в ' + path.relative(root, target)
-    + ' — без колонок проверка настроек скажет «не задано ни одной колонки»');
+    + ' — без колонок проверка настроек скажет «no columns are given (columns)»');
 }
 
 export function initMode(root, file, force) {
