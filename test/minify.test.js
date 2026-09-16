@@ -178,7 +178,7 @@ test('без необязательной зависимости метрика 
     'отступление не названо кодом 4: код ' + json.code + ', ' + json.stderr.trim());
   assert.equal(json.stdout, goldenText,
     'без минификатора числа не равны прежнему способу: ' + json.stderr.trim());
-  assert.match(json.stderr, /минификатор недоступен/, 'отступление не объяснено');
+  assert.match(json.stderr, /the minifier is unavailable/, 'отступление не объяснено');
   assert.match(json.stderr, /minify.*engine.*strip/, 'отступление не назвало починку');
 
   const dir = cloneFixture(path.join(tmp, 'write-off'));
@@ -214,13 +214,13 @@ test('расхождение и отступление вместе: назва�
     'вердикт отдан приближению: код ' + check.code + ', ' + check.stderr.trim());
   assert.match(check.stderr, /diverged from the git history/,
     'расхождение не названо: ' + check.stderr.trim());
-  assert.match(check.stderr, /минификатор недоступен/,
+  assert.match(check.stderr, /the minifier is unavailable/,
     'другой счёт не назван, и расхождение осталось без причины: ' + check.stderr.trim());
 
   const cover = runSize(dir, ['--config', file, 'check'], OFF);
   assert.equal(cover.code, EXIT.VIOLATION,
     'покрытие не назвало нарушение: код ' + cover.code + ', ' + cover.stderr.trim());
-  assert.match(cover.stderr, /минификатор недоступен/,
+  assert.match(cover.stderr, /the minifier is unavailable/,
     'покрытие промолчало о другом счёте, хотя назвало нарушение: ' + cover.stderr.trim());
 });
 

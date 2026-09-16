@@ -240,16 +240,16 @@ export function sensorGaps(cfg) {
   const minify = minifier();
   if (cfg.minify.engine === 'esbuild' && minify.tool === null) {
     gaps.push({
-      why: 'метрика «min» считает упрощением: минификатор недоступен — ' + minify.why,
-      fix: 'поставьте необязательные зависимости заново или задайте "minify": {"engine": "strip"}'
+      why: 'the metric "min" counts by simplification: the minifier is unavailable — ' + minify.why,
+      fix: 'install the optional dependencies again or set "minify": {"engine": "strip"}'
     });
   }
   if (cfg.metrics.indexOf('tok') >= 0) {
     const tokens = tokenizer(cfg.tokens);
     if (tokens.tool === null) {
       gaps.push({
-        why: 'метрика «tok» считает оценкой по длине: словаря нет — ' + tokens.why,
-        fix: 'поставьте необязательные зависимости заново или уберите "tok" из metrics'
+        why: 'the metric "tok" counts by an estimate of length: there is no dictionary — ' + tokens.why,
+        fix: 'install the optional dependencies again or remove "tok" from metrics'
       });
     }
   }

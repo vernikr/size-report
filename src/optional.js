@@ -18,7 +18,7 @@ export const NO_OPTIONAL = 'SIZE_REPORT_NO_OPTIONAL';
  * `node_modules`. */
 export function loadOptional(spec) {
   if (process.env[NO_OPTIONAL]) {
-    return { tool: null, version: null, why: 'необязательные зависимости выключены (' + NO_OPTIONAL + ')' };
+    return { tool: null, version: null, why: 'the optional dependencies are switched off (' + NO_OPTIONAL + ')' };
   }
   const require = createRequire(import.meta.url);
   try {

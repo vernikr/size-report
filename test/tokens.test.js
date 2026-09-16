@@ -102,8 +102,8 @@ test('без словаря счёт идёт оценкой по длине —
   const res = runSize(PLAIN, ['--config', TOK, '--json'], OFF);
   assert.equal(res.code, EXIT.SENSOR,
     'оценка вместо точного счёта не названа кодом 4: код ' + res.code + ', ' + res.stderr.trim());
-  assert.match(res.stderr, /метрика «tok» считает оценкой/, 'отступление не объяснено');
-  assert.match(res.stderr, /"tok" из metrics/, 'отступление не назвало починку');
+  assert.match(res.stderr, /the metric "tok" counts by an estimate/, 'отступление не объяснено');
+  assert.match(res.stderr, /"tok" from metrics/, 'отступление не назвало починку');
 
   const data = runSize(PLAIN, ['--config', TOK, '--data'], OFF);
   const view = JSON.parse(data.stdout).metrics.find((m) => m.key === 'tok');

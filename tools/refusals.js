@@ -327,15 +327,15 @@ export const CASES = [
     ] },
   { id: 'приближение вместо точного счёта', scenario: 'fixture', args: ['--config', '@sensor', '--write'], code: 4,
     env: { SIZE_REPORT_NO_OPTIONAL: '1' },
-    must: ['метрика «min» считает упрощением', 'метрика «tok» считает оценкой', 'fix: '],
+    must: ['the metric "min" counts by simplification', 'the metric "tok" counts by an estimate', 'fix: '],
     truth: 'приближение названо приближением и не уезжает как успех',
     // Both pieces of advice are prose: the tool cannot install dependencies for a person. But the
     // alternative each names is a setting, and a run checks it.
     advice: [
-      { kind: 'manual', text: 'поставьте необязательные зависимости заново или задайте "minify": {"engine": "strip"}',
+      { kind: 'manual', text: 'install the optional dependencies again or set "minify": {"engine": "strip"}',
         why: 'установка зависимостей — сеть и чужой проект: её исполняет человек',
         works: { args: ['--config', '@strip', '--write'], env: { SIZE_REPORT_NO_OPTIONAL: '1' }, expect: 0, inClone: true } },
-      { kind: 'manual', text: 'поставьте необязательные зависимости заново или уберите "tok" из metrics',
+      { kind: 'manual', text: 'install the optional dependencies again or remove "tok" from metrics',
         why: 'то же действие человека, и та же проверка его половины: без «tok» в метриках жалобы на словарь нет',
         works: { args: ['--config', '@notok', '--write'], env: { SIZE_REPORT_NO_OPTIONAL: '1' }, expect: 0, inClone: true } }
     ] },

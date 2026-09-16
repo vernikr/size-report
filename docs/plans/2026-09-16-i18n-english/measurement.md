@@ -112,16 +112,30 @@ every owner.
 Budget and habits as in S1 and S2: ≤ 600 lines and ≤ 10 files per commit, `pnpm run verify:fast`
 green before each, the counter per file before and after, one red-first experiment quoted per step.
 
-**Step 1 — the sensor note (`src/metrics.js`'s `sensorGaps` + `src/optional.js`'s `why`).** Four
-`why`/`fix` strings and the loader's reason they concatenate. Joint edits: the `приближение вместо
-точного счёта` case in `tools/refusals.js` (`must`, both advice texts, `truth`), the two patterns of
-`test/minify.test.js:181,182`, `test/tokens.test.js:105,106`, and `test/doctor.test.js:228` if the
-fix's wording changes shape. **Keep the JSON fragments and the key names in both fixes** — `"minify":
-{"engine": "strip"}` and `"tok"` + `metrics` — because a pattern matching `/minify.*engine.*strip/`
-and another matching `/"tok" из metrics/` are what hold the advice's usefulness, not its language.
-Keep the two sentences parallel in structure (a cause, then a way out) so that the note reads as one
-mechanism; `test/refusals.test.js` runs both fixes as alternatives (`works`), so both have to remain
-actions a person can carry out.
+**Step 1 — the sensor note (`src/metrics.js`'s `sensorGaps` + `src/optional.js`'s `why`) — done
+2026-09-16** (`src/metrics.js` 20 → 16, `src/optional.js` 1 → 0; commit
+`feat(i18n): translate what a run says about a degraded sensor`). The four `why`/`fix` strings became
+`the metric "min" counts by simplification: the minifier is unavailable — …` with `fix: install the
+optional dependencies again or set "minify": {"engine": "strip"}`, and the same for `tok`
+(`… or remove "tok" from metrics`); the loader's reason became `the optional dependencies are
+switched off (SIZE_REPORT_NO_OPTIONAL)`. Joint edits landed as planned: the `приближение вместо
+точного счёта` case's `must` and its two advice `text` fields (quoted word for word, so
+`test/refusals.test.js` compares them with the output), `test/minify.test.js:181,217,223` and
+`test/tokens.test.js:105,106`. **The JSON fragments and key names were kept**, which is what
+`test/refusals.test.js`'s `works` alternatives run. Two things the plan expected to move did **not**:
+`test/doctor.test.js:228` reads only `"engine": "strip"` (the JSON, not the sentence), and the
+catalogue's `truth` line is the catalogue's own prose (W1's owner), as in S2.
+
+**Measured, string by string** (each put back into Russian alone): the `min` `why` reddens
+`test/minify.test.js` twice (`отступление не объяснено`, in the plain run and in the divergence run)
+while the `ru` dictionary's line in the same test file stays satisfied — the two kinds of string in one
+file, told apart by the message; the `tok` `fix` reddens `test/tokens.test.js` on the JSON fragment
+(`отступление не назвало починку`); and the loader's own reason has **no reader at all** — with
+`src/optional.js` back in Russian, `test/minify.test.js` and `test/tokens.test.js` answered 16 checks
+green, because the reader reads the note's opening words rather than the reason appended to them. One
+collision to know about: the pattern `/the minifier is unavailable/` matches **both** the sensor note
+(`src/metrics.js`) and the internal error of `src/minify.js:40`, and it did the same in Russian — so
+that check never told the two apart.
 
 **Step 2 — the two refusals of the measurement** (`src/minify.js`, `src/strip/guard.js`,
 `src/parse.js`'s fallback reason). One commit, because the guard's message embeds the parse worker's
@@ -143,8 +157,13 @@ dictionary lines and the 1 comment:
 
 ```bash
 rg -cP '[\p{Cyrillic}]' src/metrics.js src/minify.js src/strip.js src/strip/guard.js src/parse.js src/optional.js
-# expected: src/metrics.js:13 (the 12 dictionary lines and the comment), nothing for the other five
+# expected: src/metrics.js:15, nothing for the other five
 ```
+
+**Correction by measurement 2026-09-16.** The expectation here read `src/metrics.js:13` — "the 12
+dictionary lines and the comment" as if the comment were one line. It is **three** (lines 61–63), so the
+final answer is **15**, and after step 1 the file reads **16** (12 dictionary + 3 comment + the
+internal error of step 3, still Russian at that point).
 
 Leave `ADVICE_LINE`'s tolerance alone if other subplans still print a Russian marker, and say so in
 the commit. No reflowing, no renaming of strategies or metrics, no "while I am here".
@@ -181,8 +200,9 @@ the commit. No reflowing, no renaming of strategies or metrics, no "while I am h
 ## Acceptance
 
 - The counter over the six files answers **only** the named exceptions: the `ru` sides of the
-  dictionaries in `src/metrics.js` (12 lines) and the Russian comment at lines 61–63 (1 line,
-  recorded in `TODO.md`). Every other Cyrillic line of these files is gone.
+  dictionaries in `src/metrics.js` (12 lines) and the Russian comment at lines 61–63 (3 lines,
+  recorded in `TODO.md`) — 15 Cyrillic lines in that file and nothing in the other five. Every other
+  Cyrillic line of these files is gone.
 - `pnpm run verify` green (fast after every commit, full before the portion is pushed).
 - **Behaviour provably untouched:** `SITES` and `PRINTED` unchanged (`test/refusals-catalog.test.js`);
   the public API list unchanged (`test/api.test.js`); the metric views' keys, labels and `accuracy`
