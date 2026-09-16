@@ -134,37 +134,41 @@ reading. Written so far: S1–S5 293 (net of the dictionary lines), W1 349, W2 1
 
 | # | Subplan | Lines | Note |
 |---|---|---|---|
-| C2 | `tests-cli.md` | 739 | `hook` 113, `check` 84, `doctor` 83, `cli` 79, `minify` 75, `disk` 68, `tokens` 54, `release` 41, `templates` 33, `cli-paths` 31, `refusals-catalog` 26, `refusals` 25, `environment` 18, `crlf` 9 — the checks that drive the tool, and the readers S1–S5 named for their own texts |
+| C2 | `tests-cli.md` | 739 | `hook` 113, `check` 84, `doctor` 83, `cli` 79, `minify` 75, `disk` 68, `tokens` 54, `release` 41, `templates` 33, `cli-paths` 31, `refusals-catalog` 26, `refusals` 25, `environment` 18, `crlf` 9 — the checks that drive the tool, and the readers S1–S5 named for their own texts. **Four negative matches over printed text**, three of them named by no plan (`test/check.test.js:184`, `:235`, `test/disk.test.js:219`) — see C1's rule, corrected in `surface.md` and `diagnostics.md` | 739 | **written 2026-09-16** |
 | C3 | `tests-guards.md` | 226 | `gates-verify` 26, `gates-files` 26, `docs-commands` 23, `gates-metrics` 22, `suites` 16, `parity` 16, `frozen` 16, `gates-coverage` 16, `docs-pin` 14, `gates-dup` 13, `git-pins` 12, `docs-numbers` 12, `gates-deps` 8, `docs-paths` 6 — including the eight assertion lines W2's steps move with their verdicts |
 | D1 | `configs.md` | 131 | `.github/workflows/**` 78, `templates/**` 35, `package.json` 1, the declarative dotfiles 17 — two of them gate files |
 | W3 | `fixture-builders.md` | 89 | `tools/synthetic/**`; **decides whether the frozen layer is re-taken** (N21) |
 | G1 | `guard.md` | — | the guard itself does not exist yet, so it has no counter reading |
 
-**The order has been respected, with one discrepancy named rather than smoothed over.** The table's row
-order has been followed without skipping a row: T0, S1, S2, S3, S4, S5, W1, W2, C1 — each portion asked
-for the next unwritten row. The discrepancy: the **Order** section below groups D1 with W1 in step 2,
-while the table lists D1 after W3 — so D1 is "next" by the sections' reading and "later" by the
-table's, and the choice is the mission agent's. It is the third place where this map's own two
-readings have differed from the measurement (the twelfth instrument became eleven, and `.githooks/**`
-with the dotfiles had no row at all); both earlier ones were corrected by measurement, and so is this
-one.
+**The order has been respected, and is now decided once.** The table's row order has been followed
+without skipping a row: T0, S1, S2, S3, S4, S5, W1, W2, C1. The one place where this file contradicted
+itself — the **Order** section below grouped D1 with W1 in step 2 while the table listed D1 after W3 —
+is settled in that section, which now follows the table's row order and names its reasons. It was the
+third place where the map's own two readings differed from the measurement (the twelfth instrument
+became eleven, and `.githooks/**` with the dotfiles had no row); all three are corrected by
+measurement, and this one by a decision written down rather than left to the reader.
 
-## Order
+## Order — decided once, 2026-09-16; the table above is the only authority
 
 1. **S1 → S5** (the published runtime) — the reader who installs the package is the reason the
    work exists, and the texts of `src/` are what the generated report and the templates quote.
-2. **D1 and W1** — the workflows and the instruments, cheapest first: they print to a developer
-   and nothing else depends on their wording.
-3. **W2** — the sensors: gate files, each commit with the `Gate-Change:` trailer and the reason
-   in words ("the verdict's language"), one file per commit as the budget allows.
-4. **C1 → C3** — the checks last of the code: after the runtime, because a message that repeats
+2. **W1 → W2** — the instruments, then the sensors: they print to a developer and to CI, and
+   nothing else depends on their wording; W2's commits carry the `Gate-Change:` trailer.
+3. **C1 → C3** — the checks last of the code: after the runtime, because a message that repeats
    the printed text has to match it, and because a translation of a message is proven by the run
    of the check that carries it.
+4. **D1** — the declarative files (the workflows, the templates, `package.json`, the dotfiles):
+   they speak to CI and to a registry rather than to a person, two of them are gate files, and
+   they are the last of the non-test files whose text a check reads — `test/release.test.js:62,66`
+   reads two workflow step names, and those two lines move with D1's own commit (the rule: a
+   reader inside another owner's file follows the text, so the order cannot break it).
 5. **W3** — the fixture builders, with the decision about the frozen layer taken first (N21).
 6. **G1** — the guard that closes the allowance: last, when the tree allows a green run.
 
-Nothing in this order is a prerequisite in substance: S*, W*, C* and D1 do not import each
-other's texts. The order is a choice (the reader who pays is first), not a dependency.
+Nothing in this order is a prerequisite in substance: S*, W*, C* and D1 do not import each other's
+texts — a line that reads another owner's text moves with that text, not with the file it stands in.
+The order is a choice (the reader who pays is first), not a dependency, and from here on the row
+order of the table above is what a portion follows.
 
 ## Rules shared by every subplan
 

@@ -114,6 +114,24 @@ commits.
 | `tools/harness.js:165` | `refusal()` | code, absence of a stack and non-empty stderr — the shape every refusal of this layer must keep |
 | `test/api.test.js` | the freeze | the public list of 55 names (`coverage`, `coverageText`, `explainCommit`, `explainText`, `doctor`, `doctorText`, `skipLine`, `assertFullHistory`) — none may be added or lost |
 
+## Correction, measured 2026-09-16 while planning C2 — two negative matches this plan had not named
+
+Two readers of this layer's texts are **negative** matches, and neither was in the table above:
+
+- `test/check.test.js:184` — `assert.equal(/починка:/.test(text), false, …)`: the benign `check`
+  mode's text must carry no fix command. The marker lives in `src/check.js` (this subplan), so the step
+  that translates it re-points the regex to `fix:` in the same commit; otherwise the assertion matches
+  nothing whatever the text says and stops guarding.
+- `test/disk.test.js:219` — `assert.equal(/перенос состояния/.test(res.stderr), false, …)`: the
+  sentence about carried-over state must not appear where it does not belong — same shape, same rule,
+  moved with the sentence.
+
+The rule is C1's, stated once and applied here: a negative match over a **translated** text is a reader
+and must be re-pointed in the same commit, while a negative match over **allow-listed data**
+(`test/minify.test.js:124`'s `indexOf('приближение') < 0`, `:195`'s `indexOf('esbuild недоступен')`,
+`test/tokens.test.js:113`) stays a real check because the data does not move. C1 found the same kind of
+reader in its own file (`test/module.test.js:120,195`), and the full inventory is in `tests-cli.md`.
+
 ## Order of work — three steps, one gated step and a wash-up
 
 Budget and habits as in S1–S3: ≤ 600 lines and ≤ 10 files per commit, `pnpm run verify:fast` green

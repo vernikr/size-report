@@ -97,6 +97,20 @@ content is then done for those files' cause/catalogue lines — W1 and C2 keep t
 scopes. A cause is one vocabulary in three files; splitting it across subplans would leave the tree
 red between commits, which the commit rule forbids.
 
+## Correction, measured 2026-09-16 while planning C2 — a negative match is a reader too
+
+The step that renames the causes has one more reader than this plan named:
+`test/check.test.js:235` asserts `assert.ok(!/нет такого коммита/.test(away.stderr), …)` — the cause
+`нет такого коммита` must **not** appear where the commit is known but outside the report. It is a
+**negative** match over a printed text, so once the cause is renamed the regex matches nothing whatever
+the tool says and the assertion becomes a statement about the absence of a Russian word: green forever,
+guarding nothing. It has to be re-pointed to the English cause in the same commit as the registry, and
+the same rule holds for every renaming in this subplan.
+
+A negative match over **allow-listed data** is the other case and needs no re-pointing, because the
+data does not move — the distinction is written out in `tests-cli.md` (C2), which also found two
+readers of the same kind in S4's files.
+
 ## Order of work — five steps, one commit each
 
 Measured discipline: ≤ 600 lines and ≤ 10 files per commit; `pnpm run verify:fast` green before
