@@ -531,3 +531,94 @@ references stayed the same after the fix.
   `eslint.config.js` carries `no-multi-spaces` as an error and does not carry `padding-line-between-statements`,
   while what it explains as consciously left out is `max-statements-per-line` and `brace-style`.
 
+- **N19. The package's default locale is `ru` — an observation with a decision inside.** Measured 2026-09-16:
+  `DEFAULT_CONFIG.locale` is `'ru'` (`src/config.js:19`), the settings template ships `"locale": "ru"` with
+  Russian `title`/`heading` (`templates/size-report.config.json`), and `src/locales.js` holds `ru` (lines 6–70)
+  beside `en` (71–126) with the same keys — the dictionary is a **feature**, so the Russian inside it is data
+  rather than a literal to translate. A project without settings therefore gets a Russian report and `--init`
+  prints Russian, which means "no Russian strings" can be true of the code while the product a fresh install
+  shows stays Russian.
+
+  **Options and their price.** (1) Keep the default: the cheapest, and both references stay untouched — but the
+  interface of a fresh install stays Russian and the report of this repository stays Russian too (its profile is
+  derived, so it takes the default). (2) Change the default to `en`: one line, and the price is named rather than
+  hidden — the frozen references do **not** move (both fixture configs pin `"locale": "ru"`, so `artifact.sha256`,
+  `golden.json` and the manifests stay byte for byte), while a fresh project's report, `--init`'s draft and this
+  repository's own built report turn English, and the settings template (`templates/size-report.config.json`) has
+  to follow in the same commit. (3) No default at all, `locale` required: the settings file of a project created
+  before the key existed would stop loading — a breaking change, so not in a PATCH.
+
+  **For the user to decide:** which of the three. The plan of the work is `docs/plans/2026-09-16-i18n-english/`
+  (subplan `surface.md`), and until the decision the code is untouched.
+
+- **N20. A translated literal changes the bytes that ship — how often to release is a decision.** Every string
+  that a user sees is inside the tarball, so `AGENTS.md`'s rule applies to each portion of the translation work:
+  a PATCH release, a journal section saying what changes in the numbers, and the pin in `README.md`, in one
+  commit — and per the same rule the release is a tag, which is pushed.
+
+  **Options and their price.** (1) A release per portion: the registry always serves the wording described in
+  the journal, at the price of a tag push and a pin commit per portion (and a wrong wording reaches nobody until
+  it is released). (2) Batch: accumulate the portions, release once at the end of a subsystem and say in each
+  commit that nothing was released yet — fewer tags, but between two releases the registry's answer and the
+  repository's source differ, and a reader of the README gets the older wording. (3) Do not release at all until
+  the whole work is done: the simplest to hold, and the most visible risk — a package whose printed interface
+  changes in the tree while the registry keeps the old one.
+
+  **For the user to decide:** the cadence. Until then the portions are committed locally and not pushed.
+
+- **N21. The fixture builders write the frozen layer — translating them re-takes both references.**
+  `tools/synthetic/*` (note.js, content.js, history.js) writes the synthetic fixture's files, subjects and its
+  `README.md`, and `tools/make-fixture.js` writes `golden.json`, `artifact.sha256` and the manifest;
+  `pnpm run check:standards` compares those files **byte for byte** with what is committed and `test/frozen.test.js`
+  holds their hashes. Measured 2026-09-16: the frozen layer is 9 files and 2 602 lines with Cyrillic —
+  `fixtures/live/history.bundle` 2 270, `fixtures/parity/data.json` 214, the two `README.md` 47, `golden.json` and
+  the configs the rest.
+
+  **Options and their price.** (1) Leave the builders and the fixtures Russian and name them in the allow-list
+  (`docs/plans/2026-09-16-i18n-english/plan.md`): nothing moves, and the allow-list keeps an entry whose reason is
+  "frozen" rather than "not a literal". (2) Translate the builders and **re-take** both references: the fixtures
+  become English (the traps stay: a non-ASCII path, an escaped subject, a quoted path are still needed, so the
+  trap data has to be replaced by an equivalent rather than dropped), at the price of a re-take of `parity` and
+  `synthetic` in one commit, new `artifact.sha256`/`golden.json`/manifests, and the `test/frozen.test.js` records
+  updated with them — the numbers of the standard were taken from the **frozen legacy copy**, so a re-take is a
+  statement about today's engine, not about parity. (3) Translate only the note (`note.js`), which is prose in the
+  fixture's `README.md` and not trap data: still a re-take, since that file is compared byte for byte too.
+
+  **For the user to decide:** whether the frozen layer is allowed to move, and with what witness.
+
+- **N22. The release guard left the tree with `CHANGELOG.md` — a promise nobody holds now.** Done 2026-09-16 on
+  request: `CHANGELOG.md`, whose per-release numbers were already recorded in the journal, was deleted, and
+  `test/changelog.test.js` went with it (its subject was gone: the file it parsed no longer exists). What is left
+  behind is a gap rather than a decision: the rule "the version named in the release notes is the manifest's
+  version, and the numbers there are a measurement on the fixture rather than a retelling" was **the only check
+  that tied a release's description to the manifest**, and the release workflow compares the tag with the manifest
+  alone. `AGENTS.md` and the workflow's comment now name the journal (`worklog/`, `worklog/archive/WORKLOG.md`)
+  as where a release is described; no check reads that.
+
+  **The consequence.** A release whose journal section is missing, stale or names other numbers ships silently:
+  the guard that would have caught it is gone with its subject. The version the guard also protected is still held
+  — `test/docs-pin.test.js` compares the install pin with the manifest and the release workflow compares the tag
+  with it — so what was lost is the **numbers** half of the promise.
+
+  **Options and their price.** (1) A journal guard: the version's section in `worklog/` (or the archive) exists and
+  the table of numbers in it is a measurement on the fixture — the same check moved to another reader, one test
+  file and a heading convention. (2) Leave it: the journal is a record rather than a product, and a person
+  releasing reads it anyway. (3) Keep the release notes in a file of its own under a new name: the guard returns
+  unchanged, at the price of the file the user asked to remove.
+
+  **For the user to decide:** whether the numbers half of the promise is held by a check again, and where.
+
+- **N23. `plans/archive/` holds the two finished plans — the paths in old records point at the root.**
+  Done 2026-09-16 on request: `PLAN.md` and `REFACTOR.md` moved to `plans/archive/`. The readers were updated in
+  the same commit (`tools/docs-facts.js` — the list of documents the docs guards read, and the list of documents
+  referenced by section; `README.md` — the file table and the prose that leads a reader to the plan of the move),
+  and `test/docs-commands.test.js` resolves a reference by **basename**, so every section citation of `PLAN.md` and
+  `REFACTOR.md` written in prose still resolves. `test/changelog.test.js` is named in `tools/docs-facts.js`'s list
+  of paths a document may name although the tree has no such file — the archived plans cite it, and that is true of
+  them (`BLOCKERS.md` N22).
+
+  **What a reader may still meet:** a **path** (a code span with a slash) naming a moved file outside the two
+  updated documents — `docs/module-design.md` writes `PLAN.md` without a directory, so it is a name rather than a
+  path and no guard reads it as one. No action needed: the name still resolves, and the file's own location is in
+  the README.
+

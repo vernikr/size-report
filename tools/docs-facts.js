@@ -33,7 +33,10 @@ const ESC = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const CALL = ESC('node node_modules/' + PKG + '/bin/size.js');
 
 /* The documents describing the repository's state **today**. */
-export const DOCS = ['README.md', 'PLAN.md', 'REFACTOR.md', 'BLOCKERS.md', 'templates/README.md', 'CHANGELOG.md'];
+export const DOCS = [
+  'README.md', 'plans/archive/PLAN.md', 'plans/archive/REFACTOR.md', 'BLOCKERS.md',
+  'templates/README.md'
+];
 
 /* Paths a document may name although the tree has no such file: the consumer project's, the
  * ones the tree has shed, the planned ones. The list is kept by hand — the check asks only that
@@ -50,6 +53,9 @@ export const FOREIGN = [
   // past: the contract suite was split by subject into four files, and historical records call
   // it by its former name — which is true of them
   'test/contract.test.js',
+  // past: the release guard watched `CHANGELOG.md`, which left the tree; the archived plans
+  // still name it, and that is true of them
+  'test/changelog.test.js',
   // past: the report became one file — a self-contained page — so the static form (markup
   // assembly and its styling) left the tree; past records still name these files, and that is
   // true of them
@@ -65,8 +71,8 @@ export const FOREIGN = [
 /* Documents other documents point at by section — the target of a reference, not a source of
  * claims. The name matches by basename: text writes both `PLAN.md` and `docs/requirements.md`. */
 export const TARGETS = [
-  'README.md', 'PLAN.md', 'REFACTOR.md', 'BLOCKERS.md', 'worklog/archive/WORKLOG.md',
-  'docs/requirements.md', 'docs/module-design.md'
+  'README.md', 'plans/archive/PLAN.md', 'plans/archive/REFACTOR.md', 'BLOCKERS.md',
+  'worklog/archive/WORKLOG.md', 'docs/requirements.md', 'docs/module-design.md'
 ];
 
 export const tracked = gitIn(ROOT, ['ls-files']).split('\n').filter((l) => l !== '');

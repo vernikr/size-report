@@ -62,9 +62,10 @@ is not given).
 After every portion of work the package is released to the registry, and the attached copy in
 this project is updated — that is part of the work, not a separate decision.
 
-1. The version by SemVer (`docs`/`fix`/`refactor`/`chore` → PATCH, `feat` → MINOR), a section in
-   `CHANGELOG.md` saying what changes in the numbers, and the pin in `README.md` (it equals
-   `installSpec()`, that is, the tag of the current version) — in one commit.
+1. The version by SemVer (`docs`/`fix`/`refactor`/`chore` → PATCH, `feat` → MINOR), a section in the
+   journal (`worklog/`, the earlier one in `worklog/archive/WORKLOG.md`) saying what changes in the
+   numbers, and the pin in `README.md` (it equals `installSpec()`, that is, the tag of the current
+   version) — in one commit.
 2. The tag `v<version>` is placed locally **before** that commit and moved onto it afterwards:
    `test/docs-pin.test.js` requires the pin to lead to an existing revision, and before the
    release commit there is no such tag. The push is **one command with the tag first**:

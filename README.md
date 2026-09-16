@@ -15,9 +15,9 @@ shows.
 all: without a config file the tool derives them from the project itself and says so in one line,
 and `--init` pins what was derived into a file. The report is **one file**, the self-contained page
 `docs/size-report.html`, and it appears by itself: the updating hook is installed after the package
-is installed and on the first run. The version is in the manifest, and every release has a
-`CHANGELOG.md` section saying what changes in the numbers: the table there is not a retelling but a
-measurement on the fixture, checked against a live run (`test/changelog.test.js`).
+is installed and on the first run. The version is in the manifest, and every release is recorded in
+the journal — `worklog/` for today's entries, `worklog/archive/WORKLOG.md` for the earlier ones:
+what changes in the numbers is measured rather than retold.
 
 2.4.0 changes nothing in the numbers; what it changes is **what is visible and in which order**:
 with no config file every tracked file is a column (rather than a sample of twelve), folders fold in
@@ -70,7 +70,7 @@ the page shows what the engine said and keeps no rule of accuracy of its own. Th
 tree of files by folder, with a switch per folder for the whole subtree; a reader's choice survives
 a revisit and travels in a link — the page's address is the link. The contract carries the **project
 catalogue** too: every path git sees, so the page's tree is the project's tree, while numbers exist
-only for the files that became columns (`CHANGELOG.md` 2.2.0).
+only for the files that became columns (release 2.2.0).
 
 The tool grew out of one script in the consumer project [`safe-resets`](../figma/safe-resets) — the
 metrics `raw` and "a simplification instead of minification", a static report in git; that path
@@ -85,10 +85,9 @@ registry and pulls a package over the network.
 
 **What the documentation promises is checked, not assumed**, and the promises are split one per file:
 existence and completeness of paths (`test/docs-paths.test.js`), commands, refusal causes and section
-links (`test/docs-commands.test.js`), the count of checks (`test/docs-numbers.test.js`), the install
-example leading to a revision whose help knows the named commands (`test/docs-pin.test.js`) and, with
-the releases, the version of the manifest and the table of what changes in the numbers
-(`test/changelog.test.js`). One reader of facts serves them all (`tools/docs-facts.js`). What a
+links (`test/docs-commands.test.js`), the count of checks (`test/docs-numbers.test.js`) and the install
+example leading to a revision whose help knows the named commands (`test/docs-pin.test.js`). One reader
+of facts serves them all (`tools/docs-facts.js`). What a
 machine cannot check — wording, promises about the future, whether a file's role is described
 correctly — the guards do not take on, and they say so in their headers.
 
@@ -149,8 +148,8 @@ commits and installs hooks; the reason for each expensive file is named line by 
 
 | Run | Command | Checks |
 |---|---|---|
-| Fast — every edit | `pnpm test` | **72 of 177** |
-| Full — release and CI | `pnpm test:all` | **177** |
+| Fast — every edit | `pnpm test` | **70 of 175** |
+| Full — release and CI | `pnpm test:all` | **175** |
 
 No check is lost or weakened: the full run starts all 177 with the same files, the fast one takes part
 of them. The default is the full run — a file becomes fast only explicitly and with a reason — so new
@@ -167,8 +166,8 @@ run twice: in the usual environment and with none of the machine's settings
 (`GIT_CONFIG_GLOBAL=/dev/null`).
 
 **What the package promises is down to fact.** The shipped-file list named four paths the repository
-does not have (`dist/`, `templates/`, `CHANGELOG.md`, `LICENSE`): today it promises only what exists —
-`templates/` and `CHANGELOG.md` came back into the list together with their files, not before them —
+does not have (`dist/`, `templates/`, `LICENSE`): today it promises only what exists —
+`templates/` came back into the list together with its files, not before them —
 while `pnpm run pack:check` checks it from both sides, that the list names nothing absent and that the
 tarball carries nothing the list does not promise. Taking both references works again (`pnpm run
 parity`, `pnpm run fixture`) and no longer depends either on whether the consumer project keeps a copy
@@ -199,7 +198,7 @@ install picks up. The publisher is set up once and lives on npmjs.com, not in th
 `npm trust github @vernikr/size-report --file release.yml --repo vernikr/size-report
 --allow-publish` (the same is the Trusted Publisher button in the package's settings), and
 `npm trust list @vernikr/size-report` shows whether the link is there. The job raises no version: a
-person names it in the manifest and `CHANGELOG.md`, and both are compared with the tag rather than
+person names it in the manifest, and it is compared with the tag rather than
 derived from it.
 
 One trap cost an edit of its own, and it is about `setup-node` rather than this package: with
@@ -408,22 +407,22 @@ the manual step "code, then the table" is gone. The report's commit is assembled
 impossible by construction rather than through an environment flag. A refusal of the tool does not bring
 the commit down: the cause is printed as one line and remembered — `size doctor` shows it.
 
-The move, the refinement and the packaging are laid out step by step in `PLAN.md`, with acceptance for
-each.
+The move, the refinement and the packaging are laid out step by step in `plans/archive/PLAN.md`, with
+acceptance for each.
 
 ## What is in the repository
 
 | File | Role |
 |---|---|
-| `PLAN.md` | **The main document:** inventory, boundaries, invariants, architecture, the seven steps of the move, acceptance, risks, open questions |
+| `plans/archive/PLAN.md` | **The main document of the move:** inventory, boundaries, invariants, architecture, the seven steps, acceptance, risks, open questions |
 | `docs/requirements.md` | The customer's requirements: what and why |
 | `docs/module-design.md` | The design of the extraction: how the module is put together |
 | `docs/size-report.html` | The size report of this very project: one self-contained file, refreshed by the hook after every commit (as a commit of its own) |
 | `worklog/` | The journal of requests and of what was done: an entry per portion of work, named `NNNN-slug.md`; `worklog/archive/WORKLOG.md` is the earlier journal in one file |
 | `docs/plans/` | Plans of work: a folder `yyyy-mm-dd-name` per piece of work, holding the main plan and its subplans |
 | `BLOCKERS.md` | Open blockers and known gaps (a workaround has to rest on a check) |
-| `REFACTOR.md` | The per-channel plan of the cleanup: size of the code first, speed after; the boundaries and what proves that the behaviour did not change |
-| `CHANGELOG.md` | The history of releases and, for each release, a section on what changes in the numbers: whose figures move and why |
+| `TODO.md` | Defects noticed in passing, one line each: where, what and how it shows — fixed in a portion of their own |
+| `plans/archive/REFACTOR.md` | The per-channel plan of the cleanup: size of the code first, speed after; the boundaries and what proves that the behaviour did not change |
 | `tools/parity-freeze.js` | Takes the parity reference (`pnpm run parity`): with the frozen copy, at the project revision from the manifest — `--json`, the config, the artifact's hash, the tool's hash |
 | `tools/make-fixture.js` | Assembles the synthetic fixture (`pnpm run fixture`): a deterministic history with traps plus the reference numbers |
 | `tools/synthetic/` | The subjects of that assembly, one per matter: `repo.js` — how git is spoken to (pinned time, author, settings), `content.js` — what the files hold, `history.js` — which commits come of it, `note.js` — the fixture's note with the list of traps |
@@ -518,7 +517,6 @@ each.
 | `test/runner.test.js` | Reading a process's output: chunks are glued as buffers rather than appended to a string — a multi-byte character at a chunk border does not turn into two replacement characters |
 | `test/git-pins.test.js` | The guard of the git border: no direct calls to git outside the shared list of pins, and an unpinned read is shown by a witness (a quoted path) |
 | `test/docs-paths.test.js`, `test/docs-commands.test.js`, `test/docs-numbers.test.js`, `test/docs-pin.test.js` | The documentation guard, one file per promise: the paths and the file table; the calls, the causes of refusal and the section addresses; the counts of checks; the pin in the install example |
-| `test/changelog.test.js` | The release guard: the version in `CHANGELOG.md` is the manifest's version, and the table of what changes in the numbers is a measurement on the fixture compared with a live run |
 | `test/release.test.js` | The guard of the release from CI: it begins with a tag, the version comes from the manifest, no secret and no one-time code are needed, a prerelease does not go to `latest`, the whole suite runs before publishing — and the hint on npmjs.com names this same file |
 | `test/suites.test.js` | The guard of the suite's split: the classification is complete (fast only explicitly, full with a reason), every file has its reason, and the fast run stays part of the suite |
 | `test/gates-metrics.test.js`, `test/gates-dup.test.js`, `test/gates-deps.test.js`, `test/gates-coverage.test.js`, `test/gates-files.test.js` | The sensors' probes: an artificial violation → the sensor is red, taking it away → green again; the run calls a sensor as a command rather than importing it, which is why it proves the exit code too |
@@ -565,7 +563,7 @@ The seams between modules follow the borders of data: above sit the parts that r
 `derived`, `page`), while the settings, the texts and the refusal stand at the edges, because everyone
 knows them and they know no one. Both reports are counted at build time: the page gets the sources of the
 shared calculation and of its own program pasted in (`src/derived.js`, `src/page/*.js`), because it opens
-from disk, with no server and no network. The rest is planned step by step in `PLAN.md`.
+from disk, with no server and no network. The rest is planned step by step in `plans/archive/PLAN.md`.
 
 ## Wiring it into your project
 
@@ -624,7 +622,7 @@ read-only deploy key before `pnpm install` in CI (that first wiring, `worklog/ar
 the template's key step went away together with the privacy. The publication to npm happened on
 2026-09-15, and it had a price: the name `size-report` in the registry is taken by someone else's package
 (2017, three versions), so the release was also a renaming into the owner's scope (`@vernikr/size-report`)
-rather than just an upload of an archive; what the renaming touched — `PLAN.md` §10, what proves the
+rather than just an upload of an archive; what the renaming touched — `plans/archive/PLAN.md` §10, what proves the
 publication — `worklog/archive/WORKLOG.md` §53.
 
 ### 2. Settings: you need not create them
