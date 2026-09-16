@@ -683,8 +683,8 @@ references stayed the same after the fix.
   Russian, and option (1) would be a change of **behaviour** rather than of a literal — `src/history.js`'s
   constant would become a lookup by `cfg.locale`, so a project asking for `locale: "en"` would start seeing
   English skip words it does not see today. No reference moves, S4's gated step is dropped
-  (`diagnostics.md`), and the line is an exception of that owner's for the guard `G1` beside the `ru`
-  dictionaries. **The decision is reversible and its price is small, which is why it is worth naming:**
+  (`diagnostics.md`), and the line joins the allow-list beside the `ru` dictionaries (the guard that would have
+  enumerated it is withdrawn, N27). **The decision is reversible and its price is small, which is why it is worth naming:**
   option (1) reddens nothing (the fixtures pin `"locale": "ru"`, so every frozen byte stays), and the whole
   change is one constant in `src/history.js` plus the three words in `src/locales.js` — a fix-sized edit of
   some ten lines, decided once `en` becomes the default locale (N19) or when someone asks for English skip
@@ -735,4 +735,32 @@ references stayed the same after the fix.
 
   **For the user to decide:** (1), (2) or (3). It is the same kind of question as N25 (a printed surface that the
   literal-only rule cannot settle) and can be decided together with it.
+
+- **N27. The language guard (`G1` of the tracker) is withdrawn.** Planned, never written: the last row of the map
+  was a check that would redden on a new Russian literal outside the allow-list, and the tracker's criterion
+  allowed it to be either built or declined with a reason.
+
+  **Decided 2026-09-16 by the mission agent: not needed.** The reason given: the instruction this work follows
+  says English everywhere except the reply in the chat, so Cyrillic arriving in new code, checks or documentation
+  is a near-impossibility rather than a risk worth a check. What holds the allowance instead is the work's own
+  acceptance, which every subplan already carries: the counter per file, before and after, quoted in the plan and
+  in the journal entry, and the allow-list as an enumeration in `plan.md`.
+
+  **The price, named rather than hidden.** A stray Russian literal added later is caught by a person running the
+  counter, not by the suite — the guard would have been the only thing that reddens by itself. The two tolerances
+  that would have been enumerated to it (W1's `commandsAt`, which reads the section name out of the pinned
+  revision, and C3's `требовани|requirements?` resolver, kept for a coverage reason) are in the allow-list
+  instead.
+
+  **Reversible, and the measurements are kept.** If Cyrillic ever appears in work written under that instruction,
+  the guard is a test file plus one line in `tools/gates/gatefiles.js`. Measured 2026-09-16 while planning it, so
+  that a later hand does not take the measurements again: a counter over `git ls-files` with the pattern
+  `\p{Cyrillic}` (the pattern carries no Cyrillic and cannot match itself) runs in **3.0 s** over the tree and
+  finds **122 files** with Cyrillic outside `worklog/**`; such a file would run in the full suite by default,
+  and `test/suites.test.js` demands its declaration in `tools/suites.js` — together with `tools/gates/gatefiles.js`
+  that is two gate files, so its commit would carry a `Gate-Change:` trailer. The simplest working form was chosen
+  as an explicit list of allowed paths with a reason each (a path-only entry for what is wholly an exception, a
+  path with a count for a file that is mostly clean), **not** a mechanism of regex exceptions: a regex per
+  exception is unreadable at a glance and hides the reason inside the pattern, while a list of paths and reasons
+  is what a person can check by eye — which is the whole point of a guard that exists to be trusted.
 

@@ -37,7 +37,7 @@ report.
 | `SKIP_WORDS` (`src/history.js:18`) | 1 line, part of the frozen `--json`: **N24 was decided 2026-09-16 — the three words stay Russian** (`BLOCKERS.md`), on the ground that the references stay Russian and that editing `src/history.js` would change behaviour rather than a literal. The decision is reversible and its price is recorded there. |
 | Russian sample data (`docs/заметки.md`, subjects, file names, labels) | It is what the measurement is measured **on**: the traps of the synthetic fixture exist to prove that a non-ASCII path, a quoted subject and an HTML-escaped signature survive. |
 | Quotes of old output in records (`BLOCKERS.md`, the archived plans, `worklog/`) | A record of what a reader saw then is true of then; `BLOCKERS.md` states the rule in its own header. |
-| `docs/plans/2026-09-16-i18n-english/**` | A subplan quotes the strings it translates and carries the counter's own pattern; without the quotation a reader cannot see what is meant, and the guard `G1` therefore skips this folder. |
+| `docs/plans/2026-09-16-i18n-english/**` | A subplan quotes the strings it translates and carries the counter's own pattern; without the quotation a reader cannot see what is meant, and, with the language guard withdrawn (below), this folder simply joins the allowance. |
 
 ## Current state — measured 2026-09-16
 
@@ -79,7 +79,8 @@ rg -c '^\s*(//|\*|/\*).*\p{Cyrillic}' <file>
 ## The map: one subplan per subsystem
 
 `T0` is this file. `S*` — the published runtime, `W*` — the repository's instruments, `C*` — the
-checks, `D*` — the declarative files, `G*` — the guard. Sums are the measured lines above.
+checks, `D*` — the declarative files. The fifth letter, `G*` — the guard that was to hold the
+allowance — is withdrawn (below), so the map closes with `D1`. Sums are the measured lines above.
 
 | # | Subplan | Owns | Lines | Status |
 |---|---|---|---|---|
@@ -93,9 +94,23 @@ checks, `D*` — the declarative files, `G*` — the guard. Sums are the measure
 | W2 | `sensors.md` | `tools/gates/**` (77: `run.js` 21, `dup.js` 20, `coverage.js` 18, `gatefiles.js` 7, `metrics.js` 6, `deps.js` 5, `common.js` 0), the `why` of every entry in `tools/suites.js` (38), `.githooks/**` (4) and the two baselines' `note` the sensors write (2) — **121 holds by measurement, and every commit of this owner is a gate-file commit: `Gate-Change:` trailer required**. Seven verdicts are read word for word by the sensors' own probes (`test/gates-*.test.js`), so each moves with its assertion | 121 | **written 2026-09-16** |
 | C1 | `tests-page.md` | the checks of the page and the contract (355 lines, confirmed file by file): `page-view` 72, `page-choice` 67, `module` 66, `page-tree` 55, `contract-data` 51, `contract-derived` 18, `guard` 11, `runner` 11, `api` 4. **The first owner whose lines are read by two other subplans at once**, and one of those reads is `assert.equal(/стриппер/.test(res.stderr), false, …)` — a *negative* match that stops checking, green, the moment S3's sentence changes; `test/module.test.js:163` is a reader of the internal error that S3's plan counted as unread (corrected in `measurement.md`) | 355 | **written 2026-09-16** |
 | C2 | `tests-cli.md` | the checks that drive the tool (739 lines): `hook` 113, `check` 84, `doctor` 83, `cli` 79, `minify` 75, `disk` 68, `tokens` 54, `release` 41, `templates` 33, `cli-paths` 31, `refusals-catalog` 26, `refusals` 25, `environment` 18, `crlf` 9 | 739 | not started |
-| C3 | `tests-guards.md` | the checks of the repository itself (226 lines, confirmed file by file): `gates-verify` 26, `gates-files` 26, `docs-commands` 23, `gates-metrics` 22, `suites` 16, `parity` 16, `frozen` 16, `gates-coverage` 16, `docs-pin` 14, `gates-dup` 13, `git-pins` 12, `docs-numbers` 12, `gates-deps` 8, `docs-paths` 6. **Six of them are gate files** (111 lines) and those commits carry the trailer; the eight assertion lines W2's steps move with their verdicts; **no negative match in this owner** (measured); one kept tolerance (`требовани|requirements?`, dead in the tree) named as its exception for G1; and the finding that `README.md`'s code table is a contract parsed by `readmeCauses()`, not a quotation | 226 | **written 2026-09-16** |
+| C3 | `tests-guards.md` | the checks of the repository itself (226 lines, confirmed file by file): `gates-verify` 26, `gates-files` 26, `docs-commands` 23, `gates-metrics` 22, `suites` 16, `parity` 16, `frozen` 16, `gates-coverage` 16, `docs-pin` 14, `gates-dup` 13, `git-pins` 12, `docs-numbers` 12, `gates-deps` 8, `docs-paths` 6. **Six of them are gate files** (111 lines) and those commits carry the trailer; the eight assertion lines W2's steps move with their verdicts; **no negative match in this owner** (measured); one kept tolerance (`требовани|requirements?`, dead in the tree) named as an exception of the allow-list; and the finding that `README.md`'s code table is a contract parsed by `readmeCauses()`, not a quotation | 226 | **written 2026-09-16** |
 | D1 | `configs.md` | `.github/workflows/**` (78), `templates/**` (35), `package.json` `description` (1), the declarative dotfiles (17: `.dependency-cruiser.cjs` 7, `eslint.metrics.config.js` 6, `.gitignore` 4) — the declarative files and what the registry shows. Measured while planning it: **131 gross = 127 this owner's own + 3 allow-listed (the draft's two values, the debt term) + 1 English comment**; four of its files are gate files, so **six of its commits carry the `Gate-Change:` trailer**; six workflow step names are read as literals by `test/release.test.js`, and the `verify` job key is a branch-protection contract outside the tree | 127 | **written 2026-09-16** |
-| G1 | `guard.md` | the check that holds the allow-list: a scan over the tree that reddens on a new Russian literal outside the named exceptions | — | not started |
+
+**G1 is withdrawn — decided 2026-09-16 by the mission agent.** The guard that was to redden on a new
+Russian literal outside the allow-list is not written, and the reason is that the question it asked has
+stopped being live: the instruction this work follows says English everywhere but the chat, so Cyrillic
+arriving in new code or documentation is a near-impossibility rather than a risk to watch. What holds
+the allowance instead is the work's own acceptance — the counter per file, before and after, quoted in
+each subplan and each journal entry — and the allow-list above as a recorded enumeration. **The price is
+named:** a stray Russian literal added later is caught by a person running the counter rather than by
+the suite, and a future reader finds the enumeration in this file rather than in a failing check.
+`BLOCKERS.md` N27 holds the decision and its reversibility. The measurements taken for the design are
+kept there too, so that a later hand does not have to take them again: a counter over `git ls-files`
+with the pattern `\p{Cyrillic}` (no Cyrillic in the pattern itself) runs in **3.0 s** over the tree,
+**122 files** carry Cyrillic outside `worklog/**` today, and such a check would be a test file whose
+declaration `test/suites.test.js` demands in `tools/suites.js` — a gate file, hence a `Gate-Change:`
+trailer.
 
 `AGENTS.md`, `BLOCKERS.md`, `README.md` and the built report are not a subplan of their own: the
 first three hold allowed quotations of printed output (measured today: 18 lines, `BLOCKERS.md` 14
@@ -137,9 +152,10 @@ D1 131 (of which 127 are this owner's — 3 allowed values and 1 comment), the a
 built report 349 — and with the allow-list (the frozen layer 2 602 + `docs/plans/**` 165 + the archive
 15 + the builders 107 = 2 889) the sum is 5 512, today's reading.
 
-| # | Subplan | Lines | Note |
-|---|---|---|---|
-| G1 | `guard.md` | — | the guard itself does not exist yet, so it has no counter reading; its list of exceptions is the allow-list above, and two tolerances have to be named in it: W1's `commandsAt` and C3's `требовани|requirements?` resolver |
+**Nothing is left to write.** The last row, `G1`, is withdrawn (`BLOCKERS.md` N27), so every row of the
+map is written and point 4 of the work is complete. The two tolerances that would have
+been named to G1 — W1's `commandsAt` and C3's `требовани|requirements?` resolver — are named in the
+allow-list above instead.
 
 **The order has been respected, and is now decided once.** The table's row order has been followed
 without skipping a row: T0, S1, S2, S3, S4, S5, W1, W2, C1. The one place where this file contradicted
@@ -171,9 +187,11 @@ allow-listed, one left) and the fold is recorded here, in the W1 row and in `too
    text, so the order cannot break it).
 5. ~~**W3** — the fixture builders.~~ **Folded into W1 on 2026-09-16**, by the mission agent's
    instruction and confirmed by measurement: after N21 this owner was one line
-   (`tools/synthetic/repo.js:74`), which is no portion. The map therefore holds **thirteen**
-   subplans, and W1's row grew by that line.
-6. **G1** — the guard that closes the allowance: last, when the tree allows a green run.
+   (`tools/synthetic/repo.js:74`),which is no portion. W1's row
+grew by that line, and the map has one row fewer.
+6. ~~**G1** — the guard that closes the allowance.~~ **Withdrawn 2026-09-16** (`BLOCKERS.md` N27): the
+alternative to a guard is the counter run by a person per portion, which is what the acceptance of
+every subplan already asks for.
 
 Nothing in this order is a prerequisite in substance: S*, W*, C* and D1 do not import each other's
 texts — a line that reads another owner's text moves with that text, not with the file it stands in.
@@ -208,8 +226,8 @@ order of the table above is what a portion follows.
   edited: a red sensor is fixed in the code (`AGENTS.md`).
 - **Commit budget: ≤ 600 lines and ≤ 10 files.** A bigger chunk is justified in the commit body.
 - **Gate files need the trailer**: `tools/gates/**`, `tools/suites.js`, `test/gates-*.test.js`,
-  `package.json`, the workflows, the hooks, the baselines, the sensor configs. W2 and G1 are the
-  subplans that meet it; for the others, needing it means the plan is wrong.
+  `package.json`, the workflows, the hooks, the baselines, the sensor configs. W2 meets it as a matter
+  of course, and `configs.md` (D1) meets it in six of its commits; for the others, needing it means the plan is wrong.
 - **Release per portion** — a string that ships changes the tarball's bytes, so
   `AGENTS.md`'s rule applies: a PATCH release, a journal section and the pin in `README.md`.
   Whether to release per subplan or to batch is a question for the mission agent
@@ -226,7 +244,9 @@ order of the table above is what a portion follows.
   `pnpm run verify` before the portion is pushed.
 - A literal that a test matched on is proven by the test still reddening where it should: the
   subplan quotes the run that would have caught a mistake (a reversed `assert`, a missing cause).
-- The guard `G1` is in the suite, or its absence is a recorded decision with a reason.
+- The guard `G1` is in the suite, or its absence is a recorded decision with a reason — which is the
+  case: withdrawn 2026-09-16 (`BLOCKERS.md` N27), with the counter per portion named as what holds the
+  allowance instead.
 
 ## Out of scope
 

@@ -31,7 +31,8 @@ rg -cP '[\p{Cyrillic}]' src/git.js src/history.js src/check.js src/explain.js sr
 stay Russian and are named in the allow-list, on the same ground as N21 — the references stay
 Russian, and the alternative that would edit `src/history.js` is a change of behaviour rather than
 of a literal. Consequences: the gated step 4 below is **dropped**, the line is an exception of this
-owner for the guard `G1` beside the `ru` dictionaries, and the reversibility with its price is
+owner in the tracker's allow-list, beside the `ru` dictionaries (the guard that would have enumerated it
+is withdrawn, `BLOCKERS.md` N27), and the reversibility with its price is
 recorded in `BLOCKERS.md` (N24: moving the three words into `src/locales.js` stays possible and would
 redden nothing, since the fixtures pin `locale: "ru"`).
 

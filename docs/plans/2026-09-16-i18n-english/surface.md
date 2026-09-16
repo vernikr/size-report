@@ -67,8 +67,8 @@ decision in its commits. Three of them:
    `ADVICE_LINE = /(?:починка|создайте его|соберите её|локально|в CI): (.+)$/` in
    `tools/refusals.js:111`, read by `adviceOf()`. Until the last subplan changes its own messages,
    that regex **accepts both** the Russian and the English marker; the tolerance is removed by the
-   subplan that finishes the last module carrying advice (it is a wash-up step for G1's pass,
-   named there). A `must` phrase in `CASES` is edited in the same commit as the message it quotes.
+   subplan that finishes the last module carrying advice — W1, whose wash-up removes the Russian
+   alternative from `ADVICE_LINE` once no module prints a Russian marker. A `must` phrase in `CASES` is edited in the same commit as the message it quotes.
 
 ## Joint edits — the readers that must change in the same commit
 

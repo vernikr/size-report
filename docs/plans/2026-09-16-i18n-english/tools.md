@@ -181,8 +181,9 @@ No reader at all, measured:
    → `test/docs-pin.test.js` goes red with "у ревизии … нет справки с разделом «Команды»"; the same
    red arrives by itself on the release that moves the pin past S1's rename (N20). So the step
    **adds** the English name, keeps the Russian one with its reason in the comment, and is the one
-   allowed exception of this owner for G1 (the guard has to name it, or the tolerance is decided
-   against in favour of a structural parse — a code change, not this plan's).
+   allowed exception of this owner, named in the tracker's allow-list (the guard that would have enumerated
+   it is withdrawn, `BLOCKERS.md` N27; the alternative — a structural parse of the help instead of a
+   section name — is a code change, not this plan's).
 6. **`tools/parity-freeze.js` + `tools/make-fixture.js`** — the console lines only. Red first: the
    allow-list's own evidence — the string of `make-fixture.js:56` stands in the frozen
    `fixtures/synthetic/config.json` (measured, 1 line), so translating it reddens `test/frozen.test.js`

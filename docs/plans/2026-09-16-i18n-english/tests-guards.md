@@ -63,7 +63,7 @@ resolving would pass **in silence**). Measured today: the Russian alternative ma
 tree — no document cites a section with the Russian word, `docs/requirements.md` and
 `docs/module-design.md` carry no Cyrillic at all, and the only Russian instances are in the prose of
 `docs/plans/2026-09-15-docs-rework/markdown.md`, which is allow-listed. Decision: **keep it** — and
-name it as this owner's exception for the guard `G1`. The price of the other option is stated rather
+name it as this owner's exception in the tracker's allow-list (`G1` is withdrawn, `BLOCKERS.md` N27). The price of the other option is stated rather
 than hidden: dropping the alternative is a coverage change, not a literal one, because the check would
 again pass a Russian citation in silence, which is the defect the branch exists for; and it is a
 change to a matcher whose behaviour on today's tree is identical, so it buys nothing but a smaller
@@ -88,7 +88,7 @@ a message is free.
 
 | Item | Why |
 |---|---|
-| The `требовани` alternatives in `namedSection()` (three regexes) | Decided above: a matcher's coverage, dead but documented, named as this owner's exception for `G1`. |
+| The `требовани` alternatives in `namedSection()` (three regexes) | Decided above: a matcher's coverage, dead but documented, named as this owner's exception in the tracker's allow-list. |
 | The fixture data every reference check reads (`golden.json`, `manifest.json`, the hashes) | Allow-listed data; C3 touches no reference. |
 | The pinned revision's help text | It is read **out of git history** (`git show <pin>:src/refusal.js`): a record of the past, and the exactly correct place for it. |
 | The cause names and `must` phrases quoted in any file of this owner | Their owner's step; C3 verifies rather than edits. |
