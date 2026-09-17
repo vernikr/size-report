@@ -20,7 +20,7 @@ import { CHARS_PER_TOKEN, TOKEN_DEFAULTS, estimate } from '../src/tokens.js';
 import { tokenCount } from '../src/tokens.js';
 import { EXIT } from '../src/refusal.js';
 import {
-  CONFIG, PACKAGE, cloneFixture, gitIn, readJson, readRun, refusal, runSize, sharedClone, tempDir
+  CONFIG, PACKAGE, cloneFixture, draftedRepo, gitIn, readJson, readRun, refusal, runSize, sharedClone, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('tokens');
@@ -156,19 +156,8 @@ test('чужое семейство и чужая кодировка — отк�
 });
 
 test('черновик --init ведёт новый проект на токены, и первый отчёт — точный', () => {
-  const dir = path.join(tmp, 'fresh');
-  fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
-  gitIn(dir, ['init', '-q', '-b', 'main']);
-  ['user.name', 'user.email', 'commit.gpgsign'].forEach((key, i) => {
-    gitIn(dir, ['config', key, ['fixture', 'fixture@local', 'false'][i]]);
-  });
-  fs.writeFileSync(path.join(dir, 'src', 'code.js'), '// комментарий\nfunction width(items) { return items.length; }\n');
-  gitIn(dir, ['add', '-A']);
-  gitIn(dir, ['commit', '-qm', 'начало']);
-
-  const made = runSize(dir, ['--init']);
-  assert.equal(made.code, 0, 'черновик не собрался: ' + made.stderr.trim());
-  const file = path.join(dir, 'size-table.config.json');
+  const { dir, file } = draftedRepo(path.join(tmp, 'fresh'),
+    '// комментарий\nfunction width(items) { return items.length; }\n');
   const draft = readJson(file);
   assert.equal(draft.metrics.indexOf('tok') >= 0, true, 'черновик не просит токены');
   assert.deepEqual(draft.tokens, TOKEN_DEFAULTS, 'черновик не назвал словарь токенов');

@@ -18,7 +18,7 @@ import { loadConfig } from '../src/config.js';
 import { EXIT } from '../src/refusal.js';
 import { minifyForm } from '../src/strip.js';
 import {
-  CONFIG, PACKAGE, SYNTH, cloneFixture, gitIn, readJson, readRun, refusal, runSize,
+  CONFIG, PACKAGE, SYNTH, cloneFixture, draftedRepo, gitIn, readJson, readRun, refusal, runSize,
   sharedClone, tempDir
 } from '../tools/harness.js';
 
@@ -250,20 +250,8 @@ test('файл, который минификатор не разобрал, —
 });
 
 test('черновик --init ведёт новый проект на настоящее сжатие', () => {
-  const dir = path.join(tmp, 'fresh');
-  fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
-  gitIn(dir, ['init', '-q', '-b', 'main']);
-  ['user.name', 'user.email', 'commit.gpgsign'].forEach((key, i) => {
-    gitIn(dir, ['config', key, ['fixture', 'fixture@local', 'false'][i]]);
-  });
-  fs.writeFileSync(path.join(dir, 'src', 'code.js'),
+  const { dir, file } = draftedRepo(path.join(tmp, 'fresh'),
     'function width(items) {\n  // сумма ширин\n  const totalWidth = items.reduce((sum, item) => sum + item.width, 0);\n  return totalWidth;\n}\n');
-  gitIn(dir, ['add', '-A']);
-  gitIn(dir, ['commit', '-qm', 'начало']);
-
-  const made = runSize(dir, ['--init']);
-  assert.equal(made.code, 0, 'черновик не собрался: ' + made.stderr.trim());
-  const file = path.join(dir, 'size-table.config.json');
   assert.equal((readJson(file).minify || {}).engine, 'esbuild', 'черновик не ведёт на настоящее сжатие');
   loadConfig(file); // the settings check has to accept what the hint gives out
 

@@ -122,6 +122,20 @@ export function initRepo(dir) {
   return dir;
 }
 
+/* A fresh project with a settings draft of its own, ready for a run: two suites start from exactly this
+ * state (the minifier's way and the tokens'), and the state is shared rather than copied — a copied block
+ * is what the `dup` sensor counts, and a copy is what it was: the same commands with the same assertion
+ * between them. The file's text is the caller's: the suites differ in what they measure, not in the setup. */
+export function draftedRepo(dir, code) {
+  initRepo(dir);
+  fs.writeFileSync(path.join(dir, 'src', 'code.js'), code);
+  gitIn(dir, ['add', '-A']);
+  gitIn(dir, ['commit', '-qm', 'the first commit']);
+  const made = runSize(dir, ['--init']);
+  assert.equal(made.code, 0, 'the draft was not built: ' + made.stderr.trim());
+  return { dir: dir, file: path.join(dir, 'size-table.config.json') };
+}
+
 /* One shared clone per environment for read-only runs. It is created on first use: suites that need no environment pay
  * nothing for it. */
 const shared = new Map();
