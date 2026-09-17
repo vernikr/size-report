@@ -381,8 +381,9 @@ references stayed the same after the fix.
   revision whose help knows the named commands — read from the history rather than from the tree).
 
 - **N14. The coverage ratchet falls from comments rather than from code: 11 regressions, 10 of them ours, one**
-  **not ours.** The `cover` step of the slow profile is red, and the run that found it measured (in separate working
-  copies rather than from memory).
+  **not ours.** Answered 2026-09-17 by the decision on **N32** — see the paragraph «What became of this note»
+  below. The `cover` step of the slow profile was red when this was written, and the run that found it measured
+  (in separate working copies rather than from memory).
 
   **The mechanism, proven by numbers.** `c8` counts as a line **every line of a file that falls into a coverage
   range**, and as covered one that lies inside an executed range; so removing a comment inside executed code lowers
@@ -422,9 +423,36 @@ references stayed the same after the fix.
      baseline. The red step stays a signal, but it demands a human step each time — and until then the slow profile
      and the CI schedule are red.
 
-  **For the user to decide:** which option to take. Until then `pnpm run verify:fast` and `pnpm run verify` are
-  green (`cover` does not run in the full profile at all), while `pnpm run verify:slow` and `verify-slow.yml` on a
-  schedule are red: one regression is old, ten are mechanical and ours.
+  **What became of this note (measured 2026-09-17).** **Option 2 was taken, and the work is recorded in N32:**
+  `tools/gates/coverage.js` now compares **executed counts** (lines, branches, functions per file) instead of a
+  share of them. **Option 1 was consumed by that change rather than chosen**: the old baseline kept percentages
+  and the new unit keeps counts, so the re-take was inseparable from it and `coverage-baseline.json` was written
+  anew in the same commit — same 39 keys, new shape (`schema` 2, a `unit` field). **Option 3 is moot.** A later
+  run of the same day (**N32**, measured in W2's step 4) names **13** files of this class rather than this note's
+  eleven, so two more joined before the unit changed; both readings are of the share, and neither survived the
+  re-take. The
+  present tense of this note is gone with it: `pnpm run cover` (run again today) answers
+  `cover: lines 80.6%, branches 89.05%, functions 92.37% of the set (the ratchet compares executed counts per
+  file)` and `✓ cover: no regressions (the baseline holds 39 files)`, exit 0 — the totals are exactly the ones
+  this note recorded while red, so the numbers never moved; the unit did.
+
+  **The one regression that was `src/data.js` was of the mechanical class too, checked against today's report.**
+  The file reads `lines 115 of 115` and `branches 34 of 38` — the 89.47 % this note recorded as the red value — and
+  its numerator did not fall: the nearest integer pair that fits the old baseline's 91.66 % is 33 of 36, so one more
+  branch is executed today than the floor the old baseline held (that reconstruction is arithmetic, and the old
+  shape cannot settle it: percentages alone cannot tell a lost check from a file that grew, which is the reason the
+  unit changed). The new baseline holds `34` for the file, and the sensor is green.
+
+  **What this note still holds open, and only this: code that arrives without any execution is invisible to the new**
+  **unit.** A floor over executed counts rises only when a check is lost, so a new branch, a new function or a new
+  file that nothing reaches no longer reddens anything — measured today: `src/data.js` carries 4 branches that never
+  run and `src/cli.js` reads 71.3 % of its lines, while the run above is green and exits 0. Under option 2's
+  predecessor those were part of the red step. Options, with their price: **(a) leave it** — the ratchet's promise is
+  then «no executed check was lost», and this class is caught only by the sensor's own probes (no work; and no gate
+  stands over new code at all); **(b) a second sensor over `covered` of the files a change touches** — new code has to
+  run at least in part — which is another gate file with its own probes, a trailer and a new question to answer (what
+  a comments-only pass means for it). **For the user to decide** whether that class deserves a gate; N32's answer does
+  not reach it, so this entry is not closed by it alone.
 
 - **N15. The duplicate sensor's fingerprint of its own — possibly superfluous by now.** Found on pass M10f
   (2026-09-15) while checking comments: both `tools/gates/dup.js` and `test/gates-dup.test.js` said jscpd's own
@@ -1140,6 +1168,11 @@ references stayed the same after the fix.
   gained the two cases the decision rests on — a fall of exactly one executed line is red, and a file that
   grew while keeping every execution is green (3 of 3 green). Both are gate files, and the commit carries the
   `Gate-Change:` trailer.
+
+  **This is the answer to N14**, which put the same ratchet's three options to the user: option 2 was taken,
+  option 1 was consumed by the re-take the change of unit made inseparable from it, option 3 went moot. N14 stays
+  open for the one class this answer does not reach — code arriving without any execution, which a floor over
+  executed counts cannot see — and names it there with its price.
 
 - **N34. The same pair formed a second time: a translated block inside an accepted clone pair becomes a *new*
   clone (`test/cli-paths.test.js` ↔ `test/doctor.test.js`).** Measured 2026-09-17 while translating for `doctor`

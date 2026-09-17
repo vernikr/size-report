@@ -56,6 +56,11 @@ a journal entry, trailer (a workflow is a gate file), full `verify` before the p
 - Open with the user: **N19** (the report's default locale), **N20** (the release cadence — it also
   moves the pin and with it the last Russian branch of `commandsAt`), **N21** (the reserved values),
   **N31** (seven stale `dup` fingerprints), **N32** (the red coverage cap). N24 is decided.
+- **The five numbers in the line above were all closed on 2026-09-17, the day after this snapshot** — N19 by
+  `worklog/0200-n19-default-locale-english.md`, N31 by `0201-n31-dup-baseline-pruned.md`, N32 by
+  `0202-n32-coverage-sensor-counts.md`, N20 by `0203-release-2.5.0.md`, and N21 by its earlier decision, which
+  had already been answered. The notes N33–N35 came after this snapshot as well. This line is the reverse link
+  a reader needs; the entry above is left as it was read then.
 - This owner ships: the registry now shows the English `description`, and `templates/**` travels in
   the tarball. The version stood still, as in every portion before: the release is N20 and is not
   decided here.

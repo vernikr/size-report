@@ -1,8 +1,10 @@
 # D1 — `configs`: the declarative files
 
 Subplan of `plan.md` (T0). Owns `.github/workflows/**`, `templates/**`, `package.json`'s
-`description` and the declarative dotfiles. Written 2026-09-16, not started. **The last owner of
-the non-test files**, and the only one whose translated bytes leave the repository twice: three of
+`description` and the declarative dotfiles. Written 2026-09-16, **all nine steps done by 2026-09-17 and
+closed**: its ten files read **2** lines with Cyrillic, both in `eslint.metrics.config.js` (the debt term and the
+English comment quoting it), and the campaign's counter over the whole owner answers the same, measured. **The
+last owner of the non-test files**, and the only one whose translated bytes leave the repository twice: three of
 its files ship (`templates/**` is a name in `files`, measured) and one is what the registry shows.
 
 ## Scope — measured 2026-09-16, file by file
