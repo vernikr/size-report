@@ -14,48 +14,48 @@ import { ROOT, gitIn, gitTry } from '../tools/harness.js';
 import { calledCommands, commandsAt, read } from '../tools/docs-facts.js';
 import { installSpec } from '../src/tool.js';
 
-test('пример установки ведёт на ревизию, чья справка знает названные команды', () => {
+test('the install example leads to a revision whose help knows the commands it names', () => {
   const pin = read('README.md').match(/github:vernikr\/size-report#([\w./-]+)/);
-  assert.notEqual(pin, null, 'README не называет ревизию в примере установки — сверить нечего');
+  assert.notEqual(pin, null, 'README does not name a revision in the install example — there is nothing to compare');
   const rev = pin[1];
 
   /* The tool teaches installing the package by **that same** link: that way the document and the advice
    * cannot drift apart, and a release that raises the version has to raise the pin too (`src/tool.js`,
    * `installSpec`). A name from the registry would not do here: it names whatever the registry serves as
    * the latest revision, while the document describes this very one. */
-  assert.ok(installSpec() !== null, 'у манифеста нет адреса репозитория: совету об'
-    + ' установке нечего назвать — это правится не документацией, а манифестом');
+  assert.ok(installSpec() !== null, 'the manifest carries no repository address: the advice about'
+    + ' the install has nothing to name — that is repaired by the manifest rather than the documentation');
   assert.ok(read('README.md').indexOf(installSpec()) >= 0,
-    'пример установки не совпадает с тем, чему учит инструмент (' + installSpec() + ')');
+    'the install example does not match what the tool teaches (' + installSpec() + ')');
 
   // pnpm resolves a short sha only through visible refs, and `git ls-remote` hands over branch tips
   // alone: while the revision is a tip it resolves, and on the next commit the install fails with
   // "Could not resolve … to a commit". So the pin is either forty characters or a branch (tag) name —
   // checked here rather than remembered.
   if (/^[0-9a-f]+$/.test(rev)) {
-    assert.equal(rev.length, 40, 'пин «' + rev + '» — короткий sha: pnpm разрешает его'
-      + ' только пока ревизия является верхушкой ветки; пишите сорок знаков');
+    assert.equal(rev.length, 40, 'the pin «' + rev + '» is a short sha: pnpm resolves it'
+      + ' only while the revision is the tip of a branch; write forty characters');
   } else {
     assert.equal(gitTry(ROOT, ['rev-parse', '--verify', '--quiet', rev + '^{commit}']).status, 0,
-      'пин «' + rev + '» — не ревизия и не ветка (тег) этого репозитория');
+      'the pin «' + rev + '» is neither a revision nor a branch (tag) of this repository');
   }
 
   const type = gitTry(ROOT, ['cat-file', '-t', rev]).stdout.trim();
   const shallow = gitTry(ROOT, ['rev-parse', '--is-shallow-repository']).stdout.trim() === 'true';
   assert.ok(type === 'commit' || type === 'tag',
-    'пример установки ссылается на «' + rev + '», а такой ревизии в этом репозитории нет'
+    'the install example refers to «' + rev + '», and this repository holds no such revision'
       + (shallow
-        ? ' — но клон обрезан, поэтому и не найдётся: сторожу нужна история'
-          + ' (`fetch-depth: 0` у checkout, `git fetch --unshallow` руками)'
+        ? ' — but the clone is truncated, so it would not be found either: this guard needs the history'
+          + ' (`fetch-depth: 0` on checkout, `git fetch --unshallow` by hand)'
         : ''));
   const commit = gitIn(ROOT, ['rev-parse', rev + '^{commit}']).trim();
 
   const commands = commandsAt(commit);
   assert.ok(commands !== null && commands.length > 0,
-    'у ревизии «' + rev + '» нет справки с разделом «Команды» — она старше того, чему учит текст');
+    'the revision «' + rev + '» has no help with a section «Команды» — it is older than what the text teaches');
 
   const unknown = [...calledCommands()].filter((c) => commands.indexOf(c) < 0);
   assert.deepEqual(unknown, [],
-    'ревизия «' + rev + '» не знает команд, которым учит текст: ' + unknown.join(', ')
-      + '\n  в справке той ревизии: ' + commands.join(', '));
+    'the revision «' + rev + '» does not know the commands the text teaches: ' + unknown.join(', ')
+      + '\n  in the help of that revision: ' + commands.join(', '));
 });

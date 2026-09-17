@@ -34,44 +34,44 @@ function written(file) {
   return path.relative(ROOT, file).split(path.sep).join('/');
 }
 
-test('каждый файл набора классифицирован: быстрый — явно, полный — с причиной', () => {
-  assert.deepEqual(duplicated(fast), [], 'в быстром прогоне файл назван дважды');
-  assert.deepEqual(duplicated(slow), [], 'причина для полного прогона названа дважды');
+test('every file of the set is classified: fast explicitly, full with a reason', () => {
+  assert.deepEqual(duplicated(fast), [], 'a file is named twice in the fast run');
+  assert.deepEqual(duplicated(slow), [], 'a reason for the full run is named twice');
   assert.deepEqual(fast.filter((f) => slow.indexOf(f) >= 0), [],
-    'файл назван и быстрым, и полным: он не может быть в двух прогонах сразу');
+    'a file is named both fast and full: it cannot be in two runs at once');
   assert.deepEqual(fast.filter((f) => files.indexOf(f) < 0), [],
-    'быстрым назван файл, которого в наборе нет');
+    'a file that is not in the set is called fast');
   assert.deepEqual(slow.filter((f) => files.indexOf(f) < 0), [],
-    'причина названа для файла, которого в наборе нет');
+    'a reason is named for a file that is not in the set');
 
   // A file missing from the fast list goes to the full one — a good default, since new work cannot
   // quietly ride into the fast run. But then every such file needs a cause: otherwise nobody named why it
   // is in the full one.
   assert.deepEqual(files.filter((f) => fast.indexOf(f) < 0 && slow.indexOf(f) < 0).map(written), [],
-    'в полном прогоне файл без названной причины — допишите её в SLOW (`tools/suites.js`)'
-      + ' или переведите файл в быстрый с причиной');
+    'a file in the full run has no reason named — write it into SLOW (`tools/suites.js`)'
+      + ' or move the file into the fast run with a reason');
 });
 
-test('у каждого файла названа причина, почему он в этом прогоне', () => {
+test('every file has a reason named for why it is in this run', () => {
   FAST.forEach((entry) => {
     assert.ok(entry.why !== undefined && entry.why.length > 30,
-      'быстрый файл без причины (' + entry.file + '): почему он здесь, а не в полном прогоне?');
+      'a fast file with no reason (' + entry.file + '): why is it here rather than in the full run?');
   });
   SLOW.forEach((entry) => {
     assert.ok(entry.why !== undefined && entry.why.length > 30,
-      'у дорогого файла не названа причина, почему он в полном прогоне: ' + entry.file);
+      'an expensive file has no reason named for why it is in the full run: ' + entry.file);
   });
 });
 
-test('быстрый прогон — часть набора, а объявление сходится с его файлами', () => {
+test('the fast run is part of the set, and the declaration agrees with its files', () => {
   const total = files.reduce((sum, f) => sum + checksIn(f), 0);
   const inFast = fast.reduce((sum, f) => sum + checksIn(f), 0);
-  assert.ok(inFast > 0, 'быстрый прогон пуст: тогда его незачем звать');
-  assert.ok(inFast < total, 'быстрый прогон равен полному (' + inFast + ' из ' + total
-    + ') — разделения нет');
+  assert.ok(inFast > 0, 'the fast run is empty: then there is no point calling it');
+  assert.ok(inFast < total, 'the fast run equals the full one (' + inFast + ' of ' + total
+    + ') — there is no split');
   // Every file of the suite is counted exactly once: completeness of the classification is checked
   // above, while what matters here is that the fast run lists no file twice and loses no checks in the
   // count.
   assert.equal(inFast, FAST.reduce((sum, entry) => sum + checksIn(entry.file), 0),
-    'счёт проверок быстрого прогона не сходится с его файлами');
+    'the check count of the fast run does not agree with its files');
 });

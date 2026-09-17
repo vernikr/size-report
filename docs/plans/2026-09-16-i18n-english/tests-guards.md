@@ -8,12 +8,16 @@ Subplan of `plan.md` (T0). Owns fourteen checks, **226 lines measured** — `gat
 sensor is configured by. **Step 0 re-measured it on 2026-09-17: the fourteen files answer 222**, not
 226 — `docs-commands` 22, `parity` 15, `gates-coverage` 14 — **after step 1 the owner read 209**
 (`docs-paths` 0, `git-pins` 5), and **after the portion of steps 7–8 named below it reads 177**
-(`docs-commands` 5, `parity` 0), and **after the four gate-file steps it reads 82** (`gates-verify` 0,
-`gates-coverage` 0, `gates-deps` 0, `gates-dup` 1, `gates-metrics` 5, `gates-files` 8). **The order of
-the portion of 2026-09-17 was set by the mission and
-differs from the numbering here**: the two files the mission named, `docs-commands` and `parity`, are
-steps 7 and 8 of this list, so those two steps were taken first and their siblings (`docs-pin`,
-`frozen`) and steps 2–6 (the six gate files) follow.
+(`docs-commands` 5, `parity` 0), and **after the four gate-file steps it read 82** (`gates-verify` 0,
+`gates-coverage` 0, `gates-deps` 0, `gates-dup` 1, `gates-metrics` 5, `gates-files` 8). **C3 is closed on
+2026-09-17 at 25 lines**: `gates-files` 8, `docs-commands` 5, `gates-metrics` 5, `git-pins` 5,
+`gates-dup` 1, `docs-pin` 1 — every one of them allow-listed data (the scenario repositories, the probe
+payloads, the witness's Cyrillic path) or a past's own word. **The order of the portions of
+2026-09-17 was set by the mission and differs from the numbering here**: the two files the mission named
+first, `docs-commands` and `parity`, are steps 7 and 8 of this list, so those two steps were taken
+first, then steps 2–6 (the six gate files), and the remaining halves of steps 7–8 (`docs-pin`,
+`frozen`) and step 6 (`suites`, `docs-numbers`) closed the owner — the record of each portion stands in
+its own step below.
 
 **Six of these files are gate files** (`test/gates-[a-z-]+\.test\.js` matches the gate list in
 `tools/gates/gatefiles.js`): `gates-verify`, `gates-files`, `gates-metrics`, `gates-coverage`,
@@ -171,12 +175,20 @@ a message is free.
 **The portion of 2026-09-17 took these four steps in one commit of its own, with the trailer on it
 (the six files are gate files, so the hook demands it — and the hook said so).** That commit also
 carries the re-ordering note from the header.
-6. **`test/suites.test.js` (16) + `test/docs-numbers.test.js` (12)** — the counters. Red first: drop a
-   `why` from an entry of `tools/suites.js` → `suites.test.js` reddens; add a check to a file without
-   updating the table of `README.md` → `docs-numbers` reddens. Both prove that what is read is a
-   **count**, not a word.
-7. **`test/docs-commands.test.js` (22 → **5**) — done 2026-09-17; `test/docs-pin.test.js` (14) still
-   to do.** Seventeen names and messages turned English. **The three experiments were run before the
+6. **`test/suites.test.js` (16 → **0**) + `test/docs-numbers.test.js` (12 → **0**) — done 2026-09-17.**
+   All twenty-eight are names and messages, and **both experiments ran, sources restored
+   byte-identical:** a `why` dropped from one entry of `tools/suites.js` reddens `suites` at check 2, and
+   a check added to a file without updating the table of `README.md` reddens `docs-numbers` at check 1.
+   So what is read is a **count** and a declared **reason** rather than any word. **What `docs-numbers`
+   actually reads, measured rather than described:** its own words are read by nobody (red first by the
+   whole file), and the things it does read are the table of runs in `README.md` (by the row labels
+   `Fast`/`Full` and the command cells `pnpm test`/`pnpm test:all` — `publishedRuns()` in
+   `tools/docs-facts.js` reads `README.md` and **no other document**, the tracker included) plus
+   `tools/suites.js`'s `checksIn`/`FAST` — hence the third experiment: renaming the `Fast` row label in
+   `README.md` reddens it, and so it can never rot in silence (a row that stops parsing reddens its own
+   `assert.ok` rather than passing quietly).
+7. **`test/docs-commands.test.js` (22 → **5**) + `test/docs-pin.test.js` (14 → **1**) — done
+   2026-09-17.** Seventeen names and messages turned English. **The three experiments were run before the
    words moved, each on its own, every source restored byte-identical:** renaming the help's section
    marker in `src/refusal.js:136` alone reddens the file at check 3
    (`the refusal causes agree between the engine, the help and the code table of README`); renaming
@@ -190,8 +202,20 @@ carries the re-ordering note from the header.
    quoting the Russian word the tolerance exists for (`:155`), and the three tolerance regexes
    (`:181`, `:184`, `:186`) — this owner's named exception, still dead in the tree. The file put back
    to `HEAD` ran green (4 of 4), so no machine reads a word of its own; `dup` unchanged
-   (`clones 5, lines 29`).
-8. **`test/parity.test.js` (15 → **0**) — done 2026-09-17; `test/frozen.test.js` (16) still to do.**
+   (`clones 5, lines 29`). **The other half of the step — `docs-pin`: fourteen names and messages turned
+   English, 14 → 1**, and the one line that stays is a message naming the past's own word: the revision
+   the pin leads to carries the **Russian** section marker, so the sentence says `«Команды»` (the same
+   allowance the pinned help itself has). **The reading that could rot was measured, not assumed:**
+   `commandsAt` resolves the section in two languages (`'Команды:'` / `'Commands:'`); dropping the
+   Russian branch that the pin still needs — restored byte-identical — reddens this file, so the branch
+   is live today, and a `null` from it cannot pass in silence (its own `assert.ok` reddens). The moment
+   the pin leads to an English revision that branch goes dead — that is **N20**'s territory, and it is
+   said here rather than discovered later. `docs-pin`'s own message set is read by nobody (red first by
+   the whole file, 1 of 1 green at `HEAD`).
+8. **`test/parity.test.js` (15 → 0) + `test/frozen.test.js` (16 → **0**) — done 2026-09-17.** Sixteen
+   more names and messages in `frozen`, whose checks read the frozen layer's manifests and hashes
+   (**allow-listed data, untouched**); the N24 line of `parity` (the one value of `SKIP_WORDS`) stays
+   exactly as it was, as its owner decided. (15 → **0**) + `test/frozen.test.js` (16 → **0**) — done 2026-09-17.**
    Fifteen names and messages turned English, and **both experiments were run and measured rather than
    quoted:** N24's example — one value of `SKIP_WORDS` made English in `src/history.js` (restored
    byte-identical) reddens `parity` at checks 1 and 3 (`--json` and the locale run) while
