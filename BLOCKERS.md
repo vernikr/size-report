@@ -1097,6 +1097,43 @@ references stayed the same after the fix.
   measured over this repository's own sources, not over the fixtures). **Not done in this portion:** it is the
   next one, after which N20's batched release follows.
 
+  **Done 2026-09-17.** `tools/gates/coverage.js` now takes its unit from c8's own `covered` numbers:
+  `counts(point) = { lines: point.lines.covered, branches: …, functions: … }`, and the whole-set shares are
+  printed to a person while they are no longer compared. **The two halves of the claim are measured on the
+  real report, not argued:** with the executed counts of the freshly taken coverage, the real `src/cli.js`
+  (`{"total":84,"covered":77,"skipped":0,"pct":91.66}`) **grown by 24 lines — green** (`✓ cover: no
+  regressions (the baseline holds 39 files)`, exit 0, even though its share falls to 71.3%, well below the
+  91.95% the previous baseline held), while **one executed line less reddens** with
+  `src/cli.js — lines: was 77, now 76` (exit 1) and **one executed branch less** with
+  `src/cli.js — branches: was 34, now 33`. So the ratchet is a floor over execution rather than a promise
+  about the share, and it is sensitive to a single line.
+
+  **The baseline's shape moved with the unit, and only its shape.** `coverage-baseline.json`: `schema` 1 → 2
+  and a new `unit` field, the entries going from shares to counts — `src/cli.js` was
+  `{"lines":91.95,"branches":97.14,"functions":100}` and reads `{"lines":77,"branches":34,"functions":9}` —
+  while the **key set is identical: 39 files before and after**, so this is not a composition change (the
+  difference N31 had). The `note` inside the file was extended to say what the unit is, since it is the
+  first thing a reader of the file has, and a re-take now writes the same counts it would read back. The six
+  files that legitimately read zero executed lines are named by the note and re-measured: `bin/postinstall.js`
+  and the five `src/page/*.js` chapters node pastes into the assembled page.
+
+  **The slow profile is green, and that was the point.** `pnpm run cover` answers
+  `✓ cover: no regressions (the baseline holds 39 files)` with the same totals it printed while it was red
+  (`lines 80.6%, branches 89.05%, functions 92.37%`) — the numbers did not move, the unit did, and the
+  thirteen “falls” that reddened it were exactly the class the decision names (share down, execution
+  unchanged). `pnpm run verify:slow` runs green end to end: **10 steps, 198.5 s**, of which `cover` 69.0 s;
+  the sensor's own cost is unchanged (the same c8 run, one more map of counts), and `tools/**`'s Cyrillic
+  counter stays at 111 (the sensor carries no Russian of its own).
+
+  **One implementation decision, with the price of the alternative named:** the user's answer spoke about
+  lines, and branches and functions were given the same unit because the flaw is identical for all three
+  and one file should not carry two units — the price of narrowing to lines alone is one word in `METRICS`,
+  recorded here rather than decided in silence. The transducer of the verdict, `test/gates-coverage.test.js`,
+  moved in the same commit and got **stronger**: its reports are written in counts, its baseline too, and it
+  gained the two cases the decision rests on — a fall of exactly one executed line is red, and a file that
+  grew while keeping every execution is green (3 of 3 green). Both are gate files, and the commit carries the
+  `Gate-Change:` trailer.
+
 - **N34. The same pair formed a second time: a translated block inside an accepted clone pair becomes a *new*
   clone (`test/cli-paths.test.js` ↔ `test/doctor.test.js`).** Measured 2026-09-17 while translating for `doctor`
   (C2's step 6): the sensor answered `✗ dup: new clones 2` over one pair — `cli-paths.test.js:28` ↔
