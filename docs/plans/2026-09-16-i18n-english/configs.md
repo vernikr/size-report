@@ -57,11 +57,14 @@ together:
 
 Machine readers, exact:
 
-- `test/release.test.js:62,66,101,114,127,132` — **six step names of `release.yml` are read as
+- `test/release.test.js:62,66,86,101,114,127,132` — **seven step names of `release.yml` are read as
   literals** (`step(doc, 'Версия манифеста — в окружение')`, `… 'Тег называет ту же версию, что
-  манифест'`, `… 'Публикация'`, `… 'Черновой прогон — в реестр ничего не ушло'`, `… 'Проверки
-  перед выпуском'`, `… 'Работа из собранного пакета'`). Each moves with its assertion line in the
-  same commit; `:86`'s step name is English and stays.
+  манифест'`, `… 'npm поновее (для trusted publishing)'`, `… 'Публикация'`, `… 'Черновой прогон —
+  в реестр ничего не ушло'`, `… 'Проверки перед выпуском'`, `… 'Работа из собранного пакета'`).
+  Each moves with its assertion line in the same commit. **This bullet said six and called `:86`'s
+  step name English; the measurement corrects it to seven** — `npm поновее (для trusted publishing)`
+  carries the Russian word `поновее`, is found by `step()` through its name, and therefore moved with
+  its line too.
 - `test/release.test.js:69,71` — `$GITHUB_REF_NAME` and `$WANT` inside the tag step's `run:` echo:
   the words may change, the variables may not.
 - `test/release.test.js:102,104,106,107,115,117,133` — `/dry_run == false/`,
@@ -229,9 +232,25 @@ not touched; the artifact's content digest `1bdb27e1…` and the reference file'
    first, two experiments: translate «Публикация» without `test/release.test.js:101` → the check
    fails with "в описании выпуска нет ровно одного шага «Публикация»"; rewrite the `:11` comment
    without the basename → `:130` reddens. **Trailer.** The heaviest commit of the owner (54 lines
-   with the two check lines), inside the budget.
+   with the two check lines), inside the budget. **Done 2026-09-17: 48 → 0**, and the seven readers
+   of `test/release.test.js` moved with it **in the same commit**, as the rule demands — that file
+   now reads 0 too, so C2's last debt is paid. Red first, three probes, every file restored byte for
+   byte: the step name `Публикация` translated **alone** reddens `release` (2 of 3) with its own
+   message — `the release workflow holds no single step «Публикация»`; the hint rewritten without the
+   basename (`--file release.yml` → `--file release-workflow.yml`) reddens it with `the hint does
+   not name the workflow file: the one-time setting on npmjs.com would point at another file…`, so
+   the file's own self-naming is load-bearing and the `:11` instruction kept the exact token; and a
+   step name translated that no check reads (`Установка`) leaves it green (3 of 3). The document
+   still parses: `parseWorkflow` answers the same **11 steps** with the translated names, and
+   `input.default` is still `true`. Identifiers untouched and named: the `jobs:` key `release`, the
+   `permissions` block, the two `if:` conditions, the four pinned `uses:` SHAs, `runs-on`, every
+   `run:` command and the `tags: ['v*']` range — the changed lines are comments, step names, the
+   input's `description` and the words inside the tag step's `echo`.
 9. **Wash-up** — the counter over the ten files answers the 3 allow-listed lines and the 1 comment
-   and nothing else; `pnpm run verify` green; `git status` clean.
+   and nothing else; `pnpm run verify` green; `git status` clean. **Measured 2026-09-17: it reads
+   4** — `templates/size-report.config.json` 2 and `eslint.metrics.config.js` 2 (the term line and
+   the English comment quoting it) — and nothing else. **D1 is closed**, and with it the campaign's
+   last source owner: every other line of its ten files is English.
 
 ## Acceptance
 
