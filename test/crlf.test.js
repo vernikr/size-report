@@ -19,27 +19,27 @@ after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 const goldenText = fs.readFileSync(path.join(SYNTH, 'golden.json'), 'utf8');
 
-test('выкладка с переводами строк в CRLF не мешает сверке', () => {
+test('a working tree with CRLF newlines does not stand in the way of the comparison', () => {
   const dir = sharedClone('crlf', tmp);
   assert.ok(/\r\n/.test(fs.readFileSync(path.join(dir, 'src', 'code.js'), 'utf8')),
-    'клон вышел без CRLF: это не то окружение, которое проверяем');
+    'the clone came out without CRLF: this is not the environment under check');
   assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '',
-    'git считает выкладку грязной: сверка такие файлы пропускает, и проверять нечего');
+    'git calls the working tree dirty: the comparison skips such files, and there is nothing to check');
 
   const plain = readRun(PACKAGE, sharedClone('plain', tmp), ['--json']);
   const crlf = readRun(PACKAGE, dir, ['--json']);
-  assert.equal(crlf.code, 0, 'при core.autocrlf=true инструмент отказался работать: '
+  assert.equal(crlf.code, 0, 'with core.autocrlf=true the tool refused to work: '
     + crlf.stderr.trim().split('\n')[0]);
-  assert.equal(crlf.stdout, plain.stdout, 'выкладка CRLF изменила числа: ' + firstDiff(crlf.stdout, plain.stdout));
-  assert.equal(crlf.stdout, goldenText, 'выкладка CRLF разошлась с эталоном: ' + firstDiff(crlf.stdout, goldenText));
+  assert.equal(crlf.stdout, plain.stdout, 'the CRLF working tree changed the numbers: ' + firstDiff(crlf.stdout, plain.stdout));
+  assert.equal(crlf.stdout, goldenText, 'the CRLF working tree diverged from the reference: ' + firstDiff(crlf.stdout, goldenText));
 
   const cfg = JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
   const plainDir = cloneFixture(path.join(tmp, 'crlf-plain'));
   const wrote = runFixtureWith(PACKAGE, dir, ['--write']);
-  assert.equal(wrote.code, 0, 'сборка в выкладке CRLF не прошла: ' + wrote.stderr.trim().split('\n')[0]);
+  assert.equal(wrote.code, 0, 'the build in the CRLF working tree failed: ' + wrote.stderr.trim().split('\n')[0]);
   assert.equal(runFixtureWith(PACKAGE, plainDir, ['--write']).code, 0,
-    'сборка в обычной выкладке не прошла');
+    'the build in the ordinary working tree failed');
   assert.equal(sha256(fs.readFileSync(path.join(dir, cfg.output))),
     sha256(fs.readFileSync(path.join(plainDir, cfg.output))),
-    'отчёт в выкладке CRLF разошёлся с собранным в обычной выкладке побайтово');
+    'the report in the CRLF working tree diverged byte for byte from the one built in an ordinary one');
 });

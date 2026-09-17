@@ -26,7 +26,7 @@ const PLAIN = sharedClone('plain', tmp);
 /* Environments in which the output has to stay the same. The first is also the witness of the fix for
  * B1: with no machine settings at all, git behaves as on a machine where nothing was configured. */
 const HOSTILE_ENVS = [
-  { label: 'настройки машины не читаются (GIT_CONFIG_GLOBAL=/dev/null)', env: { GIT_CONFIG_GLOBAL: '/dev/null' } },
+  { label: 'the machine settings are not read (GIT_CONFIG_GLOBAL=/dev/null)', env: { GIT_CONFIG_GLOBAL: '/dev/null' } },
   { label: 'core.quotePath=true', env: gitConfig({ 'core.quotePath': 'true' }) },
   {
     label: 'core.quotePath=true, color.ui=always, i18n.logOutputEncoding=ISO-8859-1',
@@ -49,50 +49,50 @@ function quotePath(args, env) {
   return (res.stdout || '').trim();
 }
 
-test('окружение теста умеет задавать настройки git (нужен git ≥ 2.31)', () => {
+test('the test environment can set git settings (git ≥ 2.31 needed)', () => {
   assert.equal(quotePath([], gitConfig({ 'core.quotePath': 'true' })), 'true',
-    'git не принимает настройки через окружение: чужие правила машины задать нечем, '
-      + 'а значит герметичность нечем и проверить');
+    'git does not take settings through the environment: there is no way to set the machine rules, '
+      + 'and so no way to check the tightness either');
 });
 
 /* A command-line key outranks both the machine's settings and the environment's — which is what the fix
  * rests on: the pin lives in the engine, not in someone else's config. */
-test('закрепление движка нельзя перебить из окружения', () => {
+test('the pin of the engine cannot be overridden from the environment', () => {
   const poisoned = gitConfig({ 'core.quotePath': 'true' });
   assert.equal(quotePath(['-c', 'core.quotePath=false'], poisoned), 'false',
-    'ключ командной строки больше не сильнее окружения: закрепление в движке ничего не гарантирует');
+    'a command-line key is no longer stronger than the environment: a pin in the engine guarantees nothing');
 });
 
 /* The main check of the fix for B1: a hostile environment changes not a single byte of the output. */
-test('вывод движка не зависит от настроек git и локали', () => {
+test('the output of the engine depends neither on git settings nor on the locale', () => {
   HOSTILE_ENVS.forEach(({ label, env }) => {
     const res = readRun(PACKAGE, PLAIN, ['--json'], env);
-    assert.equal(res.code, 0, 'инструмент упал в окружении «' + label + '»: ' + res.stderr.trim());
+    assert.equal(res.code, 0, 'the tool fell over in the environment «' + label + '»: ' + res.stderr.trim());
     assert.equal(res.stdout, goldenText,
-      'окружение «' + label + '» изменило вывод: ' + firstDiff(res.stdout, goldenText));
+      'the environment «' + label + '» changed the output: ' + firstDiff(res.stdout, goldenText));
   });
 });
 
 /* The witness of the fix: the very environment in which the fixture used to lose a row. */
-test('в окружении без настроек машины фикстура даёт 14 строк и все колонки', () => {
+test('in an environment with no machine settings the fixture gives 14 rows and every column', () => {
   const res = readRun(PACKAGE, PLAIN, ['--json'], { GIT_CONFIG_GLOBAL: '/dev/null' });
-  assert.equal(res.code, 0, 'инструмент упал: ' + res.stderr.trim());
+  assert.equal(res.code, 0, 'the tool fell over: ' + res.stderr.trim());
   const data = JSON.parse(res.stdout);
 
   assert.equal(data.rows.length, goldenJson.rows.length,
-    'строк ' + data.rows.length + ' вместо ' + goldenJson.rows.length
-      + ': в окружении с настройками git по умолчанию снова теряется коммит');
+    'rows ' + data.rows.length + ' instead of ' + goldenJson.rows.length
+      + ': with the default git settings the commit is lost again');
   assert.equal(data.skipped.length, goldenJson.skipped.length,
-    'пропущено ' + data.skipped.length + ' коммитов вместо ' + goldenJson.skipped.length);
+    'skipped ' + data.skipped.length + ' commits instead of ' + goldenJson.skipped.length);
 
   // The column holding a non-English path: the one that used to come out empty altogether.
   const notes = data.columns.findIndex((c) => /[^\u0000-\u007f]/.test(c.label));
-  assert.ok(notes >= 0, 'в фикстуре нет колонки с не-ASCII меткой');
+  assert.ok(notes >= 0, 'the fixture holds no column with a non-ASCII label');
   assert.ok(data.rows.some((r) => r.cells[notes] !== null),
-    'колонка «' + data.columns[notes].label + '» пуста: файла для инструмента не существует');
+    'the column «' + data.columns[notes].label + '» is empty: no such file exists for the tool');
 
   // The commit whose only change of volume was that column.
   assert.ok(data.rows.some((r) => r.subject === 'fixture: ветка — правка кода и заметок'),
-    'коммит, терявший строку из-за колонки с не-ASCII путём, снова её не получил');
+    'the commit that used to lose its row over the non-ASCII path column did not get it again');
 });
 

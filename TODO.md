@@ -84,6 +84,12 @@ Opened 2026-09-16 with the string-translation work (`docs/plans/2026-09-16-i18n-
   It is prose rather than a literal, so the string work does not touch it and `src/metrics.js` will
   not reach a zero Cyrillic count until someone does. Fix it in a portion of its own (one comment,
   no code), or name it permanently in that plan's allow-list.
+- **`test/cli.test.js:311` — a message points at a file that has moved.** Seen 2026-09-16 while
+  translating the command-line checks (subplan C2, step 3). The assertion compares `EXIT` with the
+  table of codes and its message reads `the exit codes diverged from PLAN.md §4.1`, but `PLAN.md` now
+  lives at `plans/archive/PLAN.md` (the root file was archived with `REFACTOR.md` in the work of
+  2026-09-16). How it shows: a failure sends a reader to a path where nothing is. Prose rather than a
+  literal, so the string work leaves it alone; fix it in a portion of its own (one line, no code).
 - **`tools/run-tests.js:22` — the example names a Russian test.** Seen 2026-09-16 in the same step:
   `node tools/run-tests.js fast --test-name-pattern=паритет` is offered as the example of passing
   flags to `node --test`, and it works only while the suites' test names are Russian (`C2`/`C3` own

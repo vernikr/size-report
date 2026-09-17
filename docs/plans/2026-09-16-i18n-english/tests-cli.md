@@ -137,13 +137,37 @@ literal** are not.
    the artifact's digest (`1bdb27e1…`) and the built page (66 427 B) unmoved. These two files are the
    harness of that promise, so their own messages were translated last within their step, after the
    experiment.
-2. **`test/crlf.test.js` (9) + `test/environment.test.js` (18).** Red first: the golden comparison is
-   data; the experiment is the counters and `pnpm test` staying green, plus one name rename proving
-   `checksIn` counts calls rather than names.
-3. **`test/cli-paths.test.js` (31) + `test/cli.test.js` (79).** Red first: translate
-   `test/cli.test.js:45`'s read alone → S2's own step would have reddened it; here the check is that it
-   is already English, and the negative at `:69` still guards the absence of a derived line once a file
-   is pinned.
+2. **`test/crlf.test.js` (9 → **0**) + `test/environment.test.js` (18 → **1**) — done 2026-09-16.**
+   Nine names and messages in the first, seventeen in the second. **Red first, one phrase at a time:**
+   all nine and all fifteen pairs went back to Russian on their own and the file's probe stayed green —
+   no reader of a check's words. The one line that stays is the fixture's own commit subject
+   (`'fixture: ветка — правка кода и заметок'`, held by `fixtures/synthetic/golden.json` and
+   `manifest.json`), and it is a **pin, not a stale expectation** — proved by experiment: translating it
+   reddens `test/environment.test.js`, while the five pieces of the two files' own fixture content (the
+   README written into a fresh project, its commit subjects, the comments appended to a file and to the
+   table) stay green when translated and stay as data. The counters were the other half of the
+   experiment: one test name renamed in `test/cli.test.js` left both `checksIn` (**9**) and the probe
+   green, so the count is of `test(` calls rather than of names.
+3. **`test/cli-paths.test.js` (30 → **3**) + `test/cli.test.js` (74 → **2**) — done 2026-09-16.**
+   Twenty-seven names and messages in the first, seventy-two in the second. **Red first by the whole
+   file, which is the method W1 used for its two files** (per-phrase sweeps over 97 phrases would cost
+   half an hour for evidence of the same class): each of these two files put back to its `HEAD` version
+   wholesale left its own probe **green**, so no machine reads a word of either. The five lines that stay
+   are the scenarios' own content, named by measurement: the README and the code comments written into
+   the scenario, the commit subjects of the repositories the scenario builds. **What this step guarded
+   is the machine half:** `test/cli-paths.test.js:104` is a marker with an end-of-line anchor
+   (`/^\s*fix: .*git init$/m`), and it is a live reader of the English marker — measured by putting that
+   marker back to Russian in `src/config.js:69` (restored byte-identical), which reddens check 6
+   (`outside a git repository the refusal explains itself…`) while everything else stays green. The one
+   negative match over printed text in this owner's four files is `test/cli.test.js:69`, and it is not
+   vacuous: the same phrase is asserted **positively** at `:45` (`/settings derived from the project/`),
+   so its pattern answers against the text the tool really prints. `test/cli.test.js:45` itself is
+   English and was measured so at step 0. A finding of the `dup` sensor belongs here: the translation
+   **dissolved** one accepted clone — `cli-paths.test.js:28-33` ↔ `doctor.test.js:176`, five lines of
+   the shallow-clone setup whose two Russian messages matched `doctor.test.js` verbatim (clones 8 → 7,
+   lines 47 → 42). Both sides of that pair are this owner's or this owner's neighbour, so step 6
+   (`doctor`) is where the pair can form again with different wording — the answer then is a varied
+   wording, never the baseline.
 4. **`test/templates.test.js` (33) + `test/release.test.js` (41).** Red first: change one workflow step
    name alone in `.github/workflows/release.yml` → `test/release.test.js:62` or `:66` reddens (that is
    D1's experiment, quoted here so its owner has the red ready).

@@ -22,17 +22,17 @@ after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 /* ---------- a shallow history ---------- */
 
-test('обрезанная история: код 3 и команда докачки', () => {
+test('a truncated history: code 3 and the command that fills it in', () => {
   const base = cloneFixture(path.join(tmp, 'shallow-source'));
   const dir = path.join(tmp, 'shallow');
   const clone = gitTry(null, ['clone', '-q', '--depth', '1', 'file://' + base, dir]);
-  assert.equal(clone.status, 0, 'не удалось собрать обрезанную выкладку: ' + firstLine(clone.stderr));
+  assert.equal(clone.status, 0, 'the truncated working tree was not assembled: ' + firstLine(clone.stderr));
   assert.equal(gitIn(dir, ['rev-parse', '--is-shallow-repository']).trim(), 'true',
-    'выкладка вышла полной: проверять нечего');
+    'the working tree came out complete: there is nothing to check');
 
   const res = runFixture(dir, ['--data']);
-  refusal(res, 3, 'запуск на обрезанной истории');
-  assert.match(res.stderr, /--unshallow/, 'отказ не называет команду докачки:\n' + res.stderr);
+  refusal(res, 3, 'a run on a truncated history');
+  assert.match(res.stderr, /--unshallow/, 'the refusal does not name the command that fills it in:\n' + res.stderr);
 });
 
 /* ---------- output into a directory that does not exist ---------- */
@@ -41,65 +41,65 @@ test('обрезанная история: код 3 и команда докач
  * report has to appear in `docs/` (the directory is created by itself) rather than in the root. The
  * check exists by measurement: the first version of the derived profile chose the root when the
  * directory was absent, so in a fresh project the report landed where nobody looks for it. */
-test('в свежем проекте отчёт ложится в docs, который создаётся сам', () => {
+test('in a fresh project the report lands in docs/, a directory that creates itself', () => {
   const dir = initRepo(path.join(tmp, 'fresh'));
   fs.writeFileSync(path.join(dir, 'README.md'), '# свежий проект\n');
   fs.writeFileSync(path.join(dir, 'code.js'), 'var a = 1;\n');
   gitIn(dir, ['add', '-A']);
   gitIn(dir, ['commit', '-qm', 'feat: начало']);
-  assert.equal(fs.existsSync(path.join(dir, 'docs')), false, 'каталог docs уже есть: случай не тот');
+  assert.equal(fs.existsSync(path.join(dir, 'docs')), false, 'the docs directory is already there: this is not the case');
 
   const res = runSize(dir, ['--write']);
-  assert.equal(res.code, 0, 'запуск без настроек не собрал отчёт: ' + firstLine(res.stderr));
+  assert.equal(res.code, 0, 'a run with no settings did not build the report: ' + firstLine(res.stderr));
   const report = path.join(dir, 'docs', 'size-report.html');
-  assert.ok(fs.existsSync(report), 'отчёта нет в docs/ — в выведенном профиле он ложится туда');
+  assert.ok(fs.existsSync(report), 'the report is not in docs/ — in the derived profile that is where it lands');
   assert.equal(fs.existsSync(path.join(dir, 'size-report.html')), false,
-    'отчёт лёг и в корне тоже: место у него одно');
-  assert.equal(runSize(dir, []).code, 0, 'контрольный режим на своём отчёте красный');
+    'the report landed in the root as well: it has one place only');
+  assert.equal(runSize(dir, []).code, 0, 'the checking mode is red on its own report');
 });
 
-test('--write создаёт недостающий каталог, названный ключом', () => {
+test('--write creates a missing directory named by a flag', () => {
   const dir = cloneFixture(path.join(tmp, 'page-dir'));
   const target = path.join('.size-report', 'report.html');
   const res = runFixture(dir, ['--write', target]);
-  assert.equal(res.code, 0, '--write отказался работать: ' + firstLine(res.stderr));
-  assert.equal(hasStack(res.stderr), false, '--write упал стеком:\n' + res.stderr);
-  assert.ok(fs.existsSync(path.join(dir, target)), 'отчёта нет по указанному пути: ' + target);
+  assert.equal(res.code, 0, '--write refused to work: ' + firstLine(res.stderr));
+  assert.equal(hasStack(res.stderr), false, '--write fell over with a stack:\n' + res.stderr);
+  assert.ok(fs.existsSync(path.join(dir, target)), 'there is no report at the named path: ' + target);
 });
 
-test('--write создаёт недостающий каталог, названный в настройках', () => {
+test('--write creates a missing directory named in the settings', () => {
   const dir = cloneFixture(path.join(tmp, 'write-dir'));
   const cfg = JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
   cfg.output = path.join('.size-report', 'table.html');
   fs.writeFileSync(path.join(dir, 'size-table.config.json'), JSON.stringify(cfg, null, 2));
 
   const res = runSize(dir, ['--write']);
-  assert.equal(res.code, 0, '--write отказался работать: ' + firstLine(res.stderr));
-  assert.equal(hasStack(res.stderr), false, '--write упал стеком:\n' + res.stderr);
-  assert.ok(fs.existsSync(path.join(dir, cfg.output)), 'таблицы нет по указанному пути');
+  assert.equal(res.code, 0, '--write refused to work: ' + firstLine(res.stderr));
+  assert.equal(hasStack(res.stderr), false, '--write fell over with a stack:\n' + res.stderr);
+  assert.ok(fs.existsSync(path.join(dir, cfg.output)), 'there is no table at the named path');
 });
 
 /* ---------- a disagreement with the working tree ---------- */
 
-test('правка только на диске: код 1 и что с ней делать', () => {
+test('an edit on disk only: code 1 and what to do about it', () => {
   const dir = cloneFixture(path.join(tmp, 'disk-edit'));
   gitIn(dir, ['update-index', '--assume-unchanged', 'src/code.js']);
   fs.appendFileSync(path.join(dir, 'src', 'code.js'), '// правка, которой нет в git\n');
   assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '',
-    'правка попала в статус git: файл выпал бы из сверки, и проверять нечего');
+    'the edit went into the git status: the file would fall out of the comparison, and there is nothing to check');
 
   const res = runFixture(dir, ['--data']);
-  refusal(res, 1, 'правка, которой нет в истории');
-  assert.match(res.stderr, /the edit exists on disk only/, 'отказ объясняет не то:\n' + res.stderr);
-  assert.match(res.stderr, /fix/, 'отказ не говорит, что делать:\n' + res.stderr);
+  refusal(res, 1, 'an edit that is not in the history');
+  assert.match(res.stderr, /the edit exists on disk only/, 'the refusal explains the wrong thing:\n' + res.stderr);
+  assert.match(res.stderr, /fix/, 'the refusal does not say what to do:\n' + res.stderr);
 });
 
 /* ---------- a run outside a repository ---------- */
 
-test('вне git-репозитория отказ объясняется, а не падает стеком', () => {
+test('outside a git repository the refusal explains itself rather than falling over with a stack', () => {
   const res = runSize(tmp, ['--data']);
-  refusal(res, 2, 'запуск вне репозитория');
+  refusal(res, 2, 'a run outside a repository');
   // The advice has to be a command: a refusal without a fix helps no reader.
   assert.match(res.stderr, /^\s*fix: .*git init$/m,
-    'отказ не назвал команду починки:\n' + res.stderr);
+    'the refusal did not name the repair command:\n' + res.stderr);
 });
