@@ -80,13 +80,13 @@ function fixCommand(file) {
 function mutatedEngine(name, part, from, to) {
   const source = fs.readFileSync(path.join(ROOT, 'src', part), 'utf8');
   const mutated = source.replace(from, to);
-  assert.notEqual(mutated, source, 'мутация не применилась: ' + part + ' переписан, мутацию пора обновить');
+  assert.notEqual(mutated, source, 'the mutation did not apply: ' + part + ' was rewritten, the mutation needs updating');
   const dir = path.join(tmp, 'engine-' + name);
   fs.mkdirSync(path.join(dir, 'bin'), { recursive: true });
   fs.cpSync(path.join(ROOT, 'src'), path.join(dir, 'src'), { recursive: true });
   fs.writeFileSync(path.join(dir, 'src', part), mutated);
   fs.copyFileSync(PACKAGE_BIN, path.join(dir, 'bin', 'size.js'));
-  return { name: 'мутированный движок', file: path.join(dir, 'bin', 'size.js'), env: null };
+  return { name: 'the mutated engine', file: path.join(dir, 'bin', 'size.js'), env: null };
 }
 
 /* A loss while the state is carried: the merge commit is deprived of its list of changed paths, so
@@ -101,54 +101,54 @@ function assertCatchesDiskEdit(dir, label) {
   gitIn(dir, ['update-index', '--assume-unchanged', 'src/code.js']);
   fs.appendFileSync(path.join(dir, 'src', 'code.js'), '// правка, которой нет в git\n');
   assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '',
-    'в выкладке «' + label + '» правка попала в статус git: файл выпал бы из сверки как грязный, и проверять нечего');
+    'in the working tree «' + label + '» the edit went into the git status: the file would fall out of the comparison as dirty, and there would be nothing to check');
   const res = runFixtureWith(PACKAGE, dir, ['--json']);
-  assert.notEqual(res.code, 0, 'сверка пропустила правку, которой нет в истории (' + label + ')');
+  assert.notEqual(res.code, 0, 'the comparison skipped an edit that is not in the history (' + label + ')');
   assert.match(res.stderr, /the edit exists on disk only/,
-    'сверка отказалась по другой причине: ' + res.stderr.trim().split('\n')[0]);
+    'the comparison refused for another reason: ' + res.stderr.trim().split('\n')[0]);
 
   /* The refusal's advice is a command and has to work: `git checkout -- <path>` returns the file to
    * HEAD, and the same call answers zero afterwards. */
   assert.match(res.stderr, /fix: commit the edit or roll it back: git checkout -- /,
-    'совет не называет, как вернуть файл: ' + res.stderr.trim());
+    'the advice does not say how to bring the file back: ' + res.stderr.trim());
   gitIn(dir, ['checkout', '--', 'src/code.js']);
   const after = runFixtureWith(PACKAGE, dir, ['--json']);
-  assert.equal(after.code, 0, 'совет «git checkout -- src/code.js» не починил состояние (' + label + '): '
+  assert.equal(after.code, 0, 'the advice «git checkout -- src/code.js» did not repair the state (' + label + '): '
     + (after.stderr || after.stdout).trim().split('\n')[0]);
 }
 
-test('правка файла только на диске ловится — и в обычной выкладке, и в CRLF', () => {
-  assertCatchesDiskEdit(cloneFixture(path.join(tmp, 'edit-plain')), 'обычная выкладка');
-  assertCatchesDiskEdit(cloneCrlf(path.join(tmp, 'edit-crlf')), 'выкладка CRLF');
+test('an edit of a file on disk only is caught — both in an ordinary working tree and in CRLF', () => {
+  assertCatchesDiskEdit(cloneFixture(path.join(tmp, 'edit-plain')), 'an ordinary working tree');
+  assertCatchesDiskEdit(cloneCrlf(path.join(tmp, 'edit-crlf')), 'a CRLF working tree');
 });
 
 /* The second half of the comparison — the state against the commit's tree — exists for an edit lost
  * while the state was carried between commits. The first witness: a conflict resolution falls out of
  * the state (the mutation above) while remaining in the tree. */
-test('потерянная правка merge-коммита ловится состоянием против дерева', () => {
+test('a lost edit of a merge commit is caught by the state against the tree', () => {
   const dir = cloneFixture(path.join(tmp, 'mutated-clone'));
   const tool = engineWithoutMergePaths();
   const res = runTool(tool, dir, ['--config', reconfig(), '--json']);
-  assert.notEqual(res.code, 0, 'потерянная правка merge-коммита прошла мимо сверки');
+  assert.notEqual(res.code, 0, 'the lost edit of a merge commit slipped past the comparison');
   assert.match(res.stderr, /carrying the state between commits lost an edit/,
-    'сверка отказалась по другой причине: ' + res.stderr.trim().split('\n')[0]);
+    'the comparison refused for another reason: ' + res.stderr.trim().split('\n')[0]);
 
   /* This refusal's advice is no repair command, and the text says so: the discrepancy lies in the
    * carrying of the state itself, and a rebuild will not change it. Both halves are checked: the
    * diagnostic command runs, while the rebuild does not remove the refusal — otherwise the advice's
    * text would be untrue. */
   assert.match(res.stderr, /fix: a rebuild does not cure this/,
-    'совет обещает то, чего пересборка не делает, или не назван:\n' + res.stderr.trim());
+    'the advice promises what a rebuild does not do, or is not named:\n' + res.stderr.trim());
   assert.match(res.stderr, /See it with: git show HEAD:/,
-    'совет не называет, чем это показать:\n' + res.stderr.trim());
+    'the advice does not say what to show it with:\n' + res.stderr.trim());
   const shown = spawnSync('bash', ['-c', 'git show HEAD:src/code.js'], { cwd: dir, encoding: 'utf8' });
-  assert.equal(shown.status, 0, 'совет зовёт git show на то, что git не показывает: '
+  assert.equal(shown.status, 0, 'the advice calls git show on what git does not show: '
     + (shown.stderr || '').trim().split('\n')[0]);
   const rebuild = spawnSync('bash', ['-c', fixCommand(reconfig())], { cwd: dir, encoding: 'utf8' });
-  assert.equal(rebuild.status, 0, 'команда пересборки из настроек не работает: '
+  assert.equal(rebuild.status, 0, 'the rebuild command from the settings does not work: '
     + (rebuild.stderr || '').trim().split('\n')[0]);
   const after = runTool(tool, dir, ['--config', reconfig(), '--json']);
-  assert.notEqual(after.code, 0, 'пересборка убрала расхождение — тогда текст совета неверен');
+  assert.notEqual(after.code, 0, 'the rebuild removed the divergence — then the text of the advice is wrong');
 });
 
 /* The second witness: a file that appears **in the merge itself** — how a resolution looks when the
@@ -156,7 +156,7 @@ test('потерянная правка merge-коммита ловится со
  * appearance, and the state comes out empty where the tree holds a file — another case of the same
  * comparison: a lost creation. The first run is with the whole engine: such a history has to
  * assemble. */
-test('потерянное создание файла ловится состоянием против дерева', () => {
+test('a lost creation of a file is caught by the state against the tree', () => {
   const dir = initRepo(path.join(tmp, 'created-in-merge'));
   fs.writeFileSync(path.join(dir, 'src', 'base.js'), 'export const base = 1;\n');
   commit(dir, 'начало');
@@ -172,10 +172,10 @@ test('потерянное создание файла ловится состо
   commit(dir, 'слияние: файл заведён при разрешении');
 
   const parents = gitIn(dir, ['log', '-1', '--format=%P']).trim().split(' ');
-  assert.equal(parents.length, 2, 'слияния не вышло: у HEAD один родитель, и проверять нечего');
+  assert.equal(parents.length, 2, 'no merge came out: HEAD has one parent, and there is nothing to check');
   parents.forEach((parent) => {
     assert.throws(() => gitIn(dir, ['cat-file', '-e', parent + ':src/only-in-merge.js']),
-      'файл есть у родителя ' + parent.slice(0, 7) + ': создание произошло не в слиянии');
+      'the file is there at the parent ' + parent.slice(0, 7) + ': the creation did not happen in a merge');
   });
 
   const file = ownConfig('created-in-merge', [
@@ -185,21 +185,21 @@ test('потерянное создание файла ловится состо
   ]);
 
   const ok = runSize(dir, ['--config', file, '--json']);
-  assert.equal(ok.code, 0, 'история с созданием файла в слиянии не собирается: '
+  assert.equal(ok.code, 0, 'the history with a file created in a merge is not built: '
     + ok.stderr.trim().split('\n')[0]);
 
   const res = runTool(engineWithoutMergePaths(), dir, ['--config', file, '--json']);
-  assert.notEqual(res.code, 0, 'потерянное создание файла прошло мимо сверки');
+  assert.notEqual(res.code, 0, 'the lost creation of a file slipped past the comparison');
   assert.match(res.stderr, /in the tree: src\/only-in-merge\.js/,
-    'отказ не назвал сторону дерева: ' + res.stderr.trim().split('\n')[0]);
+    'the refusal did not name the tree side: ' + res.stderr.trim().split('\n')[0]);
   assert.match(res.stderr, /in the state: the file is absent/,
-    'отказ не назвал сторону состояния: ' + res.stderr.trim().split('\n')[0]);
+    'the refusal did not name the state side: ' + res.stderr.trim().split('\n')[0]);
 });
 
 /* The other side of the same comparison: a column whose file lived in the history and was removed
  * before HEAD is no lost state. The run has to assemble, and the column's numbers have to agree with
  * what git shows (the blob's size at every commit). */
-test('файл, удалённый до HEAD, не роняет прогон и числа сходятся с историей', () => {
+test('a file deleted before HEAD does not bring the run down, and the numbers agree with the history', () => {
   const dir = cloneFixture(path.join(tmp, 'gone'));
   const gone = path.join(dir, 'src', 'gone.js');
 
@@ -215,13 +215,13 @@ test('файл, удалённый до HEAD, не роняет прогон и 
   const removedAgain = commit(dir, 'удалил gone.js снова');
 
   const res = runSize(dir, ['--config', configWith('gone', [{ label: 'gone.js', paths: ['src/gone.js'] }]), '--json']);
-  assert.equal(res.code, 0, 'история с удалённым файлом не собирается: ' + res.stderr.trim().split('\n')[0]);
+  assert.equal(res.code, 0, 'the history with a deleted file is not built: ' + res.stderr.trim().split('\n')[0]);
   assert.equal(/carrying the state/.test(res.stderr), false,
-    'сверка приняла удалённый файл за потерянное состояние:\n' + res.stderr);
+    'the comparison took a deleted file for a lost state:\n' + res.stderr);
 
   const data = JSON.parse(res.stdout);
   const i = data.columns.findIndex((c) => c.label === 'gone.js');
-  assert.notEqual(i, -1, 'колонка потерялась в данных');
+  assert.notEqual(i, -1, 'the column got lost in the data');
   const reported = {};
   data.rows.forEach((row) => { reported[row.sha] = row.cells[i] === null ? null : row.cells[i].raw; });
   // The size comes from git rather than from the same code: the blob of the revision holding the
@@ -230,16 +230,16 @@ test('файл, удалённый до HEAD, не роняет прогон и 
   assert.deepEqual(
     [reported[first], reported[edited], reported[removed], reported[back], reported[removedAgain]],
     [blobSize(first), blobSize(edited), null, blobSize(back), null],
-    'числа колонки разошлись с историей git');
+    'the numbers of the column diverged from the git history');
   assert.equal(reported[first], reported[back],
-    'возврат того же файла посчитан иначе, чем его первое появление');
+    'bringing the same file back is counted differently from its first appearance');
 });
 
 /* The third witness of the comparison is a lost **removal**: the state remembers the file while the
  * tree has none. Here the file is removed in the merge only (by hand, as the merge is brought to a
  * commit), so the mutated engine again learns nothing of it and has to refuse, while the whole engine
  * assembles the same history. */
-test('потерянное удаление файла ловится состоянием против дерева', () => {
+test('a lost deletion of a file is caught by the state against the tree', () => {
   const dir = initRepo(path.join(tmp, 'deleted-in-merge'));
   fs.writeFileSync(path.join(dir, 'src', 'keep.js'), 'export const keep = 1;\n');
   fs.writeFileSync(path.join(dir, 'src', 'gone.js'), 'export const gone = 2;\n');
@@ -262,15 +262,15 @@ test('потерянное удаление файла ловится состо
   ]);
 
   const ok = runSize(dir, ['--config', file, '--json']);
-  assert.equal(ok.code, 0, 'история с удалением в слиянии не собирается: '
+  assert.equal(ok.code, 0, 'the history with a deletion in a merge is not built: '
     + ok.stderr.trim().split('\n')[0]);
 
   const res = runTool(engineWithoutMergePaths(), dir, ['--config', file, '--json']);
-  assert.notEqual(res.code, 0, 'потерянное удаление прошло мимо сверки');
+  assert.notEqual(res.code, 0, 'the lost deletion slipped past the comparison');
   assert.match(res.stderr, /in the tree: the file is absent/,
-    'отказ не назвал сторону дерева: ' + res.stderr.trim().split('\n')[0]);
+    'the refusal did not name the tree side: ' + res.stderr.trim().split('\n')[0]);
   assert.match(res.stderr, /in the state: src\/gone\.js/,
-    'отказ не назвал сторону состояния: ' + res.stderr.trim().split('\n')[0]);
+    'the refusal did not name the state side: ' + res.stderr.trim().split('\n')[0]);
 });
 
 /* A trap of someone else's environment: with rename detection off, git hands over **both** paths of
@@ -278,32 +278,32 @@ test('потерянное удаление файла ловится состо
  * the first in the settings' order, that is, the one that had disappeared, and the state lost the
  * file: the comparison refused a lawful case. The choice goes by what the commit really holds, so the
  * run has to assemble and the numbers have to agree with the blob in git. */
-test('переименование внутри псевдонимов колонки не роняет прогон', () => {
+test('a rename inside the aliases of a column does not bring the run down', () => {
   const dir = cloneFixture(path.join(tmp, 'alias-rename'));
   gitIn(dir, ['mv', 'src/modern.js', 'src/legacy.js']);
   commit(dir, 'имя файла вернулось к legacy.js');
   // git's default (a rename is one path) and someone else's environment: both have to work.
   const env = gitConfig({ 'diff.renames': 'false' });
   const plain = runFixtureWith(PACKAGE, dir, ['--json']);
-  assert.equal(plain.code, 0, 'история с переименованием не собирается: '
+  assert.equal(plain.code, 0, 'the history with a rename is not built: '
     + plain.stderr.trim().split('\n')[0]);
   const res = runFixtureWith(PACKAGE, dir, ['--json'], env);
-  assert.equal(res.code, 0, 'переименование роняет прогон при diff.renames=false: '
+  assert.equal(res.code, 0, 'the rename brings the run down with diff.renames=false: '
     + res.stderr.trim().split('\n')[0]);
 
   const data = JSON.parse(res.stdout);
   const i = data.columns.findIndex((c) => c.label === 'modern.js');
   const last = data.rows[data.rows.length - 1];
-  assert.notEqual(last.cells[i], null, 'колонка пуста на последней строке: файл потерян');
+  assert.notEqual(last.cells[i], null, 'the column is empty on the last row: the file is lost');
   // The size comes from git: in that revision the file lies under one of the aliases, and that is its
   // blob.
   const blobSize = (sha) => {
     const found = ['src/modern.js', 'src/legacy.js'].filter((p) => {
       try { gitIn(dir, ['cat-file', '-e', sha + ':' + p]); return true; } catch (_e) { return false; }
     });
-    assert.equal(found.length, 1, 'в ревизии ' + sha.slice(0, 7) + ' файл не один или его нет');
+    assert.equal(found.length, 1, 'in the revision ' + sha.slice(0, 7) + ' the file is not alone or is missing');
     return Number(gitIn(dir, ['cat-file', '-s', sha + ':' + found[0]]).trim());
   };
   assert.equal(last.cells[i].raw, blobSize(last.sha),
-    'число колонки разошлось с блобом git на строке ' + last.sha.slice(0, 7));
+    'the number of the column diverged from the git blob on the row ' + last.sha.slice(0, 7));
 });

@@ -136,6 +136,18 @@ export function draftedRepo(dir, code) {
   return { dir: dir, file: path.join(dir, 'size-table.config.json') };
 }
 
+/* A working tree whose history is cut: what `git clone --depth 1` gives. Two suites need exactly this state — the
+ * command line and the doctor both have to name the command that fills the history in rather than count coverage over
+ * it, and both start from the same cut clone. The assertions are the ones both suites had written out: the clone went
+ * through and the history really is shallow, otherwise there would be nothing to check. */
+export function shallowClone(source, into) {
+  const clone = gitTry(null, ['clone', '-q', '--depth', '1', 'file://' + source, into]);
+  assert.equal(clone.status, 0, 'the truncated working tree was not assembled: ' + firstLine(clone.stderr));
+  assert.equal(gitIn(into, ['rev-parse', '--is-shallow-repository']).trim(), 'true',
+    'the working tree came out complete: there is nothing to check');
+  return into;
+}
+
 /* One shared clone per environment for read-only runs. It is created on first use: suites that need no environment pay
  * nothing for it. */
 const shared = new Map();

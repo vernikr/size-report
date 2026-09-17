@@ -1040,3 +1040,22 @@ references stayed the same after the fix.
   is **not** a composition change (no key would appear or vanish), which is the difference between the two
   baselines, and the reason the two questions are recorded separately.
 
+- **N34. The same pair formed a second time: a translated block inside an accepted clone pair becomes a *new*
+  clone (`test/cli-paths.test.js` ↔ `test/doctor.test.js`).** Measured 2026-09-17 while translating for `doctor`
+  (C2's step 6): the sensor answered `✗ dup: new clones 2` over one pair — `cli-paths.test.js:28` ↔
+  `doctor.test.js:176`, **6 lines, 52 tokens**, reported both against the baseline file and against `origin/main`.
+  With the three files of that portion put back to their `HEAD` version the same run was green
+  (`✓ dup: no new clones (clones 5, lines 29, the baseline holds 15 fingerprints)`, measured), so the pair is not
+  new in substance: it is the shallow-clone setup both checks had written out with the **same two messages**
+  (`the truncated working tree was not assembled: …`, `the working tree came out complete: there is nothing to
+  check`), whose fingerprint was taken while their words were Russian — the class **N33** describes. `dup` names
+  the honest reading itself: the duplicated thing is real duplication of setup, not a coincidence of wording.
+
+  **Answered by the rule N33 was decided with** (taking the shared part out; not varying a word, not editing the
+  baseline): `tools/harness.js` gained `shallowClone(source, into)` — the `git clone --depth 1` of a source plus
+  the two assertions both checks made, returning the working tree — and both checks' five hand-rolled lines became
+  one call. Measured after it: `clones 5, lines 29` (the numbers the tree had before the port), `dup` green, the
+  baseline untouched, the file green at 11 checks and the neighbour at 3. The extraction touches a file of another
+  owner (`test/cli-paths.test.js`, step 3's) and a tools file, which is why the commit is named in `tests-cli.md`
+  rather than hidden inside the translation.
+

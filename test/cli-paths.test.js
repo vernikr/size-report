@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  CONFIG, cloneFixture, firstLine, gitIn, gitTry, hasStack, initRepo, refusal, runFixture, runSize,
+  CONFIG, cloneFixture, firstLine, gitIn, hasStack, initRepo, refusal, runFixture, runSize, shallowClone,
   tempDir
 } from '../tools/harness.js';
 
@@ -24,11 +24,7 @@ after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 test('a truncated history: code 3 and the command that fills it in', () => {
   const base = cloneFixture(path.join(tmp, 'shallow-source'));
-  const dir = path.join(tmp, 'shallow');
-  const clone = gitTry(null, ['clone', '-q', '--depth', '1', 'file://' + base, dir]);
-  assert.equal(clone.status, 0, 'the truncated working tree was not assembled: ' + firstLine(clone.stderr));
-  assert.equal(gitIn(dir, ['rev-parse', '--is-shallow-repository']).trim(), 'true',
-    'the working tree came out complete: there is nothing to check');
+  const dir = shallowClone(base, path.join(tmp, 'shallow'));
 
   const res = runFixture(dir, ['--data']);
   refusal(res, 3, 'a run on a truncated history');

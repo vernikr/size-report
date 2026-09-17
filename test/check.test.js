@@ -43,89 +43,89 @@ function firstLine(text) {
   return text.trim().split('\n')[0];
 }
 
-test('полнота: непокрытый путь назван вместе с коммитом и починкой', () => {
+test('completeness: an uncovered path is named together with the commit and a repair', () => {
   const res = runFixture(dir, ['check']);
-  assert.equal(res.code, 1, 'путь мимо колонок не стал нарушением:\n' + res.stdout + res.stderr);
-  assert.equal(hasStack(res.stdout + res.stderr), false, 'ответ пришёл стеком вместо объяснения');
-  assert.ok(res.stdout.indexOf(LOOSE) >= 0, 'непокрытый путь не назван:\n' + res.stdout);
-  assert.ok(res.stdout.indexOf(LOOSE_SINCE) >= 0, 'не назван коммит, заведший путь:\n' + res.stdout);
-  assert.match(res.stdout, /fix: .*--init/, 'нет готовой команды починки:\n' + res.stdout);
+  assert.equal(res.code, 1, 'a path outside the columns did not become a violation:\n' + res.stdout + res.stderr);
+  assert.equal(hasStack(res.stdout + res.stderr), false, 'the answer came with a stack instead of an explanation');
+  assert.ok(res.stdout.indexOf(LOOSE) >= 0, 'the uncovered path is not named:\n' + res.stdout);
+  assert.ok(res.stdout.indexOf(LOOSE_SINCE) >= 0, 'the commit that brought the path in is not named:\n' + res.stdout);
+  assert.match(res.stdout, /fix: .*--init/, 'there is no ready repair command:\n' + res.stdout);
 });
 
-test('полнота: сказано, какая часть истории покрыта и кто выпал', () => {
+test('completeness: it says which part of the history is covered and who dropped out', () => {
   const res = runFixture(dir, ['check', '--json']);
   assert.equal(res.code, 1);
   const rep = JSON.parse(res.stdout);
-  assert.equal(rep.schema, 1, 'у ответа нет схемы — агенту не на что ветвиться');
+  assert.equal(rep.schema, 1, 'the answer has no schema — an agent has nothing to branch on');
   assert.equal(rep.ok, false);
-  assert.deepEqual(rep.paths.unknown.map((u) => u.path), [LOOSE], 'названы не те пути');
-  assert.equal(rep.paths.unknown[0].since.slice(0, 7), LOOSE_SINCE, 'улика указывает не на тот коммит');
-  assert.equal(rep.history.commits, 16, 'история посчитана не та');
-  assert.equal(rep.history.rows, 14, 'строк в отчёте не 14');
+  assert.deepEqual(rep.paths.unknown.map((u) => u.path), [LOOSE], 'the wrong paths are named');
+  assert.equal(rep.paths.unknown[0].since.slice(0, 7), LOOSE_SINCE, 'the evidence points at the wrong commit');
+  assert.equal(rep.history.commits, 16, 'the wrong history is counted');
+  assert.equal(rep.history.rows, 14, 'the report does not hold 14 rows');
   assert.deepEqual(rep.history.byReason, { merge: 0, report: 1, flat: 1 },
-    'выпавшие коммиты разложены не по тем причинам');
+    'the commits that dropped out are sorted by the wrong causes');
   assert.deepEqual(rep.history.dropped.map((d) => d.reason).sort(), ['flat', 'report']);
 
   const text = runFixture(dir, ['check']).stdout;
   assert.ok(text.indexOf(ONLY_REPORT) >= 0 && text.indexOf(NO_VOLUME) >= 0,
-    'в тексте не названы коммиты, выпавшие без строки:\n' + text);
-  assert.match(text, /report only 1/, 'в тексте нет сводки по причинам:\n' + text);
+    'the text does not name the commits that dropped out without a row:\n' + text);
+  assert.match(text, /report only 1/, 'the text carries no summary by causes:\n' + text);
 });
 
-test('полнота: путь, ставший колонкой или исключением, закрывает нарушение', () => {
+test('completeness: a path that became a column or an exclusion closes the violation', () => {
   const asSkip = configWith('skip.json', (cfg) => { cfg.skip = [LOOSE]; return cfg; });
   const asColumn = configWith('column.json', (cfg) => {
     cfg.columns.push({ label: LOOSE, paths: [LOOSE] });
     return cfg;
   });
-  [[asSkip, 'исключением'], [asColumn, 'колонкой']].forEach(([file, how]) => {
+  [[asSkip, 'as a skip'], [asColumn, 'as a column']].forEach(([file, how]) => {
     const res = runSize(dir, ['--config', file, 'check', '--json']);
-    assert.equal(res.code, 0, 'путь, объявленный ' + how + ', не закрыл полноту:\n'
+    assert.equal(res.code, 0, 'the path declared ' + how + ' did not close completeness:\n'
       + res.stdout + res.stderr);
     const rep = JSON.parse(res.stdout);
-    assert.equal(rep.ok, true, 'полнота объявлена неполной, хотя пути разобраны');
+    assert.equal(rep.ok, true, 'completeness is declared incomplete, though the paths are dealt with');
     assert.deepEqual(rep.paths.unknown, [],
-      'ложные непокрытые пути: ' + JSON.stringify(rep.paths.unknown));
-    assert.equal(rep.history.rows, 14, 'починка настроек сдвинула числа отчёта: строк стало '
+      'false uncovered paths: ' + JSON.stringify(rep.paths.unknown));
+    assert.equal(rep.history.rows, 14, 'the settings repair moved the numbers of the report: there are now '
       + rep.history.rows);
   });
 
   const text = runSize(dir, ['--config', asSkip, 'check']);
   assert.match(firstLine(text.stdout), /every touched path is tracked or excluded/,
-    'на полном покрытии инструмент не сказал этого прямо:\n' + text.stdout);
+    'with full coverage the tool did not say so outright:\n' + text.stdout);
 });
 
-test('объяснение: числа не сдвинулись — назван файл колонки и сказано, что делать нечего', () => {
+test('explanation: the numbers did not move — the file of the column is named and there is nothing to do', () => {
   const res = runFixture(dir, ['explain', NO_VOLUME]);
-  assert.equal(res.code, 0, 'объяснение вернуло код отказа:\n' + res.stdout + res.stderr);
-  assert.match(res.stdout, /the numbers did not move/, 'причина названа не та:\n' + res.stdout);
-  assert.ok(res.stdout.indexOf('src/code.js') >= 0, 'не назван файл колонки, который тронул коммит');
-  assert.match(res.stdout, /fix: not needed/, 'предложена починка там, где починять нечего');
+  assert.equal(res.code, 0, 'the explanation returned a refusal code:\n' + res.stdout + res.stderr);
+  assert.match(res.stdout, /the numbers did not move/, 'the cause named is the wrong one:\n' + res.stdout);
+  assert.ok(res.stdout.indexOf('src/code.js') >= 0, 'the file of the column the commit touched is not named');
+  assert.match(res.stdout, /fix: not needed/, 'a repair is offered where there is nothing to repair');
 });
 
-test('объяснение: коммит только отчёта — причина и что это не дефект', () => {
+test('explanation: a commit of the report alone — the cause, and that it is not a defect', () => {
   const res = runFixture(dir, ['explain', ONLY_REPORT]);
   assert.equal(res.code, 0);
-  assert.match(res.stdout, /only the report itself was touched/, 'причина названа не та:\n' + res.stdout);
-  assert.ok(res.stdout.indexOf('docs/size-table.html') >= 0, 'не назван файл отчёта');
+  assert.match(res.stdout, /only the report itself was touched/, 'the cause named is the wrong one:\n' + res.stdout);
+  assert.ok(res.stdout.indexOf('docs/size-table.html') >= 0, 'the report file is not named');
 });
 
-test('объяснение: строка есть — сказано, которая', () => {
+test('explanation: there is a row — and which one is said', () => {
   const res = runFixture(dir, ['explain', '25e3f39', '--json']);
   assert.equal(res.code, 0);
   const rep = JSON.parse(res.stdout);
-  assert.equal(rep.reason, null, 'у коммита со строкой названа причина пропуска');
-  assert.equal(rep.row, 2, 'строка коммита названа не та: ' + rep.row);
+  assert.equal(rep.reason, null, 'a commit with a row is given a reason for being skipped');
+  assert.equal(rep.row, 2, 'the row of the commit is the wrong one: ' + rep.row);
   assert.equal(rep.rows, 14);
   assert.deepEqual(rep.touched.columns.sort(), ['WORKLOG.md', 'src/code.js'],
-    'не названы файлы колонок, которые тронул коммит');
-  assert.deepEqual(rep.touched.untracked, [], 'выдуман непокрытый путь: ' + JSON.stringify(rep.touched));
+    'the files of the columns the commit touched are not named');
+  assert.deepEqual(rep.touched.untracked, [], 'an uncovered path is invented: ' + JSON.stringify(rep.touched));
 });
 
 /* A difference that is not in the report's row: "outside the columns" is not the same thing as "the
  * numbers did not move". A commit touching the journal alone shows it: the journal is not tracked as a
  * column, its volume does not shift, and a person needs to know why exactly there is no row. */
-test('объяснение: коммит мимо колонок отличается от «числа не сдвинулись»', () => {
+test('explanation: a commit outside the columns differs from "the numbers did not move"', () => {
   const file = configWith('few.json', (cfg) => {
     cfg.columns = [{ label: 'code.js', paths: ['src/code.js'] }];
     return cfg;
@@ -133,17 +133,17 @@ test('объяснение: коммит мимо колонок отличае�
   const res = runSize(dir, ['--config', file, 'explain', '9dfe679', '--json']);
   assert.equal(res.code, 0);
   const rep = JSON.parse(res.stdout);
-  assert.equal(rep.reason, 'outside', 'коммит мимо колонок назван причиной не того вида: ' + rep.reason);
-  assert.deepEqual(rep.touched.untracked, ['WORKLOG.md'], 'не назван путь, оставшийся мимо колонок');
-  assert.deepEqual(rep.touched.columns, [], 'названы колонки, которых коммит не касался');
-  assert.match(rep.fix, /as a column or to "skip"/, 'починка не говорит, что делать с таким путём');
+  assert.equal(rep.reason, 'outside', 'a commit outside the columns is given a cause of the wrong kind: ' + rep.reason);
+  assert.deepEqual(rep.touched.untracked, ['WORKLOG.md'], 'the path left outside the columns is not named');
+  assert.deepEqual(rep.touched.columns, [], 'columns the commit did not touch are named');
+  assert.match(rep.fix, /as a column or to "skip"/, 'the repair does not say what to do with such a path');
 });
 
 /* One judgement about "outside the columns" and one phrase for it in two answers: `check` asks about the
  * whole history, `explain` about one commit, while the fix text is shared (`src/config.js`) and names the
  * paths. Two phrases for one situation would be a defect: the viewer gets two different commands, and one
  * of them may go out without the names. */
-test('мимо колонок: полнота и объяснение говорят одну фразу с именами путей', () => {
+test('outside the columns: completeness and the explanation say one phrase with the names of the paths', () => {
   const file = configWith('outside.json', (cfg) => {
     cfg.columns = [{ label: 'code.js', paths: ['src/code.js'] }];
     return cfg;
@@ -151,73 +151,73 @@ test('мимо колонок: полнота и объяснение говор
   const STEM = 'add these paths as a column or to "skip" of size-table.config.json: ';
   const rep = JSON.parse(runSize(dir, ['--config', file, 'explain', '9dfe679', '--json']).stdout);
   assert.equal(rep.fix.slice(0, STEM.length), STEM,
-    'объяснение говорит о таком пути своими словами:\n' + rep.fix);
+    'the explanation speaks about such a path in its own words:\n' + rep.fix);
   assert.ok(rep.fix.indexOf(rep.touched.untracked[0]) > 0,
-    'починка объяснения не назвала путь:\n' + rep.fix);
+    'the repair of the explanation did not name the path:\n' + rep.fix);
 
   const text = runSize(dir, ['--config', file, 'check']).stdout;
   const head = '  fix: ';
   const line = text.split('\n').filter((l) => l.indexOf(head) === 0).pop();
-  assert.notEqual(line, undefined, 'полнота не сказала, что делать:\n' + text);
+  assert.notEqual(line, undefined, 'completeness did not say what to do:\n' + text);
   assert.equal(line.slice(head.length, head.length + STEM.length), STEM,
-    'полнота говорит о таком пути своими словами:\n' + line);
+    'completeness speaks about such a path in its own words:\n' + line);
   assert.ok(line.indexOf(rep.touched.untracked[0]) > head.length,
-    'починка полноты не назвала путь:\n' + line);
+    'the repair of completeness did not name the path:\n' + line);
 });
 
 /* A commit with no files (`git commit --allow-empty`) is the same case from the other end: nothing was left
  * outside the columns, and a repair command without names would be a lie about what to fix. So there is no
  * fix at all here rather than a text with an empty list. */
-test('объяснение: коммит без файлов — починки нет, а не команда без имён', () => {
+test('explanation: a commit with no files — no repair rather than a command without names', () => {
   const side = cloneFixture(path.join(tmp, 'empty'));
   gitIn(side, ['-c', 'user.name=fixture', '-c', 'user.email=fixture@local',
     'commit', '-q', '--allow-empty', '-m', 'пустой коммит']);
   const sha = gitIn(side, ['rev-parse', 'HEAD']).trim();
   const res = runFixture(side, ['explain', sha, '--json']);
-  assert.equal(res.code, 0, 'объяснение пустого коммита — не ответ:\n' + res.stdout + res.stderr);
+  assert.equal(res.code, 0, 'the explanation of an empty commit is not an answer:\n' + res.stdout + res.stderr);
   const rep = JSON.parse(res.stdout);
-  assert.equal(rep.reason, 'outside', 'причина пропуска названа не та: ' + rep.reason);
-  assert.deepEqual(rep.touched.untracked, [], 'у пустого коммита названы тронутые пути');
-  assert.equal(rep.fix, null, 'предложена починка без имён: ' + JSON.stringify(rep.fix));
+  assert.equal(rep.reason, 'outside', 'the reason for the skip is the wrong one: ' + rep.reason);
+  assert.deepEqual(rep.touched.untracked, [], 'an empty commit is given touched paths');
+  assert.equal(rep.fix, null, 'a repair without names is offered: ' + JSON.stringify(rep.fix));
 
   const text = runFixture(side, ['explain', sha]).stdout;
-  assert.equal(/fix:/.test(text), false, 'в тексте команда починки без имён:\n' + text);
+  assert.equal(/fix:/.test(text), false, 'the text carries a repair command without names:\n' + text);
 });
 
-test('объяснение: слияние объясняется настройкой, которая его скрыла', () => {
+test('explanation: a merge is explained by the setting that hid it', () => {
   const file = configWith('nomerge.json', (cfg) => { cfg.rows.merges = false; return cfg; });
   const res = runSize(dir, ['--config', file, 'explain', '9326134']);
   assert.equal(res.code, 0);
-  assert.match(res.stdout, /the commit is a merge/, 'причина названа не та:\n' + res.stdout);
-  assert.match(res.stdout, /rows\.merges/, 'не сказано, какой настройкой строка скрыта');
-  assert.match(res.stdout, /"merges": true/, 'нет готового значения для починки');
+  assert.match(res.stdout, /the commit is a merge/, 'the cause named is the wrong one:\n' + res.stdout);
+  assert.match(res.stdout, /rows\.merges/, 'it is not said which setting hides the row');
+  assert.match(res.stdout, /"merges": true/, 'there is no ready value for the repair');
 });
 
 /* A commit is called the way git calls it: `HEAD`, a branch, `HEAD~1`. The defect class: a name the tool
  * does not understand must not be answered as "no such commit" — that would be a lie about what the person
  * was looking for. */
-test('объяснение: коммит называется именем ревизии, и ответ тот же, что по sha', () => {
+test('explanation: a commit is named by a revision name, and the answer is the same as by sha', () => {
   [['HEAD', 'HEAD'], ['HEAD~1', 'HEAD~1'], ['main', 'HEAD']].forEach(([name, rev]) => {
     const sha = gitIn(dir, ['rev-parse', rev]).trim();
     const byName = runFixture(dir, ['explain', name, '--json']);
     const bySha = runFixture(dir, ['explain', sha, '--json']);
-    assert.equal(byName.code, 0, 'имя ревизии «' + name + '» не объяснилось (код '
+    assert.equal(byName.code, 0, 'the revision name «' + name + '» was not explained (code '
       + byName.code + '):\n' + byName.stdout + byName.stderr);
     assert.deepEqual(JSON.parse(byName.stdout), JSON.parse(bySha.stdout),
-      'ответ по имени «' + name + '» разошёлся с ответом по sha ' + sha.slice(0, 7));
+      'the answer by the name «' + name + '» diverged from the answer by the sha ' + sha.slice(0, 7));
   });
 });
 
 /* Two different causes that are easy to merge into one: there is no such name at all, and the name exists
  * while the commit is not in the report's history (another branch). The second is not "no such commit":
  * the commit exists, and that is exactly what a person needs to hear, together with its sha. */
-test('объяснение: несуществующее имя и коммит вне истории отчёта — разные причины', () => {
+test('explanation: a name that does not exist and a commit outside the history are different causes', () => {
   const typo = runFixture(dir, ['explain', 'maser']);
-  assert.equal(typo.code, 2, 'выдуманное имя не отказ:\n' + typo.stdout + typo.stderr);
-  assert.equal(hasStack(typo.stderr), false, 'отказ напечатал стек');
+  assert.equal(typo.code, 2, 'an invented name is not a refusal:\n' + typo.stdout + typo.stderr);
+  assert.equal(hasStack(typo.stderr), false, 'the refusal printed a stack');
   assert.match(typo.stderr, /is not a revision name and not the start of a sha/,
-    'отказ не назвал настоящую причину:\n' + typo.stderr);
-  assert.match(typo.stderr, /git log/, 'отказ не даёт готовой команды');
+    'the refusal did not name the real cause:\n' + typo.stderr);
+  assert.match(typo.stderr, /git log/, 'the refusal gives no ready command');
 
   // A branch aside from the current history: the commit exists, but the report builds no row for it.
   const side = cloneFixture(path.join(tmp, 'side'));
@@ -228,29 +228,29 @@ test('объяснение: несуществующее имя и коммит 
   gitIn(side, ['checkout', '-q', 'main']);
 
   const away = runFixture(side, ['explain', 'side']);
-  assert.equal(away.code, 2, 'коммит вне истории отчёта не отказ:\n' + away.stdout + away.stderr);
-  assert.match(away.stderr, /not in the history of the report/, 'причина названа не та:\n' + away.stderr);
+  assert.equal(away.code, 2, 'a commit outside the history of the report is not a refusal:\n' + away.stdout + away.stderr);
+  assert.match(away.stderr, /not in the history of the report/, 'the cause named is the wrong one:\n' + away.stderr);
   assert.ok(away.stderr.indexOf(sha.slice(0, 7)) >= 0,
-    'отказ не назвал sha коммита, о котором спросили:\n' + away.stderr);
+    'the refusal did not name the sha of the commit asked about:\n' + away.stderr);
   assert.ok(!/is not a revision name and not the start of a sha/.test(away.stderr),
-    'коммит, который есть, назван несуществующим:\n' + away.stderr);
+    'a commit that exists is called non-existent:\n' + away.stderr);
 });
 
-test('отказы команд: неизвестное слово, неизвестный коммит, неоднозначный префикс', () => {
+test('command refusals: an unknown word, an unknown commit, an ambiguous prefix', () => {
   const unknown = runFixture(dir, ['sizes']);
-  assert.equal(unknown.code, 2, 'неизвестная команда не отказ:\n' + unknown.stdout + unknown.stderr);
-  assert.match(unknown.stderr, /--help/, 'отказ не ведёт к справке');
+  assert.equal(unknown.code, 2, 'an unknown command is not a refusal:\n' + unknown.stdout + unknown.stderr);
+  assert.match(unknown.stderr, /--help/, 'the refusal does not lead to the help');
 
   const absent = runFixture(dir, ['explain', 'zzzzzzz']);
   assert.equal(absent.code, 2);
-  assert.equal(hasStack(absent.stderr), false, 'отказ напечатал стек');
+  assert.equal(hasStack(absent.stderr), false, 'the refusal printed a stack');
   assert.match(absent.stderr, /is not a revision name and not the start of a sha/,
-    'отказ не назвал настоящую причину:\n' + absent.stderr);
-  assert.match(absent.stderr, /git log/, 'отказ не даёт готовой команды');
+    'the refusal did not name the real cause:\n' + absent.stderr);
+  assert.match(absent.stderr, /git log/, 'the refusal gives no ready command');
 
   // A short prefix matches several commits of the fixture — here the choice is a person's.
   const many = runFixture(dir, ['explain', '9']);
   assert.equal(many.code, 2);
-  assert.match(many.stderr, /is ambiguous/, 'неоднозначный префикс разрешён молча:\n' + many.stderr);
-  assert.match(many.stderr, /9dfe679/, 'в отказе нет подходящих коммитов');
+  assert.match(many.stderr, /is ambiguous/, 'an ambiguous prefix is resolved in silence:\n' + many.stderr);
+  assert.match(many.stderr, /9dfe679/, 'the refusal carries no matching commits');
 });

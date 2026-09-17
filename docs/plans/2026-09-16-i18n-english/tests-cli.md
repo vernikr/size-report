@@ -7,6 +7,10 @@ confirmed file by file (113+84+83+79+75+68+54+41+33+31+26+25+18+9 = 739). Writte
 **Step 0 re-measured it on 2026-09-16: the fourteen files answer 708, not 739** — the drop is the
 joint lines the owners' steps already moved (`hook` 113 → 109, `check` 84 → 78, `doctor` 83 → 82,
 `cli` 79 → 74, `minify` 75 → 72, `disk` 68 → 58, `cli-paths` 31 → 30, `refusals-catalog` 26 → 25).
+**After steps 1–7 the fourteen files answer 169** (2026-09-17) — `hook` 109, `disk` 16, `doctor` 10,
+`minify` 10, `release` 7, `tokens` 5, `refusals` 4, `cli-paths` 3, `check` 2, `cli` 2, `environment` 1,
+`crlf`/`refusals-catalog`/`templates` 0 — and every one of them is allow-listed data or D1's contract:
+step 8 (`hook`) is what is left of this owner.
 
 By the map's order S1–S5, W1 and W2, C1 have landed before this one, so these files are where the
 promises of the printed runtime are **read back**: every subplan above named the lines of this owner
@@ -201,12 +205,46 @@ literal** are not.
    `initRepo` does, became one helper (`draftedRepo`, `tools/harness.js`) — so the twin left by removing the
    duplication (commit `897a780`: `clones 7, lines 42` → `clones 5, lines 29`, both files green). The same
    commit moved the one literal that belonged to both — the scenario's commit subject — into the helper.
-6. **`test/doctor.test.js` (83).** Red first: the long list of S4's reads — pick `/не спрашивается/`
-   (a dependency note) and translate it alone in `src/doctor.js` → reddens.
-7. **`test/check.test.js` (84) + `test/disk.test.js` (68).** Red first: the three negatives of section
-   (2) are the experiment — with the text already English, each has to redden when the sentence it
-   names comes back, which is what makes them guards rather than tautologies; the step records how the
-   red was produced (a temporary re-inserted word in a scratch copy, never in the tree).
+6. **`test/doctor.test.js` (82 → **10**) — done 2026-09-17.** Seventy-two names and messages. The ten
+   that stay are the scenarios' own fixture content alone: the code comments and commit subjects the
+   checks write (`'// начало\n'`, `'начало'`, `'правка'`, `'# проект\n'`, `'// один\nvar a = 1;\n'`,
+   `'// два\nvar b = 2;\n'`, `'// не в git\n'`, `'@@@ это не JavaScript\n'`, `'не JavaScript'`) —
+   written by the check and only tripped over by the tool. **Red first by the whole file** (the method
+   steps 2–5 used for a large file): it put back to its `HEAD` version left its own probe green, and the
+   experiment was re-run **after** this step's extraction (N34) so the evidence covers the file as it
+   stands. **S4's reads are English and stay so:** every expectation in the file is ASCII — measured by
+   extracting the file's regex literals (zero carry Cyrillic) — because the owner moved the texts and
+   step 0 verified its named lines by number. **A finding beyond the step's own words (N34):**
+   translating for `doctor` re-formed the clone pair step 3 had dissolved — `cli-paths.test.js:28` ↔
+   `doctor.test.js:176`, the same six lines of shallow-clone setup with the same two messages — and the
+   answer taken was the one **N33** took: the shared part was **taken out** (`shallowClone`,
+   `tools/harness.js`) rather than the wording varied or the baseline edited. Measured: `clones 5,
+   lines 29` with the shared code and again with the helper (the numbers the tree had before the port),
+   both files green.
+7. **`test/check.test.js` (78 → **2**) + `test/disk.test.js` (58 → **16**) — done 2026-09-17.**
+   Seventy-six names and messages in the first, forty-two in the second. The leftovers are the
+   scenarios' own content: in `check`, the two empty commits' subjects (`'пустой коммит'`,
+   `'ветка мимо отчёта'`); in `disk`, the code comment the check edits and the commit subjects it makes
+   (`'// правка, которой нет в git\n'`, `'начало'`, `'файл в ветке'`, …). No regex literal with
+   Cyrillic is left in either file (measured), which is what the acceptance asks. **Red first by the
+   whole file** (both back to `HEAD` wholesale → both probes green). **The negatives of section (2)
+   were re-measured as guards rather than tautologies, each by mutation, sources restored
+   byte-identical:**
+   - `disk.test.js:219` (`/carrying the state/` false) — on the clean tree the scenario answers code 0,
+     a two-line stderr and the phrase **absent**; with the comparison made to treat an empty state as
+     lost (`src/history.js`: `const lost = s === null ? true : …`) the same scenario answers code 1 and
+     the phrase **is** in stderr. Plainly: the regression reddens the check at `:218` first — the
+     refusal precedes the negative — and the negative is what names the difference between a file
+     deleted before HEAD and a lost state.
+   - `check.test.js:235` (no `is not a revision name and not the start of a sha`) — with that sentence
+     merged into the sibling refusal (`src/explain.js`, the outside-history cause) the check reddens at
+     `:235` with its own message, `a commit that exists is called non-existent`.
+   - `check.test.js:184` (`/fix:/` false) — with the renderer made to print a repair command that names
+     nothing (`src/explain.js`, the line rendering `rep.fix`), the check reddens at `:184` with its own
+     message, `the text carries a repair command without names`.
+   Both `check` negatives also have a positive twin in the same file on a green run (`fix: ` at
+   `:52,103,159`; the revision-name sentence at `:218,247`), so their patterns answer against text the
+   tool really prints.
 8. **`test/hook.test.js` (113)** — the largest file, and the one S5's plan named most precisely; the
    step verifies the six reads and then translates the file's own names and messages.
 
