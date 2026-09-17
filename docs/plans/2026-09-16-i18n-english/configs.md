@@ -152,9 +152,23 @@ Two things that rule does not cover, named rather than left to luck:
    (below). No trailer needed, and the hook confirmed it (`gate files 0`).
 2. **`.gitignore`** (4) — red first: fold the `reports/` line into another comment and watch
    `test/gates-verify.test.js` redden with its own message; translating the comment above it does
-   not. No trailer.
+   not. No trailer. **Done 2026-09-17: 4 → 0**, the four comments. Red first, both halves of the
+   experiment measured with the file restored byte for byte: folding `reports/` away reddens
+   `test/gates-verify.test.js` (4 of 5) with its own message — `the directory `reports/` is not in
+   .gitignore: the reports would go into the history` — while the same four comments translated
+   leave it green (5 of 5). The line itself is the only thing read (`/^reports\/$/m`, beside
+   `tools/gates/common.js`'s `'reports'`) and it did not move.
 3. **`package.json`** (1) — red first: the counter, and `pnpm run pack:check` green (it reads
-   `files`, not the description). **Trailer**; these bytes are what the registry shows.
+   `files`, not the description). **Trailer**; these bytes are what the registry shows. **Done
+   2026-09-17: 1 → 0**, the `description`. Red first: the translated description leaves
+   `test/templates.test.js` green (3 of 3) — no reader anywhere, measured (`rg` for its words over
+   `test/`, `tools/`, `src/`, `bin/` answers nothing; the registry is the only place it shows).
+   `pnpm run pack:check` green.
+
+**Both steps landed in one commit that carries the trailer** — the portion's rule is one commit,
+and `package.json` is a gate file, so the hook demanded the `Gate-Change:` line and accepted it
+(`gate files 1`). The counter over the ten files now reads **93**: 89 of this owner's own, 3
+allow-listed, 1 English comment. The owner reads **89 own**.
 4. **`.dependency-cruiser.cjs`** (7) — red first: the counter, and `pnpm run deps` green with the
    same numbers (a rule's `comment` is not a rule's name). **Trailer.**
 5. **`eslint.metrics.config.js`** (4 messages) — red first: the counter, and `pnpm run metrics`
