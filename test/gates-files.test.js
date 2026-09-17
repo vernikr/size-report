@@ -26,7 +26,7 @@ const GATE = path.join(repo, 'tools/gates');
 
 function gitIn(argv) {
   const res = git(argv, { cwd: repo });
-  assert.equal(res.code, 0, 'git ' + argv.join(' ') + ' не отработал:\n' + res.out);
+  assert.equal(res.code, 0, 'git ' + argv.join(' ') + ' did not work:\n' + res.out);
   return res.out;
 }
 
@@ -59,11 +59,11 @@ function prepare() {
   gitIn(['config', 'user.email', 'probe@example.invalid']);
   gitIn(['add', 'src/ok.js']);
   const first = commit('feat: обычный файл без трейлера');
-  assert.equal(first.code, 0, 'обычный коммит не прошёл:\n' + first.out);
+  assert.equal(first.code, 0, 'an ordinary commit did not go through:\n' + first.out);
   return gitIn(['rev-parse', 'HEAD']).trim();
 }
 
-test('гейт-файл без трейлера красный, с трейлером — зелёный', () => {
+test('a gate file without the trailer is red, with the trailer green', () => {
   const base = prepare();
 
   // A gate-file edit in the index — the hook's verdict.
@@ -71,46 +71,46 @@ test('гейт-файл без трейлера красный, с трейле�
   const staged = path.join(tmp, 'staged-msg.txt');
   write(staged, 'chore: правка порога\n');
   const hook = gate(['--commit-msg', staged]);
-  assert.equal(hook.code, 1, 'правка гейт-файла прошла хук без трейлера:\n' + hook.out);
+  assert.equal(hook.code, 1, 'an edit of a gate file passed the hook without the trailer:\n' + hook.out);
   // The red has to be a verdict rather than a failure of the script itself (a broken import is a
   // non-zero code too, and without this comparison the probe would "pass" on it).
-  assert.match(hook.out, /a gate edit with no Gate-Change: trailer/, 'красный не назвал причину:\n' + hook.out);
-  assert.match(hook.out, /package\.json/, 'хук не назвал гейт-файл:\n' + hook.out);
+  assert.match(hook.out, /a gate edit with no Gate-Change: trailer/, 'the red one did not name the cause:\n' + hook.out);
+  assert.match(hook.out, /package\.json/, 'the hook did not name the gate file:\n' + hook.out);
 
   write(staged, 'chore: правка порога\n\nGate-Change: порог поднят по замеру, причина такая\n');
   const hookOk = gate(['--commit-msg', staged]);
-  assert.equal(hookOk.code, 0, 'трейлер не был принят:\n' + hookOk.out);
+  assert.equal(hookOk.code, 0, 'the trailer was not accepted:\n' + hookOk.out);
 
   // A commit without the trailer in the range — the CI verdict.
   const bad = commit('chore: правка порога без трейлера');
-  assert.equal(bad.code, 0, 'git не смог закоммитить:\n' + bad.out);
+  assert.equal(bad.code, 0, 'git could not commit:\n' + bad.out);
   const range = gate(['--range', base]);
-  assert.equal(range.code, 1, 'коммит с правкой гейт-файла прошёл диапазон без трейлера:\n' + range.out);
+  assert.equal(range.code, 1, 'a commit editing a gate file passed the range without the trailer:\n' + range.out);
 
   // The same commit with the trailer is green: amend, and the range is clean again.
   const amend = git(['commit', '--amend', '-m',
     'chore: правка порога\n\nGate-Change: порог поднят по замеру, причина такая'], { cwd: repo });
-  assert.equal(amend.code, 0, 'аменд не прошёл:\n' + amend.out);
+  assert.equal(amend.code, 0, 'the amend did not go through:\n' + amend.out);
   const rangeOk = gate(['--range', base]);
-  assert.equal(rangeOk.code, 0, 'трейлер в коммите не принят диапазоном:\n' + rangeOk.out);
-  assert.match(rangeOk.out, /Gate-Change/, 'вердикт не назвал трейлер:\n' + rangeOk.out);
+  assert.equal(rangeOk.code, 0, 'the trailer in the commit was not accepted over the range:\n' + rangeOk.out);
+  assert.match(rangeOk.out, /Gate-Change/, 'the verdict did not name the trailer:\n' + rangeOk.out);
 });
 
-test('обычная правка трейлера не требует', () => {
+test('an ordinary edit requires no trailer', () => {
   write(path.join(repo, 'src/ok.js'), 'export const ok = 2;\n');
   gitIn(['add', 'src/ok.js']);
   const staged = path.join(tmp, 'plain-msg.txt');
   write(staged, 'feat: правка обычного файла\n');
   const res = gate(['--commit-msg', staged]);
-  assert.equal(res.code, 0, 'правка обычного файла потребовала трейлер:\n' + res.out);
-  assert.match(res.out, /the commit can be made/, 'вердикт не сказал, что коммит ставится:\n' + res.out);
+  assert.equal(res.code, 0, 'an edit of an ordinary file demanded the trailer:\n' + res.out);
+  assert.match(res.out, /the commit can be made/, 'the verdict did not say the commit can be made:\n' + res.out);
 });
 
-test('короткая пометка вместо причины не принимается', () => {
+test('a short note instead of a reason is not accepted', () => {
   gitIn(['add', 'pnpm-lock.yaml']);
   const staged = path.join(tmp, 'short-msg.txt');
   write(staged, 'chore: правка базы\n\nGate-Change: ok\n');
   const res = gate(['--commit-msg', staged]);
-  assert.equal(res.code, 1, 'пометка без причины принята за обоснование:\n' + res.out);
-  assert.match(res.out, /a gate edit with no Gate-Change: trailer/, 'красный не назвал причину:\n' + res.out);
+  assert.equal(res.code, 1, 'a note without a reason was taken for a justification:\n' + res.out);
+  assert.match(res.out, /a gate edit with no Gate-Change: trailer/, 'the red one did not name the cause:\n' + res.out);
 });

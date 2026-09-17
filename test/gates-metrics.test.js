@@ -58,11 +58,11 @@ function lint(text, stdinFilename, expected) {
   try {
     JSON.parse(res.out).forEach((file) => file.messages.forEach((m) => found.push(m.ruleId)));
   } catch (_e) {
-    assert.fail('линтер не отдал отчёт по ' + stdinFilename + ':\n' + res.out.slice(0, 600));
+    assert.fail('the linter gave no report for ' + stdinFilename + ':\n' + res.out.slice(0, 600));
   }
   expected.forEach((rule) => {
-    assert.ok(found.includes(rule), 'правило ' + rule + ' не покрасило ' + stdinFilename
-      + ' (найдено: ' + (found.join(', ') || 'ничего') + ')');
+    assert.ok(found.includes(rule), 'the rule ' + rule + ' did not paint ' + stdinFilename
+      + ' (found: ' + (found.join(', ') || 'nothing') + ')');
   });
 }
 
@@ -73,7 +73,7 @@ const DEBT = 'TO' + 'DO' + ': починить';
 /* All the violations sit in one probe per file rather than one probe per rule: a linter run costs
  * seconds, and six probes would cost six runs where two suffice (otherwise the sensor would become the
  * bloat it catches). Every rule is still checked by name. */
-test('размер, сложность и долг в исходнике красят датчик', () => {
+test('size, complexity and debt in the source paint the sensor', () => {
   const source = '// ' + DEBT + '\n'
     + 'export function big(x) {\n'
     + Array.from({ length: 70 }, (_v, i) => '  x = x + ' + i + ';\n').join('')
@@ -85,7 +85,7 @@ test('размер, сложность и долг в исходнике кра�
     ['max-lines-per-function', 'complexity', 'local/no-debt-marker']);
 });
 
-test('вес проверок красят датчик поимённо', () => {
+test('the weight of the checks paints the sensor by name', () => {
   const tests = "import { test } from 'node:test';\n"
     + "import assert from 'node:assert/strict';\n"
     + "test('ничего не проверяет', () => {\n  const ready = true;\n  ready.toString();\n});\n"
@@ -96,13 +96,13 @@ test('вес проверок красят датчик поимённо', () =>
     ['local/assert-in-test', 'local/weak-assert', 'local/no-skipped-test']);
 });
 
-test('храповик держит обе половины: база проходит молча, чистка базы работает', () => {
+test('the ratchet holds both halves: the baseline passes in silence and pruning the baseline works', () => {
   const suppressions = path.join(ROOT, '.eslint-suppressions.json');
-  assert.ok(fs.existsSync(suppressions), 'нет файла подавлений: датчик завален первым же прогоном');
+  assert.ok(fs.existsSync(suppressions), 'there is no suppressions file: the sensor would be brought down by its first run');
   const files = Object.keys(readJson(suppressions));
   assert.deepEqual(files.filter((f) => !fs.existsSync(path.join(ROOT, f))), [],
-    'в базе назван файл, которого в дереве нет: переименование или удаление делают'
-      + ' запись мёртвой, а храповик — тихо слабее');
+    'the baseline names a file the tree does not hold: a rename or a deletion makes'
+      + ' the entry dead and the ratchet quietly weaker');
 
   /* The silent pass and the pruning are checked on a baseline of **its own** rather than on the
    * repository's: the whole debt may be sorted out — that is the sensor's goal, and a ban on emptiness
@@ -113,35 +113,35 @@ test('храповик держит обе половины: база прохо
     const own = path.join(tmp, 'ratchet-suppressions.json');
     exec('pnpm', ['exec', 'eslint', '--config', 'eslint.metrics.config.js',
       '--suppressions-location', own, '--suppress-all', file]);
-    assert.ok(fs.existsSync(own), 'база не записалась — храповик нечем проверить');
+    assert.ok(fs.existsSync(own), 'the baseline was not written — there is nothing to check the ratchet with');
     const kept = probe('metrics', ['--paths', file, '--baseline', own]);
-    assert.equal(kept.code, 0, 'нарушение из базы повалило гейт (храповик не работает):\n' + kept.out);
+    assert.equal(kept.code, 0, 'a violation from the baseline brought the gate down (the ratchet does not work):\n' + kept.out);
 
     /* A stale record (the violation is fixed, the line stays in the baseline) does not fail the gate,
      * while pruning takes it away: otherwise fixing code would require editing a gate file, which that
      * same gate forbids without the trailer. */
     write(path.join(ROOT, file), 'export const one = 1;\n');
     const stale = probe('metrics', ['--paths', file, '--baseline', own]);
-    assert.equal(stale.code, 0, 'устаревшая запись базы повалила гейт:\n' + stale.out);
+    assert.equal(stale.code, 0, 'a stale entry of the baseline brought the gate down:\n' + stale.out);
     const copy = path.join(tmp, 'ratchet-pruned.json');
     fs.copyFileSync(own, copy);
     const pruned = exec('pnpm', ['exec', 'eslint', '--config', 'eslint.metrics.config.js',
       '--suppressions-location', copy, '--prune-suppressions', file]);
-    assert.equal(pruned.code, 0, 'обрезка базы не прошла:\n' + pruned.out.slice(0, 600));
-    assert.deepEqual(readJson(copy), {}, 'обрезка не сняла устаревшую запись');
+    assert.equal(pruned.code, 0, 'pruning the baseline did not go through:\n' + pruned.out.slice(0, 600));
+    assert.deepEqual(readJson(copy), {}, 'pruning did not take the stale entry away');
   } finally {
     fs.rmSync(SCRATCH, { recursive: true, force: true });
   }
 });
 
-test('нарушение, которого в дереве нет, датчик всё равно называет', () => {
+test('a violation the tree does not hold is named by the sensor all the same', () => {
   // The gate's baseline comes from the repository, so "the sensor is live" is checked on a file it
   // cannot hold: a file absent from the baseline, carrying a violation, has to go red.
   const file = scratch('src/plain.js', LONG);
   try {
     const res = probe('metrics', ['--paths', file]);
-    assert.equal(res.code, 1, 'новое нарушение не покрасило датчик:\n' + res.out);
-    assert.match(res.out, /new violations 1/, 'датчик не назвал число новых нарушений:\n' + res.out);
+    assert.equal(res.code, 1, 'a new violation did not paint the sensor:\n' + res.out);
+    assert.match(res.out, /new violations 1/, 'the sensor did not name the number of new violations:\n' + res.out);
   } finally {
     fs.rmSync(SCRATCH, { recursive: true, force: true });
   }

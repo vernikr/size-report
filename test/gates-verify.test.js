@@ -45,7 +45,7 @@ function read(file) {
 
 function stepsOf(profile) {
   const res = exec(process.execPath, ['tools/gates/run.js', '--list', profile]);
-  assert.equal(res.code, 0, 'профиль «' + profile + '» не печатает список шагов:\n' + res.out);
+  assert.equal(res.code, 0, 'the profile «' + profile + '» does not print the list of steps:\n' + res.out);
   return res.out.split('\n').map((l) => l.trim()).filter((l) => l !== '');
 }
 
@@ -59,24 +59,24 @@ const scripts = pkg().scripts;
 const profiles = {};
 PROFILES.forEach((p) => { profiles[p] = stepsOf(p); });
 
-test('каждый шаг профиля — существующий скрипт, а профили вложены', () => {
+test('every step of a profile is an existing script, and the profiles are nested', () => {
   PROFILES.forEach((p) => {
-    assert.ok(profiles[p].length > 0, 'профиль «' + p + '» пуст');
+    assert.ok(profiles[p].length > 0, 'the profile «' + p + '» is empty');
     profiles[p].forEach((command) => {
       const script = scriptOf(command);
-      assert.ok(script !== null, 'шаг «' + command + '» в профиле «' + p + '» — не `pnpm run`');
+      assert.ok(script !== null, 'the step «' + command + '» in the profile «' + p + '» is not `pnpm run`');
       assert.ok(scripts[script] !== undefined,
-        'профиль «' + p + '» зовёт скрипт «' + script + '», которого нет в package.json');
+        'the profile «' + p + '» calls the script «' + script + '», which is not in package.json');
     });
   });
 
   const names = (p) => profiles[p].map(scriptOf);
   names('fast').forEach((s) => assert.ok(names('full').indexOf(s) >= 0 || names('full').indexOf(SUBSUMED[s]) >= 0,
-    'быстрый шаг «' + s + '» не входит в полный профиль: локально и в CI разойдётся'));
+    'the fast step «' + s + '» is not part of the full profile: locally and in CI they would diverge'));
   names('full').forEach((s) => assert.ok(names('slow').indexOf(s) >= 0,
-    'полный шаг «' + s + '» не входит в slow-профиль'));
+    'the full step «' + s + '» is not part of the slow profile'));
   assert.ok(names('slow').length > names('full').length,
-    'slow-профиль не отличается от полного: тогда он не нужен');
+    'the slow profile does not differ from the full one: then it is not needed');
 });
 
 function runsOf(file) {
@@ -92,10 +92,10 @@ function isSetup(command) {
   return SETUP.some((p) => p.test(command));
 }
 
-test('в CI нет проверки, которой нет в профиле', () => {
+test('CI holds no check that is not in a profile', () => {
   const runs = [];
   CHECKS.forEach((file) => runsOf(file).forEach((command) => runs.push({ file: file, command: command })));
-  assert.ok(runs.length > 0, 'в рабочих процессах не нашлось ни одной команды — разбор сломался');
+  assert.ok(runs.length > 0, 'not a single command was found in the workflows — the parsing broke');
 
   const known = [];
   PROFILES.forEach((p) => profiles[p].forEach((c) => known.push(c)));
@@ -105,22 +105,22 @@ test('в CI нет проверки, которой нет в профиле', (
     const script = scriptOf(entry.command);
     const callsProfile = script !== null && PROFILE_SCRIPTS.indexOf(script) >= 0;
     assert.ok(callsProfile || known.indexOf(entry.command) >= 0,
-      'в ' + entry.file + ' шаг «' + entry.command + '» не входит ни в один профиль:'
-        + ' проверка в CI, которой нет локально');
+      'in ' + entry.file + ' the step «' + entry.command + '» is in no profile:'
+        + ' a check in CI that is not there locally');
   });
 
   // The profiles CI calls are named: each has a job name of its own.
   assert.ok(runs.some((r) => r.command === 'pnpm run verify'),
-    'в CI нет ни одного зова `pnpm run verify`: обязательный чек не назван');
+    'CI holds no call of `pnpm run verify`: the required check is not named');
   assert.ok(runs.some((r) => r.command === 'pnpm run verify:slow'),
-    'slow-профиль в CI не зовётся: покрытие не стережёт никто');
+    'the slow profile is not called in CI: nobody guards the coverage');
 
   // The required check is named by name: the job `verify` is the one CI requires.
   const ci = parseWorkflow(read('.github/workflows/ci.yml'));
-  assert.ok(ci.jobs.verify !== undefined, 'в описании CI нет работы «verify»');
+  assert.ok(ci.jobs.verify !== undefined, 'the CI description holds no job «verify»');
 });
 
-test('выпуск зовёт проверки теми же скриптами, что профиль', () => {
+test('the release calls the checks with the same scripts as the profile', () => {
   const scriptsOfProfile = [];
   PROFILES.forEach((p) => profiles[p].forEach((c) => scriptsOfProfile.push(scriptOf(c))));
   runsOf('.github/workflows/release.yml').forEach((command) => {
@@ -130,32 +130,32 @@ test('выпуск зовёт проверки теми же скриптами,
       // commands are no checks.
       if (NOT_SCRIPT.indexOf(script) >= 0) return;
       assert.ok(scriptsOfProfile.indexOf(script) >= 0 || PROFILE_SCRIPTS.indexOf(script) >= 0,
-        'выпуск зовёт «' + script + '» — скрипта нет ни в одном профиле: проверка мимо профиля');
+        'the release calls «' + script + '» — the script is in no profile: a check beside the profile');
     });
   });
 });
 
-test('хуки зовут профиль, а не свои команды', () => {
+test('the hooks call the profile rather than commands of their own', () => {
   const preCommit = read('.githooks/pre-commit');
   const prePush = read('.githooks/pre-push');
   const commitMsg = read('.githooks/commit-msg');
-  assert.match(preCommit, /pnpm run verify:fast/, 'pre-commit не зовёт быстрый профиль');
-  assert.match(prePush, /pnpm run verify:fast/, 'pre-push не зовёт быстрый профиль');
-  assert.match(commitMsg, /tools\/gates\/gatefiles\.js/, 'commit-msg не защищает гейт-файлы');
+  assert.match(preCommit, /pnpm run verify:fast/, 'pre-commit does not call the fast profile');
+  assert.match(prePush, /pnpm run verify:fast/, 'pre-push does not call the fast profile');
+  assert.match(commitMsg, /tools\/gates\/gatefiles\.js/, 'commit-msg does not guard the gate files');
   // The hook calls the profile — so it holds no check that `verify` does not.
   [preCommit, prePush].forEach((text) => {
     [...text.matchAll(/pnpm run ([a-z:.-]+)/g)].forEach((m) => {
-      assert.ok(scriptOf('pnpm run ' + m[1]) !== null, 'хук зовёт «' + m[1] + '», которого нет');
+      assert.ok(scriptOf('pnpm run ' + m[1]) !== null, 'the hook calls «' + m[1] + '», which does not exist');
     });
   });
 });
 
-test('машинные отчёты датчиков не попадают в историю', () => {
+test('the machine reports of the sensors stay out of the history', () => {
   const ignore = read('.gitignore');
-  assert.match(ignore, /^reports\/$/m, 'каталог `reports/` не в .gitignore: отчёты уедут в историю');
-  assert.match(ignore, /^node_modules\/$/m, 'каталог зависимостей не в .gitignore');
+  assert.match(ignore, /^reports\/$/m, 'the directory `reports/` is not in .gitignore: the reports would go into the history');
+  assert.match(ignore, /^node_modules\/$/m, 'the directory of dependencies is not in .gitignore');
   // Reports are written to one root (`tools/gates/common.js`, `REPORTS`) — the directory named here has
   // to match that name.
   assert.match(read('tools/gates/common.js'), /'reports'/,
-    'каталог отчётов называется иначе, чем в .gitignore');
+    'the directory of reports is named differently from the one in .gitignore');
 });

@@ -39,47 +39,47 @@ function verdict(name, current, base) {
   return probe('coverage', ['--summary', file, '--baseline', baseline]);
 }
 
-test('храповик: своё покрытие зелено, просадка красна', () => {
+test('the ratchet: its own coverage is green, a fall is red', () => {
   const base = { 'src/x.js': { lines: 80, branches: 70, functions: 60 } };
   const same = verdict('same', summary({ 'src/x.js': point(80, 70, 60) }), base);
-  assert.equal(same.code, 0, 'своё же покрытие объявлено просадкой:\n' + same.out);
+  assert.equal(same.code, 0, 'its own coverage was declared a fall:\n' + same.out);
 
   const down = verdict('down', summary({ 'src/x.js': point(50, 70, 60) }), base);
-  assert.equal(down.code, 1, 'падение строк ниже базы прошло молча:\n' + down.out);
+  assert.equal(down.code, 1, 'a fall of lines below the baseline passed in silence:\n' + down.out);
   assert.match(down.out, /src\/x\.js — lines: was 80, now 50/,
-    'просадка названа не по файлу и метрике:\n' + down.out);
+    'the fall is not named by file and metric:\n' + down.out);
 
   const branch = verdict('branch', summary({ 'src/x.js': point(80, 40, 60) }), base);
-  assert.equal(branch.code, 1, 'падение ветвей ниже базы прошло молча (а ветви важнее строк):\n'
+  assert.equal(branch.code, 1, 'a fall of branches below the baseline passed in silence (and branches matter more than lines):\n'
     + branch.out);
 });
 
-test('новый непокрытый исходник красный, новый покрытый — зелёный', () => {
+test('a new uncovered source is red, a new covered one green', () => {
   const base = { 'src/x.js': { lines: 80, branches: 70, functions: 60 } };
   const blind = verdict('blind', summary({
     'src/x.js': point(80, 70, 60), 'src/new.js': point(0, 0, 0)
   }), base);
-  assert.equal(blind.code, 1, 'новый исходник без единого выполнения прошёл молча:\n' + blind.out);
+  assert.equal(blind.code, 1, 'a new source without a single execution passed in silence:\n' + blind.out);
   assert.match(blind.out, /src\/new\.js — lines: was not in the baseline, now 0/,
-    'новый непокрытый файл назван не по файлу:\n' + blind.out);
+    'a new uncovered file is not named by file:\n' + blind.out);
 
   const covered = verdict('covered', summary({
     'src/x.js': point(80, 70, 60), 'src/new.js': point(90, 80, 70)
   }), base);
-  assert.equal(covered.code, 0, 'новый покрытый файл объявлен просадкой:\n' + covered.out);
+  assert.equal(covered.code, 0, 'a new covered file was declared a fall:\n' + covered.out);
 });
 
-test('база покрытия сходится с деревом', () => {
+test('the coverage baseline agrees with the tree', () => {
   const baseline = readJson(path.join(ROOT, 'coverage-baseline.json'));
   const named = Object.keys(baseline.files);
-  assert.ok(named.length > 0, 'база покрытия пуста — тогда она ничего не стережёт');
+  assert.ok(named.length > 0, 'the coverage baseline is empty — then it guards nothing');
 
   const tracked = git(['ls-files', 'src', 'bin']).out
     .split('\n').filter((f) => f.endsWith('.js'));
   assert.deepEqual(named.filter((f) => tracked.indexOf(f) < 0), [],
-    'в базе покрытия есть файлы, которых в дереве нет: почините базу человеком'
+    'the coverage baseline holds files the tree does not: repair the baseline by hand'
       + ' (`pnpm run baseline:coverage`)');
   assert.deepEqual(tracked.filter((f) => named.indexOf(f) < 0), [],
-    'в дереве есть исходники, которых нет в базе покрытия: снятие покрытия их не видит'
-      + ' (проверьте `include` в `.c8rc.json` и обновите базу)');
+    'the tree holds sources the coverage baseline does not: taking coverage does not see them'
+      + ' (check `include` in `.c8rc.json` and update the baseline)');
 });

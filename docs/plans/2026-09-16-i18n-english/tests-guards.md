@@ -8,7 +8,9 @@ Subplan of `plan.md` (T0). Owns fourteen checks, **226 lines measured** — `gat
 sensor is configured by. **Step 0 re-measured it on 2026-09-17: the fourteen files answer 222**, not
 226 — `docs-commands` 22, `parity` 15, `gates-coverage` 14 — **after step 1 the owner read 209**
 (`docs-paths` 0, `git-pins` 5), and **after the portion of steps 7–8 named below it reads 177**
-(`docs-commands` 5, `parity` 0). **The order of the portion of 2026-09-17 was set by the mission and
+(`docs-commands` 5, `parity` 0), and **after the four gate-file steps it reads 82** (`gates-verify` 0,
+`gates-coverage` 0, `gates-deps` 0, `gates-dup` 1, `gates-metrics` 5, `gates-files` 8). **The order of
+the portion of 2026-09-17 was set by the mission and
 differs from the numbering here**: the two files the mission named, `docs-commands` and `parity`, are
 steps 7 and 8 of this list, so those two steps were taken first and their siblings (`docs-pin`,
 `frozen`) and steps 2–6 (the six gate files) follow.
@@ -134,16 +136,41 @@ a message is free.
    (`clones 5, lines 29` both times — no new clone); checks unchanged (2 each; 70 fast, 175 full); the
    artifact's content digest `1bdb27e1…` and the reference file's own sha256 `cdda8d01…` unmoved;
    neither file is a gate file, so the commit carries no trailer (checked by the hook).
-2. **`test/gates-deps.test.js` (8) + `test/gates-dup.test.js` (13) — trailer.** Red first: translate
-   `'dup: новых клонов N'` alone in the sensor → `:72` reddens; and `'deps: находок нет'` alone →
-   `:48`. W2's steps do both; here they are re-measured against the now English verdicts.
-3. **`test/gates-coverage.test.js` (16) + `test/gates-metrics.test.js` (22) — trailer.** Red first:
-   the same shape, with the coverage line `'было … стало …'` and `'новых нарушений 1'`.
-4. **`test/gates-files.test.js` (26) — trailer.** Red first: the guard's own experiment, which this
-   file runs in a temporary repository — a gate change without a trailer.
-5. **`test/gates-verify.test.js` (26) — trailer.** Red first: rewrite the hooks' call line
-   (`pnpm run verify:fast` → anything else) → `:142` reddens; the words around the call are free, and
-   the check reads D1's workflows and W2's hooks as **identifiers**.
+2. **`test/gates-deps.test.js` (8 → **0**) + `test/gates-dup.test.js` (13 → **1**) — done 2026-09-17,
+   with the trailer.** Dependencies: eight names and messages. Duplicates: twelve, and the one line that
+   stays is the scenario's own path of a baseline that is not there (`:85`, an input the check hands to
+   the sensor; nothing asserts on the name). **The verdict reads were re-measured as the plan asked,
+   by mutation of the sensor, sources restored byte-identical:** `'deps: no findings ('` made Russian
+   reddens `gates-deps` at check 1; `'dup: new clones '` made Russian reddens `gates-dup` at check 2,
+   and `'dup: there is no baseline ('` reddens it at check 4. **A finding worth naming:** making the
+   **ok** verdict (`'dup: no new clones ('`) Russian leaves the file green — the ok line is printed on a
+   green run and no check of this file reads its words, while the two `bad` lines are read. So the
+   guards are green-path-blind by construction, and that is measured rather than assumed.
+3. **`test/gates-coverage.test.js` (14 → **0**) + `test/gates-metrics.test.js` (22 → **5**) — done
+   2026-09-17, with the trailer.** Coverage: fourteen names and messages. Metrics: seventeen, and the
+   five that stay are the probe's own source snippets (`:71` the debt comment, `:91`–`:94` the four
+   injected `test(` bodies the sensor measures — the payload, not a message). **Reads re-measured by
+   mutation:** `': was '` made `': было '` in the sensor reddens `gates-coverage` at checks 1 and 2
+   (the fall of lines and the uncovered new file); `'metrics: new violations '` made Russian reddens
+   `gates-metrics` at check 4.
+4. **`test/gates-files.test.js` (26 → **8**) — done 2026-09-17, with the trailer.** Eighteen names and
+   messages; the eight that stay are the scenario's own repository: the identity (`:58`), the commit
+   subjects (`:61`, `:72`, `:80`, `:85`, `:92`, `:103`, `:112`) and the `Gate-Change:` bodies the check
+   writes to test the trailer rule — data of the experiment, not prose (the guard's own reading of the
+   trailer is a **shape**, measured in W2's step 5, so the reason's wording is free). **Reads
+   re-measured by mutation:** the guard's own sentence `': a gate edit with no Gate-Change: trailer'`
+   made Russian reddens **all three** checks of the file — the trailer-less commit, the ordinary edit
+   and the short note.
+5. **`test/gates-verify.test.js` (26 → **0**) — done 2026-09-17, with the trailer.** Twenty-six names
+   and messages; the protocol stays where it is: `/pnpm run verify:fast/` (`:142-143`),
+   `/tools\/gates\/gatefiles\.js/` (`:144`) and `/^reports\/$/m` (`:155`) are untouched — all ASCII,
+   measured. **Both reads re-measured by mutation:** the hooks' call line changed
+   (`pnpm run verify:fast` → `verify:slow` in `.githooks/pre-commit`) reddens check 4, and `reports/`
+   renamed in `.gitignore` reddens check 5; both files restored byte-identical.
+
+**The portion of 2026-09-17 took these four steps in one commit of its own, with the trailer on it
+(the six files are gate files, so the hook demands it — and the hook said so).** That commit also
+carries the re-ordering note from the header.
 6. **`test/suites.test.js` (16) + `test/docs-numbers.test.js` (12)** — the counters. Red first: drop a
    `why` from an entry of `tools/suites.js` → `suites.test.js` reddens; add a check to a file without
    updating the table of `README.md` → `docs-numbers` reddens. Both prove that what is read is a
