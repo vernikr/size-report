@@ -10,7 +10,7 @@ shows.
 
 ## Status
 
-**Release 2.5.0 (2026-09-17).** The tool lives as a package of its own: the registry name is
+**Release 2.6.0 (2026-09-17).** The tool lives as a package of its own: the registry name is
 `@vernikr/size-report` (published by tag from CI, with no secret). A project may keep no settings at
 all: without a config file the tool derives them from the project itself and says so in one line,
 and `--init` pins what was derived into a file. The report is **one file**, the self-contained page
@@ -19,13 +19,19 @@ is installed and on the first run. The version is in the manifest, and every rel
 the journal — `worklog/` for today's entries, `worklog/archive/WORKLOG.md` for the earlier ones:
 what changes in the numbers is measured rather than retold.
 
-2.5.0 changes nothing in the numbers; what it changes is **the language the tool speaks**: the help,
-the refusals, the diagnostics and the page are English, and a project with no config file now gets
-`locale: en` rather than `ru`. Nothing is thrown away for it — the Russian dictionaries stay in the
-package and are chosen by `locale` in the settings, and the frozen layer keeps its Russian values,
-as `schema: 1` stays what it was. The note of 2.4.0 — what that release made visible and in which
-order — stands in the journal, `worklog/02*`: what changes in the numbers is measured rather than
-retold.
+2.6.0 changes the numbers themselves, and they are measured rather than retold: on this repository's own
+history the page this engine writes is **85 955 B against 1 899 370 B** written by 2.5.0 — 22.1 times
+smaller, −95.5 % — because the data travels as one packed block (49 392 B, `base64+gzip`) instead of a list
+of rows, the program is pasted without comments and indentation (28 007 B) and the styling is 6 172 B. The
+page also stops rebuilding itself: a click on a filter rewrites the nodes in place and recomputes the
+totals, the columns carry computed widths under a fixed layout, and two candidates (`content-visibility`,
+`border-collapse: separate`) were measured dead here and left out, with the records in
+`plans/2026-09-17-page-perf/`. **The contract loses fields:** `metrics[].accuracy` and the `approx` bit map
+are gone and the split into exact and approximate numbers with them, so a reader of `--data` that still
+asks for them gets nothing — while the two schema numbers (`1` for the contract, `2` for the packed block)
+stay where they were. The checks grow with the work: 70 → **81** in the fast profile and 175 → **186** in
+the full one. The note of 2.5.0 — the language the tool speaks — stands in the journal,
+`worklog/0203-release-2.5.0.md`.
 
 **Parity with the implementation the move started from is proven, not asserted.** The command is
 `bin/size.js` and the package's entry point is `src/size-table.js` (a re-export only), with the
@@ -645,7 +651,7 @@ The same release can be taken by a reference to the repository — installation 
 registry, but stays tied to a revision:
 
 ```bash
-pnpm add -D github:vernikr/size-report#v2.5.0
+pnpm add -D github:vernikr/size-report#v2.6.0
 ```
 
 With no network (or nothing to fetch from codeload) — the tarball: `pnpm pack` in the package clone, then
@@ -657,7 +663,7 @@ the branch moves on the installation fails with `Could not resolve <sha> to a co
 observation rather than reasoning: the short pin `6530237` installed while `main` stood on it and stopped
 working at the very next commit, while the same sha in full installed. A branch name (`#main`) and a tag
 are both accepted, but a branch is a moving target and a tag is constant: this release stands on the tag
-`v2.5.0`, which is also the one in the example (forty characters work as well, but they have to be copied
+`v2.6.0`, which is also the one in the example (forty characters work as well, but they have to be copied
 out of the history by eye).
 
 The revision in the example is a part of the claim rather than decoration: what is described below is
