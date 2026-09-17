@@ -64,13 +64,53 @@ instruction below. The step with a key left it later, along with private access.
 **The data contract and the page.** The engine hands over absolute values and the shape of the table
 (`--data`), while deltas, totals, "now" and the filters are computed by the page — which is the
 report itself (`size-report.html`): without that split the filters and "the total over the
-selection" are impossible in principle. The contract carries the accuracy of a number as well, a
-row of `approx` marks per cell, because that is a fact of the measurement rather than a conclusion:
-the page shows what the engine said and keeps no rule of accuracy of its own. The page's panel is a
+selection" are impossible in principle. The contract tells how each number was obtained (the metric's
+`method`) and nothing else about it: the page shows what the engine said and judges no number — it keeps
+no rule of counting of its own, and the split of numbers into exact and approximate was taken out of the
+package. The page's panel is a
 tree of files by folder, with a switch per folder for the whole subtree; a reader's choice survives
 a revisit and travels in a link — the page's address is the link. The contract carries the **project
 catalogue** too: every path git sees, so the page's tree is the project's tree, while numbers exist
 only for the files that became columns (release 2.2.0).
+
+**The page's block is the contract in sparse form.** The file carries the history as changes rather than
+as a snapshot per commit — for every file the rows it appeared in (absolute numbers), moved in (deltas
+against its own previous record) and disappeared in — with the texts in a dictionary and the rows' links
+cut by the part they share. The page's own chapter unrolls it back into exactly the contract
+(`src/page/payload.js`), so the calculation and the table know nothing of the sparse form and there is no
+second way to count a row; `--data` still answers with the dense contract, and the block's `schema: 2` is
+what refuses a record written for the previous form. On this repository the data block is
+1 370 724 → 88 712 B, and its parse is 11.6 → 0.6 ms plus 3.3 ms of unrolling (`contract-data` holds the
+round trip).
+
+**The block travels packed, and that is the page's one asynchronous step.** It lies in the file gzipped and
+base64 encoded — the tag says so (`data-pack="base64+gzip"`) — and the page unpacks it with the platform's own
+`DecompressionStream`: no library travels in the page, nothing is fetched, and the whole artifact of this
+repository goes 122 668 → 78 319 B (the block 88 786 → 42 856 B — 74 B more than step 05 measured, because the
+report is itself a column of the report and its own size moved in between). The price is deliberate and twofold: the
+block can no longer be read by eye or by `diff`, and the first drawing waits for a promise where it used to
+happen during the parse. Everything after the first drawing is as synchronous as it was; a host that cannot
+unpack is told in words rather than left with an empty table. The checks read the page in jsdom, which has no
+such API, so the harness puts the platform's own implementations of it into the window — and that seam is
+tested from both sides: the ordinary path with them put in, and the message in words without them.
+
+**What the page carries is squeezed, and only what the page carries.** The program and the styling are pasted
+with their comments and indentation out — the same stripping the `min` metric counts — so the artifact holds
+code without ballast while `src/derived.js`, `src/page/*.js`, `src/table.css` and `src/page/app.css` stay the
+ordinary files a person reads: the squeeze lives in the paste and nowhere else. It is 58 922 → 24 885 B of
+program and 15 505 → 5 905 B of styling (the artifact 166 305 → 122 668 B), and the assembled program is
+guarded at build time by the stripper's own `assertCompilable` — a squeeze that ate code stops the build
+rather than the browser.
+
+**Minification of what the page carries is decided, not defaulted: not taken — and measured.** esbuild would
+take the pasted program 24 885 → 18 128 B and the styling 5 906 → 5 102 B, the artifact 122 668 → 115 107 B
+(7 561 B), for 91 ms of every build. The price is not those bytes but the contract: esbuild is an **optional**
+dependency and its absence is a different count rather than a refusal, while the artifact is rebuilt by the
+post-commit hook on whatever machine made the commit — a builder that minifies when it can would build **a
+different file** there, and the report would stop being a fixed point. Buying determinism instead would mean
+a pinned version and a page that cannot be assembled at all without esbuild (`src/optional.js`), for 6 % of
+the file. What the decision rests on — the bytes it would save, the fixed point it would cost, and what
+reopens it — is written down beside the plan the step belongs to.
 
 The tool grew out of one script in the consumer project [`safe-resets`](../figma/safe-resets) — the
 metrics `raw` and "a simplification instead of minification", a static report in git; that path
@@ -110,8 +150,7 @@ refusal site — the maps `SITES` and `PRINTED` hold the counts — and a case i
 entry, so a new refusal cannot appear without a check. Refusals a run cannot reach are named
 explicitly: four are guarded by a check of their own (the catalogue names the file and the phrases),
 and one cannot be caught at all — "internal error" — which is said where it stands. What the
-catalogue does not take on is said in words: wording beyond the listed phrases, and meaning, and the
-"!" sign, which is a note (an approximation, a mixed commit, the automation switched off) rather
+catalogue does not take on is said in words: wording beyond the listed phrases, and meaning, andthe "!" sign, which is a note (another count, a mixed commit, the automation switched off) rather
 than a refusal, with exit code zero.
 
 **And the advice in a refusal is executable — that is checked as well.** The truth about the cause is
@@ -148,10 +187,10 @@ commits and installs hooks; the reason for each expensive file is named line by 
 
 | Run | Command | Checks |
 |---|---|---|
-| Fast — every edit | `pnpm test` | **70 of 175** |
-| Full — release and CI | `pnpm test:all` | **175** |
+| Fast — every edit | `pnpm test` | **81 of 186** |
+| Full — release and CI | `pnpm test:all` | **186** |
 
-No check is lost or weakened: the full run starts all 177 with the same files, the fast one takes part
+No check is lost or weakened: the full run starts all 186 with the same files, the fast one takes part
 of them. The default is the full run — a file becomes fast only explicitly and with a reason — so new
 expensive work cannot quietly move into the fast one. Two declarations guard that:
 `test/suites.test.js` (every file classified, and a reason for each) and the documentation guard
@@ -260,9 +299,22 @@ its middle is out of reach.
 
 **Folding is pure view, and it counts no numbers.** The subtree lies in the markup and a class on the
 row hides it, so a click on the sign changes exactly the three things the reader sees — the class, the
-sign and the note in the memory. A rebuild here would be honest work for nothing: it counts the whole
-table, every row by every column, and so pays for numbers folding does not change. What guards this is
-that after folding the table is the same markup rather than a rebuilt one (`test/page-tree.test.js`).
+sign and the note in the memory. What guards this is that after folding the table is the same markup
+rather than a rebuilt one (`test/page-tree.test.js`).
+
+**A click shows and hides rather than builds.** The table is assembled once, with every column of every
+file, and a switch afterwards changes only what is visible: a metric is one class on the table plus the
+`colSpan` of the group headings, a file's column is a class per node of it, and a folder or a category is
+the same for each file of its subtree. The table's own nodes stay the objects the first drawing made:
+`test/page-view.test.js` counts what a click appends (a metric: nothing at all; a file, a folder or a
+category: at most the cells of the totals, rows × metrics) and checks that the rows and the cells are
+still the very same objects. What makes this possible is that the order of the columns depends on the
+files rather than on the choice — the last commit's first, then the settings' order — so a hidden column
+keeps its place and the visible ones do not move. The totals are the only numbers a choice changes, and
+they are carried rather than recounted: a sum is linear, so a file switched off subtracts exactly its own
+values, which costs its own rows instead of rows × files. That arithmetic is the step's one new piece,
+and it is held against the engine's own `rowModel` cell by cell for a mixed choice, so that counting a
+row stays in one place (`test/page-view.test.js`).
 
 **The columns the last commit touched come first.** The report is rebuilt after every commit, and a
 reader's first question is what that edit brought. The mark comes from the history rather than from the
@@ -289,17 +341,17 @@ numbers behind the layout is the contract rather than the markup: switching a fo
 its columns and exactly its volume from the total (`test/contract.test.js`).
 
 **A checkbox takes away neither the numbers' room nor the reader's place in the list.** The panel is
-drawn anew after every switch, so its scroll and the list's are part of the view like the checkboxes:
-both are saved before the rebuild and set back after, and the field under the keyboard comes back with
-its focus (without scrolling — `preventScroll`), or switching with `Tab` and `Space` would mean walking
-the panel from the start again. The file list has no ceiling of its own in a wide window: the panel
+built once and a switch writes only the fields it reached, so the reader's place is his still: there is
+no rebuild that could lose the scroll of the panel or of the list, and the field under the keyboard keeps
+its focus without being found again by hand (`test/page-tree.test.js`) — with a rebuild every switch with
+`Tab` and `Space` would mean walking the panel from the start. The file list has no ceiling of its own in a wide window: the panel
 scrolls, and the list does not push the table. The row of categories sticks to the top of the panel,
 with the panel's own background (or passing rows of the list would read through it), and the panel's own
 top padding lives on its first field, which travels away with it. File captions use the table's font size
 (12.5px), and the legend under the tree is gone on purpose: below the list it pushed the numbers away,
 while what it explained already stands next to the thing it explains — the sign of a number names the
-colour of a delta, accuracy stands under the metric switches, and the mark of a gap lives in the cell's
-tooltip.
+colour of a delta, the way each number was counted stands under the metric switches, and the mark of a gap
+lives in the cell's own text.
 
 **The panel remembers the reader's choice.** The record lives in the browser's memory, tied to the
 report's passport — the tool's name, the data schema, the artifact's path, the title and the column
@@ -330,15 +382,14 @@ check rather than a promise (`test/page-view.test.js`, `test/parity.test.js`).
 `"engine": "strip"` is the earlier removal of comments and indentation. The default did not change,
 because both frozen references were taken under it. Measured on the fixture: real minification is
 smaller than stripping in **44 cells and never larger**; `src/code.js` **276 → 185 B**, `src/style.css`
-**55 → 43 B**, and over the fixture's history **−1 372 B**. JSON is minified by parsing and so stays
-exact, while the formats the minifier does not take are named in the metric's caption together with the
-ones it does take. Accuracy is declared twice, and that is not two answers to one question: the caption
-speaks of **the worst in the column** — one format without minification makes the metric approximate as
-a whole rather than hiding behind an exact neighbour — while each cell speaks of its own number, and an
-approximate one is marked with a dashed line and the method in its tooltip. The worst is taken from the
-cells rather than from the engine's name: a report of one JSON is exact even under stripping — parsing
-loses only insignificant whitespace, and nobody would make it shorter — and the caption says so. Both
-answers come from one rule (`pointExact` in `src/metrics.js`), so they cannot diverge. With no minifier
+**55 → 43 B**, and over the fixture's history **−1 372 B**. JSON is minified by parsing (parsing loses
+only insignificant whitespace, and nobody would make it shorter), while the formats the minifier does not
+take are named in the metric's caption **by extension**: `esbuild … (minify, rename); other formats
+(.md .toml) lose comments and indentation`. The split of numbers into exact and approximate is gone from
+the package: how a column was counted is told once, in the metric's method, and no cell carries a mark of
+it any more. The list comes from the columns rather than from the name of the method (`otherCountFormats`
+in `src/metrics.js`), so a report made only of formats the minifier takes says nothing about other
+formats. With no minifier
 (an installation without optional dependencies, a platform without it) the metric falls back to
 stripping, the method says so in words and the run answers **code 4** rather than staying silent, while
 the numbers are the same as the earlier way of counting — byte for byte with the reference. The derived
@@ -364,9 +415,7 @@ and it has nothing to count tokens with. Counting every family on every run woul
 the reader may never ask about, so the choice of family and encoding lives where it costs time — in the
 run's settings — while the page **names** it: the method of each metric stands under the switches as
 text rather than only in a tooltip. Formats without text (a picture, a font, an archive) are named in
-the metric's caption together with the reason: their number goes by bytes, the cell of such a file is
-marked by the same rule, and the caption takes the worst in the column — two answers have nothing to
-diverge with. With no dictionary (an installation without optional dependencies, a platform without it)
+the metric's caption by extension: their number goes by bytes rather than text. With no dictionary (an installation without optional dependencies, a platform without it)
 the count is an estimate by length with the coefficient named in the method, and the run answers **code
 4**; the other metrics stay what they were in a report without tokens, and that seam is checked in an
 environment with no optional dependencies at all (`SIZE_REPORT_NO_OPTIONAL`). Counting tokens costs a
@@ -414,6 +463,7 @@ acceptance for each.
 
 | File | Role |
 |---|---|
+| `plans/` | The plans of work on this repository: `plans/archive/` holds the earlier ones, `plans/2026-09-17-page-perf/` the plan of the page work — an index and one file per step of the report, each with why, what changes, acceptance and the risks (`plans/2026-09-17-page-perf/README.md`) |
 | `plans/archive/PLAN.md` | **The main document of the move:** inventory, boundaries, invariants, architecture, the seven steps, acceptance, risks, open questions |
 | `docs/requirements.md` | The customer's requirements: what and why |
 | `docs/module-design.md` | The design of the extraction: how the module is put together |
@@ -426,6 +476,7 @@ acceptance for each.
 | `tools/parity-freeze.js` | Takes the parity reference (`pnpm run parity`): with the frozen copy, at the project revision from the manifest — `--json`, the config, the artifact's hash, the tool's hash |
 | `tools/make-fixture.js` | Assembles the synthetic fixture (`pnpm run fixture`): a deterministic history with traps plus the reference numbers |
 | `tools/synthetic/` | The subjects of that assembly, one per matter: `repo.js` — how git is spoken to (pinned time, author, settings), `content.js` — what the files hold, `history.js` — which commits come of it, `note.js` — the fixture's note with the list of traps |
+| `probes/` | The scripted measurements behind `plans/2026-09-17-page-perf/`: one file per step, run by hand against live Chrome at the debug port — the fixed layout, where `content-visibility` acts at all, and the two border models with their pixels (`probes/README.md`). Outside the sensors' paths on purpose: they measure the product rather than being part of it, and a suite cannot see layout, paint or a browser's own skipping |
 | `tools/parity-live.js` | Compares the engine with the live project on a clone: the numbers and the self-contained report at the path the consumer's settings give (`pnpm run parity:live`) |
 | `tools/pack-check.js` | Assembles the tarball and checks that everything works from it: all sources arrived, the numbers and the report as from the repository (`pnpm run pack:check`) |
 | `tools/check-standards.js` | Checks that both references reproduce: a re-take goes nowhere and is compared with what is committed (our files byte for byte, the bundle by content), and that the live-history bundle carries `HEAD` (`pnpm run check:standards`) |
@@ -457,14 +508,15 @@ acceptance for each.
 | `src/css.js` | Reading the styling from disk: which sets of styles exist and what role each has |
 | `src/table.css` | The report's table: the geometry of a cell, the sticky header and commit column, the colour of deltas |
 | `src/page/app.css` | The page's styling on top of the shared part: the panel with the file tree and its sticky row of categories (a column on the left on a wide screen, the page fitting the window), the empty states, a narrow window |
-| `src/page/state.js` | The page's state: the report's data, the view of the checkboxes, the pointer "which path is which column", folded folders, the record's passport, the browser's memory and the exchange by link — a chapter of the page's program |
+| `src/page/payload.js` | The page's block in sparse form, and the one place that unrolls it back: the history as changes (a file's appearance, its moves, its disappearance) turned into the snapshots the calculation and the table already speak — a value that did not move is one object shared by the rows that hold it |
+| `src/page/state.js` | The page's state: the report's data (the block unrolled by the payload chapter), the view of the checkboxes, the pointer "which path is which column", folded folders, the record's passport, the browser's memory and the exchange by link — a chapter of the page's program |
 | `src/page/dom.js` | The page's nodes: the small helpers of markup (`appEl`, `appBox`) — one set for the panel and the table alike |
-| `src/page/panel.js` | The panel of choices: the switches of metrics and files, the categories, the tree of the project's paths (files outside the report keep a checkbox off with a reason and stand after the rest; folders carry a folding sign that hides the subtree by a class rather than by a rebuild); a redraw is asked of the assembling chapter |
-| `src/page/table.js` | The page's table: a cell, a commit's caption, the header and the empty states — markup over the shared calculation |
-| `src/page/app.js` | Assembling and starting the page: the whole table, a redraw on the reader's choice (with the focus and the scroll put back), the first drawing and an anchor change; pasted into the assembled page |
-| `src/page/build.js` | Assembling the page: data, styling and program in one file with no external references |
+| `src/page/panel.js` | The panel of choices: the switches of metrics and files, the categories, the tree of the project's paths (files outside the report keep a checkbox off with a reason and stand after the rest; folders carry a folding sign that hides the subtree by a class rather than by a rebuild); built once, with the fields of the switches and of the folders and categories written where they stand |
+| `src/page/table.js` | The page's table, built once: a cell, a commit's caption, the header, the empty states and the cache of the nodes of every column — markup over the shared calculation, with the totals carried rather than recounted |
+| `src/page/app.js` | Assembling and starting the page: the first drawing, then a switch that shows, hides and rewrites the totals without making a node; an anchor change; pasted into the assembled page |
+| `src/page/build.js` | Assembling the page: data, styling and program in one file with no external references — the pasted text is **squeezed** on the way in (comments and indentation out, the same stripping the `min` metric counts) while the sources keep them, and the result is guarded by the stripper's own `assertCompilable` |
 | `src/git.js` | The only border where git is called: the pinned settings, blobs by the batch, the history, the comparison with the working tree |
-| `src/strip.js` | Removing ballast: which form goes to which file (extension, strategy) and what counts as an exact number — the entry to the parsing of forms |
+| `src/strip.js` | Removing ballast: which form goes to which file (extension, strategy) and which strategies are minification itself — the entry to the parsing of forms |
 | `src/strip/js.js` | Removing comments and indentation in JS: a pass over the cases (a comment, a regexp, a string, a character) — through strings and templates as well |
 | `src/strip/forms.js` | The forms of text with a removal of their own: markup, styles, the lines of a file and JSON |
 | `src/strip/guard.js` | The stripper's guard: what was stripped has to compile — as a script in the process or as a module in a worker thread |
@@ -493,7 +545,7 @@ acceptance for each.
 | `test/api.test.js` | The package's public API: the list of names is frozen, and splitting the engine may not change it |
 | `eslint.config.js` | The rules of formatting: the same as the consumer project's, plus a ban on gluing operators into one line (`pnpm run lint`, `pnpm run lint:strict`) |
 | `tools/harness.js` | The harness of the checks: paths, clones of the fixture (including one shared per suite and one with CRLF), running the tool, reading refusals, hashes |
-| `tools/page-harness.js` | The harness of the contract and page checks: the contract data, the assembled page, reading it in a real DOM, the panel's switches — one for five suites |
+| `tools/page-harness.js` | The harness of the contract and page checks: the contract data, the assembled page, reading it in a real DOM, the panel's switches, the page's calculation and its decoder evaluated from their sources, the block unpacked, and the platform's unpacker put into jsdom (which has none) — one for six suites |
 | `tools/suites.js` | The split of the suite: which files go into the fast run (with a reason for each) and why every dear one is in the full run |
 | `tools/run-tests.js` | Running the suite (`pnpm test`, `pnpm test:all`, `pnpm run suites:measure`): each file's duration measured on its own, and the counts of checks adding up |
 | `tools/docs-facts.js` | Reading facts out of the documentation — one layer for the four checks of the documentation guard: what a document names (paths, calls, section addresses) against what the repository holds |
@@ -507,11 +559,12 @@ acceptance for each.
 | `test/cli.test.js`, `test/cli-paths.test.js` | The command line's refusals: the help, the settings, the exit codes — and where the tool writes |
 | `test/refusals.test.js` | The refusals are executed: each one is called by a run, its exit code and its promised phrases are compared (with clones of their own for someone else's hook, a shallow history and a branch past the report), and **the advice runs** — the command answers with the promised code and no stack, while where "the refusal is gone" is declared the same call answers differently after it |
 | `test/refusals-catalog.test.js` | The guard of the refusal catalogue: every refusal site in the sources has an entry, every entry declares its advice, and refusals handed to another check are really accepted by it (the named file and line are checked) |
-| `test/contract-data.test.js` | The data contract: the numbers against the reference, the set of fields against the derived quantities, the marks of approximation against a metric's caption |
+| `test/contract-data.test.js` | The data contract: the numbers against the reference, the set of fields against the derived quantities, the metric's method against the way the numbers were counted — and the round trip through the page's sparse block, which restores the contract whole and twice over the same bytes |
 | `test/contract-derived.test.js` | The derived quantities against the artifact's numbers: a row's totals, a cell's delta and the delta of a total — on the code that lies in the tree |
-| `test/page-view.test.js` | The assembled page: pasted with no copy of the calculation, self-contained, the empty states, the styling and the switches |
-| `test/page-tree.test.js` | The panel's file tree: folders by the project's paths, three states, the subtree, files and folders outside the report (a checkbox off, a place after the rest), folding without a rebuild and the scroll across a rebuild |
+| `test/page-view.test.js` | The assembled page: pasted with no copy of the calculation, self-contained, the empty states, the styling, the switches, a click that makes no table and the carried totals against the engine's own sums |
+| `test/page-tree.test.js` | The panel's file tree: folders by the project's paths, three states, the subtree, files and folders outside the report (a checkbox off, a place after the rest), folding without a rebuild and a scroll a click does not touch |
 | `test/page-choice.test.js` | The memory of the choice and the exchange by link: a revisit, someone else's report, a foreign and a broken record, an address change on an open page |
+| `test/page-cols.test.js` | The fixed layout the page carries: a column's width is counted from the model rather than measured in a laid-out cell, the clip keeps a caption inside its column, the sticky header and commit column keep their edges, and the table names its own width (`width: auto` would hand the layout back to the automatic algorithm) |
 | `test/module.test.js` | A module under a `.js` extension: measured without touching the settings; the stripper's guard is alive (proved by mutation) and does not accuse the innocent |
 | `test/guard.test.js` | Parsing a module: it goes through a thread, both paths give one verdict, the fallback works with the thread's file away, and hundreds of parses are cheaper than a launch |
 | `test/runner.test.js` | Reading a process's output: chunks are glued as buffers rather than appended to a string — a multi-byte character at a chunk border does not turn into two replacement characters |
@@ -562,8 +615,9 @@ The seams between modules follow the borders of data: above sit the parts that r
 (`git`, `strip`, `metrics`, `history`), below the parts that work on values already collected (`data`,
 `derived`, `page`), while the settings, the texts and the refusal stand at the edges, because everyone
 knows them and they know no one. Both reports are counted at build time: the page gets the sources of the
-shared calculation and of its own program pasted in (`src/derived.js`, `src/page/*.js`), because it opens
-from disk, with no server and no network. The rest is planned step by step in `plans/archive/PLAN.md`.
+shared calculation and of its own program pasted in (`src/derived.js`, `src/page/*.js`) and squeezed on the way
+in, because it opens from disk, with no server and no network. The rest is planned step by step in
+`plans/archive/PLAN.md`.
 
 ## Wiring it into your project
 
@@ -673,7 +727,7 @@ known to a person. What is edited most often:
 | `columns` | the table's columns: `{label, paths: [...]}`; **a column is a file**: the list of paths is its renames (a revision takes whichever of them it holds), not several files at once; `label` is what a person will see |
 | `metrics` | what a number is made of: `raw` (the size of the git object), `min` (the minified form — which one, `minify.engine` decides), `tok` (tokens), `gzip` |
 | `tokens.family`, `tokens.encoding` | the dictionary for `tok`: the family (`openai`) and the encoding (`o200k_base` or `cl100k_base`) — the encoding changes the number, which is why it is both in the settings and in the metric's label |
-| `minify.engine` | what counts `min`: `strip` (comments and indentation, with no accuracy promised) or `esbuild` (real compression; a format without a minifier counts as stripping, and the metric's label says so) |
+| `minify.engine` | what counts `min`: `strip` (comments and indentation — a simplification, and the method names it as one) or `esbuild` (real compression; a format the minifier does not take counts as stripping, and the method says so) |
 | `output` | the report file (in the derived profile `docs/size-report.html`; the directory is created by the writer). The path enters the report's passport — the key of the saved choice — so a changed path means a fresh choice |
 | `journal` | where to look for the journal sections the rows refer to |
 | `links.commitUrl` | the commit link template, for example `https://github.com/org/repo/commit/{sha}`; derived from the `origin` address for GitHub and GitLab (for other hosts — empty rather than a guess) |
@@ -731,11 +785,11 @@ commit".
 
 `size doctor` gathers all the diagnostics into one answer: the environment and its influence on the numbers
 (the machine's settings do not influence them — the engine pins them at the call's border), the state of
-the optional dependencies and what it means for accuracy, the validity of the settings and the completeness
+the optional dependencies and what it means for the count, the validity of the settings and the completeness
 of the coverage. It answers with the same pieces as the other commands: the coverage block is exactly the
 answer of `size check` rather than a second calculation. The exit code is the first by importance rather
 than "something was found": `2` the settings are unreadable (there is nothing else to read), `3` the
-history is cut short, `1` the coverage is incomplete, `4` a number is approximate, `0` nothing to do. A
+history is cut short, `1` the coverage is incomplete, `4` a sensor counted another way, `0` nothing to do. A
 sensor the settings are silent about is named unneeded rather than missing, and it is not loaded: the
 dictionary weighs megabytes, and there is nothing to pay with for an answer the numbers never needed.
 
@@ -767,7 +821,7 @@ put together from are the templates above.
 | 1 | the table diverged from the history (or an edit on disk is not committed); for `size check` — a path of the history is neither tracked nor excluded | `pnpm run sizes` and commit the table; for `check` — add the path as a column or to `skip` |
 | 2 | something in the call or in the project — the causes are quoted as the tool prints them: **command line** (unknown flag, flag without a value, repeated flag, two modes at once, extra word, command and mode, unknown command, incompatible flag, no JSON answer, two answers at once, no commit); **settings and the project** (no settings file, settings not parsed, settings invalid, git missing, not a git repository, config already exists); **history** (no such commit, ambiguous commit, commit outside the history); **hook** (foreign hook, foreign core.hooksPath, no way to invoke the tool); **measurement** (file is not JavaScript, minifier did not parse) | the refusal text names the reason and a ready command — and it is executable: `test/refusals.test.js` guards that |
 | 3 | a shallow history (a clone with `--depth`) | a full clone: `git fetch --unshallow` |
-| 4 | no sensor | `minify.engine: "esbuild"` with no minifier: the numbers are stripped rather than minified. The report is built, and its text carries the reason and the fix; if the table also diverges from the history, the code stays **1** (a mismatch outranks the approximation) while the note about the other count is printed next to it |
+| 4 | no sensor | `minify.engine: "esbuild"` with no minifier: the numbers are stripped rather than minified. The report is built, and its text carries the reason and the fix; if the table also diverges from the history, the code stays **1** (a mismatch outranks the sensor note) while the note about the other count is printed next to it |
 | 5 | an internal error | this is a defect of the tool: we are the ones who need the text — see "Traps worth testing the engine on" below |
 
 The cell of code 2 quotes the tool rather than describing it: those are the names of the refusal registry
@@ -831,12 +885,12 @@ behaviour rather than as workarounds:
   metric honestly falls back to stripping: the numbers are the same as `strip`, the label says so in words,
   and a **build** (`--write`) returns **code 4** with a ready fix. A **check** answers in two parts in that
   case, and it is named here because it is what CI advises: if the report on disk was built with the real
-  minifier while the run goes without it, the accuracy has changed — the numbers in the table no longer
-  agree with the history, so the check says as much (**code 1**), showing the diverged signature row and
-  **naming the other count right there** in a note with a ready fix. The verdict stays with the divergence:
-  code 4 would claim the difference is explained by the sensor, and nobody checked that — the divergence
-  may also be an edit that went past the report (the same order as `size check` and `doctor`: a mismatch
-  outranks an approximation). The fix in both cases is `pnpm run sizes`; on this environment it returns
+  minifier while the run goes without it, the numbers were counted another way — the numbers in the table
+  no longer agree with the history, so the check says as much (**code 1**), showing the diverged signature
+  row and **naming the other count right there** in a note with a ready fix. The verdict stays with the
+  divergence: code 4 would claim the difference is explained by the sensor, and nobody checked that — the
+  divergence may also be an edit that went past the report (the same order as `size check` and `doctor`: a
+  mismatch outranks the sensor note). The fix in both cases is `pnpm run sizes`; on this environment it returns
   **code 4**. This can be checked without reinstalling by the `SIZE_REPORT_NO_OPTIONAL=1` environment — the
   same way `test/minify.test.js` does it.
 - **The module parse is one worker raised once per a run** (`REFACTOR.md` R-5.4): the fallback to
@@ -932,9 +986,9 @@ rejected tools (knip, ast-grep, size-limit, gitleaks) are in `worklog/archive/WO
   excluded, untracked) and a ready fix. The commit is named by a revision (`HEAD`, a branch, a tag), by a
   full sha or by its beginning.
 - The data without the markup — the rows, the numbers, the totals — is `--json` (the earlier form, frozen
-  byte for byte by the parity reference) and `--data` (the page's contract: absolute values and the shape of
-  the table, with nothing derived — whatever the page can count itself is not there). A `size measure`
-  command does not exist yet.
+  byte for byte by the parity reference) and `--data` (the contract: absolute values and the shape of the
+  table, with nothing derived — whatever the page can count itself is not there; the page's own block is the
+  same data in sparse form). A `size measure` command does not exist yet.
 - `--json` is a form of answer rather than a mode of its own, and it has one rule: exactly four calls have
   an answer. With no command it is the earlier form of the data (frozen by the parity reference), and for
   `check`, `explain` and `doctor` it is their answer. For a command with no answer, and next to a mode
