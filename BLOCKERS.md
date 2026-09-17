@@ -992,6 +992,17 @@ references stayed the same after the fix.
   has 8, which a reader of the file has to notice for themselves. Nothing else moves either way, and the same
   question will be measured for `coverage-baseline.json` in W2's step 4 rather than assumed to be identical.
 
+  **Decided 2026-09-17 by the user: prune the garbage.** Done exactly as `AGENTS.md` prescribes —
+  `pnpm run baseline:dup`, no hand editing: the baseline goes from **15** fingerprints to **5** (the number the
+  note itself predicted it would, 8, then fell further as N33's and N34's extractions took their pairs out),
+  the diff being 1 insertion and 11 deletions, and the five that stay are entries the file already had
+  (`schema`, `config` and `note` compare equal to the previous revision, and every surviving fingerprint is
+  present in it — measured against a copy). The sensor's reading is unchanged —
+  `✓ dup: no new clones (clones 5, lines 29, the baseline holds 5 fingerprints; looks 2: the baseline file,
+  against origin/main)` — while the ratchet is now **stricter**: the file says what the tree produces, so a
+  reappearance of any of the ten historical clones counts as a new clone instead of hiding behind a tolerated
+  leftover. The reason travels in the commit's `Gate-Change:` trailer, the baseline being a gate file.
+
 - **N33. A translated block inside an accepted clone pair becomes a *new* clone: `test/minify.test.js` ↔
   `test/tokens.test.js`.** Measured 2026-09-16 in C2's steps 4–5, after translating those two files' prose.
   `node tools/gates/dup.js` answers `✗ dup: new clones 4 (the baseline holds 15 fingerprints, the tree has 7)`
@@ -1065,9 +1076,26 @@ references stayed the same after the fix.
   **For the user to decide:** re-take the baseline (one `pnpm run baseline:coverage` with the
   `Gate-Change:` trailer) or fix the coverage. Price of the re-take: it accepts the thirteen falls **and**
   the four rises without asking why the falls happened — the ratchet then starts from today. Price of
-  waiting: the slow profile is red locally and its first scheduled CI run will be red too. Unlike N31 this
-  is **not** a composition change (no key would appear or vanish), which is the difference between the two
+  waiting: the slow profile is red locally and its first scheduled CI run will be red too. Unlike N31  this is **not** a composition change (no key would appear or vanish), which is the difference between the two
   baselines, and the reason the two questions are recorded separately.
+
+  **Decided 2026-09-17 by the user: fix the sensor, not the baseline — count what actually executed rather
+  than a file's share.** The unit changes from a percentage to a count, and that is what makes the ratchet
+  mean what it says: a percentage falls when a file merely grows (a translated literal split into a two-line
+  concatenation adds a line the report counts and the suite never reaches), while a count of executed lines
+  moves only when the code stops being run. **The instrument for it is already in hand, measured:** c8 runs
+  with `json-summary` (`.c8rc.json`), so every file of the summary it writes beside its report (the file
+  `coverage-summary.json`, inside the gitignored report directory) carries
+  `lines: { total, covered, skipped, pct }` beside branches and functions — `src/cli.js` today reads
+  `{"total":84,"covered":77,"pct":91.66}` while the baseline holds the percentage `91.95`, which is exactly
+  the pair that cannot be compared in the new unit and the reason a re-take is inseparable from this change.
+  **The price is named rather than discovered:** the baseline changes its **shape** (counts instead of
+  percentages), so `coverage-baseline.json` is re-taken in the same commit — with the `Gate-Change:` trailer,
+  a gate file — and the sensor's own probes move with it, since `test/gates-coverage.test.js` asserts the
+  verdict's wording **and** its numbers (`/src\/x\.js — lines: was 80, now 50/`, `was not in the baseline,
+  now 0`); that file is a gate file too. Both references and every frozen byte stay untouched (coverage is
+  measured over this repository's own sources, not over the fixtures). **Not done in this portion:** it is the
+  next one, after which N20's batched release follows.
 
 - **N34. The same pair formed a second time: a translated block inside an accepted clone pair becomes a *new*
   clone (`test/cli-paths.test.js` ↔ `test/doctor.test.js`).** Measured 2026-09-17 while translating for `doctor`
