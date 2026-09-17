@@ -30,7 +30,7 @@ import { CASES, PLACEHOLDER, adviceOf } from '../tools/refusals.js';
 import { usageCommands, usageFlags } from '../tools/docs-facts.js';
 import {
   CONFIG, PACKAGE, PACKAGE_BIN, ROOT, cloneFixture, gitIn, hasStack, readJson, runTool,
-  sharedClone, tempDir
+  shallowClone, sharedClone, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('refusals');
@@ -82,7 +82,7 @@ const PLACES = {};
     columns: base.columns, metrics: ['raw', 'min', 'tok'], output: 'docs/nope.html',
     minify: { engine: 'esbuild' }, tokens: { family: 'openai', encoding: 'o200k_base' }
   })],
-  // The two halves of the advice about approximation: with no dictionary but real minification, and
+  // The two halves of the advice about a sensor that fell back: with no dictionary but real minification, and
   // with no tokens but real minification — so that what removes what is visible.
   [PLACEHOLDER + 'strip', writeConfig('strip', {
     columns: base.columns, metrics: ['raw', 'min'], output: 'docs/nope.html', minify: { engine: 'strip' }
@@ -159,11 +159,7 @@ const SCENARIOS = {
     gitIn(dir, ['checkout', '-q', 'main']);
     return { dir: dir };
   }),
-  'shallow': () => once('shallow', () => {
-    const dir = path.join(tmp, 'shallow');
-    gitIn(null, ['clone', '-q', '--depth', '1', '--no-hardlinks', 'file://' + FIXTURE, dir]);
-    return { dir: dir };
-  }),
+  'shallow': () => once('shallow', () => ({ dir: shallowClone(FIXTURE, path.join(tmp, 'shallow')) })),
   'drift': (caseArgs) => once('drift', () => {
     const dir = cloneFixture(path.join(tmp, 'drift'));
     const tool = { name: 'the package engine', file: path.join(ROOT, 'bin', 'size.js'), env: null };

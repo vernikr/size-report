@@ -1,7 +1,8 @@
 /* Tokens — the third measurement of the report: "weight for a language model". What is checked is what
- * makes the count honest rather than merely present: the number is taken with the very dictionary the
- * settings asked for (the encoding is part of the count rather than a detail), an approximate value is
- * named approximate, and a format for which tokens are meaningless is not passed off as counted.
+ * keeps the count understandable rather than merely present: the number is taken with the very dictionary
+ * the settings asked for (the encoding is part of the count rather than a detail), a count made another way
+ * is named as such in the method, and a format for which tokens are meaningless is not passed off as
+ * counted.
  *
  * The anchors are numbers written by hand for fixed texts rather than derived from the code under check, so
  * the check is not circular (any other implementation of the same encoding can be held against them); the
@@ -20,7 +21,7 @@ import { CHARS_PER_TOKEN, TOKEN_DEFAULTS, estimate } from '../src/tokens.js';
 import { tokenCount } from '../src/tokens.js';
 import { EXIT } from '../src/refusal.js';
 import {
-  CONFIG, PACKAGE, cloneFixture, gitIn, readJson, readRun, refusal, runSize, sharedClone, tempDir
+  CONFIG, PACKAGE, cloneFixture, draftedRepo, gitIn, readJson, readRun, refusal, runSize, sharedClone, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('tokens');
@@ -107,7 +108,8 @@ test('без словаря счёт идёт оценкой по длине —
 
   const data = runSize(PLAIN, ['--config', TOK, '--data'], OFF);
   const view = JSON.parse(data.stdout).metrics.find((m) => m.key === 'tok');
-  assert.equal(view.accuracy, 'approximate', 'оценка выдана за точный счёт');
+  assert.equal(Object.prototype.hasOwnProperty.call(view, 'accuracy'), false,
+    'описание метрики всё ещё несёт оценку точности');
   assert.match(view.method, new RegExp('1 токен ≈ ' + CHARS_PER_TOKEN + ' знака'),
     'способ не называет ни оценки, ни её коэффициента: ' + view.method);
   assert.ok(view.method.indexOf('недоступен') >= 0, 'способ не говорит, почему счёт оценкой');
@@ -136,10 +138,10 @@ test('формат, для которого токены бессмысленн�
   const res = runSize(dir, ['--config', file, '--data']);
   assert.equal(res.code, 0, 'данные с бинарной колонкой не собрались: ' + res.stderr.trim());
   const view = JSON.parse(res.stdout).metrics.find((m) => m.key === 'tok');
-  assert.equal(view.accuracy, 'approximate',
-    'отчёт с бинарным форматом обещает точный счёт токенов: ' + view.method);
+  assert.equal(Object.prototype.hasOwnProperty.call(view, 'accuracy'), false,
+    'описание метрики всё ещё несёт оценку точности');
   assert.ok(view.method.indexOf('.png') >= 0,
-    'приближение не названо по формату: ' + view.method);
+    'другой счёт не назван по формату: ' + view.method);
 });
 
 test('чужое семейство и чужая кодировка — отказ настроек со списком', () => {
@@ -155,20 +157,9 @@ test('чужое семейство и чужая кодировка — отк�
     'отказ не назвал кодировок семейства: ' + res2.stderr.trim());
 });
 
-test('черновик --init ведёт новый проект на токены, и первый отчёт — точный', () => {
-  const dir = path.join(tmp, 'fresh');
-  fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
-  gitIn(dir, ['init', '-q', '-b', 'main']);
-  ['user.name', 'user.email', 'commit.gpgsign'].forEach((key, i) => {
-    gitIn(dir, ['config', key, ['fixture', 'fixture@local', 'false'][i]]);
-  });
-  fs.writeFileSync(path.join(dir, 'src', 'code.js'), '// комментарий\nfunction width(items) { return items.length; }\n');
-  gitIn(dir, ['add', '-A']);
-  gitIn(dir, ['commit', '-qm', 'начало']);
-
-  const made = runSize(dir, ['--init']);
-  assert.equal(made.code, 0, 'черновик не собрался: ' + made.stderr.trim());
-  const file = path.join(dir, 'size-table.config.json');
+test('черновик --init ведёт новый проект на токены, и первый отчёт считает словарём', () => {
+  const { dir, file } = draftedRepo(path.join(tmp, 'fresh'),
+    '// комментарий\nfunction width(items) { return items.length; }\n');
   const draft = readJson(file);
   assert.equal(draft.metrics.indexOf('tok') >= 0, true, 'черновик не просит токены');
   assert.deepEqual(draft.tokens, TOKEN_DEFAULTS, 'черновик не назвал словарь токенов');
@@ -177,7 +168,8 @@ test('черновик --init ведёт новый проект на токен
   const res = runSize(dir, ['--data']);
   assert.equal(res.code, 0, 'данные нового проекта не собрались: ' + res.stderr.trim());
   const view = JSON.parse(res.stdout).metrics.find((m) => m.key === 'tok');
-  assert.equal(view.accuracy, 'exact', 'первый отчёт нового проекта считает токены оценкой');
+  assert.equal(Object.prototype.hasOwnProperty.call(view, 'accuracy'), false,
+    'описание метрики всё ещё несёт оценку точности');
   assert.match(view.method, /^gpt-tokenizer \d+\.\d+\.\d+, o200k_base \(BPE\)$/,
     'первый отчёт собран не тем словарём, который просил черновик: ' + view.method);
 });

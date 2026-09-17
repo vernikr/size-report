@@ -33,7 +33,7 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { firstLine, gitIn, gitTry, hasStack, runSize, tempDir } from '../tools/harness.js';
+import { firstLine, gitIn, hasStack, runSize, shallowClone, tempDir } from '../tools/harness.js';
 
 /* The check sets the environment itself rather than taking the machine's: `CI` and
  * `SIZE_REPORT_NO_HOOK` are the hook's switches and are set for the whole suite in integration, so
@@ -325,9 +325,7 @@ test('хук молчит в CI, по выключателю и на отдел�
 
 test('отказ инструмента не роняет коммит, а причина видна в диагностике', () => {
   // A shallow history is a refusal of the tool itself (code 3) rather than of the hook.
-  const dir = path.join(tmp, 'shallow');
-  const shallow = gitTry(null, ['clone', '-q', '--depth', '1', '--no-hardlinks', 'file://' + source(), dir]);
-  assert.equal(shallow.status, 0, 'не удалось собрать обрезанную выкладку: ' + firstLine(shallow.stderr));
+  const dir = shallowClone(source(), path.join(tmp, 'shallow'));
   ['user.name', 'user.email', 'commit.gpgsign'].forEach((key, i) => {
     gitIn(dir, ['config', key, ['fixture', 'fixture@local', 'false'][i]]);
   });

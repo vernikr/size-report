@@ -1,8 +1,8 @@
 /* Real compression is the second way to obtain the `min` metric. Ballast removal is left untouched on
  * purpose: both frozen fixtures were taken under it, and projects with settings of their own must not
  * silently get other numbers. So the way is chosen in the settings (`minify.engine`), and what is checked
- * here is that the choice really changes something, that an approximation is named as one, and that a
- * missing optional dependency is not a crash.
+ * here is that the choice really changes something, that the formats it does not take are named in the
+ * method, and that a missing optional dependency is not a crash.
  *
  * The seam of a missing minifier: the environment with `SIZE_REPORT_NO_OPTIONAL` (the way an install
  * without the optional dependencies goes too).
@@ -18,7 +18,7 @@ import { loadConfig } from '../src/config.js';
 import { EXIT } from '../src/refusal.js';
 import { minifyForm } from '../src/strip.js';
 import {
-  CONFIG, PACKAGE, SYNTH, cloneFixture, gitIn, readJson, readRun, refusal, runSize,
+  CONFIG, PACKAGE, SYNTH, cloneFixture, draftedRepo, gitIn, readJson, readRun, refusal, runSize,
   sharedClone, tempDir
 } from '../tools/harness.js';
 
@@ -101,73 +101,65 @@ test('на фикстуре настоящее сжатие меньше упр�
       + ' против ' + before.rows[last].cells[code].min);
 });
 
-test('подпись метрики называет приближение по формату, а не молчит', () => {
+test('подпись метрики называет форматы, которые минификатор не берёт, а не молчит', () => {
   const all = runSize(PLAIN, ['--config', configAs('esbuild', () => {}), '--data']);
   const min = JSON.parse(all.stdout).metrics.find((m) => m.key === 'min');
-  assert.equal(min.accuracy, 'approximate', 'метрика со смешанными форматами обещает точность');
   assert.match(min.method, /^esbuild \d+\.\d+\.\d+ \(minify, rename\)/,
     'способ не называет минификатор и его версию: ' + min.method);
   ['.md', '.toml', '.txt'].forEach((ext) => {
     assert.ok(min.method.indexOf(ext) >= 0,
       'приближение не названо по формату: ' + ext + ' пропущен в «' + min.method + '»');
   });
-  assert.ok(min.method.indexOf('.json') < 0, 'точный формат записан в приближение: ' + min.method);
+  assert.ok(min.method.indexOf('.json') < 0, 'формат, который минификатор берёт, записан в другой счёт: ' + min.method);
+  assert.equal(/приближ|точн/.test(min.method), false,
+    'способ оценивает свои числа, а не описывает счёт: ' + min.method);
 
-  // A report without the formats the minifier does not take promises an exact number.
+  // A report without the formats the minifier does not take says nothing about other formats.
   const only = configAs('esbuild-exact', (cfg) => {
     cfg.columns = cfg.columns.filter((c) => MINIFIED.indexOf(c.label) >= 0);
   });
   const pure = JSON.parse(runSize(PLAIN, ['--config', only, '--data']).stdout);
   const pureMin = pure.metrics.find((m) => m.key === 'min');
-  assert.equal(pureMin.accuracy, 'exact',
-    'отчёт целиком из минифицируемых форматов объявлен приближённым: ' + pureMin.method);
-  assert.ok(pureMin.method.indexOf('приближение') < 0,
-    'в способе осталось предупреждение о приближении: ' + pureMin.method);
+  assert.ok(pureMin.method.indexOf('остальные форматы') < 0,
+    'отчёт целиком из минифицируемых форматов говорит о форматах, которых в нём нет: ' + pureMin.method);
 
-  /* The same rule from the other side: accuracy comes from the cells rather than from the method's name.
-   * A report made of one JSON file is exact under ballast removal too — re-serialising loses only
-   * insignificant whitespace and nobody can make it shorter — so the label has to say "exact" rather than
-   * promise an approximation because of what the method is called. */
+  /* The list comes from the columns rather than from the name of the method: a report made of one JSON
+   * file under ballast removal has no other format in it either — re-serialising loses only insignificant
+   * whitespace and nobody can make it shorter. */
   const onlyJson = configAs('strip-json', (cfg) => {
     cfg.minify = { engine: 'strip' };
     cfg.columns = cfg.columns.filter((c) => c.label === 'package.json');
   });
   const jsoned = JSON.parse(runSize(PLAIN, ['--config', onlyJson, '--data']).stdout);
   const jsonMin = jsoned.metrics.find((m) => m.key === 'min');
-  assert.equal(jsonMin.accuracy, 'exact',
-    'точный формат под снятием балласта объявлен приближённым: подпись смотрит на название способа, а не на клетки');
-  assert.equal(jsoned.approx.min, undefined, 'точная колонка получила пометки приближения');
+  assert.equal(/приближ|точно/.test(jsonMin.method), false,
+    'способ оценивает числа вместо того, чтобы описать счёт: ' + jsonMin.method);
+  assert.equal(Object.prototype.hasOwnProperty.call(jsoned, 'approx'), false,
+    'данные всё ещё несут пометки по клеткам');
 });
 
-/* Accuracy reaches the cell itself rather than stopping at the metric label: where the minifier took the
- * file the number is exact, and where the format is foreign to it, it is not. The row of marks comes from
- * the contract (`--data`) rather than from the engine's internals, and is compared with the very columns
- * the drop in numbers was checked on. */
-test('с настоящим сжатием точность объявлена по клетке', () => {
+/* The split of the column into "taken by the minifier" and "counted another way" is what tells a reader
+ * where the numbers come from, and it lives in the method rather than on the cells: the formats the
+ * minifier takes are not named and the ones it does not take are. The list comes from the contract
+ * (`--data`) and is compared with the very columns the drop in numbers was checked on. */
+test('с настоящим сжатием способ называет другие форматы, а пометок по клетке нет', () => {
   const all = runSize(PLAIN, ['--config', configAs('esbuild-cells', () => {}), '--data']);
   assert.equal(all.code, 0, 'прогон со сжатием упал: ' + all.stderr.trim());
   const data = JSON.parse(all.stdout);
-  const min = (data.approx || {}).min;
-  assert.notEqual(min, undefined,
-    'приближённые клетки не объявлены, хотя часть форматов минификатор не берёт');
-  assert.equal(data.approx.raw, undefined, 'размер объекта git помечен приближением');
-  const where = (label) => data.files.findIndex((f) => f.label === label);
-  const cell = (r, i) => min.rows.charAt(r * data.files.length + i);
+  assert.equal(Object.prototype.hasOwnProperty.call(data, 'approx'), false,
+    'часть форматов минификатор не берёт, а клетки всё ещё помечены точностью');
+  const min = data.metrics.find((m) => m.key === 'min');
 
   MINIFIED.forEach((label) => {
-    const i = where(label);
-    assert.equal(min.now.charAt(i), '0', 'клетка «' + label + '» названа приближённой без причины');
-    data.rows.forEach((row, r) => {
-      if (row.values[i] === null) return;
-      assert.equal(cell(r, i), '0',
-        'строка ' + (r + 1) + '/«' + label + '»: число минификатора помечено приближённым');
-    });
+    const ext = label.slice(label.lastIndexOf('.'));
+    assert.equal(min.method.indexOf(ext), -1,
+      'формат «' + label + '» назван другим счётом, хотя его берёт минификатор: ' + min.method);
   });
 
   ['заметки.md', 'table.toml', 'crlf.txt'].forEach((label) => {
-    const i = where(label);
-    assert.equal(min.now.charAt(i), '1',
-      'число «' + label + '» снято без минификатора, а объявлено точным');
+    const ext = label.slice(label.lastIndexOf('.'));
+    assert.ok(min.method.indexOf(ext) >= 0,
+      'другой счёт «' + label + '» не назван в способе: ' + min.method);
   });
 });
 
@@ -191,7 +183,8 @@ test('без необязательной зависимости метрика 
 
   const data = runSize(PLAIN, ['--config', file, '--data'], OFF);
   const min = JSON.parse(data.stdout).metrics.find((m) => m.key === 'min');
-  assert.equal(min.accuracy, 'approximate', 'отступление выдано за точное число');
+  assert.equal(/приближ|точно/.test(min.method), false,
+    'способ оценивает отступление вместо того, чтобы его назвать: ' + min.method);
   assert.ok(min.method.indexOf('esbuild недоступен') >= 0,
     'способ не говорит, почему счёт идёт упрощением: ' + min.method);
   assert.ok(min.method.indexOf('0.28.2') < 0, 'способ называет версию минификатора, которого нет');
@@ -250,20 +243,8 @@ test('файл, который минификатор не разобрал, —
 });
 
 test('черновик --init ведёт новый проект на настоящее сжатие', () => {
-  const dir = path.join(tmp, 'fresh');
-  fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
-  gitIn(dir, ['init', '-q', '-b', 'main']);
-  ['user.name', 'user.email', 'commit.gpgsign'].forEach((key, i) => {
-    gitIn(dir, ['config', key, ['fixture', 'fixture@local', 'false'][i]]);
-  });
-  fs.writeFileSync(path.join(dir, 'src', 'code.js'),
+  const { dir, file } = draftedRepo(path.join(tmp, 'fresh'),
     'function width(items) {\n  // сумма ширин\n  const totalWidth = items.reduce((sum, item) => sum + item.width, 0);\n  return totalWidth;\n}\n');
-  gitIn(dir, ['add', '-A']);
-  gitIn(dir, ['commit', '-qm', 'начало']);
-
-  const made = runSize(dir, ['--init']);
-  assert.equal(made.code, 0, 'черновик не собрался: ' + made.stderr.trim());
-  const file = path.join(dir, 'size-table.config.json');
   assert.equal((readJson(file).minify || {}).engine, 'esbuild', 'черновик не ведёт на настоящее сжатие');
   loadConfig(file); // the settings check has to accept what the hint gives out
 
@@ -271,7 +252,8 @@ test('черновик --init ведёт новый проект на насто
   const min = data.metrics.find((m) => m.key === 'min');
   assert.match(min.method, /^esbuild \d+\.\d+\.\d+ \(minify, rename\)$/,
     'первый отчёт нового проекта собран не минификатором: ' + min.method);
-  assert.equal(min.accuracy, 'exact', 'у нового проекта число объявлено приближённым');
+  assert.equal(Object.prototype.hasOwnProperty.call(min, 'accuracy'), false,
+    'описание метрики всё ещё несёт оценку точности');
 });
 
 test('неизвестный способ минификации — отказ настроек с готовой починкой', () => {

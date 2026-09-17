@@ -21,7 +21,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { NO_OPTIONAL } from '../src/optional.js';
 import {
-  CONFIG, firstLine, gitIn, gitTry, hasStack, initRepo, readJson, runSize, sharedClone, tempDir
+  CONFIG, firstLine, gitIn, hasStack, initRepo, readJson, runSize, shallowClone, sharedClone, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('doctor');
@@ -172,11 +172,7 @@ test('неполное покрытие: код 1, путь назван, и э�
 });
 
 test('обрезанная история: код 3 и команда докачки, а не «покрытия нет»', () => {
-  const dir = path.join(tmp, 'shallow');
-  const clone = gitTry(null, ['clone', '-q', '--depth', '1', 'file://' + PLAIN, dir]);
-  assert.equal(clone.status, 0, 'не удалось собрать обрезанную выкладку: ' + firstLine(clone.stderr));
-  assert.equal(gitIn(dir, ['rev-parse', '--is-shallow-repository']).trim(), 'true',
-    'выкладка вышла полной: проверять нечего');
+  const dir = shallowClone(PLAIN, path.join(tmp, 'shallow'));
 
   const res = runSize(dir, ['--config', CONFIG, 'doctor']);
   assert.equal(res.code, 3, 'обрезанная история обработана не как обрезанная: ' + firstLine(res.stdout));
@@ -234,9 +230,9 @@ test('приближение датчика: код 4 с причиной и г�
     'недоступный минификатор назван доступным');
 });
 
-/* Completeness outranks accuracy of the count: without it there are no numbers at all, while an
- * approximate number is still a number. So with two findings the exit code carries incompleteness, and the
- * approximation names itself in the text. */
+/* Completeness outranks the way the count was made: without it there are no numbers at all, while a number
+ * counted another way is still a number. So with two findings the exit code carries incompleteness, and the
+ * other count names itself in the text. */
 test('две находки сразу: код выхода несёт та, без которой чисел нет', () => {
   const file = configAs('both.json', (cfg) => {
     cfg.minify = { engine: 'esbuild', ext: {}, guard: ['.js', '.mjs', '.cjs'] };

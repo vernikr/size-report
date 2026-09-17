@@ -37,9 +37,9 @@ What is worth knowing about the template's values:
 - `metrics: ["raw", "min", "tok"]` — the report's three measurements. `min` is counted by the real minifier
   (`minify.engine: "esbuild"`) and `tok` by the `o200k_base` dictionary. Both travel as optional
   dependencies of the package and are installed by an ordinary installation; without them (an installation
-  without the optional dependencies, a platform that has none) the tool still works, but says honestly that
-  the numbers were counted another way, and returns **code 4** — that is a named approximation rather than
-  an error of the settings.
+  without the optional dependencies, a platform that has none) the tool still works, but says that the
+  numbers were counted another way, and returns **code 4** — that is a named different count rather than an
+  error of the settings.
 - `fixCommand` — the command the report's signature and the refusals quote. In the template it is
   `node node_modules/@vernikr/size-report/bin/size.js --write` — the path to the installed package inside
   the project. **The package name as a command cannot stand here:** `npx <name>` in a project without the
