@@ -1,7 +1,8 @@
 {
-  "schema": 1,
+  "schema": 2,
   "suite": "full",
-  "note": "A baseline of coverage: a snapshot per file, taken from the whole set (`pnpm run cover`). Updated by a person. A zero can be honest: the chapters of the page program (`src/page/*.js`) node never executes — they are pasted into the assembled page, and those chapters are guarded by the page suites.",
+  "unit": "executed lines, branches and functions per file",
+  "note": "A baseline of coverage: a snapshot per file, taken from the whole set (`pnpm run cover`). The unit is the count of what executed rather than a share, so a file that merely grew does not move the ratchet while code that stopped being run does. Updated by a person. A zero can be honest: the chapters of the page program (`src/page/*.js`) node never executes — they are pasted into the assembled page, and those chapters are guarded by the page suites.",
   "files": {
     "bin/postinstall.js": {
       "lines": 0,
@@ -9,109 +10,109 @@
       "functions": 0
     },
     "bin/size.js": {
-      "lines": 100,
-      "branches": 100,
-      "functions": 100
+      "lines": 6,
+      "branches": 1,
+      "functions": 0
     },
     "src/args.js": {
-      "lines": 100,
-      "branches": 100,
-      "functions": 100
+      "lines": 191,
+      "branches": 80,
+      "functions": 10
     },
     "src/artifact.js": {
-      "lines": 100,
-      "branches": 100,
-      "functions": 100
+      "lines": 37,
+      "branches": 4,
+      "functions": 3
     },
     "src/check.js": {
-      "lines": 100,
-      "branches": 97.61,
-      "functions": 100
+      "lines": 139,
+      "branches": 41,
+      "functions": 5
     },
     "src/cli.js": {
-      "lines": 91.95,
-      "branches": 97.14,
-      "functions": 100
+      "lines": 77,
+      "branches": 34,
+      "functions": 9
     },
     "src/config.js": {
-      "lines": 95.79,
-      "branches": 82.81,
-      "functions": 93.75
+      "lines": 224,
+      "branches": 53,
+      "functions": 15
     },
     "src/css.js": {
-      "lines": 100,
-      "branches": 100,
-      "functions": 100
+      "lines": 28,
+      "branches": 2,
+      "functions": 1
     },
     "src/data.js": {
-      "lines": 100,
-      "branches": 91.66,
-      "functions": 100
+      "lines": 115,
+      "branches": 34,
+      "functions": 5
     },
     "src/derived.js": {
-      "lines": 75.86,
-      "branches": 97.22,
-      "functions": 62.5
+      "lines": 84,
+      "branches": 35,
+      "functions": 5
     },
     "src/doctor.js": {
-      "lines": 98.93,
-      "branches": 91.25,
-      "functions": 100
+      "lines": 274,
+      "branches": 73,
+      "functions": 11
     },
     "src/explain.js": {
-      "lines": 97.69,
-      "branches": 97.5,
-      "functions": 100
+      "lines": 126,
+      "branches": 39,
+      "functions": 5
     },
     "src/git.js": {
-      "lines": 98.19,
-      "branches": 86.79,
-      "functions": 92.85
+      "lines": 212,
+      "branches": 46,
+      "functions": 13
     },
     "src/history.js": {
-      "lines": 95.06,
-      "branches": 96.8,
-      "functions": 100
+      "lines": 224,
+      "branches": 96,
+      "functions": 9
     },
     "src/hook.js": {
-      "lines": 88.16,
-      "branches": 77.77,
-      "functions": 91.66
+      "lines": 376,
+      "branches": 84,
+      "functions": 22
     },
     "src/init.js": {
-      "lines": 100,
-      "branches": 100,
-      "functions": 100
+      "lines": 74,
+      "branches": 24,
+      "functions": 3
     },
     "src/journal.js": {
-      "lines": 89.39,
-      "branches": 71.42,
-      "functions": 100
+      "lines": 61,
+      "branches": 15,
+      "functions": 5
     },
     "src/locales.js": {
-      "lines": 100,
-      "branches": 75,
-      "functions": 100
+      "lines": 142,
+      "branches": 3,
+      "functions": 1
     },
     "src/metrics.js": {
-      "lines": 99.25,
-      "branches": 98.59,
-      "functions": 85.71
+      "lines": 266,
+      "branches": 70,
+      "functions": 12
     },
     "src/minify.js": {
-      "lines": 100,
-      "branches": 77.77,
-      "functions": 100
+      "lines": 68,
+      "branches": 7,
+      "functions": 3
     },
     "src/modes.js": {
-      "lines": 98.34,
-      "branches": 92.3,
-      "functions": 100
+      "lines": 175,
+      "branches": 48,
+      "functions": 15
     },
     "src/optional.js": {
-      "lines": 93.54,
-      "branches": 66.66,
-      "functions": 100
+      "lines": 31,
+      "branches": 4,
+      "functions": 1
     },
     "src/page/app.js": {
       "lines": 0,
@@ -119,9 +120,9 @@
       "functions": 0
     },
     "src/page/build.js": {
-      "lines": 100,
-      "branches": 100,
-      "functions": 100
+      "lines": 131,
+      "branches": 14,
+      "functions": 9
     },
     "src/page/dom.js": {
       "lines": 0,
@@ -149,59 +150,59 @@
       "functions": 0
     },
     "src/parse-worker.js": {
-      "lines": 100,
-      "branches": 80,
-      "functions": 100
+      "lines": 34,
+      "branches": 4,
+      "functions": 1
     },
     "src/parse.js": {
-      "lines": 79.41,
-      "branches": 61.9,
-      "functions": 66.66
+      "lines": 105,
+      "branches": 13,
+      "functions": 4
     },
     "src/project.js": {
-      "lines": 96.22,
-      "branches": 91.78,
-      "functions": 94.44
+      "lines": 287,
+      "branches": 83,
+      "functions": 19
     },
     "src/refusal.js": {
-      "lines": 100,
-      "branches": 87.5,
-      "functions": 100
+      "lines": 137,
+      "branches": 14,
+      "functions": 6
     },
     "src/size-table.js": {
-      "lines": 100,
-      "branches": 100,
-      "functions": 100
+      "lines": 59,
+      "branches": 1,
+      "functions": 0
     },
     "src/strip.js": {
-      "lines": 98.27,
-      "branches": 89.47,
-      "functions": 100
+      "lines": 54,
+      "branches": 17,
+      "functions": 3
     },
     "src/strip/forms.js": {
-      "lines": 100,
-      "branches": 87.5,
-      "functions": 100
+      "lines": 26,
+      "branches": 7,
+      "functions": 4
     },
     "src/strip/guard.js": {
-      "lines": 96.61,
-      "branches": 88.23,
-      "functions": 100
+      "lines": 55,
+      "branches": 15,
+      "functions": 2
     },
     "src/strip/js.js": {
-      "lines": 97.79,
-      "branches": 80.82,
-      "functions": 100
+      "lines": 133,
+      "branches": 59,
+      "functions": 11
     },
     "src/tokens.js": {
-      "lines": 100,
-      "branches": 78.57,
-      "functions": 100
+      "lines": 77,
+      "branches": 11,
+      "functions": 5
     },
     "src/tool.js": {
-      "lines": 100,
-      "branches": 28.57,
-      "functions": 100
+      "lines": 23,
+      "branches": 2,
+      "functions": 1
     }
   }
 }

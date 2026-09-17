@@ -55,35 +55,35 @@ const first = tree('first', { 'src/one.js': MODULE, 'src/two.js': MODULE, 'tools
 const paths = first + '/src,' + first + '/tools';
 const baseline = path.join(tmp, 'baseline.json');
 
-test('база снимается, и живущий клон гейт не валит', () => {
+test('the baseline is taken, and a clone it holds does not bring the gate down', () => {
   const made = probe('dup', ['--update', '--baseline', baseline, '--paths', paths]);
-  assert.equal(made.code, 0, 'база дублей не снялась:\n' + made.out);
+  assert.equal(made.code, 0, 'the baseline of twins was not taken:\n' + made.out);
   const fingerprints = Object.keys(readJson(baseline).fingerprints);
-  assert.equal(fingerprints.length, 1, 'в базе не один отпечаток на два одинаковых файла');
+  assert.equal(fingerprints.length, 1, 'the baseline does not hold one fingerprint for two identical files');
 
   const clean = probe('dup', ['--baseline', baseline, '--paths', paths, '--no-ref']);
-  assert.equal(clean.code, 0, 'клон из базы повалил гейт (храповик не работает):\n' + clean.out);
+  assert.equal(clean.code, 0, 'a clone from the baseline brought the gate down (the ratchet does not work):\n' + clean.out);
 });
 
-test('новая копия красит гейт', () => {
+test('a new copy paints the gate', () => {
   write(path.join(first, 'src/three.js'), MODULE);
   const red = probe('dup', ['--baseline', baseline, '--paths', paths, '--no-ref']);
-  assert.equal(red.code, 1, 'третья копия того же модуля прошла молча:\n' + red.out);
-  assert.match(red.out, /new clones 1/, 'гейт не назвал число новых клонов:\n' + red.out);
+  assert.equal(red.code, 1, 'a third copy of the same module passed in silence:\n' + red.out);
+  assert.match(red.out, /new clones 1/, 'the gate did not name the number of new clones:\n' + red.out);
   fs.rmSync(path.join(first, 'src/three.js'));
 });
 
-test('база переносима: то же дерево в другом каталоге остаётся зелёным', () => {
+test('the baseline is portable: the same tree in another directory stays green', () => {
   const copy = tree('copy', { 'src/one.js': MODULE, 'src/two.js': MODULE, 'tools/other.js': OTHER });
   const again = probe('dup', ['--baseline', baseline,
     '--paths', copy + '/src,' + copy + '/tools', '--no-ref']);
-  assert.equal(again.code, 0, 'база привязана к пути выкладки — на копии дерева она красная:\n'
+  assert.equal(again.code, 0, 'the baseline is tied to the path of the working tree — on a copy of the tree it is red:\n'
     + again.out);
 });
 
-test('без базы датчик отказывает, а не зеленеет', () => {
+test('with no baseline the sensor refuses rather than turns green', () => {
   const none = probe('dup', ['--baseline', path.join(tmp, 'нет-такого.json'),
     '--paths', paths, '--no-ref']);
-  assert.equal(none.code, 1, 'отсутствие базы принято за чистое дерево:\n' + none.out);
-  assert.match(none.out, /no baseline/, 'отказ не назвал причину:\n' + none.out);
+  assert.equal(none.code, 1, 'a missing baseline was taken for a clean tree:\n' + none.out);
+  assert.match(none.out, /no baseline/, 'the refusal did not name the cause:\n' + none.out);
 });

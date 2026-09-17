@@ -65,17 +65,6 @@ Opened 2026-09-16 with the string-translation work (`docs/plans/2026-09-16-i18n-
   `!` into a `✗` and every check stays as it was. Fixing means a check of its own (the draft's lines
   for a project with and without a `package.json`, and that the mark and the code say the same thing)
   — a check rather than a literal, hence a portion of its own.
-- **`src/parse.js:129` — a comment that states the opposite of the code beside it.** Seen
-  2026-09-16 while translating the measurement layer (subplan S3, step 2): the comment above the parse
-  worker's fallback reason reads "The fallback reason travels into a printed refusal, so it is Russian
-  like the rest of the output", while the literal right below it is English since that step
-  (`'the module does not parse'`). How it shows: a reader is told the language of the line by a comment
-  that argues for the other one. It is prose rather than a literal, so the string work leaves it alone
-  (`AGENTS.md`'s frame) and records it here; the literal it explains moved because the reason lands in a
-  refusal that became English. Fix it in a portion of its own (one comment, no code).
-  (The `tools/refusals.js:134` comment that stood beside this one was fixed 2026-09-16 in W1's step 8,
-  together with the rest of the catalogue's prose: it now names `<file>`/`<commit>`, as the advice
-  prints them. A fixed entry is deleted rather than struck through.)
 - **`src/metrics.js:61-63` — the last Russian comment in `src/`.** Seen 2026-09-16 while measuring
   the measurement layer for subplan S3 (`docs/plans/2026-09-16-i18n-english/measurement.md`): the
   comment above `METRICS` explains why a metric declares `needsText`, and it is the only comment
@@ -84,12 +73,16 @@ Opened 2026-09-16 with the string-translation work (`docs/plans/2026-09-16-i18n-
   It is prose rather than a literal, so the string work does not touch it and `src/metrics.js` will
   not reach a zero Cyrillic count until someone does. Fix it in a portion of its own (one comment,
   no code), or name it permanently in that plan's allow-list.
-- **`tools/run-tests.js:22` — the example names a Russian test.** Seen 2026-09-16 in the same step:
-  `node tools/run-tests.js fast --test-name-pattern=паритет` is offered as the example of passing
-  flags to `node --test`, and it works only while the suites' test names are Russian (`C2`/`C3` own
-  them). How it shows: after those two owners the example silently stops selecting anything — the run
-  answers green with **fewer** checks, which is the failure mode the runner's own counter exists to
-  catch for files rather than for patterns. Prose, not a literal; fix it with the checks' pass.
+- **`tools/run-tests.js` — extra flags after the run's name never reach `node --test`.** Measured
+  2026-09-17 (node 22.23.2) while removing the usage example this entry was opened for: the runner
+  spawns `node --test <file> <flags>`, and node ignores options that follow the file — with
+  `--test-name-pattern=byte-identical` **before** the file it selects one test of `test/parity.test.js`
+  (`# tests 1`), **after** the file it selects all three (`# tests 3`), which is what the runner's
+  order gives. How it shows: `node tools/run-tests.js fast --test-name-pattern=<anything>` answers
+  exactly as without the flag, so a developer who passes a pattern runs the whole file and is told
+  nothing. The example the entry was opened for also named a Russian test name, dead since C2/C3
+  renamed the checks. The fix is one reordering (flags before the file) — behaviour rather than prose,
+  hence a portion of its own; the comment in the file no longer promises what does not work.
 - **`test/gates-verify.test.js:146-149` — an assertion that cannot fail.** Seen 2026-09-16 in W2's
   step 7, while measuring who reads the hooks' messages: the sweep over `pnpm run ([a-z:.-]+)` in the
   hook text asserts `scriptOf('pnpm run ' + m[1]) !== null`, and `scriptOf` returns the matched token

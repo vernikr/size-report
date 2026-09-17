@@ -20,7 +20,7 @@ import { ROOT } from '../tools/harness.js';
 import { FAST, checksIn, testFiles } from '../tools/suites.js';
 import { publishedRuns, read } from '../tools/docs-facts.js';
 
-test('числа проверок в документации совпадают с фактом', () => {
+test('the check counts in the documentation agree with the fact', () => {
   // Check declarations, file by file. The count holds because a check is declared at the start of a
   // line: a declaration inside a loop would make the number a derivation from the code, and the
   // documentation would have nothing to rest on.
@@ -31,7 +31,7 @@ test('числа проверок в документации совпадают
     });
   });
   assert.deepEqual(nested, [],
-    'проверка объявлена не в начале строки — число проверок нельзя прочесть по файлам:\n  '
+    'a check is not declared at the start of a line — the count cannot be read off the files:\n  '
     + nested.join('\n  '));
 
   const total = testFiles().reduce((sum, f) => sum + checksIn(f), 0);
@@ -39,14 +39,14 @@ test('числа проверок в документации совпадают
 
   // README names both runs as a table: the command and how many checks it takes.
   const runs = publishedRuns();
-  assert.ok(runs.fast !== null, 'README не называет быстрый прогон: `pnpm test` — сколько'
-    + ' проверок из скольких');
-  assert.ok(runs.full !== null, 'README не называет полный прогон: `pnpm test:all` — сколько'
-    + ' проверок');
-  assert.equal(runs.fast.checks, quick, 'README обещает быстрому прогону ' + runs.fast.checks
-    + ' проверок, а в быстрых файлах их ' + quick);
-  assert.equal(runs.fast.total, total, 'README называет в наборе ' + runs.fast.total
-    + ' проверок, а в файлах их ' + total);
-  assert.equal(runs.full.checks, total, 'README обещает полному прогону ' + runs.full.checks
-    + ' проверок, а в файлах их ' + total);
+  assert.ok(runs.fast !== null, 'README does not name the fast run: `pnpm test` — how many'
+    + ' checks out of how many');
+  assert.ok(runs.full !== null, 'README does not name the full run: `pnpm test:all` — how many'
+    + ' checks');
+  assert.equal(runs.fast.checks, quick, 'README promises the fast run ' + runs.fast.checks
+    + ' checks, and the fast files hold ' + quick);
+  assert.equal(runs.fast.total, total, 'README names in the set ' + runs.fast.total
+    + ' checks, and the files hold ' + total);
+  assert.equal(runs.full.checks, total, 'README promises the full run ' + runs.full.checks
+    + ' checks, and the files hold ' + total);
 });

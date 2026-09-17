@@ -10,7 +10,7 @@ shows.
 
 ## Status
 
-**Release 2.4.0 (2026-09-15).** The tool lives as a package of its own: the registry name is
+**Release 2.5.0 (2026-09-17).** The tool lives as a package of its own: the registry name is
 `@vernikr/size-report` (published by tag from CI, with no secret). A project may keep no settings at
 all: without a config file the tool derives them from the project itself and says so in one line,
 and `--init` pins what was derived into a file. The report is **one file**, the self-contained page
@@ -19,12 +19,13 @@ is installed and on the first run. The version is in the manifest, and every rel
 the journal — `worklog/` for today's entries, `worklog/archive/WORKLOG.md` for the earlier ones:
 what changes in the numbers is measured rather than retold.
 
-2.4.0 changes nothing in the numbers; what it changes is **what is visible and in which order**:
-with no config file every tracked file is a column (rather than a sample of twelve), folders fold in
-the tree, and everything outside the report stands after the rest with its box cleared and
-unavailable; in the table, the columns the last commit touched come first. The data `schema: 1`,
-frozen at 1.0.0, stays what it was: the release added a field rather than changing the meaning of
-the old ones.
+2.5.0 changes nothing in the numbers; what it changes is **the language the tool speaks**: the help,
+the refusals, the diagnostics and the page are English, and a project with no config file now gets
+`locale: en` rather than `ru`. Nothing is thrown away for it — the Russian dictionaries stay in the
+package and are chosen by `locale` in the settings, and the frozen layer keeps its Russian values,
+as `schema: 1` stays what it was. The note of 2.4.0 — what that release made visible and in which
+order — stands in the journal, `worklog/02*`: what changes in the numbers is measured rather than
+retold.
 
 **Parity with the implementation the move started from is proven, not asserted.** The command is
 `bin/size.js` and the package's entry point is `src/size-table.js` (a re-export only), with the
@@ -486,7 +487,7 @@ acceptance for each.
 | `tools/gates/metrics.js` | The bloat sensor: rules of size and complexity, the weight of checks, debt marks — with an ESLint suppression ratchet (`.eslint-suppressions.json`) |
 | `tools/gates/dup.js` | The duplication sensor: clone fingerprints by content (`dup-baseline.json`), a view against the baseline file and one against the `origin/main` tree |
 | `tools/gates/deps.js` | The dependency sensor: cycles, orphans, the direction of layers and unresolvable imports (`dependency-cruiser`) |
-| `tools/gates/coverage.js` | The coverage sensor: a per-file ratchet against `coverage-baseline.json` rather than a percentage over the repository |
+| `tools/gates/coverage.js` | The coverage sensor: a per-file ratchet against `coverage-baseline.json` rather than a percentage over the repository. The unit is **how much executed** — lines, branches and functions, taken from c8's own numbers — so a file that merely grew does not move the ratchet while code that stopped being run does |
 | `tools/gates/gatefiles.js` | The guard of the gate files: editing thresholds, baselines or the harness without the `Gate-Change:` trailer is red — the `commit-msg` hook at commit time and the `pre-push` hook over a range, while CI reads no trailers at all |
 | `tools/gates/common.js`, `tools/gate-probe.js` | What the sensors share (the root, argument parsing, reports) and the harness of their probes: a sensor is called as a command rather than imported |
 | `.githooks/commit-msg`, `.githooks/pre-commit`, `.githooks/pre-push` | Hooks: the guard of the gate files, the fast profile on an edit and before a push; installed by `pnpm run hooks:install` (no hook manager of our own is started) |
@@ -644,7 +645,7 @@ The same release can be taken by a reference to the repository — installation 
 registry, but stays tied to a revision:
 
 ```bash
-pnpm add -D github:vernikr/size-report#v2.4.0
+pnpm add -D github:vernikr/size-report#v2.5.0
 ```
 
 With no network (or nothing to fetch from codeload) — the tarball: `pnpm pack` in the package clone, then
@@ -656,7 +657,7 @@ the branch moves on the installation fails with `Could not resolve <sha> to a co
 observation rather than reasoning: the short pin `6530237` installed while `main` stood on it and stopped
 working at the very next commit, while the same sha in full installed. A branch name (`#main`) and a tag
 are both accepted, but a branch is a moving target and a tag is constant: this release stands on the tag
-`v2.4.0`, which is also the one in the example (forty characters work as well, but they have to be copied
+`v2.5.0`, which is also the one in the example (forty characters work as well, but they have to be copied
 out of the history by eye).
 
 The revision in the example is a part of the claim rather than decoration: what is described below is

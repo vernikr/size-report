@@ -1,24 +1,24 @@
 name: CI
 
-# На каждый пуш и на каждый запрос правки — **одна команда профиля**, а не перечень
-# шагов: `pnpm run verify`. Список проверок живёт в одном месте
-# (`tools/gates/run.js`), поэтому локально и здесь гоняются одни и те же команды в
-# одном порядке — за этим следит `test/gates-verify.test.js`, читая этот файл.
-# Секретов не требует: всё, что читают проверки, лежит в репозитории, включая
-# историю проекта-потребителя (`fixtures/live`).
+# On every push and every pull request — **one profile command** rather than a list of
+# steps: `pnpm run verify`. The list of checks lives in one place
+# (`tools/gates/run.js`), so locally and here the same commands run in the
+# same order — `test/gates-verify.test.js` reads this file and guards that.
+# It needs no secrets: everything the checks read lies in the repository, including
+# the history of the consumer project (`fixtures/live`).
 on: [push, pull_request]
 
 jobs:
-  # Имя работы — обязательный чек: branch protection ссылается на него, поэтому оно
-  # и называется тем же словом, что команда.
+  # The job name is the required check: branch protection refers to it, which is why it
+  # is called by the same word as the command.
   verify:
     runs-on: ubuntu-latest
     steps:
-      # История нужна целиком: сторож документации читает справку закреплённой в
-      # примере установки ревизии (`git show <пин>:src/refusal.js`), а взгляд на дубли
-      # сравнивает дерево с веткой `main`. На обрезанном клоне и то, и другое нечем.
-      # Действия закреплены по SHA коммита (не по плавающей метке) — как и версия
-      # pnpm из поля `packageManager` манифеста.
+      # The history is needed in full: the documentation guard reads the help of the revision
+      # pinned in the install example (`git show <pin>:src/refusal.js`), and the duplicate
+      # reading compares the tree with the `main` branch. A shallow clone can do neither.
+      # The actions are pinned by commit SHA (not by a floating tag) — as is the
+      # pnpm version from the manifest's `packageManager` field.
       # actions/checkout v7
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -33,13 +33,13 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Установка
+      - name: Setup
         run: pnpm install --frozen-lockfile
 
-      # Подготовка, а не проверка: ветка `main` нужна взгляду на дубли (база строится
-      # из её дерева). Если ветки нет вовсе, датчик сам скажет, что взгляд пропущен.
-      - name: Ветка main для взгляда на дубли
-        run: git fetch --no-tags origin main || echo "origin/main недоступен — взгляд на ветку пропущен"
+      # Preparation rather than a check: the `main` branch is needed by the duplicate reading
+      # (its baseline is built from that tree). With no branch at all, the sensor says it was skipped.
+      - name: The main branch for the duplicate reading
+        run: git fetch --no-tags origin main || echo "origin/main is unavailable — the duplicate reading was skipped"
 
-      - name: Проверки — те же команды, что локально
+      - name: The checks — the same commands as locally
         run: pnpm run verify

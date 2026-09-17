@@ -35,27 +35,27 @@ function verdictOf(name, files) {
 
 function expectVerdict(name, files, code, rule) {
   const res = verdictOf(name, files);
-  assert.equal(res.code, code, (code === 0 ? 'исправный граф покрашен' : 'находка прошла молча')
+  assert.equal(res.code, code, (code === 0 ? 'a clean graph came out painted' : 'a finding passed in silence')
     + ' (' + name + '):\n' + res.out);
   if (rule !== null) {
-    assert.match(res.out, new RegExp(rule), 'находка не названа правилом ' + rule + ':\n' + res.out);
+    assert.match(res.out, new RegExp(rule), 'the finding is not named by the rule ' + rule + ':\n' + res.out);
   }
 }
 
-test('связка из двух модулей зелёная', () => {
+test('a pair of two modules is green', () => {
   const res = verdictOf('linked', { 'src/a.js': A, 'src/b.js': B });
-  assert.equal(res.code, 0, 'исправная связка покрашена:\n' + res.out);
-  assert.match(res.out, /no findings/, 'датчик не сказал про чистый граф:\n' + res.out);
+  assert.equal(res.code, 0, 'a sound pair came out painted:\n' + res.out);
+  assert.match(res.out, /no findings/, 'the sensor did not say the graph is clean:\n' + res.out);
 });
 
-test('кольцо связей красит прогон', () => {
+test('a cycle of relations paints the run', () => {
   expectVerdict('cycle', { 'src/a.js': A, 'src/b.js': CYCLE }, 1, 'no-circular');
 });
 
-test('сирота красит прогон', () => {
+test('an orphan paints the run', () => {
   expectVerdict('orphan', { 'src/lonely.js': LONELY }, 1, 'no-orphans');
 });
 
-test('связь в несуществующий модуль красит прогон', () => {
+test('a relation to a module that does not exist paints the run', () => {
   expectVerdict('broken', { 'src/a.js': GONE }, 1, 'not-to-unresolvable');
 });

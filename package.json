@@ -1,12 +1,12 @@
 {
   "name": "@vernikr/size-report",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "author": "vernikr",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vernikr/size-report.git"
   },
-  "description": "Учёт роста объёма кода и документов по истории git: raw / min / токены; отчёт — один самодостаточный файл, обновляется хуком сам",
+  "description": "Tracking how the volume of code and documents grows across git history: raw / min / tokens; the report is one self-contained file, refreshed by the hook on its own",
   "type": "module",
   "license": "MIT",
   "packageManager": "pnpm@10.6.1",
@@ -65,7 +65,7 @@
     "report"
   ],
   "devDependencies": {
-    "@vernikr/size-report": "2.4.0",
+    "@vernikr/size-report": "2.5.0",
     "c8": "10",
     "dependency-cruiser": "17",
     "eslint": "^9.18.0",

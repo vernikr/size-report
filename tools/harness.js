@@ -110,17 +110,6 @@ export function cloneCrlf(into) {
   return into;
 }
 
-/* A truncated history: a clone with `--depth 1`, which is the seam every check of a shallow repository builds on. The
- * clone is asserted to have really come out shallow — otherwise there is nothing to check, and a green answer would
- * mean nothing. This is the third place the seam was written out by hand, which is why it lives here. */
-export function shallowClone(from, into) {
-  const clone = gitTry(null, ['clone', '-q', '--depth', '1', '--no-hardlinks', 'file://' + from, into]);
-  assert.equal(clone.status, 0, 'не удалось собрать обрезанную выкладку: ' + firstLine(clone.stderr));
-  assert.equal(gitIn(into, ['rev-parse', '--is-shallow-repository']).trim(), 'true',
-    'выкладка вышла полной: проверять нечего');
-  return into;
-}
-
 /* A project from scratch: an empty repository with an `src` directory and a given identity — without it git refuses to
  * commit and cannot ask. One for every suite that needs a project of its own rather than a clone of the fixture
  * (measured: three suites had grown this separately). */
@@ -133,17 +122,30 @@ export function initRepo(dir) {
   return dir;
 }
 
-/* The same project, brought to the state the tool is asked to make its own settings in: one file in `src` committed
- * (the subject is Russian like the rest of the fixtures), then `--init` — a draft exists only in a repository no
- * report has been taken in. What the suites need back is where the project lies and where the draft did. */
+/* A fresh project with a settings draft of its own, ready for a run: two suites start from exactly this
+ * state (the minifier's way and the tokens'), and the state is shared rather than copied — a copied block
+ * is what the `dup` sensor counts, and a copy is what it was: the same commands with the same assertion
+ * between them. The file's text is the caller's: the suites differ in what they measure, not in the setup. */
 export function draftedRepo(dir, code) {
   initRepo(dir);
   fs.writeFileSync(path.join(dir, 'src', 'code.js'), code);
   gitIn(dir, ['add', '-A']);
-  gitIn(dir, ['commit', '-qm', 'начало']);
+  gitIn(dir, ['commit', '-qm', 'the first commit']);
   const made = runSize(dir, ['--init']);
-  assert.equal(made.code, 0, 'черновик не собрался: ' + made.stderr.trim());
+  assert.equal(made.code, 0, 'the draft was not built: ' + made.stderr.trim());
   return { dir: dir, file: path.join(dir, 'size-table.config.json') };
+}
+
+/* A working tree whose history is cut: what `git clone --depth 1` gives. Two suites need exactly this state — the
+ * command line and the doctor both have to name the command that fills the history in rather than count coverage over
+ * it, and both start from the same cut clone. The assertions are the ones both suites had written out: the clone went
+ * through and the history really is shallow, otherwise there would be nothing to check. */
+export function shallowClone(source, into) {
+  const clone = gitTry(null, ['clone', '-q', '--depth', '1', 'file://' + source, into]);
+  assert.equal(clone.status, 0, 'the truncated working tree was not assembled: ' + firstLine(clone.stderr));
+  assert.equal(gitIn(into, ['rev-parse', '--is-shallow-repository']).trim(), 'true',
+    'the working tree came out complete: there is nothing to check');
+  return into;
 }
 
 /* One shared clone per environment for read-only runs. It is created on first use: suites that need no environment pay

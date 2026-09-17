@@ -381,8 +381,9 @@ references stayed the same after the fix.
   revision whose help knows the named commands — read from the history rather than from the tree).
 
 - **N14. The coverage ratchet falls from comments rather than from code: 11 regressions, 10 of them ours, one**
-  **not ours.** The `cover` step of the slow profile is red, and the run that found it measured (in separate working
-  copies rather than from memory).
+  **not ours.** Answered 2026-09-17 by the decision on **N32** — see the paragraph «What became of this note»
+  below. The `cover` step of the slow profile was red when this was written, and the run that found it measured
+  (in separate working copies rather than from memory).
 
   **The mechanism, proven by numbers.** `c8` counts as a line **every line of a file that falls into a coverage
   range**, and as covered one that lies inside an executed range; so removing a comment inside executed code lowers
@@ -422,9 +423,36 @@ references stayed the same after the fix.
      baseline. The red step stays a signal, but it demands a human step each time — and until then the slow profile
      and the CI schedule are red.
 
-  **For the user to decide:** which option to take. Until then `pnpm run verify:fast` and `pnpm run verify` are
-  green (`cover` does not run in the full profile at all), while `pnpm run verify:slow` and `verify-slow.yml` on a
-  schedule are red: one regression is old, ten are mechanical and ours.
+  **What became of this note (measured 2026-09-17).** **Option 2 was taken, and the work is recorded in N32:**
+  `tools/gates/coverage.js` now compares **executed counts** (lines, branches, functions per file) instead of a
+  share of them. **Option 1 was consumed by that change rather than chosen**: the old baseline kept percentages
+  and the new unit keeps counts, so the re-take was inseparable from it and `coverage-baseline.json` was written
+  anew in the same commit — same 39 keys, new shape (`schema` 2, a `unit` field). **Option 3 is moot.** A later
+  run of the same day (**N32**, measured in W2's step 4) names **13** files of this class rather than this note's
+  eleven, so two more joined before the unit changed; both readings are of the share, and neither survived the
+  re-take. The
+  present tense of this note is gone with it: `pnpm run cover` (run again today) answers
+  `cover: lines 80.6%, branches 89.05%, functions 92.37% of the set (the ratchet compares executed counts per
+  file)` and `✓ cover: no regressions (the baseline holds 39 files)`, exit 0 — the totals are exactly the ones
+  this note recorded while red, so the numbers never moved; the unit did.
+
+  **The one regression that was `src/data.js` was of the mechanical class too, checked against today's report.**
+  The file reads `lines 115 of 115` and `branches 34 of 38` — the 89.47 % this note recorded as the red value — and
+  its numerator did not fall: the nearest integer pair that fits the old baseline's 91.66 % is 33 of 36, so one more
+  branch is executed today than the floor the old baseline held (that reconstruction is arithmetic, and the old
+  shape cannot settle it: percentages alone cannot tell a lost check from a file that grew, which is the reason the
+  unit changed). The new baseline holds `34` for the file, and the sensor is green.
+
+  **What this note still holds open, and only this: code that arrives without any execution is invisible to the new**
+  **unit.** A floor over executed counts rises only when a check is lost, so a new branch, a new function or a new
+  file that nothing reaches no longer reddens anything — measured today: `src/data.js` carries 4 branches that never
+  run and `src/cli.js` reads 71.3 % of its lines, while the run above is green and exits 0. Under option 2's
+  predecessor those were part of the red step. Options, with their price: **(a) leave it** — the ratchet's promise is
+  then «no executed check was lost», and this class is caught only by the sensor's own probes (no work; and no gate
+  stands over new code at all); **(b) a second sensor over `covered` of the files a change touches** — new code has to
+  run at least in part — which is another gate file with its own probes, a trailer and a new question to answer (what
+  a comments-only pass means for it). **For the user to decide** whether that class deserves a gate; N32's answer does
+  not reach it, so this entry is not closed by it alone.
 
 - **N15. The duplicate sensor's fingerprint of its own — possibly superfluous by now.** Found on pass M10f
   (2026-09-15) while checking comments: both `tools/gates/dup.js` and `test/gates-dup.test.js` said jscpd's own
@@ -551,6 +579,24 @@ references stayed the same after the fix.
   **For the user to decide:** which of the three. The plan of the work is `docs/plans/2026-09-16-i18n-english/`
   (subplan `surface.md`), and until the decision the code is untouched.
 
+  **Decided 2026-09-17 by the user: option (2) — the default locale becomes `en`.** Done in one commit:
+  `src/config.js:19` `locale: 'ru'` → `'en'`, and the settings template follows —
+  `templates/size-report.config.json` carries `"locale": "en"` and the `en` dictionary's own heading
+  (`File size by commit`) in its `title`/`heading`, which is the same relationship to the dictionary the
+  two Russian values had. **The blast radius is exactly these two files, as this note predicted, and that
+  is measured rather than hoped:** with the change in place the **full** `verify` (8 steps) is green —
+  `check:standards` reproduces both references, `parity:live` passes, `frozen` stays green and
+  `pack:check`'s byte comparison answers `the report from the package is byte-identical: 66427 B`, because
+  both fixture configs pin `"locale": "ru"` (`fixtures/parity/config.json`, `fixtures/synthetic/config.json`)
+  and the builders (`tools/make-fixture.js:55`) pin it too. What a person meets instead: `--init`'s derived
+  draft now pins `"locale": "en"` (measured in an empty repository), and a fresh project's report is English.
+  **One step of the chain is worth naming, because the measurement contradicts the obvious reading:** this
+  repository's own page does **not** turn English with this commit — its post-commit hook runs the engine of
+  the **attached copy** in `node_modules`, and that copy is `2.4.0`, whose `src/config.js:20` still reads
+  `locale: 'ru'` (measured). So the page follows the tree only after the release and the `pnpm add -D -E`
+  that attaches the new version, which is exactly what `AGENTS.md`'s release step 3 is for. The `ru`
+  dictionary is untouched either way: a project that wants Russian asks for it with the key, as before.
+
 - **N20. A translated literal changes the bytes that ship — how often to release is a decision.** Every string
   that a user sees is inside the tarball, so `AGENTS.md`'s rule applies to each portion of the translation work:
   a PATCH release, a journal section saying what changes in the numbers, and the pin in `README.md`, in one
@@ -571,6 +617,24 @@ references stayed the same after the fix.
   portion, or batched, with the registry's answer differing from the tree's source until the release. Before
   the first of those pushes the full profile was run by hand and was green (`pnpm run verify`: eight steps,
   including `test:all`, `parity:live`, `check:standards` and `pack:check`).
+
+  **Decided 2026-09-17 by the user: option (2) — batch, because few portions are left.** The answer was
+  conditional, and the condition is met rather than rounded off: "if few portions are left — batch; if the
+  work is still long — a release per portion, so that the divergence does not accumulate". Measured when it
+  was answered: the translation campaign wrote its last portion on 2026-09-17 (D1, its last owner), so what
+  remained was the three self-contained repairs of `N19` (done the same day), `N31` and `N32` — a handful,
+  which is why the batch is chosen: **one PATCH release after the last of them**, with the journal section
+  saying what changes in the numbers, the pin in `README.md` and a single `git push origin v<version> main`.
+  The divergence the batch accepts is named rather than left implicit: until that release the registry
+  serves `2.4.0` with the Russian wordings while the tree is English, so anyone who installs inside the
+  window gets the older interface — and the release is what closes the window.
+
+  **Done 2026-09-17: released as `2.5.0`, tag `v2.5.0`** (MINOR by the user's choice, since the default
+  locale is visible behaviour rather than wording; the journal entry is `worklog/0203-release-2.5.0.md`).
+  The window is closed: the registry answers `2.5.0` with the English interface, and the pin in `README.md`
+  leads to a revision whose help is English — which is also what makes the Russian branch of
+  `commandsAt()` (`tools/docs-facts.js`) dead, measured at the release rather than assumed. The attached
+  copy is updated in the commit that follows (`pnpm add -D -E`, with the trailer, no new release).
 
 - **N21. The fixture builders write the frozen layer — translating them re-takes both references.**
   `tools/synthetic/*` (note.js, content.js, history.js) writes the synthetic fixture's files, subjects and its
@@ -963,6 +1027,58 @@ references stayed the same after the fix.
   has 8, which a reader of the file has to notice for themselves. Nothing else moves either way, and the same
   question will be measured for `coverage-baseline.json` in W2's step 4 rather than assumed to be identical.
 
+  **Decided 2026-09-17 by the user: prune the garbage.** Done exactly as `AGENTS.md` prescribes —
+  `pnpm run baseline:dup`, no hand editing: the baseline goes from **15** fingerprints to **5** (the number the
+  note itself predicted it would, 8, then fell further as N33's and N34's extractions took their pairs out),
+  the diff being 1 insertion and 11 deletions, and the five that stay are entries the file already had
+  (`schema`, `config` and `note` compare equal to the previous revision, and every surviving fingerprint is
+  present in it — measured against a copy). The sensor's reading is unchanged —
+  `✓ dup: no new clones (clones 5, lines 29, the baseline holds 5 fingerprints; looks 2: the baseline file,
+  against origin/main)` — while the ratchet is now **stricter**: the file says what the tree produces, so a
+  reappearance of any of the ten historical clones counts as a new clone instead of hiding behind a tolerated
+  leftover. The reason travels in the commit's `Gate-Change:` trailer, the baseline being a gate file.
+
+- **N33. A translated block inside an accepted clone pair becomes a *new* clone: `test/minify.test.js` ↔
+  `test/tokens.test.js`.** Measured 2026-09-16 in C2's steps 4–5, after translating those two files' prose.
+  `node tools/gates/dup.js` answers `✗ dup: new clones 4 (the baseline holds 15 fingerprints, the tree has 7)`
+  with two pairs, each counted twice (`[the baseline file]` and `[against origin/main]`, the sensor's two looks):
+  `8 lines, 109 tokens: minify.test.js:252 ↔ tokens.test.js:158` and
+  `7 lines, 71 tokens: minify.test.js:260 ↔ tokens.test.js:165`.
+
+  **The pairs are not new in substance — only their fingerprints are.** With the four files put back to their
+  `HEAD` version the sensor answers `✓ dup: no new clones (clones 7, lines 42, the baseline holds 15
+  fingerprints)` (measured, then restored byte-identical): the same two blocks are **accepted twins** of the
+  baseline, whose fingerprint was taken while their words were Russian. The fragment carries a test name and a
+  message (`'the --init draft leads a new project to …'`, `'the draft was not built: ' + made.stderr.trim()`),
+  so translating them changes the token sequence, the fingerprint changes with it, and `newer()` counts the pair
+  as new. It is the same class as **N29** (`firstDiff` in `tools/harness.js` / `tools/parity-live.js`), and the
+  same mechanism: the sensor measures a shape, and a translation is a different shape.
+
+  **What is actually duplicated.** Both files set up the same fresh project by hand — `fs.mkdirSync(src)`,
+  `git init -q -b main`, the three `git config` lines — although `initRepo` (`tools/harness.js:116`) already
+  does exactly that and is used by `doctor`, `disk` and `cli-paths`; then both write their own `src/code.js`,
+  commit it, run `--init` and assert the same `the draft was not built: …`. So the twin is **real duplication of
+  setup**, not a coincidence of wording.
+
+  **What was not done.** No word was varied to hide the twin and no baseline was edited — `AGENTS.md` forbids
+  both ("fix the code, not the sensor"; "a baseline is updated by a person"), and this portion's frame says the
+  answer to a twin is not to "tinker with words without need".
+
+  **Decided by the user on 2026-09-17: take the shared part out** (way 1 of the three that were put to the
+  user: the sensor's own advice, and the repair **N29** took). No word was varied to hide the twin and no
+  baseline was touched. The repair landed as a commit of its own, `897a780`: `tools/harness.js` gained
+  `draftedRepo(dir, code)` — `initRepo` plus the file under measure, the two git commands, `--init` and the
+  assertion that the draft was built, returning `{ dir, file }` — and the two checks' seven hand-rolled lines
+  (four of which were already what `initRepo` does) became a two-line call. Measured after it: both files green
+  (9 + 7 checks), `dup` green with the count **falling** — `clones 7, lines 42` before, `clones 5, lines 29`
+  after — and the two files' remaining Russian lines are their payloads and the `ru` dictionary reads alone.
+  The one literal that belonged to both, the scenario's commit subject, moved into the helper; nothing asserts
+  on it.
+
+  **Left for the user, as the same family of questions:** whether the two baselines are re-taken at all —
+  **N31** (the seven stale `dup` fingerprints) and **N32** (the coverage ratchet, red on the tree before any
+  translation). Neither has anything to do with this repair, and neither is touched by it.
+
 - **N32. The coverage ratchet is red on the tree: 13 regressions, and the baseline is 261 commits old.**
   Measured 2026-09-16 in W2's step 4, **before** anything was translated: `pnpm run cover` answers
   `✗ cover: regressions 13 (the baseline holds 39 files)` with the totals `lines 80.6%, branches 89.05%,
@@ -995,7 +1111,101 @@ references stayed the same after the fix.
   **For the user to decide:** re-take the baseline (one `pnpm run baseline:coverage` with the
   `Gate-Change:` trailer) or fix the coverage. Price of the re-take: it accepts the thirteen falls **and**
   the four rises without asking why the falls happened — the ratchet then starts from today. Price of
-  waiting: the slow profile is red locally and its first scheduled CI run will be red too. Unlike N31 this
-  is **not** a composition change (no key would appear or vanish), which is the difference between the two
+  waiting: the slow profile is red locally and its first scheduled CI run will be red too. Unlike N31  this is **not** a composition change (no key would appear or vanish), which is the difference between the two
   baselines, and the reason the two questions are recorded separately.
+
+  **Decided 2026-09-17 by the user: fix the sensor, not the baseline — count what actually executed rather
+  than a file's share.** The unit changes from a percentage to a count, and that is what makes the ratchet
+  mean what it says: a percentage falls when a file merely grows (a translated literal split into a two-line
+  concatenation adds a line the report counts and the suite never reaches), while a count of executed lines
+  moves only when the code stops being run. **The instrument for it is already in hand, measured:** c8 runs
+  with `json-summary` (`.c8rc.json`), so every file of the summary it writes beside its report (the file
+  `coverage-summary.json`, inside the gitignored report directory) carries
+  `lines: { total, covered, skipped, pct }` beside branches and functions — `src/cli.js` today reads
+  `{"total":84,"covered":77,"pct":91.66}` while the baseline holds the percentage `91.95`, which is exactly
+  the pair that cannot be compared in the new unit and the reason a re-take is inseparable from this change.
+  **The price is named rather than discovered:** the baseline changes its **shape** (counts instead of
+  percentages), so `coverage-baseline.json` is re-taken in the same commit — with the `Gate-Change:` trailer,
+  a gate file — and the sensor's own probes move with it, since `test/gates-coverage.test.js` asserts the
+  verdict's wording **and** its numbers (`/src\/x\.js — lines: was 80, now 50/`, `was not in the baseline,
+  now 0`); that file is a gate file too. Both references and every frozen byte stay untouched (coverage is
+  measured over this repository's own sources, not over the fixtures). **Not done in this portion:** it is the
+  next one, after which N20's batched release follows.
+
+  **Done 2026-09-17.** `tools/gates/coverage.js` now takes its unit from c8's own `covered` numbers:
+  `counts(point) = { lines: point.lines.covered, branches: …, functions: … }`, and the whole-set shares are
+  printed to a person while they are no longer compared. **The two halves of the claim are measured on the
+  real report, not argued:** with the executed counts of the freshly taken coverage, the real `src/cli.js`
+  (`{"total":84,"covered":77,"skipped":0,"pct":91.66}`) **grown by 24 lines — green** (`✓ cover: no
+  regressions (the baseline holds 39 files)`, exit 0, even though its share falls to 71.3%, well below the
+  91.95% the previous baseline held), while **one executed line less reddens** with
+  `src/cli.js — lines: was 77, now 76` (exit 1) and **one executed branch less** with
+  `src/cli.js — branches: was 34, now 33`. So the ratchet is a floor over execution rather than a promise
+  about the share, and it is sensitive to a single line.
+
+  **The baseline's shape moved with the unit, and only its shape.** `coverage-baseline.json`: `schema` 1 → 2
+  and a new `unit` field, the entries going from shares to counts — `src/cli.js` was
+  `{"lines":91.95,"branches":97.14,"functions":100}` and reads `{"lines":77,"branches":34,"functions":9}` —
+  while the **key set is identical: 39 files before and after**, so this is not a composition change (the
+  difference N31 had). The `note` inside the file was extended to say what the unit is, since it is the
+  first thing a reader of the file has, and a re-take now writes the same counts it would read back. The six
+  files that legitimately read zero executed lines are named by the note and re-measured: `bin/postinstall.js`
+  and the five `src/page/*.js` chapters node pastes into the assembled page.
+
+  **The slow profile is green, and that was the point.** `pnpm run cover` answers
+  `✓ cover: no regressions (the baseline holds 39 files)` with the same totals it printed while it was red
+  (`lines 80.6%, branches 89.05%, functions 92.37%`) — the numbers did not move, the unit did, and the
+  thirteen “falls” that reddened it were exactly the class the decision names (share down, execution
+  unchanged). `pnpm run verify:slow` runs green end to end: **10 steps, 198.5 s**, of which `cover` 69.0 s;
+  the sensor's own cost is unchanged (the same c8 run, one more map of counts), and `tools/**`'s Cyrillic
+  counter stays at 111 (the sensor carries no Russian of its own).
+
+  **One implementation decision, with the price of the alternative named:** the user's answer spoke about
+  lines, and branches and functions were given the same unit because the flaw is identical for all three
+  and one file should not carry two units — the price of narrowing to lines alone is one word in `METRICS`,
+  recorded here rather than decided in silence. The transducer of the verdict, `test/gates-coverage.test.js`,
+  moved in the same commit and got **stronger**: its reports are written in counts, its baseline too, and it
+  gained the two cases the decision rests on — a fall of exactly one executed line is red, and a file that
+  grew while keeping every execution is green (3 of 3 green). Both are gate files, and the commit carries the
+  `Gate-Change:` trailer.
+
+  **This is the answer to N14**, which put the same ratchet's three options to the user: option 2 was taken,
+  option 1 was consumed by the re-take the change of unit made inseparable from it, option 3 went moot. N14 stays
+  open for the one class this answer does not reach — code arriving without any execution, which a floor over
+  executed counts cannot see — and names it there with its price.
+
+- **N34. The same pair formed a second time: a translated block inside an accepted clone pair becomes a *new*
+  clone (`test/cli-paths.test.js` ↔ `test/doctor.test.js`).** Measured 2026-09-17 while translating for `doctor`
+  (C2's step 6): the sensor answered `✗ dup: new clones 2` over one pair — `cli-paths.test.js:28` ↔
+  `doctor.test.js:176`, **6 lines, 52 tokens**, reported both against the baseline file and against `origin/main`.
+  With the three files of that portion put back to their `HEAD` version the same run was green
+  (`✓ dup: no new clones (clones 5, lines 29, the baseline holds 15 fingerprints)`, measured), so the pair is not
+  new in substance: it is the shallow-clone setup both checks had written out with the **same two messages**
+  (`the truncated working tree was not assembled: …`, `the working tree came out complete: there is nothing to
+  check`), whose fingerprint was taken while their words were Russian — the class **N33** describes. `dup` names
+  the honest reading itself: the duplicated thing is real duplication of setup, not a coincidence of wording.
+
+  **Answered by the rule N33 was decided with** (taking the shared part out; not varying a word, not editing the
+  baseline): `tools/harness.js` gained `shallowClone(source, into)` — the `git clone --depth 1` of a source plus
+  the two assertions both checks made, returning the working tree — and both checks' five hand-rolled lines became
+  one call. Measured after it: `clones 5, lines 29` (the numbers the tree had before the port), `dup` green, the
+  baseline untouched, the file green at 11 checks and the neighbour at 3. The extraction touches a file of another
+  owner (`test/cli-paths.test.js`, step 3's) and a tools file, which is why the commit is named in `tests-cli.md`
+  rather than hidden inside the translation.
+
+- **N35. The coverage baseline's note explains one kind of honest zero but not the other.** Measured
+  2026-09-17 while taking the new unit (N32): the files reading zero executed lines are the same six before
+  and after the change — `src/page/app.js`, `dom.js`, `panel.js`, `state.js`, `table.js` and
+  `bin/postinstall.js` — and the note the sensor writes names only the first kind (the page chapters node
+  pastes into the assembled page and never executes). The sixth is a different kind: the postinstall script
+  is run by `pnpm install` in a consumer project, not by this suite, so its zero is honest for a reason the
+  note does not say. The gap is pre-existing rather than introduced by N32 (the previous baseline held the
+  same `{"lines":0,"branches":0,"functions":0}` for it).
+
+  **For the user to decide:** whether to name that second kind in the note. Price of naming it: one
+  sentence in the sensor's literal, which is a gate file, so a commit of its own with the `Gate-Change:`
+  trailer (and a re-take so the file's copy of the note matches the script's). Price of leaving it: a reader
+  of the baseline who meets a zero in `bin/` has to work out for themselves whether it is honest — the
+  note's sentence about the page chapters does not cover it, and a reader who takes it as the only exception
+  may read the sixth zero as an oversight.
 

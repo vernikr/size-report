@@ -44,7 +44,7 @@ function usageCauses() {
  * `**name** (cause, cause)`. */
 function readmeCauses() {
   const rows = read('README.md').split('\n').filter((l) => /^\|\s*2\s*\|/.test(l));
-  assert.ok(rows.length > 0, 'в таблице кодов README нет строки про код 2 — сверить нечего');
+  assert.ok(rows.length > 0, 'the code table of README carries no row about code 2 — there is nothing to compare');
   const cell = rows[0].split('|')[2];
   const found = [...cell.matchAll(/\*\*(.+?)\*\* \(([^)]+)\)/g)];
   return found.map((m) => [m[1], m[2].split(', ')]);
@@ -64,7 +64,7 @@ function emittedCauses() {
     const text = fs.readFileSync(path.join(ROOT, f), 'utf8');
     [...text.matchAll(/refuseCause\(([^\n]*)/g)].forEach((m) => {
       const literal = m[1].match(/^'([^']+)'/);
-      assert.ok(literal !== null, 'в ' + f + ' причина отказа не названа литералом: ' + m[0].trim());
+      assert.ok(literal !== null, 'in ' + f + ' the refusal cause is not named by a literal: ' + m[0].trim());
       out.add(literal[1]);
     });
   });
@@ -73,7 +73,7 @@ function emittedCauses() {
 
 const escapedName = PKG.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-test('документация зовёт только существующие команды и ключи', () => {
+test('the documentation calls only commands and flags that exist', () => {
   // What is checked is the instructions — the package's README and the note in the templates: they are
   // read by someone about to run something. Other documents name the target surface, commands the CLI
   // does not have yet — that is a plan, and demanding today's CLI of it would forbid planning.
@@ -90,20 +90,20 @@ test('документация зовёт только существующие 
         // that does not exist (but only if it is a word rather than, say, the `…` or `<sha>` of a
         // template).
         if (/^[a-z][a-z-]*$/.test(words[0])) {
-          bad.push(doc + ': команда «' + words[0] + '» (в «' + call + '»)');
+          bad.push(doc + ': the command «' + words[0] + '» (in «' + call + '»)');
         }
         return;
       }
       (known ? words.slice(1) : words).forEach((w) => {
         if (w[0] !== '-' || usageFlags.indexOf(w) >= 0) return;
-        bad.push(doc + ': ключ ' + w + ' в «' + call + '»');
+        bad.push(doc + ': the flag ' + w + ' in «' + call + '»');
       });
     });
   });
-  assert.deepEqual(bad, [], 'документация зовёт то, чего инструмент не знает:\n  ' + bad.join('\n  '));
+  assert.deepEqual(bad, [], 'the documentation calls what the tool does not know:\n  ' + bad.join('\n  '));
 });
 
-test('документация зовёт инструмент так, что зов работает и без установленного пакета', () => {
+test('the documentation calls the tool so that the call works without the package installed', () => {
   /* The promised call has two states and the advice has to work in both: with the package installed it
    * does what was promised, without it, it refuses on the spot. A call by the package name manages
    * neither: without the package nearby it goes to the registry and runs the revision served there,
@@ -117,34 +117,34 @@ test('документация зовёт инструмент так, что з
       if (byName.test(call)) bad.push(doc + ': «' + call + '»');
     });
   });
-  assert.deepEqual(bad, [], 'зов идёт по имени пакета, а не путём внутри проекта:\n  ' + bad.join('\n  '));
+  assert.deepEqual(bad, [], 'the call goes by the package name rather than by a path inside the project:\n  ' + bad.join('\n  '));
 });
 
-test('причины отказа совпадают у движка, справки и таблицы кодов README', () => {
+test('the refusal causes agree between the engine, the help and the code table of README', () => {
   assert.deepEqual(usageCauses(), CONFIG_CAUSES,
-    'справка называет не те причины, что объявлены в CONFIG_CAUSES');
+    'the help names causes other than the ones declared in CONFIG_CAUSES');
   assert.deepEqual(readmeCauses(), CONFIG_CAUSES,
-    'таблица кодов README называет не те причины, что объявлены в CONFIG_CAUSES');
+    'the code table of README names causes other than the ones declared in CONFIG_CAUSES');
 
   // The other side: a cause declared and printed while nobody hands it out is a promise of a refusal
   // that never happens and a place in the documentation a reader looks for in vain.
   const emitted = emittedCauses();
   const declared = new Set(CONFIG_CAUSES.map((g) => g[1]).flat());
   const silent = [...declared].filter((c) => !emitted.has(c));
-  assert.deepEqual(silent, [], 'причины объявлены, но никем не выдаются: ' + silent.join(', '));
+  assert.deepEqual(silent, [], 'the causes are declared but handed out by nobody: ' + silent.join(', '));
   const undeclared = [...emitted].filter((c) => !declared.has(c));
-  assert.deepEqual(undeclared, [], 'отказы называют причины, которых нет в списке: ' + undeclared.join(', '));
+  assert.deepEqual(undeclared, [], 'refusals name causes that are not in the list: ' + undeclared.join(', '));
 
   // A bare refusal with code 2 bypassing the cause is the same thing, only quieter: the cause would
   // appear in the behaviour and not in the documentation.
   const bare = gitIn(ROOT, ['grep', '-l', '-F', 'refuse(EXIT.CONFIG', '--', 'src'])
     .split('\n').filter((f) => f !== '' && f !== 'src/refusal.js');
-  assert.deepEqual(bare, [], 'отказ кодом 2 в обход причины (refuseCause) в: ' + bare.join(', '));
+  assert.deepEqual(bare, [], 'a refusal with code 2 around the cause (refuseCause) in: ' + bare.join(', '));
 
   // The mechanism is live rather than decorative: a cause that is not in the registry never reaches a
   // user.
   assert.throws(() => refuseCause('выдуманная причина', 'текст'),
-    /refusal cause is not declared/, 'refuseCause пропустил неназванную причину');
+    /refusal cause is not declared/, 'refuseCause let an unnamed cause through');
 });
 
 /* The document a reference names. On its own line: the name right after the reference ("§4.3
@@ -187,7 +187,7 @@ function namedSection(sections, lines, i, m) {
       ? 'requirements.md' : null);
 }
 
-test('ссылки на разделы ведут в существующие разделы', () => {
+test('the references to sections lead to sections that exist', () => {
   const sections = {};
   TARGETS.forEach((f) => { sections[path.basename(f)] = sectionsOf(read(f)); });
 
@@ -203,5 +203,5 @@ test('ссылки на разделы ведут в существующие р
       });
     });
   });
-  assert.deepEqual(bad, [], 'ссылки ведут в несуществующие разделы:\n  ' + bad.join('\n  '));
+  assert.deepEqual(bad, [], 'the references lead to sections that do not exist:\n  ' + bad.join('\n  '));
 });

@@ -1,8 +1,7 @@
 /* Tokens — the third measurement of the report: "weight for a language model". What is checked is what
- * keeps the count understandable rather than merely present: the number is taken with the very dictionary
- * the settings asked for (the encoding is part of the count rather than a detail), a count made another way
- * is named as such in the method, and a format for which tokens are meaningless is not passed off as
- * counted.
+ * makes the count honest rather than merely present: the number is taken with the very dictionary the
+ * settings asked for (the encoding is part of the count rather than a detail), an approximate value is
+ * named approximate, and a format for which tokens are meaningless is not passed off as counted.
  *
  * The anchors are numbers written by hand for fixed texts rather than derived from the code under check, so
  * the check is not circular (any other implementation of the same encoding can be held against them); the
@@ -52,79 +51,79 @@ function codePoints(text) {
   return [...text].length;
 }
 
-test('счёт идёт тем словарём, который просили: кодировка — часть числа', () => {
+test('the count goes by the dictionary that was asked for: the encoding is part of the number', () => {
   // A hand-written anchor: for this phrase the count is fixed by the text, not derived from this code.
-  assert.equal(tokenCount('hello world', O200K), 2, 'якорное число словаря не совпало');
-  assert.equal(tokenCount('', O200K), 0, 'пустой файл — не ноль токенов');
-  assert.equal(tokenCount('hello world', CL100K), 2, 'латиница в cl100k_base считается иначе');
+  assert.equal(tokenCount('hello world', O200K), 2, 'the anchor number of the dictionary did not match');
+  assert.equal(tokenCount('', O200K), 0, 'an empty file is not zero tokens');
+  assert.equal(tokenCount('hello world', CL100K), 2, 'latin text in cl100k_base is counted differently');
 
   // Russian text counts differently under different encodings — and that is no detail.
   const ru = 'Привет, мир!';
-  assert.equal(tokenCount(ru, O200K), 5, 'o200k_base посчитал русскую строку иначе');
-  assert.equal(tokenCount(ru, CL100K), 7, 'cl100k_base посчитал русскую строку иначе');
+  assert.equal(tokenCount(ru, O200K), 5, 'o200k_base counted the Russian string differently');
+  assert.equal(tokenCount(ru, CL100K), 7, 'cl100k_base counted the Russian string differently');
   assert.notEqual(tokenCount(ru, O200K), tokenCount(ru, CL100K),
-    'выбор кодировки перестал влиять на число: в способе метрики он указан зря');
+    'the choice of encoding stopped telling on the number: the metric names it to no purpose');
 
   const sample = 'const longName = (a, b) => a + b;\n';
   assert.equal(tokenCount(sample, O200K), tokenCount(sample, O200K),
-    'два счёта одного текста разошлись: отчёт перестал быть воспроизводимым');
+    'two counts of one text diverged: the report is no longer reproducible');
 });
 
-test('в отчёте токены — не байты и не минифицированный размер', () => {
+test('in the report tokens are neither bytes nor the minified size', () => {
   const res = runSize(PLAIN, ['--config', TOK, '--json']);
-  assert.equal(res.code, 0, 'отчёт с токенами не собрался: ' + res.stderr.trim());
+  assert.equal(res.code, 0, 'the report with tokens was not built: ' + res.stderr.trim());
   const data = JSON.parse(res.stdout);
   const last = data.rows.length - 1;
   const ratios = [];
   data.columns.forEach((col, ci) => {
     const cell = data.rows[last].cells[ci];
     if (cell === null || cell.raw === 0) return;
-    assert.ok(cell.tok > 0, 'у «' + col.label + '» токенов нет вовсе');
+    assert.ok(cell.tok > 0, '«' + col.label + '» holds no tokens at all');
     assert.ok(cell.tok < cell.raw,
-      'токенов не меньше, чем байт, у «' + col.label + '»: ' + cell.tok + ' против ' + cell.raw);
+      '«' + col.label + '» holds at least as many tokens as bytes: ' + cell.tok + ' against ' + cell.raw);
     assert.notEqual(cell.tok, cell.min,
-      'токены совпали с минифицированным размером у «' + col.label + '»: это разные величины');
+      'the tokens of «' + col.label + '» equal the minified size: these are different quantities');
     ratios.push(cell.raw / cell.tok);
   });
   // Bytes per token is no constant: code, Russian text and JSON each have their own.
   const spread = Math.max.apply(null, ratios) / Math.min.apply(null, ratios);
   assert.ok(spread > 2,
-    'байт на токен почти не различается по файлам (' + spread.toFixed(2) + '): '
-      + 'значит, «токены» считаются не текстом, а отношением');
+    'bytes per token hardly differ across files (' + spread.toFixed(2) + '): '
+      + 'so the «tokens» are counted from a ratio rather than from text');
 });
 
-test('без словаря счёт идёт оценкой по длине — и это названо и посчитано', () => {
+test('with no dictionary the count goes by a length estimate — and that is named and counted', () => {
   // No metric asked for it — so the dictionary is not needed either: the report comes out with an ordinary
   // code.
   const quiet = runSize(PLAIN, ['--config', NO_TOK, '--json'], OFF);
   assert.equal(quiet.code, EXIT.OK,
-    'без токенов в метриках прогон споткнулся о отсутствующий словарь: ' + quiet.stderr.trim());
+    'with no tokens among the metrics the run stumbled over the missing dictionary: ' + quiet.stderr.trim());
 
   const res = runSize(PLAIN, ['--config', TOK, '--json'], OFF);
   assert.equal(res.code, EXIT.SENSOR,
-    'оценка вместо точного счёта не названа кодом 4: код ' + res.code + ', ' + res.stderr.trim());
-  assert.match(res.stderr, /the metric "tok" counts by an estimate/, 'отступление не объяснено');
-  assert.match(res.stderr, /"tok" from metrics/, 'отступление не назвало починку');
+    'an estimate instead of an exact count is not named by code 4: code ' + res.code + ', ' + res.stderr.trim());
+  assert.match(res.stderr, /the metric "tok" counts by an estimate/, 'the retreat is not explained');
+  assert.match(res.stderr, /"tok" from metrics/, 'the retreat did not name a repair');
 
   const data = runSize(PLAIN, ['--config', TOK, '--data'], OFF);
   const view = JSON.parse(data.stdout).metrics.find((m) => m.key === 'tok');
   assert.equal(Object.prototype.hasOwnProperty.call(view, 'accuracy'), false,
-    'описание метрики всё ещё несёт оценку точности');
+    'the metric still carries an accuracy mark');
   assert.match(view.method, new RegExp('1 токен ≈ ' + CHARS_PER_TOKEN + ' знака'),
-    'способ не называет ни оценки, ни её коэффициента: ' + view.method);
+    'the way names neither the estimate nor its coefficient: ' + view.method);
   assert.ok(view.method.indexOf('недоступен') >= 0, 'способ не говорит, почему счёт оценкой');
-  assert.ok(view.method.indexOf('4.0.0') < 0, 'способ называет версию словаря, которого нет');
+  assert.ok(view.method.indexOf('4.0.0') < 0, 'the way names the version of a dictionary that is not there');
 
   // The estimate is exactly the coefficient the method names, not "a similar number".
   const text = fs.readFileSync(path.join(PLAIN, 'src', 'code.js'), 'utf8');
   const ci = JSON.parse(data.stdout).files.findIndex((f) => f.label === 'code.js');
   assert.equal(JSON.parse(data.stdout).now[ci].tok, estimate(text),
-    'оценка в отчёте не совпала с оценкой по длине');
+    'the estimate in the report did not match the length estimate');
   assert.equal(estimate(text), Math.ceil(codePoints(text) / CHARS_PER_TOKEN),
-    'оценка считается не по кодовым точкам');
+    'the estimate is not counted by code points');
 });
 
-test('формат, для которого токены бессмысленны, не выдаётся за посчитанный', () => {
+test('a format for which tokens are meaningless is not passed off as counted', () => {
   const dir = cloneFixture(path.join(tmp, 'binary'));
   fs.mkdirSync(path.join(dir, 'assets'), { recursive: true });
   fs.writeFileSync(path.join(dir, 'assets', 'logo.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x01, 0x02]));
@@ -136,53 +135,53 @@ test('формат, для которого токены бессмысленн�
   });
 
   const res = runSize(dir, ['--config', file, '--data']);
-  assert.equal(res.code, 0, 'данные с бинарной колонкой не собрались: ' + res.stderr.trim());
+  assert.equal(res.code, 0, 'the data with a binary column was not built: ' + res.stderr.trim());
   const view = JSON.parse(res.stdout).metrics.find((m) => m.key === 'tok');
   assert.equal(Object.prototype.hasOwnProperty.call(view, 'accuracy'), false,
-    'описание метрики всё ещё несёт оценку точности');
+    'the metric still carries an accuracy mark: ' + view.method);
   assert.ok(view.method.indexOf('.png') >= 0,
-    'другой счёт не назван по формату: ' + view.method);
+    'the other count is not named by format: ' + view.method);
 });
 
-test('чужое семейство и чужая кодировка — отказ настроек со списком', () => {
+test('an unknown family and an unknown encoding are a settings refusal with a list', () => {
   const badFamily = configAs('bad-family', ['raw', 'tok'], { family: 'gemini', encoding: 'o200k_base' });
   const res = runSize(PLAIN, ['--config', badFamily, '--json']);
-  refusal(res, EXIT.CONFIG, 'конфиг с чужим семейством');
-  assert.match(res.stderr, /openai/, 'отказ не назвал, из чего выбирать: ' + res.stderr.trim());
+  refusal(res, EXIT.CONFIG, 'a config with an unknown family');
+  assert.match(res.stderr, /openai/, 'the refusal did not name what to choose from: ' + res.stderr.trim());
 
   const badEncoding = configAs('bad-encoding', ['raw', 'tok'], { family: 'openai', encoding: 'p50k_base' });
   const res2 = runSize(PLAIN, ['--config', badEncoding, '--json']);
-  refusal(res2, EXIT.CONFIG, 'конфиг с чужой кодировкой');
+  refusal(res2, EXIT.CONFIG, 'a config with an unknown encoding');
   assert.match(res2.stderr, /o200k_base, cl100k_base/,
-    'отказ не назвал кодировок семейства: ' + res2.stderr.trim());
+    'the refusal did not name the encodings of the family: ' + res2.stderr.trim());
 });
 
-test('черновик --init ведёт новый проект на токены, и первый отчёт считает словарём', () => {
+test('the --init draft leads a new project to tokens, and the first report is counted by the dictionary', () => {
   const { dir, file } = draftedRepo(path.join(tmp, 'fresh'),
     '// комментарий\nfunction width(items) { return items.length; }\n');
   const draft = readJson(file);
-  assert.equal(draft.metrics.indexOf('tok') >= 0, true, 'черновик не просит токены');
-  assert.deepEqual(draft.tokens, TOKEN_DEFAULTS, 'черновик не назвал словарь токенов');
+  assert.equal(draft.metrics.indexOf('tok') >= 0, true, 'the draft does not ask for tokens');
+  assert.deepEqual(draft.tokens, TOKEN_DEFAULTS, 'the draft did not name the token dictionary');
 
-  assert.equal(runSize(dir, ['--write']).code, 0, 'первый отчёт нового проекта не собрался');
+  assert.equal(runSize(dir, ['--write']).code, 0, 'the first report of a new project was not built');
   const res = runSize(dir, ['--data']);
-  assert.equal(res.code, 0, 'данные нового проекта не собрались: ' + res.stderr.trim());
+  assert.equal(res.code, 0, 'the data of a new project was not built: ' + res.stderr.trim());
   const view = JSON.parse(res.stdout).metrics.find((m) => m.key === 'tok');
   assert.equal(Object.prototype.hasOwnProperty.call(view, 'accuracy'), false,
-    'описание метрики всё ещё несёт оценку точности');
+    'the metric still carries an accuracy mark');
   assert.match(view.method, /^gpt-tokenizer \d+\.\d+\.\d+, o200k_base \(BPE\)$/,
-    'первый отчёт собран не тем словарём, который просил черновик: ' + view.method);
+    'the first report is built with a dictionary other than the one the draft asked for: ' + view.method);
 });
 
-test('словарь не трогают те прогоны, которые о токенах не просили', () => {
+test('the runs that did not ask for tokens leave the dictionary alone', () => {
   const before = readRun(PACKAGE, PLAIN, ['--json']);
   const withTokens = runSize(PLAIN, ['--config', TOK, '--json']);
-  assert.equal(before.code, 0, 'прежний отчёт сломался: ' + before.stderr.trim());
-  assert.equal(withTokens.code, 0, 'отчёт с токенами сломался: ' + withTokens.stderr.trim());
+  assert.equal(before.code, 0, 'the former report broke: ' + before.stderr.trim());
+  assert.equal(withTokens.code, 0, 'the report with tokens broke: ' + withTokens.stderr.trim());
   const without = JSON.parse(before.stdout);
   const with3 = JSON.parse(withTokens.stdout);
-  assert.equal(without.metrics.length, 2, 'в прежний отчёт попала лишняя метрика');
-  assert.equal(with3.metrics.length, 3, 'метрика токенов не попала в отчёт');
+  assert.equal(without.metrics.length, 2, 'a superfluous metric got into the former report');
+  assert.equal(with3.metrics.length, 3, 'the token metric did not get into the report');
   assert.equal(without.rows.length, with3.rows.length,
-    'набор строк отчёта зависит от того, просили токены или нет');
+    'the set of report rows depends on whether tokens were asked for');
 });

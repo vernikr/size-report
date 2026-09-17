@@ -167,21 +167,22 @@ export function calledCommands() {
 }
 
 /* The commands of the pinned revision's help: the file is read from git history rather than from
- * the tree, because that help is a different one. The section `Команды` of that file is a list of
- * string literals — Russian, because it is the help the tool prints — and the first word of each
- * literal is a command's name.
+ * the tree, because that help is a different one. The section `Commands` of that file is a list of
+ * string literals — English, the help the tool prints — and the first word of each literal is a
+ * command's name.
  *
- * The pin points at a released revision, whose help is Russian until a release carries the English
- * one (`BLOCKERS.md` N20 is the cadence), so **both** section names are read here and the Russian
- * one goes only once the pin has moved past the rename: a reader that knows one spelling would go
- * green on the old revision and red on the new — or worse, answer `null` and silently drop a
- * promise. Only the *commands* are taken out of the section, and those names are ASCII in either
- * language. */
+ * The Russian spellings of the same two markers stood here while the pin led to a Russian help and
+ * went with the release that moved it (N20; measured 2026-09-17 — with them cut out
+ * `test/docs-pin.test.js` is green, 5 of 5, because `AGENTS.md` keeps the pin at the current
+ * release and its help is English). A pin to a pre-rename revision would need them back, and that is
+ * the one case this reader cannot serve — such a revision spells them in the very file read here
+ * (`git show <rev>:src/refusal.js`). Only the *commands* are taken out of the section, and those
+ * names are ASCII either way. */
 export function commandsAt(rev) {
   const src = gitIn(ROOT, ['show', rev + ':src/refusal.js']);
-  const section = src.split("'Команды:'")[1] || src.split("'Commands:'")[1];
+  const section = src.split("'Commands:'")[1];
   if (section === undefined) return null;
-  const head = section.split("'Режимы:'")[0].split("'Modes:'")[0];
+  const head = section.split("'Modes:'")[0];
   return [...head.matchAll(/^\s*'\s+([a-z][a-z-]*)/gm)].map((m) => m[1]);
 }
 

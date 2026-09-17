@@ -4,8 +4,20 @@ Subplan of `plan.md` (T0). Owns fourteen checks, **226 lines measured** — `gat
 `gates-files` 26, `docs-commands` 23, `gates-metrics` 22, `suites` 16, `parity` 16, `frozen` 16,
 `gates-coverage` 16, `docs-pin` 14, `gates-dup` 13, `git-pins` 12, `docs-numbers` 12, `gates-deps` 8,
 `docs-paths` 6 — the tracker's row, confirmed file by file (26+26+23+22+16+16+16+16+14+13+12+12+8+6 =
-226). Written 2026-09-16, not started. Last of the checks, and the last portion that touches a file a
-sensor is configured by.
+226). Written 2026-09-16. Last of the checks, and the last portion that touches a file a
+sensor is configured by. **Step 0 re-measured it on 2026-09-17: the fourteen files answer 222**, not
+226 — `docs-commands` 22, `parity` 15, `gates-coverage` 14 — **after step 1 the owner read 209**
+(`docs-paths` 0, `git-pins` 5), and **after the portion of steps 7–8 named below it reads 177**
+(`docs-commands` 5, `parity` 0), and **after the four gate-file steps it read 82** (`gates-verify` 0,
+`gates-coverage` 0, `gates-deps` 0, `gates-dup` 1, `gates-metrics` 5, `gates-files` 8). **C3 is closed on
+2026-09-17 at 25 lines**: `gates-files` 8, `docs-commands` 5, `gates-metrics` 5, `git-pins` 5,
+`gates-dup` 1, `docs-pin` 1 — every one of them allow-listed data (the scenario repositories, the probe
+payloads, the witness's Cyrillic path) or a past's own word. **The order of the portions of
+2026-09-17 was set by the mission and differs from the numbering here**: the two files the mission named
+first, `docs-commands` and `parity`, are steps 7 and 8 of this list, so those two steps were taken
+first, then steps 2–6 (the six gate files), and the remaining halves of steps 7–8 (`docs-pin`,
+`frozen`) and step 6 (`suites`, `docs-numbers`) closed the owner — the record of each portion stands in
+its own step below.
 
 **Six of these files are gate files** (`test/gates-[a-z-]+\.test\.js` matches the gate list in
 `tools/gates/gatefiles.js`): `gates-verify`, `gates-files`, `gates-metrics`, `gates-coverage`,
@@ -95,39 +107,124 @@ a message is free.
 
 ## Steps — one commit each, red first, and a trailer on the six gate-file commits
 
-0. **Re-measure and verify the moved lines.** S1–S5, W1, W2, C1 and C2 have landed, so the eight W2
-   verdict reads, S1's markers and the `README.md` row are English; this step measures them and writes
-   the counter's baseline for the fourteen files and the per-file check counts into the journal. If a
-   reader line was missed, the fix belongs to the owner of the text, and the gap goes to `TODO.md`
-   rather than being patched here.
-1. **`test/docs-paths.test.js` (6) + `test/git-pins.test.js` (12)** — the smallest, and both are
-   shape readers. Red first: unpin one setting in `src/git.js` (`git-pins` reddens) and remove one
-   file from the table of `README.md` (`docs-paths` reddens); then put both back and translate the
-   messages.
-2. **`test/gates-deps.test.js` (8) + `test/gates-dup.test.js` (13) — trailer.** Red first: translate
-   `'dup: новых клонов N'` alone in the sensor → `:72` reddens; and `'deps: находок нет'` alone →
-   `:48`. W2's steps do both; here they are re-measured against the now English verdicts.
-3. **`test/gates-coverage.test.js` (16) + `test/gates-metrics.test.js` (22) — trailer.** Red first:
-   the same shape, with the coverage line `'было … стало …'` and `'новых нарушений 1'`.
-4. **`test/gates-files.test.js` (26) — trailer.** Red first: the guard's own experiment, which this
-   file runs in a temporary repository — a gate change without a trailer.
-5. **`test/gates-verify.test.js` (26) — trailer.** Red first: rewrite the hooks' call line
-   (`pnpm run verify:fast` → anything else) → `:142` reddens; the words around the call are free, and
-   the check reads D1's workflows and W2's hooks as **identifiers**.
-6. **`test/suites.test.js` (16) + `test/docs-numbers.test.js` (12)** — the counters. Red first: drop a
-   `why` from an entry of `tools/suites.js` → `suites.test.js` reddens; add a check to a file without
-   updating the table of `README.md` → `docs-numbers` reddens. Both prove that what is read is a
-   **count**, not a word.
-7. **`test/docs-commands.test.js` (23) + `test/docs-pin.test.js` (14)** — the documentation guards.
-   Red first: rename the help's section marker alone → `docs-commands` reddens (S1's experiment, met
-   from this side); rename a cause in the registry alone → the `README.md` row comparison reddens,
-   which is the measured proof that the table is a contract; and the pin's help is read from history,
-   so `docs-pin` stays green while the working tree changes — the experiment is that it does.
-8. **`test/parity.test.js` (16) + `test/frozen.test.js` (16)** — the two checks that tell a moved
-   standard from a broken engine. Red first: N24's example, already measured by S4's plan — an English
-   `SKIP_WORDS` in a scratch copy reddens `parity.test.js` while `frozen.test.js` (running the frozen
-   copy against the same golden) stays green; the experiment is quoted here so that the last owner who
-   touches these files has it. Then translate their own names and messages, leaving the N24 line alone.
+0. **Re-measure and verify the moved lines — done 2026-09-17.** The counter answers **222**, not 226:
+   `docs-commands` 23 → 22, `parity` 16 → 15, `gates-coverage` 16 → 14, everything else as planned;
+   the fourteen files' check counts are 5/3/4/4/3/3/4/3/1/4/2/1/4/2. **All nine reads of W2's verdicts
+   are English** (`gates-files` 77/106/115, `gates-dup` 72/88, `gates-coverage` 49/63, `gates-deps` 48,
+   `gates-metrics` 144 — the exact patterns are in the tracker's row), and so are S1's readers: the
+   help block is parsed by the English marker (`usageCauses()` splits on `'Causes of a code-2 refusal'`
+   at `:35`), the internal error by `/refusal cause is not declared/` (`:147`), the summary shape by
+   `/: (\d+) rows × (\d+) files/` (`parity.test.js:57`). `gates-verify`'s reads are the protocol's and
+   D1's (`/pnpm run verify:fast/`, `/tools\/gates\/gatefiles\.js/`, `.gitignore`'s `/^reports\/$/m`) and
+   are untouched. Nothing was missed, so `TODO.md` gets nothing. **The allow-list's quotation row was
+   re-measured as the plan demanded: 33 lines, all `BLOCKERS.md`; `README.md` and `AGENTS.md` read 0**
+   (the code-2 row is the contract S1 moved, the `!` note S4's, the hook subject S5's). The tolerance
+   is still **dead in the tree**: `docs/requirements.md` and `docs/module-design.md` carry no Cyrillic;
+   the only Russian instances of the three regexes are the file's own comment (`:155`). No negative
+   match over Cyrillic in this owner, re-measured.
+1. **`test/docs-paths.test.js` (6 → **0**) + `test/git-pins.test.js` (12 → **5**) — done 2026-09-17.**
+   Both red-first experiments were run and are more interesting than the plan expected. (a) `docs-paths`:
+   a row removed from the file table of `README.md` reddens it at check 2 with the sentence the plan
+   names (`the tree holds files that are missing from the table of README`), the table restored
+   byte-identical. (b) `git-pins`: the pin taken out of `GIT_PINS` (`'core.quotePath=false'`, restored
+   byte-identical) reddens check 2 **only where the machine's settings do not stand in the way** — on
+   this machine the ordinary run stays green because its global config already carries
+   `core.quotePath=false`, and the same run with `GIT_CONFIG_GLOBAL=/dev/null` and an empty `HOME` goes
+   red with `the shared reading quoted a non-English path`. That is B1's own note met from this side,
+   and it is recorded rather than smoothed over. (c) The Cyrillic file name was proved **load-bearing**
+   the other way round: made ASCII, the check reddens *even with the pin in place*, with its own
+   verdict `the unpinned reading handed the path back as it is: the pin then proves nothing` — so the
+   five lines that stay are not decoration but the witness's data (`'заметки.md'` written and read by
+   the check, the identity `'Тест'`, the commit subject `'заметки'`). Both files put back to `HEAD`
+   ran green (2 of 2 each), so no machine reads a word of their own; `dup` asked before and after
+   (`clones 5, lines 29` both times — no new clone); checks unchanged (2 each; 70 fast, 175 full); the
+   artifact's content digest `1bdb27e1…` and the reference file's own sha256 `cdda8d01…` unmoved;
+   neither file is a gate file, so the commit carries no trailer (checked by the hook).
+2. **`test/gates-deps.test.js` (8 → **0**) + `test/gates-dup.test.js` (13 → **1**) — done 2026-09-17,
+   with the trailer.** Dependencies: eight names and messages. Duplicates: twelve, and the one line that
+   stays is the scenario's own path of a baseline that is not there (`:85`, an input the check hands to
+   the sensor; nothing asserts on the name). **The verdict reads were re-measured as the plan asked,
+   by mutation of the sensor, sources restored byte-identical:** `'deps: no findings ('` made Russian
+   reddens `gates-deps` at check 1; `'dup: new clones '` made Russian reddens `gates-dup` at check 2,
+   and `'dup: there is no baseline ('` reddens it at check 4. **A finding worth naming:** making the
+   **ok** verdict (`'dup: no new clones ('`) Russian leaves the file green — the ok line is printed on a
+   green run and no check of this file reads its words, while the two `bad` lines are read. So the
+   guards are green-path-blind by construction, and that is measured rather than assumed.
+3. **`test/gates-coverage.test.js` (14 → **0**) + `test/gates-metrics.test.js` (22 → **5**) — done
+   2026-09-17, with the trailer.** Coverage: fourteen names and messages. Metrics: seventeen, and the
+   five that stay are the probe's own source snippets (`:71` the debt comment, `:91`–`:94` the four
+   injected `test(` bodies the sensor measures — the payload, not a message). **Reads re-measured by
+   mutation:** `': was '` made `': было '` in the sensor reddens `gates-coverage` at checks 1 and 2
+   (the fall of lines and the uncovered new file); `'metrics: new violations '` made Russian reddens
+   `gates-metrics` at check 4.
+4. **`test/gates-files.test.js` (26 → **8**) — done 2026-09-17, with the trailer.** Eighteen names and
+   messages; the eight that stay are the scenario's own repository: the identity (`:58`), the commit
+   subjects (`:61`, `:72`, `:80`, `:85`, `:92`, `:103`, `:112`) and the `Gate-Change:` bodies the check
+   writes to test the trailer rule — data of the experiment, not prose (the guard's own reading of the
+   trailer is a **shape**, measured in W2's step 5, so the reason's wording is free). **Reads
+   re-measured by mutation:** the guard's own sentence `': a gate edit with no Gate-Change: trailer'`
+   made Russian reddens **all three** checks of the file — the trailer-less commit, the ordinary edit
+   and the short note.
+5. **`test/gates-verify.test.js` (26 → **0**) — done 2026-09-17, with the trailer.** Twenty-six names
+   and messages; the protocol stays where it is: `/pnpm run verify:fast/` (`:142-143`),
+   `/tools\/gates\/gatefiles\.js/` (`:144`) and `/^reports\/$/m` (`:155`) are untouched — all ASCII,
+   measured. **Both reads re-measured by mutation:** the hooks' call line changed
+   (`pnpm run verify:fast` → `verify:slow` in `.githooks/pre-commit`) reddens check 4, and `reports/`
+   renamed in `.gitignore` reddens check 5; both files restored byte-identical.
+
+**The portion of 2026-09-17 took these four steps in one commit of its own, with the trailer on it
+(the six files are gate files, so the hook demands it — and the hook said so).** That commit also
+carries the re-ordering note from the header.
+6. **`test/suites.test.js` (16 → **0**) + `test/docs-numbers.test.js` (12 → **0**) — done 2026-09-17.**
+   All twenty-eight are names and messages, and **both experiments ran, sources restored
+   byte-identical:** a `why` dropped from one entry of `tools/suites.js` reddens `suites` at check 2, and
+   a check added to a file without updating the table of `README.md` reddens `docs-numbers` at check 1.
+   So what is read is a **count** and a declared **reason** rather than any word. **What `docs-numbers`
+   actually reads, measured rather than described:** its own words are read by nobody (red first by the
+   whole file), and the things it does read are the table of runs in `README.md` (by the row labels
+   `Fast`/`Full` and the command cells `pnpm test`/`pnpm test:all` — `publishedRuns()` in
+   `tools/docs-facts.js` reads `README.md` and **no other document**, the tracker included) plus
+   `tools/suites.js`'s `checksIn`/`FAST` — hence the third experiment: renaming the `Fast` row label in
+   `README.md` reddens it, and so it can never rot in silence (a row that stops parsing reddens its own
+   `assert.ok` rather than passing quietly).
+7. **`test/docs-commands.test.js` (22 → **5**) + `test/docs-pin.test.js` (14 → **1**) — done
+   2026-09-17.** Seventeen names and messages turned English. **The three experiments were run before the
+   words moved, each on its own, every source restored byte-identical:** renaming the help's section
+   marker in `src/refusal.js:136` alone reddens the file at check 3
+   (`the refusal causes agree between the engine, the help and the code table of README`); renaming
+   one cause in `CONFIG_CAUSES` alone (`'unknown flag'` → `'unrecognised flag'`) reddens the same check
+   — the measured proof that the `README.md` row is a contract read through `readmeCauses()`; and
+   `docs-pin`'s half was measured with the same mutation by running that file: it **stays green** while
+   the working tree's help changes, because its help comes from history (`commandsAt`). **What stays:
+   five lines, named one by one** — the invented cause and its text that the check feeds to
+   `refuseCause` (`:146`, an input, not a message: the assertion around it reads only the English
+   sentence `/refusal cause is not declared/`, so the name is free and stays as data), the comment
+   quoting the Russian word the tolerance exists for (`:155`), and the three tolerance regexes
+   (`:181`, `:184`, `:186`) — this owner's named exception, still dead in the tree. The file put back
+   to `HEAD` ran green (4 of 4), so no machine reads a word of its own; `dup` unchanged
+   (`clones 5, lines 29`). **The other half of the step — `docs-pin`: fourteen names and messages turned
+   English, 14 → 1**, and the one line that stays is a message naming the past's own word: the revision
+   the pin leads to carries the **Russian** section marker, so the sentence says `«Команды»` (the same
+   allowance the pinned help itself has). **The reading that could rot was measured, not assumed:**
+   `commandsAt` resolves the section in two languages (`'Команды:'` / `'Commands:'`); dropping the
+   Russian branch that the pin still needs — restored byte-identical — reddens this file, so the branch
+   is live today, and a `null` from it cannot pass in silence (its own `assert.ok` reddens). The moment
+   the pin leads to an English revision that branch goes dead — that is **N20**'s territory, and it is
+   said here rather than discovered later. `docs-pin`'s own message set is read by nobody (red first by
+   the whole file, 1 of 1 green at `HEAD`).
+8. **`test/parity.test.js` (15 → 0) + `test/frozen.test.js` (16 → **0**) — done 2026-09-17.** Sixteen
+   more names and messages in `frozen`, whose checks read the frozen layer's manifests and hashes
+   (**allow-listed data, untouched**); the N24 line of `parity` (the one value of `SKIP_WORDS`) stays
+   exactly as it was, as its owner decided. (15 → **0**) + `test/frozen.test.js` (16 → **0**) — done 2026-09-17.**
+   Fifteen names and messages turned English, and **both experiments were run and measured rather than
+   quoted:** N24's example — one value of `SKIP_WORDS` made English in `src/history.js` (restored
+   byte-identical) reddens `parity` at checks 1 and 3 (`--json` and the locale run) while
+   `test/frozen.test.js`, running the frozen copy against the same golden, stays **green (4 of 4)** —
+   which is what makes this file the one that tells a moved standard from a broken engine; and S1's
+   summary shape — `' rows × '` in `src/modes.js:89` changed to `' rows x '` reddens `parity` at
+   check 2, so the read of `/: (\d+) rows × (\d+) files/` is a live guard. The file put back to `HEAD`
+   ran green (3 of 3); `dup` unchanged (`clones 5, lines 29`); checks unchanged (3; 70 fast, 175 full);
+   the artifact's content digest `1bdb27e1…` and the reference file's own sha256 `cdda8d01…` unmoved.
 
 **Why the tree is green between the commits.** Every reader line of this owner moved in the step of the
 subplan that owns the text it reads (W2's eight verdicts, S1's markers and the README row, D1's

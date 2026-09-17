@@ -4,19 +4,9 @@
   "note": "A baseline of duplicates: fingerprints by the content of a clone (fragment + lines + tokens), so moving files or checkouts does not shift it. Updated by a person.",
   "fingerprints": {
     "21bdd8cb03a5dc0d": 1,
-    "3427416463def1d5": 1,
-    "56100b833a93880b": 1,
-    "341259fe4cb595d5": 1,
     "8539b34ea1763009": 1,
     "3063b60f1af9e34c": 1,
-    "c5d15cebde8ffca0": 1,
-    "c0f795821c12b9a6": 1,
-    "017107c2b065a3a9": 1,
     "2d97944126ee542e": 1,
-    "e13341ade2407c21": 1,
-    "fe8a876df304352d": 1,
-    "2258c50453bd2029": 1,
-    "831aa5e3eaa72af4": 1,
-    "395713f42135c9c0": 1
+    "e13341ade2407c21": 1
   }
 }

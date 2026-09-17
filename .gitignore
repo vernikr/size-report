@@ -1,13 +1,13 @@
-# зависимые пакеты и служебные файлы
+# dependencies and service files
 node_modules/
 
-# артефакты самого инструмента в чужих проектах (и в этом, если понадобится)
+# the tool's own artifacts inside other projects (and in this one, if the need arises)
 .size-report/
 *.log
 .DS_Store
 
-# машинные отчёты датчиков (`tools/gates/*`): их смотрит человек, их не хранит история
+# machine reports of the sensors (`tools/gates/*`): a person reads them, history does not keep them
 reports/
 
-# рабочий каталог клиента, в котором идёт работа (не содержимое репозитория)
+# the client's working directory the work happens in (not the repository's contents)
 .freebuff/

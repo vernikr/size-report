@@ -35,7 +35,7 @@ function jsFiles(dir) {
   });
 }
 
-test('прямой вызов git идёт только через общий список закреплений', () => {
+test('a direct call of git goes through the shared list of pins alone', () => {
   // A process call: a helper name with git as the first argument — as a single word or as a whole
   // command line (`'git clone …'`).
   const CALL = /\b(?:execFileSync|execFile|spawnSync|spawn|execSync|exec)\s*\(\s*(['"])(git[^'"\n]*)\1([^\n]*)/g;
@@ -48,18 +48,18 @@ test('прямой вызов git идёт только через общий с
         [...line.matchAll(CALL)].forEach((m) => {
           if (/gitArgv\(|gitBare\(/.test(m[3])) return;
           bad.push(rel + ':' + (i + 1) + ' — «' + m[2].slice(0, 40)
-            + '» без общего списка закреплений: настройки унаследуются от машины');
+            + '» without the shared list of pins: the settings would be inherited from the machine');
         });
       });
     });
   });
   assert.deepEqual(bad, [],
-    'git зовётся в обход общего списка закреплений:\n  ' + bad.join('\n  '));
+    'git is called around the shared list of pins:\n  ' + bad.join('\n  '));
 });
 
 /* The witness: unpinned reading quoted the path, the shared one does not. That way the check proves
  * its point both in an environment without machine settings and in an ordinary one. */
-test('общее чтение git не зависит от того, какие настройки унаследованы', () => {
+test('the shared reading of git does not depend on which settings are inherited', () => {
   const dir = path.join(tmp, 'repo');
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'заметки.md'), '# заметки\n');
@@ -72,14 +72,14 @@ test('общее чтение git не зависит от того, какие 
   const read = ['log', '--name-only', '--pretty=format:'];
   const pinned = gitIn(dir, read);
   assert.ok(pinned.indexOf('заметки.md') >= 0,
-    'общее чтение закавычило не-английский путь: ' + JSON.stringify(pinned.trim()));
+    'the shared reading quoted a non-English path: ' + JSON.stringify(pinned.trim()));
 
   // The same reading unpinned: with `core.quotePath=true`, as on a default machine, the path is escaped.
   const bare = gitBare(read, {
     cwd: dir,
     env: Object.assign({}, process.env, gitConfig({ 'core.quotePath': 'true' }))
   });
-  assert.equal(bare.status, 0, 'свидетель не отработал: ' + (bare.stderr || '').trim());
+  assert.equal(bare.status, 0, 'the witness did not work: ' + (bare.stderr || '').trim());
   assert.ok(bare.stdout.indexOf('заметки.md') < 0,
-    'незакреплённое чтение вернуло путь как есть: закрепление не доказывает ничего');
+    'the unpinned reading handed the path back as it is: the pin then proves nothing');
 });

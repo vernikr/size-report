@@ -41,50 +41,50 @@ const STEPS = TEXT.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
 /* Parsing the description is part of the check: an unparseable file cannot count as a valid one. A parse
  * error names a line rather than "somewhere in the file". */
 function workflow() {
-  assert.ok(TEXT !== '', 'описания выпуска нет: выпускать нечем — это ' + FILE);
+  assert.ok(TEXT !== '', 'there is no release workflow: there is nothing to release with — that is ' + FILE);
   return parseWorkflow(TEXT);
 }
 
 function step(doc, name) {
   const found = doc.jobs.release.steps.filter((s) => s.name === name);
-  assert.equal(found.length, 1, 'в описании выпуска нет ровно одного шага «' + name + '»');
+  assert.equal(found.length, 1, 'the release workflow holds no single step «' + name + '»');
   return found[0];
 }
 
-test('описание выпуска разбирается, и выпуск начинается тегом, а не кнопкой', () => {
+test('the release workflow parses, and a release starts from a tag rather than a button', () => {
   const doc = workflow();
   assert.deepEqual(doc.on.push.tags, ['v*'],
-    'выпуск не привязан к тегу `v*`: выкладывать можно было бы с любой ветки');
-  assert.ok(doc.on.workflow_dispatch, 'у выпуска нет ручного запуска: черновой прогон нечем позвать');
+    'the release is not tied to a `v*` tag: it could be published from any branch');
+  assert.ok(doc.on.workflow_dispatch, 'the release has no manual run: there is no way to call a dry run');
 
   // The version is held against the tag and taken from the manifest: two numbers read separately rather
   // than one derived from the other.
-  const version = step(doc, 'Версия манифеста — в окружение');
+  const version = step(doc, 'The manifest version into the environment');
   assert.match(String(version.run), /require\('\.\/package\.json'\)\.version/,
-    'версия не берётся из манифеста — вторым списком её держать нечем');
-  assert.match(String(version.run), /GITHUB_ENV/, 'версия не доходит до следующего шага');
-  const tag = step(doc, 'Тег называет ту же версию, что манифест');
+    'the version does not come from the manifest — there is no way to keep it in a second list');
+  assert.match(String(version.run), /GITHUB_ENV/, 'the version does not reach the next step');
+  const tag = step(doc, 'The tag names the same version as the manifest');
   assert.equal(tag.if, "github.event_name == 'push'",
-    'шаг сверки тега идёт и на ручном запуске: там тега нет и сверять нечего');
+    'the tag comparison step runs on a manual start as well: there is no tag there and nothing to compare');
   assert.match(String(tag.run), /\$GITHUB_REF_NAME/,
-    'шаг не сверяет тег с версией манифеста: реестр получил бы номер, которого нет в истории');
-  assert.match(String(tag.run), /\$WANT/, 'шаг не называет версию манифеста');
+    'the step does not compare the tag with the manifest version: the registry would get a number the history does not hold');
+  assert.match(String(tag.run), /\$WANT/, 'the step does not name the manifest version');
 });
 
-test('публикация не требует ни секрета, ни кода, и prerelease не уезжает в `latest`', () => {
+test('publishing needs neither a secret nor a code, and a prerelease does not go out as `latest`', () => {
   const doc = workflow();
   assert.equal(/secrets\./.test(STEPS), false,
-    'в шагах выпуска есть secrets.: обещание «в настройках репозитория заводить нечего» стало ложью');
+    'the release steps carry secrets.: the promise «nothing has to be set up in the repository settings» has become a lie');
   assert.equal(/NODE_AUTH_TOKEN/.test(STEPS), false,
-    'выпуск ждёт токен в окружении: это и есть секрет, которого обещано не требовать');
+    'the release waits for a token in the environment: that is the very secret it promised not to need');
   assert.equal(/--otp/.test(STEPS), false,
-    'выпуск просит одноразовый код: у аккаунта с security key его взять негде');
+    'the release asks for a one-time code: there is nowhere to get one for an account with a security key');
   assert.equal(doc.permissions['id-token'], 'write',
-    'нет `id-token: write`: trusted publishing нечем себя предъявить, и публикация упадёт');
+    'there is no `id-token: write`: trusted publishing has nothing to present itself with, and the publish fails');
   assert.equal(doc.permissions.contents, 'read',
-    'права job’а не ограничены чтением содержимого — выпуску больше и не нужно');
-  assert.equal(step(doc, 'npm поновее (для trusted publishing)').run, 'npm install -g npm@latest',
-    'npm не поднят: trusted publishing требует 11.5.1, а с Node 22 приходит 10');
+    'the job permissions are not limited to reading contents — the release needs nothing more');
+  assert.equal(step(doc, 'npm newer (for trusted publishing)').run, 'npm install -g npm@latest',
+    'npm is not raised: trusted publishing needs 11.5.1, while Node 22 brings 10');
 
   /* `registry-url` is no decoration of the step: with it setup-node writes the line
    * `_authToken=${NODE_AUTH_TOKEN}` into `.npmrc`, npm takes the credentials for given and never goes for
@@ -93,45 +93,45 @@ test('публикация не требует ни секрета, ни код�
    * `publishConfig`. */
   const setup = doc.jobs.release.steps.find((s) => String(s.uses || '').startsWith('actions/setup-node'));
   assert.notEqual(setup, undefined,
-    'в описании выпуска нет шага setup-node: Node берётся неизвестно откуда');
+    'the release workflow carries no setup-node step: Node comes from nowhere in particular');
   assert.equal((setup.with || {})['registry-url'], undefined,
-    'setup-node получает `registry-url`: подставная строка `_authToken` в `.npmrc`'
-      + ' отменяет удостоверение OIDC, и публикация падает 404');
+    'setup-node gets `registry-url`: the substituted `_authToken` line in `.npmrc`'
+      + ' cancels the OIDC identity, and the publish fails 404');
 
-  const publish = step(doc, 'Публикация');
+  const publish = step(doc, 'Publishing');
   assert.match(String(publish.if), /dry_run == false/,
-    'настоящая публикация не отделена от черновой — черновой прогон уехал бы в реестр');
+    'the real publish is not separated from the dry one — a dry run would go to the registry');
   assert.match(String(publish.run), /contains\(github\.ref_name, '-'\)/,
-    'метка выпуска не различает prerelease: черновик уехал бы в `latest`');
-  assert.match(String(publish.run), /'next'/, 'у prerelease нет своей метки `next`');
-  assert.match(String(publish.run), /'latest'/, 'у обычного выпуска нет метки `latest`');
+    'the release tag does not tell a prerelease apart: a draft would go out as `latest`');
+  assert.match(String(publish.run), /'next'/, 'a prerelease has no `next` tag of its own');
+  assert.match(String(publish.run), /'latest'/, 'an ordinary release has no `latest` tag');
 
   /* The draft run assembles the package and walks the publishing path without sending anything. Its
    * version is a draft increment: on an honest number the registry refuses to publish an already
    * published version, and a run that has to answer "the setting is right" would be red for a foreign
    * reason — as the first run did with 1.1.1. The version edit lives in the runner's working directory
    * alone. */
-  const dry = step(doc, 'Черновой прогон — в реестр ничего не ушло');
+  const dry = step(doc, 'The draft run — nothing reached the registry');
   assert.match(String(dry.run), /npm publish --dry-run/,
-    'черновой прогон не показывает, что бы уехало: он молчит о содержимом пакета');
+    'the dry run does not show what would go out: it is silent about the contents of the package');
   assert.match(String(dry.run), /npm version prerelease --preid=draft --no-git-tag-version/,
-    'черновой прогон идёт на версии из манифеста: на уже выпущенном номере реестр'
-      + ' откажет, и красный результат будет ни при чём');
+    'the dry run goes on the version from the manifest: on a number already released the registry'
+      + ' refuses, and the red result would be for nothing');
   const input = doc.on.workflow_dispatch.inputs.dry_run;
   assert.equal(String(input.default), 'true',
-    'черновой режим не включён по умолчанию: кнопка «запустить» выпустила бы пакет');
+    'the dry mode is not on by default: the "run" button would publish the package');
 });
 
-test('выпуск прогоняет тот же набор, что CI, и подсказка называет этот же файл', () => {
+test('the release runs the same set as CI, and the hint names the same file', () => {
   const doc = workflow();
-  const checks = step(doc, 'Проверки перед выпуском');
+  const checks = step(doc, 'The checks before the release');
   assert.match(String(checks.run), /pnpm run lint:strict/,
-    'перед выпуском не идёт строгий линтер');
+    'the strict linter does not run before the release');
   assert.match(String(checks.run), /pnpm test:all/,
-    'перед выпуском идёт не полный набор: CI выкладывает, а не правит');
-  assert.match(String(step(doc, 'Работа из собранного пакета').run), /pack:check/,
-    'выпуск не проверяет работу из собранного пакета — а уезжает именно он');
+    'a set other than the full one runs before the release: CI publishes rather than edits');
+  assert.match(String(step(doc, 'The work from the assembled package').run), /pack:check/,
+    'the release does not check the work from the assembled package — while that is what goes out');
   assert.ok(TEXT.indexOf(path.basename(FILE)) >= 0,
-    'подсказка не называет файл рабочего процесса: одноразовая настройка на npmjs.com'
-      + ' указывала бы на другой файл, и выпуск по тегу не нашёл бы издателя');
+    'the hint does not name the workflow file: the one-time setting on npmjs.com'
+      + ' would point at another file, and a release by tag would not find its publisher');
 });

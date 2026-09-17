@@ -1,42 +1,42 @@
 name: Release
 
-# Выпуск — это тег, и больше ничего: `git push origin v1.2.3` собирает пакет,
-# прогоняет проверки и отправляет его в реестр. Ни секрета, ни кода из
-# аутентификатора: публикация идёт через trusted publishing (OIDC) — npm принимает
-# её по удостоверению GitHub Actions, выписанному для этого job'а, а не по токену.
-# Поэтому в настройках репозитория заводить нечего: в шагах ниже нет ни одного
-# `secrets.`, и это же стережёт `test/release.test.js`.
+# A release is a tag and nothing more: `git push origin v1.2.3` assembles the package,
+# runs the checks and sends it to the registry. Neither a secret nor a code from an
+# authenticator: publishing goes through trusted publishing (OIDC) — npm accepts it by the
+# GitHub Actions attestation issued for this job rather than by a token.
+# So there is nothing to set up in the repository settings: not a single `secrets.` is
+# in the steps below, and `test/release.test.js` guards exactly that.
 #
-# Издатель заводится один раз и живёт на стороне npmjs.com, а не в этом файле:
+# The publisher is set up once and lives on the npmjs.com side rather than in this file:
 #   `npm trust github @vernikr/size-report --file release.yml --repo vernikr/size-report
-#   --allow-publish` — то же самое делает кнопка Trusted Publisher в настройках
-#   пакета; окружение пустое, потому что этот job его не объявляет.
-# Что связь есть, видно командой `npm trust list @vernikr/size-report`.
-# После этого выпуск — это тег; посмотреть, что уехало бы, можно черновым
-# прогоном (Actions → Release → Run workflow, «dry run» включён по умолчанию).
+#   --allow-publish` — the Trusted Publisher button in the package's settings does the
+#   same; the environment is empty because this job declares none.
+# That the link exists is visible with `npm trust list @vernikr/size-report`.
+# After that a release is a tag; what would go out can be seen from a draft run
+# (Actions → Release → Run workflow, "dry run" is on by default).
 #
-# Что job НЕ делает: не поднимает версию (её называет человек в манифесте — и
-# она сверяется с тегом, а не выдумывается здесь), не
-# публикует prerelease в `latest` и не трогает потребителей пакета.
+# What the job does NOT do: it does not raise the version (a person names it in the
+# manifest, and it is compared with the tag rather than invented here), does not
+# publish a prerelease into `latest` and does not touch the package's consumers.
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Ничего не публиковать: собрать и показать, что уехало бы'
+        description: 'Publish nothing: assemble the package and show what would go out'
         type: boolean
         default: true
 
 permissions:
   contents: read
-  id-token: write # этим и живёт trusted publishing: без него npm нечего предъявить
+  id-token: write # trusted publishing lives on it: without it npm has nothing to present
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      # Действия закреплены по SHA коммита, а не по плавающей метке: метку двигают.
+      # The actions are pinned by commit SHA rather than by a floating tag: a tag gets moved.
       # actions/checkout v7
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -45,58 +45,58 @@ jobs:
       # pnpm/action-setup v4
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
 
-      # `registry-url` здесь намеренно не указан: setup-node пишет тогда в `.npmrc`
-      # строку `_authToken=${NODE_AUTH_TOKEN}`, а с ней npm считает учётные данные
-      # заданными и за удостоверением OIDC не идёт — публикация падает 404 при
-      # верной настройке издателя. Адрес реестра и так по умолчанию
-      # registry.npmjs.org, а нужный явно прописан в `publishConfig` манифеста.
+      # `registry-url` is deliberately not given here: setup-node then writes the line
+      # `_authToken=${NODE_AUTH_TOKEN}` into `.npmrc`, and with it npm takes the
+      # credentials for given and never goes for the OIDC attestation — publishing fails
+      # with 404 while the publisher is configured correctly. The registry address is the
+      # default one anyway, and the one needed is written in the manifest's `publishConfig`.
       # actions/setup-node v7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 22
           cache: pnpm
 
-      # Trusted publishing требует npm 11.5.1 и новее, а с Node 22 приходит npm 10.
-      - name: npm поновее (для trusted publishing)
+      # Trusted publishing needs npm 11.5.1 or newer, while Node 22 brings npm 10.
+      - name: npm newer (for trusted publishing)
         run: npm install -g npm@latest
 
-      - name: Установка
+      - name: Setup
         run: pnpm install --frozen-lockfile
 
-      # Выпуск выкладывает, а не правит: тот же полный набор, что и в CI.
-      - name: Проверки перед выпуском
+      # A release publishes rather than edits: the same full suite as in CI.
+      - name: The checks before the release
         run: pnpm run lint:strict && pnpm test:all
 
-      - name: Работа из собранного пакета
+      - name: The work from the assembled package
         run: pnpm run pack:check
 
-      # Версия берётся из манифеста, а не из тега: сверять два числа можно только
-      # тогда, когда оба прочитаны, а не выведены одно из другого.
-      - name: Версия манифеста — в окружение
+      # The version comes from the manifest rather than from the tag: two numbers can be
+      # compared only when both are read rather than one derived from the other.
+      - name: The manifest version into the environment
         if: github.event_name == 'push'
         run: echo "WANT=v$(node -p "require('./package.json').version")" >> "$GITHUB_ENV"
 
-      # Тег и версия в манифесте — одно и то же число: иначе реестр получил бы
-      # версию, которой нет в истории, и по тегу поставилось бы не то.
-      - name: Тег называет ту же версию, что манифест
+      # The tag and the manifest's version are one and the same number: otherwise the registry
+      # would get a version the history does not hold, and the tag would install the wrong thing.
+      - name: The tag names the same version as the manifest
         if: github.event_name == 'push'
-        run: test "$GITHUB_REF_NAME" = "$WANT" || { echo "тег $GITHUB_REF_NAME, а в манифесте $WANT"; exit 1; }
+        run: test "$GITHUB_REF_NAME" = "$WANT" || { echo "the tag is $GITHUB_REF_NAME while the manifest holds $WANT"; exit 1; }
 
-      # Prerelease уходит в `next`, а не в `latest`: установка по умолчанию не
-      # должна подхватывать черновик.
-      - name: Публикация
+      # A prerelease goes to `next` rather than to `latest`: a default install must not
+      # pick up a draft.
+      - name: Publishing
         if: github.event_name == 'push' || inputs.dry_run == false
         run: npm publish --tag "${{ contains(github.ref_name, '-') && 'next' || 'latest' }}"
 
-      # Черновой прогон: собрать пакет и пройти путь публикации, ничего не отправляя.
-      # Версия в нём — черновая надстройка над манифестом (`1.1.1` → `1.1.2-draft.0`):
-      # реестр отказывает в публикации уже выпущенной версии, и на честном номере
-      # прогон был бы красным по причине, которая к настройке выпуска не относится.
-      # Эта правка живёт только в рабочем каталоге раннера и никуда не едет.
+      # The draft run: assemble the package and walk the publishing path sending nothing.
+      # Its version is a draft increment over the manifest (`1.1.1` → `1.1.2-draft.0`):
+      # the registry refuses to publish an already published version, and on an honest
+      # number the run would be red for a reason unrelated to the release settings.
+      # This edit lives in the runner's working directory alone and goes nowhere.
       #
-      # Чего черновой прогон **не** проверяет: настроен ли издатель (trusted publisher).
-      # `--dry-run` не обменивается удостоверением и проходит вообще без учётных данных
-      # (проверено в пустом каталоге: код 0 без токена) — это проверяет только настоящий тег.
-      - name: Черновой прогон — в реестр ничего не ушло
+      # What the draft run does **not** check: whether the publisher (trusted publisher) is
+      # configured. `--dry-run` exchanges no attestation and passes with no credentials
+      # at all (checked in an empty directory: code 0 with no token) — only a real tag checks that.
+      - name: The draft run — nothing reached the registry
         if: github.event_name == 'workflow_dispatch' && inputs.dry_run
         run: npm version prerelease --preid=draft --no-git-tag-version && npm publish --dry-run --tag next
