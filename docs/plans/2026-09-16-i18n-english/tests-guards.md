@@ -6,8 +6,12 @@ Subplan of `plan.md` (T0). Owns fourteen checks, **226 lines measured** — `gat
 `docs-paths` 6 — the tracker's row, confirmed file by file (26+26+23+22+16+16+16+16+14+13+12+12+8+6 =
 226). Written 2026-09-16. Last of the checks, and the last portion that touches a file a
 sensor is configured by. **Step 0 re-measured it on 2026-09-17: the fourteen files answer 222**, not
-226 — `docs-commands` 22, `parity` 15, `gates-coverage` 14 — and **after step 1 the owner reads 209**
-(`docs-paths` 0, `git-pins` 5).
+226 — `docs-commands` 22, `parity` 15, `gates-coverage` 14 — **after step 1 the owner read 209**
+(`docs-paths` 0, `git-pins` 5), and **after the portion of steps 7–8 named below it reads 177**
+(`docs-commands` 5, `parity` 0). **The order of the portion of 2026-09-17 was set by the mission and
+differs from the numbering here**: the two files the mission named, `docs-commands` and `parity`, are
+steps 7 and 8 of this list, so those two steps were taken first and their siblings (`docs-pin`,
+`frozen`) and steps 2–6 (the six gate files) follow.
 
 **Six of these files are gate files** (`test/gates-[a-z-]+\.test\.js` matches the gate list in
 `tools/gates/gatefiles.js`): `gates-verify`, `gates-files`, `gates-metrics`, `gates-coverage`,
@@ -144,16 +148,32 @@ a message is free.
    `why` from an entry of `tools/suites.js` → `suites.test.js` reddens; add a check to a file without
    updating the table of `README.md` → `docs-numbers` reddens. Both prove that what is read is a
    **count**, not a word.
-7. **`test/docs-commands.test.js` (23) + `test/docs-pin.test.js` (14)** — the documentation guards.
-   Red first: rename the help's section marker alone → `docs-commands` reddens (S1's experiment, met
-   from this side); rename a cause in the registry alone → the `README.md` row comparison reddens,
-   which is the measured proof that the table is a contract; and the pin's help is read from history,
-   so `docs-pin` stays green while the working tree changes — the experiment is that it does.
-8. **`test/parity.test.js` (16) + `test/frozen.test.js` (16)** — the two checks that tell a moved
-   standard from a broken engine. Red first: N24's example, already measured by S4's plan — an English
-   `SKIP_WORDS` in a scratch copy reddens `parity.test.js` while `frozen.test.js` (running the frozen
-   copy against the same golden) stays green; the experiment is quoted here so that the last owner who
-   touches these files has it. Then translate their own names and messages, leaving the N24 line alone.
+7. **`test/docs-commands.test.js` (22 → **5**) — done 2026-09-17; `test/docs-pin.test.js` (14) still
+   to do.** Seventeen names and messages turned English. **The three experiments were run before the
+   words moved, each on its own, every source restored byte-identical:** renaming the help's section
+   marker in `src/refusal.js:136` alone reddens the file at check 3
+   (`the refusal causes agree between the engine, the help and the code table of README`); renaming
+   one cause in `CONFIG_CAUSES` alone (`'unknown flag'` → `'unrecognised flag'`) reddens the same check
+   — the measured proof that the `README.md` row is a contract read through `readmeCauses()`; and
+   `docs-pin`'s half was measured with the same mutation by running that file: it **stays green** while
+   the working tree's help changes, because its help comes from history (`commandsAt`). **What stays:
+   five lines, named one by one** — the invented cause and its text that the check feeds to
+   `refuseCause` (`:146`, an input, not a message: the assertion around it reads only the English
+   sentence `/refusal cause is not declared/`, so the name is free and stays as data), the comment
+   quoting the Russian word the tolerance exists for (`:155`), and the three tolerance regexes
+   (`:181`, `:184`, `:186`) — this owner's named exception, still dead in the tree. The file put back
+   to `HEAD` ran green (4 of 4), so no machine reads a word of its own; `dup` unchanged
+   (`clones 5, lines 29`).
+8. **`test/parity.test.js` (15 → **0**) — done 2026-09-17; `test/frozen.test.js` (16) still to do.**
+   Fifteen names and messages turned English, and **both experiments were run and measured rather than
+   quoted:** N24's example — one value of `SKIP_WORDS` made English in `src/history.js` (restored
+   byte-identical) reddens `parity` at checks 1 and 3 (`--json` and the locale run) while
+   `test/frozen.test.js`, running the frozen copy against the same golden, stays **green (4 of 4)** —
+   which is what makes this file the one that tells a moved standard from a broken engine; and S1's
+   summary shape — `' rows × '` in `src/modes.js:89` changed to `' rows x '` reddens `parity` at
+   check 2, so the read of `/: (\d+) rows × (\d+) files/` is a live guard. The file put back to `HEAD`
+   ran green (3 of 3); `dup` unchanged (`clones 5, lines 29`); checks unchanged (3; 70 fast, 175 full);
+   the artifact's content digest `1bdb27e1…` and the reference file's own sha256 `cdda8d01…` unmoved.
 
 **Why the tree is green between the commits.** Every reader line of this owner moved in the step of the
 subplan that owns the text it reads (W2's eight verdicts, S1's markers and the README row, D1's
