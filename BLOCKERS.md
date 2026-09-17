@@ -551,6 +551,24 @@ references stayed the same after the fix.
   **For the user to decide:** which of the three. The plan of the work is `docs/plans/2026-09-16-i18n-english/`
   (subplan `surface.md`), and until the decision the code is untouched.
 
+  **Decided 2026-09-17 by the user: option (2) — the default locale becomes `en`.** Done in one commit:
+  `src/config.js:19` `locale: 'ru'` → `'en'`, and the settings template follows —
+  `templates/size-report.config.json` carries `"locale": "en"` and the `en` dictionary's own heading
+  (`File size by commit`) in its `title`/`heading`, which is the same relationship to the dictionary the
+  two Russian values had. **The blast radius is exactly these two files, as this note predicted, and that
+  is measured rather than hoped:** with the change in place the **full** `verify` (8 steps) is green —
+  `check:standards` reproduces both references, `parity:live` passes, `frozen` stays green and
+  `pack:check`'s byte comparison answers `the report from the package is byte-identical: 66427 B`, because
+  both fixture configs pin `"locale": "ru"` (`fixtures/parity/config.json`, `fixtures/synthetic/config.json`)
+  and the builders (`tools/make-fixture.js:55`) pin it too. What a person meets instead: `--init`'s derived
+  draft now pins `"locale": "en"` (measured in an empty repository), and a fresh project's report is English.
+  **One step of the chain is worth naming, because the measurement contradicts the obvious reading:** this
+  repository's own page does **not** turn English with this commit — its post-commit hook runs the engine of
+  the **attached copy** in `node_modules`, and that copy is `2.4.0`, whose `src/config.js:20` still reads
+  `locale: 'ru'` (measured). So the page follows the tree only after the release and the `pnpm add -D -E`
+  that attaches the new version, which is exactly what `AGENTS.md`'s release step 3 is for. The `ru`
+  dictionary is untouched either way: a project that wants Russian asks for it with the key, as before.
+
 - **N20. A translated literal changes the bytes that ship — how often to release is a decision.** Every string
   that a user sees is inside the tarball, so `AGENTS.md`'s rule applies to each portion of the translation work:
   a PATCH release, a journal section saying what changes in the numbers, and the pin in `README.md`, in one
@@ -571,6 +589,17 @@ references stayed the same after the fix.
   portion, or batched, with the registry's answer differing from the tree's source until the release. Before
   the first of those pushes the full profile was run by hand and was green (`pnpm run verify`: eight steps,
   including `test:all`, `parity:live`, `check:standards` and `pack:check`).
+
+  **Decided 2026-09-17 by the user: option (2) — batch, because few portions are left.** The answer was
+  conditional, and the condition is met rather than rounded off: "if few portions are left — batch; if the
+  work is still long — a release per portion, so that the divergence does not accumulate". Measured when it
+  was answered: the translation campaign wrote its last portion on 2026-09-17 (D1, its last owner), so what
+  remained was the three self-contained repairs of `N19` (done the same day), `N31` and `N32` — a handful,
+  which is why the batch is chosen: **one PATCH release after the last of them**, with the journal section
+  saying what changes in the numbers, the pin in `README.md` and a single `git push origin v<version> main`.
+  The divergence the batch accepts is named rather than left implicit: until that release the registry
+  serves `2.4.0` with the Russian wordings while the tree is English, so anyone who installs inside the
+  window gets the older interface — and the release is what closes the window.
 
 - **N21. The fixture builders write the frozen layer — translating them re-takes both references.**
   `tools/synthetic/*` (note.js, content.js, history.js) writes the synthetic fixture's files, subjects and its

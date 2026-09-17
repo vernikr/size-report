@@ -31,7 +31,7 @@ the baseline's `note`, written by the sensor (`tools/gates/coverage.js:84`) and 
 
 | Item | Why |
 |---|---|
-| `title` and `heading` of `templates/size-report.config.json` (2 lines) | Measured: they are **the same string** as `src/locales.js:8`'s `heading`, that is, the `ru` dictionary's own words placed in a draft a person copies. `DEFAULT_CONFIG.title` and `.heading` are `''` with the comment "by default: the heading from the locale" (`src/config.js:20-21`), so the draft is where a project pins the locale's wording. Translating it gives a `locale: "ru"` project a page titled in English while every other caption of that page stays Russian — the mixing S5 recorded for the panel (`BLOCKERS.md` N25) — while a project that wants English asks for `locale: "en"`, which is S1's dictionary. **The alternative's price is measured rather than guessed:** no check reads these two values (`test/templates.test.js` reads the draft through `loadConfig` and its `fixCommand`, its keys and its columns), so translating them reddens nothing and buys a draft that disagrees with the report it produces. |
+| ~~`title` and `heading` of `templates/size-report.config.json` (2 lines)~~ — **left the allow-list 2026-09-17 by N19** | Measured: they are **the same string** as `src/locales.js:8`'s `heading`, that is, the `ru` dictionary's own words placed in a draft a person copies. `DEFAULT_CONFIG.title` and `.heading` are `''` with the comment "by default: the heading from the locale" (`src/config.js:20-21`), so the draft is where a project pins the locale's wording. Translating it gives a `locale: "ru"` project a page titled in English while every other caption of that page stays Russian — the mixing S5 recorded for the panel (`BLOCKERS.md` N25) — while a project that wants English asks for `locale: "en"`, which is S1's dictionary. **The alternative's price is measured rather than guessed:** no check reads these two values (`test/templates.test.js` reads the draft through `loadConfig` and its `fixCommand`, its keys and its columns), so translating them reddens nothing and buys a draft that disagrees with the report it produces. |
 | `отложено` in `DEBT_TERMS` (`eslint.metrics.config.js:30`) | A **term the linter matches**, not a message: translating it stops the sensor seeing the marker it exists to see. Behaviour rather than wording — the same class as S1's `✗ ` marks, which stay marks for the same reason. The English comment above it (`:29`) says why the Russian word is in the list and stays as it is. |
 
 ## Terminology against S1's dictionary
@@ -250,7 +250,10 @@ not touched; the artifact's content digest `1bdb27e1…` and the reference file'
    and nothing else; `pnpm run verify` green; `git status` clean. **Measured 2026-09-17: it reads
    4** — `templates/size-report.config.json` 2 and `eslint.metrics.config.js` 2 (the term line and
    the English comment quoting it) — and nothing else. **D1 is closed**, and with it the campaign's
-   last source owner: every other line of its ten files is English.
+   last source owner: every other line of its ten files is English. **Corrected the same day by N19:**
+   the default locale became `en`, so the draft follows it (`"locale": "en"` and the `en` dictionary's
+   heading) and its two lines left the allow-list; the counter over D1's ten files reads **2** now,
+   and those two are `eslint.metrics.config.js`'s term line and the English comment quoting it.
 
 ## Acceptance
 

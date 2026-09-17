@@ -16,7 +16,7 @@ export const CONFIG_NAME = 'size-table.config.json';
 
 export const DEFAULT_CONFIG = {
   output: 'size-report.html',
-  locale: 'ru',
+  locale: 'en',
   title: '',          // by default: the heading from the locale
   heading: '',
   // The fix is a call that stays inside the project: the package name would send the reader to the registry,
