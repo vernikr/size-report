@@ -351,8 +351,12 @@ order of the table above is what a portion follows.
   the 107 lines that write it — `tools/synthetic/note.js`/`content.js`/`history.js` and the two
   instrument ranges — are in the allow-list with it. The decision is what made W3 a one-line owner, and that
   line has since been folded into W1 (see the order section).
-- **Releases.** A portion that changes a shipped literal changes the package's bytes. Release a
-  PATCH per portion, or batch the releases and say so in the commits: `BLOCKERS.md` N20.
+- ~~**Releases.**~~ **Decided 2026-09-17 (`BLOCKERS.md` N20): batch, because few portions were
+  left** — one release after the last of the three repairs (N19, N31, N32). Done as **2.5.0**, tag
+  `v2.5.0` (MINOR by the user's choice: the default locale is visible behaviour, not wording), with the
+  journal entry `worklog/0203-release-2.5.0.md`, the pin in `README.md` moved to the tag, and the
+  attached copy attached in the commit that follows. The campaign's own shipped bytes are therefore
+  English in the registry, not only in the tree.
 - **The numbers were formatted with a Russian decimal comma made by code** (`tools/run-tests.js:43,64`
   and `tools/gates/run.js:111,114`), so a translated profile printed "total 12,2 s". **Decided
   2026-09-16 (`BLOCKERS.md` N26):** `Intl.NumberFormat` in the locale the machine runs in, through one

@@ -601,6 +601,13 @@ references stayed the same after the fix.
   serves `2.4.0` with the Russian wordings while the tree is English, so anyone who installs inside the
   window gets the older interface — and the release is what closes the window.
 
+  **Done 2026-09-17: released as `2.5.0`, tag `v2.5.0`** (MINOR by the user's choice, since the default
+  locale is visible behaviour rather than wording; the journal entry is `worklog/0203-release-2.5.0.md`).
+  The window is closed: the registry answers `2.5.0` with the English interface, and the pin in `README.md`
+  leads to a revision whose help is English — which is also what makes the Russian branch of
+  `commandsAt()` (`tools/docs-facts.js`) dead, measured at the release rather than assumed. The attached
+  copy is updated in the commit that follows (`pnpm add -D -E`, with the trailer, no new release).
+
 - **N21. The fixture builders write the frozen layer — translating them re-takes both references.**
   `tools/synthetic/*` (note.js, content.js, history.js) writes the synthetic fixture's files, subjects and its
   `README.md`, and `tools/make-fixture.js` writes `golden.json`, `artifact.sha256` and the manifest;
