@@ -7,10 +7,10 @@ confirmed file by file (113+84+83+79+75+68+54+41+33+31+26+25+18+9 = 739). Writte
 **Step 0 re-measured it on 2026-09-16: the fourteen files answer 708, not 739** — the drop is the
 joint lines the owners' steps already moved (`hook` 113 → 109, `check` 84 → 78, `doctor` 83 → 82,
 `cli` 79 → 74, `minify` 75 → 72, `disk` 68 → 58, `cli-paths` 31 → 30, `refusals-catalog` 26 → 25).
-**After steps 1–7 the fourteen files answer 169** (2026-09-17) — `hook` 109, `disk` 16, `doctor` 10,
+**C2 is closed as of 2026-09-17: the fourteen files answer 87** — `hook` 27, `disk` 16, `doctor` 10,
 `minify` 10, `release` 7, `tokens` 5, `refusals` 4, `cli-paths` 3, `check` 2, `cli` 2, `environment` 1,
-`crlf`/`refusals-catalog`/`templates` 0 — and every one of them is allow-listed data or D1's contract:
-step 8 (`hook`) is what is left of this owner.
+`crlf`/`refusals-catalog`/`templates` 0 — and every one of them is allow-listed data or D1's contract,
+named file by file in the steps below. Nothing of this owner is left to translate.
 
 By the map's order S1–S5, W1 and W2, C1 have landed before this one, so these files are where the
 promises of the printed runtime are **read back**: every subplan above named the lines of this owner
@@ -245,8 +245,30 @@ literal** are not.
    Both `check` negatives also have a positive twin in the same file on a green run (`fix: ` at
    `:52,103,159`; the revision-name sentence at `:218,247`), so their patterns answer against text the
    tool really prints.
-8. **`test/hook.test.js` (113)** — the largest file, and the one S5's plan named most precisely; the
-   step verifies the six reads and then translates the file's own names and messages.
+8. **`test/hook.test.js` (109 → **27**) — done 2026-09-17, and C2 is closed with it.** Eighty-two names
+   and messages, plus the messages of the five lines that carry a scenario subject as well. The
+   twenty-seven that stay are the scenario's own content, and they are **three kinds, named here**: the
+   sample project's files (`'# проект\n'`, `'// начало\nvar width = 1;\n'`, `'// ещё файл\n'`), its two
+   commits (`'feat: начало'`, `'chore: отчёт'`), and the working copies' commits and edits the checks
+   make to prove the hook touches nothing of someone else's (`'feat: правка кода'`, `'feat: правка
+   сбоку'`, `'feat: правка в основной'`, `'feat: ещё правка'`, `'chore: пусто'`,
+   `'// отложенная правка\n'`, `'грязная правка\n'`, `'// ещё правка\n'`), the foreign hooks' bodies
+   with the regex that reads one of them (`'#!/bin/sh\necho чужой хук\n'`, `/чужой хук/`) — the reads
+   that assert them are the checks' own data. **Red first by the whole file:** `test/hook.test.js` put
+   back to its `HEAD` version ran 11 of 11 checks **green** — the largest file of the owner and still
+   no machine reads a word of it (restored byte-identical). **The reads of S5's printed text were
+   verified one by one rather than assumed:** the installation's `/already installed/` (`:151`) and
+   `/hooks.*enabled/` (`:152`), the cause line `/^✗ size-report: /` (`:339`), the state's `why` —
+   `/CI/` (`:295`), `/detached HEAD/` (`:323`) and the hook's own subject read back as an exact string
+   (`'chore(report): report rebuilt after ' + parent.slice(0, 7)`, `:191`) — and the refusal's `/hook-run/`
+   (`:404`) and `/core\.hooksPath/` (`:412`); all are ASCII, and the tool's mark asserted at `:136` is
+   `'size-report'`, ASCII as well, so nothing here moved with the words. The file's only regex literal
+   with Cyrillic is `/чужой хук/` (`:173`), the reader of its own fixture (measured). `dup` asked before
+   and after: `clones 5, lines 29` both times — the block this file clones a shallow history with is
+   *not* the harness's pair (its shape carries the identity `git config` lines), so no new clone formed
+   and the helper was not needed here. Checks unchanged (11; 70 fast, 175 full), the artifact's content
+   digest `1bdb27e1…` and the reference file's own sha256 `cdda8d01…` unmoved, the built page 66 427 B,
+   the package from the tarball byte-identical; `pnpm run verify` (8 steps) green before the push.
 
 **Why the tree is green between the commits.** The printed texts moved in earlier steps, and every
 line that reads one of them is either already English or waits for its owner; the data reads stay

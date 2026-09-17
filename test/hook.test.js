@@ -76,7 +76,7 @@ function source() {
   }, null, 2) + '\n');
   gitIn(SOURCE, ['add', '-A']);
   gitIn(SOURCE, ['commit', '-qm', 'feat: начало']);
-  assert.equal(runSize(SOURCE, ['--write']).code, 0, 'отчёт образца не собрался');
+  assert.equal(runSize(SOURCE, ['--write']).code, 0, 'the report of the sample was not built');
   gitIn(SOURCE, ['add', REPORT]);
   gitIn(SOURCE, ['commit', '-qm', 'chore: отчёт']);
   built = true;
@@ -96,7 +96,7 @@ function clone(name) {
 
 function install(dir) {
   const res = runSize(dir, ['--config', CONFIG, 'install-hook']);
-  assert.equal(res.code, 0, 'установка хука не прошла: ' + firstLine(res.stdout + res.stderr));
+  assert.equal(res.code, 0, 'the hook was not installed: ' + firstLine(res.stdout + res.stderr));
   return res;
 }
 
@@ -121,48 +121,48 @@ function commit(dir, subject, files) {
 
 /* ---------- installation ---------- */
 
-test('хук ставится сам при первом запуске, а ставится ли — решает проект', () => {
+test('the hook installs itself on the first run, and whether it may is the decision of the project', () => {
   const dir = clone('install');
   const file = hookFileOf(dir);
 
   // A fresh clone has no hook: `.git/hooks` is not cloned, and nothing can install it before the
   // first run — a manual step is absent on purpose.
-  assert.equal(fs.existsSync(file), false, 'хук появился в клоне до первого запуска');
+  assert.equal(fs.existsSync(file), false, 'the hook appeared in the clone before the first run');
 
   // The first ordinary run is enough.
-  assert.equal(runSize(dir, ['--config', CONFIG, '--write']).code, 0, 'отчёт не собрался');
-  assert.ok(fs.existsSync(file), 'первый запуск не поставил хук: ' + file);
-  assert.ok((fs.statSync(file).mode & 0o111) !== 0, 'хук не исполняемый: git его не позовёт');
-  assert.ok(fs.readFileSync(file, 'utf8').indexOf('size-report') >= 0, 'в хуке нет метки инструмента');
+  assert.equal(runSize(dir, ['--config', CONFIG, '--write']).code, 0, 'the report was not built');
+  assert.ok(fs.existsSync(file), 'the first run did not install the hook: ' + file);
+  assert.ok((fs.statSync(file).mode & 0o111) !== 0, 'the hook is not executable: git will not call it');
+  assert.ok(fs.readFileSync(file, 'utf8').indexOf('size-report') >= 0, 'the hook carries no mark of the tool');
   assert.ok(fs.existsSync(path.join(dir, '.git', 'hooks', 'post-merge')),
-    'нет хука пост-слияния: git не зовёт post-commit на слияние, отчёт остался бы stale');
+    'there is no post-merge hook: git does not call post-commit for a merge, and the report would stay stale');
   assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '',
-    'постановка что-то изменила в проекте: хук обязан жить только в `.git`');
+    'the installation changed something in the project: the hook has to live in `.git` alone');
 
   // The diagnostics rearrange nothing: it reports rather than repairs.
   const before = fs.readFileSync(file, 'utf8');
   assert.equal(runSize(dir, ['--config', CONFIG, 'doctor', '--json']).code, 0,
-    'диагностика здорового проекта не зелёная');
-  assert.equal(fs.readFileSync(file, 'utf8'), before, 'диагностика переписала хук');
+    'the diagnostics of a healthy project are not green');
+  assert.equal(fs.readFileSync(file, 'utf8'), before, 'the diagnostics rewrote the hook');
 
   // The explicit installation says what a person needs: it is already there, here is what switches
   // it off, here is how it is removed.
   const again = install(dir);
-  assert.match(again.stdout, /already installed/, 'установка не сказала, что хук уже стоит');
-  assert.match(again.stdout, /hooks.*enabled/, 'установка не сказала, чем выключается автоматика');
-  assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '', 'повторная установка оставила грязь');
+  assert.match(again.stdout, /already installed/, 'the installation did not say the hook is already there');
+  assert.match(again.stdout, /hooks.*enabled/, 'the installation did not say what switches the automation off');
+  assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '', 'the repeated installation left dirt behind');
 });
 
 /* The automation is a background service rather than a side effect: where a project does not want it
  * or it cannot be installed, it does not appear and does not get in the way. Checked by a run (the
  * first one in the clone) rather than by reading a condition in the code. */
-test('там, где автоматику выключили или поставить нельзя, хук не появляется', () => {
+test('where the automation is switched off or cannot be installed, no hook appears', () => {
   const off = clone('install-off');
   const offCfg = JSON.parse(fs.readFileSync(path.join(off, CONFIG), 'utf8'));
   offCfg.hooks = { enabled: false };
   fs.writeFileSync(path.join(off, CONFIG), JSON.stringify(offCfg, null, 2) + '\n');
-  assert.equal(runSize(off, ['--config', CONFIG, '--write']).code, 0, 'запись с выключателем не прошла');
-  assert.equal(fs.existsSync(hookFileOf(off)), false, 'хук поставлен вопреки hooks.enabled: false');
+  assert.equal(runSize(off, ['--config', CONFIG, '--write']).code, 0, 'the write with the switch off did not go through');
+  assert.equal(fs.existsSync(hookFileOf(off)), false, 'the hook was installed against hooks.enabled: false');
 
   const foreignDir = clone('install-foreign');
   const foreignFile = hookFileOf(foreignDir);
@@ -170,18 +170,18 @@ test('там, где автоматику выключили или постав
   fs.writeFileSync(foreignFile, '#!/bin/sh\necho чужой хук\n');
   fs.chmodSync(foreignFile, 0o755);
   assert.equal(runSize(foreignDir, ['--config', CONFIG, '--write']).code, 0);
-  assert.match(fs.readFileSync(foreignFile, 'utf8'), /чужой хук/, 'чужой хук переписан постановкой');
+  assert.match(fs.readFileSync(foreignFile, 'utf8'), /чужой хук/, 'the installation rewrote a foreign hook');
 
   const customDir = clone('install-custom');
   gitIn(customDir, ['config', 'core.hooksPath', '.githooks']);
   assert.equal(runSize(customDir, ['--config', CONFIG, '--write']).code, 0);
   assert.equal(fs.existsSync(path.join(customDir, '.githooks')), false,
-    'постановка создала каталог чужого core.hooksPath');
+    'the installation created the directory of a foreign core.hooksPath');
 });
 
 /* ---------- updating ---------- */
 
-test('правка кода даёт пересобранный отчёт отдельным коммитом', () => {
+test('an edit of code gives the rebuilt report as a commit of its own', () => {
   const dir = clone('update');
   install(dir);
 
@@ -189,27 +189,27 @@ test('правка кода даёт пересобранный отчёт от�
   const parent = gitIn(dir, ['rev-parse', 'HEAD^']).trim();
 
   assert.deepEqual(subjects(dir, 2), ['chore(report): report rebuilt after ' + parent.slice(0, 7),
-    'feat: правка кода'], 'отчёт не лёг отдельным коммитом сразу после коммита кода');
+    'feat: правка кода'], 'the report did not land as a commit of its own right after the commit of code');
   assert.deepEqual(gitIn(dir, ['show', '--name-only', '--format=', 'HEAD']).trim().split('\n'), [REPORT],
-    'в коммите отчёта оказалось что-то кроме отчёта');
-  assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '', 'после хука рабочее дерево грязное');
+    'the report commit carried something besides the report');
+  assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '', 'the working tree is dirty after the hook');
 
   // The commit carries the very bytes `--write` assembles: otherwise the report in history and the
   // report on disk would diverge, and so would the check "the table agrees with history".
   const committed = fs.readFileSync(path.join(dir, REPORT), 'utf8');
   assert.equal(runSize(dir, ['--config', CONFIG, '--write']).code, 0);
   assert.equal(fs.readFileSync(path.join(dir, REPORT), 'utf8'), committed,
-    'хук положил в коммит не то, что собирает `--write`');
-  assert.equal(runSize(dir, ['--config', CONFIG]).code, 0, 'отчёт в git разошёлся с историей');
+    'the hook put into the commit something other than what `--write` builds');
+  assert.equal(runSize(dir, ['--config', CONFIG]).code, 0, 'the report in git diverged from the history');
 
   const state = hookState(dir);
-  assert.equal(state.result, 'committed', 'хук не записал, что закоммитил: ' + JSON.stringify(state));
-  assert.equal(state.head, parent, 'в записи хука не тот коммит');
+  assert.equal(state.result, 'committed', 'the hook did not record that it committed: ' + JSON.stringify(state));
+  assert.equal(state.head, parent, 'the record of the hook holds the wrong commit');
   assert.equal(runSize(dir, ['--config', CONFIG, 'check', '--json']).code, 0,
-    'коммит отчёта сломал полноту покрытия');
+    'the report commit broke the completeness of coverage');
 });
 
-test('повторный запуск и коммит без изменений ничего не порождают', () => {
+test('a repeated run and a commit with no changes produce nothing', () => {
   const dir = clone('repeat');
   install(dir);
   commit(dir, 'feat: правка кода', ['src/code.js']);
@@ -217,15 +217,15 @@ test('повторный запуск и коммит без изменений 
 
   // An empty commit: it earns the report no row, hence no commit either.
   gitIn(dir, ['commit', '-q', '--allow-empty', '-m', 'chore: пусто']);
-  assert.equal(subjects(dir, 1)[0], 'chore: пусто', 'хук создал коммит там, где отчёт не менялся');
+  assert.equal(subjects(dir, 1)[0], 'chore: пусто', 'the hook made a commit where the report did not change');
   assert.equal(gitIn(dir, ['log', '--format=%s']).split('\n').filter((s) => /^chore\(report\)/.test(s)).length, 1,
-    'после коммита без изменений появился второй коммит отчёта');
+    'a second report commit appeared after a commit with no changes');
 
   // And by hand the answer is the same: there was nothing to change.
   const res = runSize(dir, ['--config', CONFIG, 'hook-run']);
-  assert.equal(res.code, 0, 'повторный запуск вернул отказ: ' + firstLine(res.stderr));
-  assert.equal(res.stdout.trim() + res.stderr.trim(), '', 'повторный запуск напечатал лишнее');
-  assert.equal(hookState(dir).result, 'unchanged', 'повторный запуск нашёл что менять');
+  assert.equal(res.code, 0, 'the repeated run returned a refusal: ' + firstLine(res.stderr));
+  assert.equal(res.stdout.trim() + res.stderr.trim(), '', 'the repeated run printed something extra');
+  assert.equal(hookState(dir).result, 'unchanged', 'the repeated run found something to change');
 });
 
 /* On a merge the hook behaves as on any commit, but arrives there by another file: git creates the
@@ -237,7 +237,7 @@ test('повторный запуск и коммит без изменений 
  * merge itself shifted a volume, and the branch's edit is already counted. So what is checked is what
  * the hook is responsible for: after the merge the report is rebuilt as a commit of its own and
  * agrees with what history and the working tree assemble. */
-test('на слиянии хук ведёт себя как на любом коммите', () => {
+test('on a merge the hook behaves as on any commit', () => {
   const dir = clone('merge');
   install(dir);
 
@@ -249,17 +249,17 @@ test('на слиянии хук ведёт себя как на любом ко
   // The hook has already run: HEAD is the report's commit, and the merge commit is its parent.
   const merge = gitIn(dir, ['rev-parse', 'HEAD^']).trim();
   assert.equal(gitIn(dir, ['rev-list', '--parents', '-n1', merge]).trim().split(' ').length, 3,
-    'слияние не создало merge-коммит: проверять нечего');
+    'the merge made no merge commit: there is nothing to check');
 
   assert.equal(subjects(dir, 1)[0], 'chore(report): report rebuilt after ' + merge.slice(0, 7),
-    'после слияния отчёт не пересобрался отдельным коммитом');
+    'after the merge the report was not rebuilt as a commit of its own');
   assert.deepEqual(gitIn(dir, ['show', '--name-only', '--format=', 'HEAD']).trim().split('\n'), [REPORT],
-    'в коммит отчёта после слияния попало что-то кроме отчёта');
-  assert.equal(runSize(dir, ['--config', CONFIG]).code, 0, 'отчёт после слияния разошёлся с историей');
-  assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '', 'после слияния дерево грязное');
+    'the report commit after the merge carried something besides the report');
+  assert.equal(runSize(dir, ['--config', CONFIG]).code, 0, 'the report after the merge diverged from the history');
+  assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '', 'the tree is dirty after the merge');
 });
 
-test('чужая незакоммиченная работа и индекс не тронуты', () => {
+test('the uncommitted work of others and the index are untouched', () => {
   const dir = clone('stage');
   install(dir);
 
@@ -274,14 +274,14 @@ test('чужая незакоммиченная работа и индекс н�
   // index).
   const status = gitIn(dir, ['status', '--porcelain']).replace(/\n+$/, '').split('\n').sort();
   assert.deepEqual(status, [' M README.md', 'M  src/other.js'],
-    'хук тронул чужую работу или индекс: ' + JSON.stringify(status));
+    'the hook touched the work of others or the index: ' + JSON.stringify(status));
   assert.deepEqual(gitIn(dir, ['show', '--name-only', '--format=', 'HEAD']).trim().split('\n'), [REPORT],
-    'в коммит отчёта попала чужая правка');
+    'the report commit picked up an edit of someone else');
 });
 
 /* ---------- where there is nothing to update ---------- */
 
-test('хук молчит в CI, по выключателю и на отделённом HEAD', () => {
+test('the hook keeps quiet in CI, behind the switch and on a detached HEAD', () => {
   const dir = clone('quiet');
   install(dir);
   commit(dir, 'feat: правка кода', ['src/code.js']);
@@ -290,13 +290,13 @@ test('хук молчит в CI, по выключателю и на отдел�
   // An edit on disk: if the hook does run, the report changes — which is how it shows.
   fs.appendFileSync(path.join(dir, 'src', 'code.js'), '// ещё правка\n');
   const env = runSize(dir, ['--config', CONFIG, 'hook-run'], { CI: '1' });
-  assert.equal(env.code, 0, 'хук в CI ответил отказом: ' + firstLine(env.stderr));
-  assert.equal(fs.readFileSync(path.join(dir, REPORT), 'utf8'), report, 'хук обновил отчёт в CI');
-  assert.match(hookState(dir).why, /CI/, 'хук не сказал, почему пропустил: ' + JSON.stringify(hookState(dir)));
+  assert.equal(env.code, 0, 'in CI the hook answered with a refusal: ' + firstLine(env.stderr));
+  assert.equal(fs.readFileSync(path.join(dir, REPORT), 'utf8'), report, 'the hook updated the report in CI');
+  assert.match(hookState(dir).why, /CI/, 'the hook did not say why it skipped: ' + JSON.stringify(hookState(dir)));
 
   const off = runSize(dir, ['--config', CONFIG, 'hook-run'], { SIZE_REPORT_NO_HOOK: '1' });
   assert.equal(off.code, 0);
-  assert.equal(fs.readFileSync(path.join(dir, REPORT), 'utf8'), report, 'рубильник окружения не сработал');
+  assert.equal(fs.readFileSync(path.join(dir, REPORT), 'utf8'), report, 'the environment switch did not work');
 
   // The switch in the settings: the file is read off the disk and need not be committed.
   const cfg = JSON.parse(fs.readFileSync(path.join(dir, CONFIG), 'utf8'));
@@ -304,53 +304,53 @@ test('хук молчит в CI, по выключателю и на отдел�
   fs.writeFileSync(path.join(dir, CONFIG), JSON.stringify(cfg, null, 2) + '\n');
   const disabled = runSize(dir, ['--config', CONFIG, 'hook-run']);
   assert.equal(disabled.code, 0);
-  assert.equal(fs.readFileSync(path.join(dir, REPORT), 'utf8'), report, 'выключатель в настройках не сработал');
-  assert.match(hookState(dir).why, /hooks\.enabled/, 'причина пропуска не названа');
+  assert.equal(fs.readFileSync(path.join(dir, REPORT), 'utf8'), report, 'the switch in the settings did not work');
+  assert.match(hookState(dir).why, /hooks\.enabled/, 'the reason for the skip is not named');
 
   // A switched-off hook shows in the diagnostics as something to act on rather than as the norm.
   const doc = JSON.parse(runSize(dir, ['--config', CONFIG, 'doctor', '--json']).stdout);
-  assert.equal(doc.hooks.installed, true, 'диагностика не видит установленный хук');
-  assert.equal(doc.hooks.enabled, false, 'диагностика не видит выключатель');
+  assert.equal(doc.hooks.installed, true, 'the diagnostics do not see the installed hook');
+  assert.equal(doc.hooks.enabled, false, 'the diagnostics do not see the switch');
   assert.ok(doc.findings.some((f) => f.level === 'action' && /hook/.test(f.what)),
-    'диагностика молчит о выключенном хуке: ' + JSON.stringify(doc.findings));
+    'the diagnostics keep quiet about the switched-off hook: ' + JSON.stringify(doc.findings));
 
   cfg.hooks = { enabled: true };
   fs.writeFileSync(path.join(dir, CONFIG), JSON.stringify(cfg, null, 2) + '\n');
   gitIn(dir, ['checkout', '-q', '--detach']);
   const detached = runSize(dir, ['--config', CONFIG, 'hook-run']);
   assert.equal(detached.code, 0);
-  assert.equal(fs.readFileSync(path.join(dir, REPORT), 'utf8'), report, 'на отделённом HEAD отчёт пересобран');
-  assert.match(hookState(dir).why, /detached HEAD/, 'отделённый HEAD назван не своей причиной');
+  assert.equal(fs.readFileSync(path.join(dir, REPORT), 'utf8'), report, 'on a detached HEAD the report was rebuilt');
+  assert.match(hookState(dir).why, /detached HEAD/, 'a detached HEAD is given the wrong reason');
 });
 
-test('отказ инструмента не роняет коммит, а причина видна в диагностике', () => {
+test('a refusal of the tool does not bring the commit down, and the cause shows in the diagnostics', () => {
   // A shallow history is a refusal of the tool itself (code 3) rather than of the hook.
   const dir = path.join(tmp, 'shallow');
   const shallow = gitTry(null, ['clone', '-q', '--depth', '1', '--no-hardlinks', 'file://' + source(), dir]);
-  assert.equal(shallow.status, 0, 'не удалось собрать обрезанную выкладку: ' + firstLine(shallow.stderr));
+  assert.equal(shallow.status, 0, 'the truncated working tree was not assembled: ' + firstLine(shallow.stderr));
   ['user.name', 'user.email', 'commit.gpgsign'].forEach((key, i) => {
     gitIn(dir, ['config', key, ['fixture', 'fixture@local', 'false'][i]]);
   });
   install(dir);
 
   const refused = runSize(dir, ['--config', CONFIG, 'hook-run']);
-  assert.equal(refused.code, 0, 'хук вернул отказ вместо нуля: ' + firstLine(refused.stderr));
-  assert.equal(hasStack(refused.stderr), false, 'хук напечатал стек');
-  assert.match(refused.stderr.split('\n')[0], /^✗ size-report: /, 'причина не названа строкой: ' + refused.stderr);
-  assert.equal(hookState(dir).result, 'refused', 'отказ не записан: ' + JSON.stringify(hookState(dir)));
+  assert.equal(refused.code, 0, 'the hook returned a refusal instead of zero: ' + firstLine(refused.stderr));
+  assert.equal(hasStack(refused.stderr), false, 'the hook printed a stack');
+  assert.match(refused.stderr.split('\n')[0], /^✗ size-report: /, 'the cause is not named as a line: ' + refused.stderr);
+  assert.equal(hookState(dir).result, 'refused', 'the refusal is not recorded: ' + JSON.stringify(hookState(dir)));
 
   // The commit is there and it is the only one: no report in history, a clean tree.
   commit(dir, 'feat: правка кода', ['src/code.js']);
-  assert.equal(subjects(dir, 1)[0], 'feat: правка кода', 'хук создал коммит после отказа');
-  assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '', 'после отказа осталась грязь');
+  assert.equal(subjects(dir, 1)[0], 'feat: правка кода', 'the hook made a commit after the refusal');
+  assert.equal(gitIn(dir, ['status', '--porcelain']).trim(), '', 'dirt was left after the refusal');
 
   const doc = JSON.parse(runSize(dir, ['--config', CONFIG, 'doctor', '--json']).stdout);
-  assert.equal(doc.hooks.last.result, 'refused', 'диагностика не видит отказа хука');
+  assert.equal(doc.hooks.last.result, 'refused', 'the diagnostics do not see the refusal of the hook');
   assert.ok(doc.findings.some((f) => f.level === 'action' && /hook/.test(f.what)),
-    'диагностика не называет сломанный хук делом: ' + JSON.stringify(doc.findings));
+    'the diagnostics do not call a broken hook a matter: ' + JSON.stringify(doc.findings));
 });
 
-test('отчёт вне git: хук пересобирает и не коммитит', () => {
+test('the report outside git: the hook rebuilds and does not commit', () => {
   const dir = clone('untracked');
   const cfg = JSON.parse(fs.readFileSync(path.join(dir, CONFIG), 'utf8'));
   cfg.output = '.size-report/report.html';
@@ -359,18 +359,18 @@ test('отчёт вне git: хук пересобирает и не комми�
   install(dir);
 
   commit(dir, 'feat: правка кода', ['src/code.js']);
-  assert.equal(subjects(dir, 1)[0], 'feat: правка кода', 'хук закоммитил отчёт, которого нет в git');
-  assert.ok(fs.existsSync(path.join(dir, '.size-report', 'report.html')), 'отчёт вне git не пересобрался');
-  assert.equal(hookState(dir).result, 'rebuilt', 'хук не сказал, что пересобрал без коммита');
+  assert.equal(subjects(dir, 1)[0], 'feat: правка кода', 'the hook committed a report that is not in git');
+  assert.ok(fs.existsSync(path.join(dir, '.size-report', 'report.html')), 'the report outside git was not rebuilt');
+  assert.equal(hookState(dir).result, 'rebuilt', 'the hook did not say it rebuilt without a commit');
 
   // And a fresh clone has no hook at all — which is the answer for "someone else's machine and
   // integration".
-  assert.equal(fs.existsSync(hookFileOf(clone('fresh'))), false, 'хук приехал вместе с историей');
+  assert.equal(fs.existsSync(hookFileOf(clone('fresh'))), false, 'the hook came along with the history');
 });
 
 /* ---------- removal and someone else's files ---------- */
 
-test('снятие возвращает проект к прежнему поведению', () => {
+test('the uninstall brings the project back to its old behaviour', () => {
   const dir = clone('uninstall');
   install(dir);
   commit(dir, 'feat: правка кода', ['src/code.js']);
@@ -378,19 +378,19 @@ test('снятие возвращает проект к прежнему пов�
   const report = fs.readFileSync(path.join(dir, REPORT), 'utf8');
 
   const gone = runSize(dir, ['--config', CONFIG, 'uninstall-hook']);
-  assert.equal(gone.code, 0, 'снятие не прошло: ' + firstLine(gone.stderr));
-  assert.equal(fs.existsSync(hookFileOf(dir)), false, 'файл хука остался');
-  assert.equal(fs.existsSync(path.join(dir, '.git', 'hooks', 'post-merge')), false, 'файл хука слияния остался');
-  assert.equal(fs.existsSync(path.join(dir, '.git', 'size-report')), false, 'состояние хука осталось');
+  assert.equal(gone.code, 0, 'the uninstall did not go through: ' + firstLine(gone.stderr));
+  assert.equal(fs.existsSync(hookFileOf(dir)), false, 'the hook file is still there');
+  assert.equal(fs.existsSync(path.join(dir, '.git', 'hooks', 'post-merge')), false, 'the post-merge hook file is still there');
+  assert.equal(fs.existsSync(path.join(dir, '.git', 'size-report')), false, 'the state of the hook is still there');
 
   commit(dir, 'feat: ещё правка', ['src/code.js']);
-  assert.equal(subjects(dir, 1)[0], 'feat: ещё правка', 'снятый хук продолжает коммитить');
+  assert.equal(subjects(dir, 1)[0], 'feat: ещё правка', 'the removed hook keeps committing');
   assert.equal(fs.readFileSync(path.join(dir, REPORT), 'utf8'), report,
-    'снятый хук продолжает пересобирать отчёт');
-  assert.equal(runSize(dir, ['--config', CONFIG, 'uninstall-hook']).code, 0, 'повторное снятие — отказ');
+    'the removed hook keeps rebuilding the report');
+  assert.equal(runSize(dir, ['--config', CONFIG, 'uninstall-hook']).code, 0, 'a repeated uninstall is a refusal');
 });
 
-test('чужой хук и чужой каталог хуков не перезаписываются', () => {
+test('a foreign hook and a foreign hooks directory are not overwritten', () => {
   const dir = clone('foreign');
   const file = hookFileOf(dir);
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -399,16 +399,16 @@ test('чужой хук и чужой каталог хуков не перез�
   fs.chmodSync(file, 0o755);
 
   const res = runSize(dir, ['--config', CONFIG, 'install-hook']);
-  assert.equal(res.code, 2, 'установка поверх чужого хука не отказ');
-  assert.equal(hasStack(res.stderr), false, 'отказ напечатал стек');
-  assert.match(res.stderr, /hook-run/, 'отказ не даёт готовой строки для чужого хука:\n' + res.stderr);
-  assert.equal(fs.readFileSync(file, 'utf8'), foreign, 'чужой хук переписан');
-  assert.equal(runSize(dir, ['--config', CONFIG, 'uninstall-hook']).code, 2, 'снятие тронуло чужой хук');
+  assert.equal(res.code, 2, 'installing over a foreign hook is not a refusal');
+  assert.equal(hasStack(res.stderr), false, 'the refusal printed a stack');
+  assert.match(res.stderr, /hook-run/, 'the refusal gives no ready line for a foreign hook:\n' + res.stderr);
+  assert.equal(fs.readFileSync(file, 'utf8'), foreign, 'the foreign hook was rewritten');
+  assert.equal(runSize(dir, ['--config', CONFIG, 'uninstall-hook']).code, 2, 'the uninstall touched a foreign hook');
 
   fs.rmSync(file);
   gitIn(dir, ['config', 'core.hooksPath', '.githooks']);
   const custom = runSize(dir, ['--config', CONFIG, 'install-hook']);
-  assert.equal(custom.code, 2, 'при чужом core.hooksPath установка не отказ');
-  assert.match(custom.stderr, /core\.hooksPath/, 'отказ не назвал причину:\n' + custom.stderr);
-  assert.equal(fs.existsSync(path.join(dir, '.githooks')), false, 'инструмент создал чужой каталог хуков');
+  assert.equal(custom.code, 2, 'with a foreign core.hooksPath the installation is not a refusal');
+  assert.match(custom.stderr, /core\.hooksPath/, 'the refusal did not name the cause:\n' + custom.stderr);
+  assert.equal(fs.existsSync(path.join(dir, '.githooks')), false, 'the tool created a foreign hooks directory');
 });
