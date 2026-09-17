@@ -3,8 +3,10 @@
 Subplan of `plan.md` (T0). Owns fourteen checks, **739 lines measured** — `hook` 113, `check` 84,
 `doctor` 83, `cli` 79, `minify` 75, `disk` 68, `tokens` 54, `release` 41, `templates` 33,
 `cli-paths` 31, `refusals-catalog` 26, `refusals` 25, `environment` 18, `crlf` 9 — the tracker's row,
-confirmed file by file (113+84+83+79+75+68+54+41+33+31+26+25+18+9 = 739). Written 2026-09-16, not
-started.
+confirmed file by file (113+84+83+79+75+68+54+41+33+31+26+25+18+9 = 739). Written 2026-09-16.
+**Step 0 re-measured it on 2026-09-16: the fourteen files answer 708, not 739** — the drop is the
+joint lines the owners' steps already moved (`hook` 113 → 109, `check` 84 → 78, `doctor` 83 → 82,
+`cli` 79 → 74, `minify` 75 → 72, `disk` 68 → 58, `cli-paths` 31 → 30, `refusals-catalog` 26 → 25).
 
 By the map's order S1–S5, W1 and W2, C1 have landed before this one, so these files are where the
 promises of the printed runtime are **read back**: every subplan above named the lines of this owner
@@ -105,18 +107,36 @@ literal** are not.
 
 ## Steps — one commit each, red first
 
-0. **Re-measure and verify the joint lines.** S1–S5, W1, W2 and C1 have landed, so every positive read
-   of section (1) is English and every marker is `fix: `. This step measures the four negatives of
-   section (2) and writes down which of them its owner re-pointed; if one was missed, the fix lands
-   with its owner (the text is theirs), and the gap is recorded in `TODO.md`/`BLOCKERS.md` rather than
-   patched inside a check. The counter's baseline for the fourteen files, and the check count per file
-   from `tools/suites.js`'s `checksIn`, go into the journal.
-1. **`test/refusals.test.js` (25) + `test/refusals-catalog.test.js` (26).** Red first: narrow
-   `ADVICE_LINE` to the English markers (W1's last step) with one refusal still printing a Russian
-   marker → `adviceOf` returns nothing and the catalogue's advice assertion reddens in
-   `test/refusals.test.js`; and rename a `must` phrase in `tools/refusals.js` alone → the same check
-   reddens. These two files are the harness of that promise, so their own messages are translated last
-   within their step, after the experiment.
+0. **Re-measure and verify the joint lines — done 2026-09-16.** The counter answers **708** for the
+   fourteen files, file by file (above), and the whole drop belongs to the owners' earlier steps. The
+   joint lines of section (1) were checked **by line number**, not by hope: **58 named lines, none of
+   them carrying Cyrillic**, including the data reads the plan exempts (`minify.test.js:124,195`,
+   `tokens.test.js:113`, which read the `ru` dictionary and stay). **All four negatives of section (2)
+   are live and English**: `check.test.js:184` → `/fix:/`, `check.test.js:235` →
+   `/is not a revision name and not the start of a sha/`, `disk.test.js:219` → `/carrying the state/`,
+   `cli.test.js:69` → `/settings derived from the project/` — so no owner missed its own, and nothing
+   was written into `TODO.md` or `BLOCKERS.md` for them.
+1. **`test/refusals.test.js` (25 → **4**) + `test/refusals-catalog.test.js` (25 → **0**) — done
+   2026-09-16.** Twenty-one names and messages in the first (plus two diagnostic labels: `'движок без
+   bin'` → `'the engine without bin'`, `'движок пакета'` → `'the package engine'`), twenty-five in the
+   second; the four that stay in the first are the scenarios' own fixture content (`echo чужой` written
+   into a foreign hook, the note file `заметка.txt`, the commit subject of the side branch, the comment
+   appended to the drifted table) — data the test writes and the tool merely trips over. **Red first,
+   both halves of step 1's experiment, each on its own:** putting a source's advice marker back to
+   Russian (`src/check.js:121`, `'  fix: '` → `'  починка: '`) reddens `test/refusals.test.js` at
+   `«the codes of the table / coverage is incomplete»: в отказе нет «fix: add these paths as a column
+   or to "skip"»` — the extractor's English `ADVICE_LINE` no longer sees the line, and that is what the
+   catalogue's promise rests on; renaming one `must` phrase in `tools/refusals.js` alone reddens the
+   same check at `«command line / unknown flag»: в отказе нет «a phrase that is not printed at all»`.
+   Both files were restored byte-identical (measured). **The files' own words are read by nobody:** all
+   **39** translated phrases went back to Russian one at a time (19 runs of `test/refusals.test.js`,
+   20 of the catalogue) and neither file reddened once. No machine reads the two files' text — the
+   catalogue's `coveredBy` entries point at `test/hook.test.js`, `test/module.test.js` and
+   `test/disk.test.js`, never here (measured). Check counts unchanged (1 and 4); `dup` green over 46
+   fresh messages (8 clones, 47 lines, 15 fingerprints); `verify:fast` and the full `verify` green;
+   the artifact's digest (`1bdb27e1…`) and the built page (66 427 B) unmoved. These two files are the
+   harness of that promise, so their own messages were translated last within their step, after the
+   experiment.
 2. **`test/crlf.test.js` (9) + `test/environment.test.js` (18).** Red first: the golden comparison is
    data; the experiment is the counters and `pnpm test` staying green, plus one name rename proving
    `checksIn` counts calls rather than names.

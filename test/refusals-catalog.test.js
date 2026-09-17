@@ -29,16 +29,16 @@ import path from 'node:path';
 import { CASES, PRINTED, SITES } from '../tools/refusals.js';
 import { ROOT, gitIn } from '../tools/harness.js';
 
-test('отказы, стерегомые другой проверкой, названы и в самом деле ею утверждаются', () => {
+test('refusals another check guards are named, and that check really asserts them', () => {
   const covered = CASES.filter((c) => c.coveredBy !== undefined);
-  assert.ok(covered.length > 0, 'в каталоге нет ни одного отказа со ссылкой на другую проверку');
+  assert.ok(covered.length > 0, 'the catalogue holds no refusal pointing at another check');
   covered.forEach((c) => {
     const file = path.join(ROOT, c.coveredBy);
-    assert.ok(fs.existsSync(file), 'проверка, которой каталог отдаёт отказ, не найдена: ' + c.coveredBy);
+    assert.ok(fs.existsSync(file), 'the check the catalogue hands a refusal to was not found: ' + c.coveredBy);
     const text = fs.readFileSync(file, 'utf8');
     c.must.forEach((phrase) => {
-      assert.ok(text.indexOf(phrase) >= 0, 'в ' + c.coveredBy + ' нет утверждения «' + phrase
-        + '» за отказ «' + c.key + '» — значит, отказ остался без сторожа');
+      assert.ok(text.indexOf(phrase) >= 0, 'the file ' + c.coveredBy + ' carries no claim «' + phrase
+        + '» for the refusal «' + c.key + '» — so the refusal is left without a guard');
     });
   });
 });
@@ -65,36 +65,36 @@ function refusalSites() {
   return { found: found, printed: printed };
 }
 
-test('у каждого места отказа в исходниках есть пункт каталога', () => {
+test('every refusal site in the sources has a line in the catalogue', () => {
   const { found, printed } = refusalSites();
   const declared = new Map(Object.entries(SITES));
   const missing = [...found.keys()].filter((k) => !declared.has(k));
-  assert.deepEqual(missing, [], 'в исходниках есть место отказа без пункта каталога (tools/refusals.js): '
+  assert.deepEqual(missing, [], 'the sources hold a refusal site with no line in the catalogue (tools/refusals.js): '
     + missing.join(', '));
   const phantom = [...declared.keys()].filter((k) => !found.has(k));
-  assert.deepEqual(phantom, [], 'каталог объявляет отказ, которого в исходниках нет: ' + phantom.join(', '));
+  assert.deepEqual(phantom, [], 'the catalogue declares a refusal the sources do not hold: ' + phantom.join(', '));
   const diff = [...declared.keys()].filter((k) => found.get(k) !== declared.get(k))
-    .map((k) => k + ' (' + declared.get(k) + ' в каталоге, ' + found.get(k) + ' в исходниках)');
-  assert.deepEqual(diff, [], 'число мест отказа разошлось с каталогом: ' + diff.join('; ')
-    + ' — у нового места обязан быть свой пункт и своя строка проверки');
+    .map((k) => k + ' (' + declared.get(k) + ' in the catalogue, ' + found.get(k) + ' in the sources)');
+  assert.deepEqual(diff, [], 'the number of refusal sites diverged from the catalogue: ' + diff.join('; ')
+    + ' — a new site has to bring its own line and its own check');
 
   // Refusals marked "✗" with a code: their mechanism is another one (a mark and a code rather than an
   // exception), and the same counting holds them. The map holds non-refusals too (`src/hook.js`
   // writes to the hook's log, `src/doctor.js` marks the report) so that a new "✗" in those files does
   // not slip through in silence.
-  assert.deepEqual(printed, PRINTED, 'число отказов со знаком «✗» разошлось с картой PRINTED'
-    + ' (tools/refusals.js) — у нового места обязан быть свой пункт');
+  assert.deepEqual(printed, PRINTED, 'the number of refusals marked «✗» diverged from the map PRINTED'
+    + ' (tools/refusals.js) — a new site has to bring its own line');
 });
 
-test('у каждого места отказа есть случай в каталоге', () => {
+test('every refusal site has a case in the catalogue', () => {
   const declared = new Map(Object.entries(SITES));
   // A site with no line in the catalogue, no reference to another check and no named reason why no
   // run can catch it is guarded by nobody. Counting the sites does not catch this: the site and the
   // map's line agree while the site has no check.
   const named = new Set(CASES.map((c) => (c.id === undefined ? c.key : c.id)));
   const noCase = [...declared.keys()].filter((k) => !named.has(k));
-  assert.deepEqual(noCase, [], 'у места отказа нет ни случая в каталоге, ни названной'
-    + ' причины, почему его не поймать: ' + noCase.join(', '));
+  assert.deepEqual(noCase, [], 'the refusal site has neither a case in the catalogue nor a named'
+    + ' reason why no run can catch it: ' + noCase.join(', '));
 
   /* An advice is the second half of a refusal: naming the cause is not enough, an exit has to be
    * given. Every case says what it advises (`advice`), and for the cases another check guards
@@ -102,33 +102,33 @@ test('у каждого места отказа есть случай в кат�
    * a line in it. Live execution of the declared advices is in `test/refusals.test.js`. */
   const silent = CASES.filter((c) => !Array.isArray(c.advice));
   assert.deepEqual(silent.map((c) => (c.id === undefined ? c.key : c.id)), [],
-    'у случая не сказано, что отказ советует (advice: [] — если совета нет)');
+    'the case does not say what the refusal advises (advice: [] if there is none)');
   CASES.filter((c) => c.uncatchable !== undefined).forEach((c) => {
-    assert.deepEqual(c.advice, [], '«' + c.id + '»: отказ, который нельзя вызвать прогоном,'
-      + ' не может ничего советовать — его вывод никто не читает');
+    assert.deepEqual(c.advice, [], '«' + c.id + '»: a refusal no run can bring about'
+      + ' cannot advise anything — nobody reads its output');
   });
 
   // The closed list of what no run can check: the reason is said in words.
   const loose = CASES.filter((c) => c.uncatchable !== undefined);
   assert.deepEqual(loose.map((c) => c.id), ['internal error'],
-    'список непроверяемых отказов изменился — это решение, а не мелочь, и его надо назвать');
+    'the list of uncheckable refusals changed — that is a decision rather than a detail, and it has to be named');
   loose.forEach((c) => {
-    assert.ok(c.uncatchable.length > 40, 'непроверяемый отказ «' + c.id + '» не объяснил, почему его не поймать');
+    assert.ok(c.uncatchable.length > 40, 'the uncheckable refusal «' + c.id + '» did not explain why no run can catch it');
   });
 });
 
-test('совет, отданный другой проверке, она в самом деле исполняет', () => {
+test('the check a refusal is handed to really runs the advice it gets', () => {
   const unfixed = [];
   CASES.forEach((c) => c.advice.forEach((a) => {
     if (a.kind !== 'coveredBy') return;
     const file = path.join(ROOT, a.file);
     if (!fs.existsSync(file)) {
-      unfixed.push((c.id === undefined ? c.key : c.id) + ': нет файла ' + a.file);
+      unfixed.push((c.id === undefined ? c.key : c.id) + ': no such file ' + a.file);
       return;
     }
     if (fs.readFileSync(file, 'utf8').indexOf(a.text) < 0) {
-      unfixed.push((c.id === undefined ? c.key : c.id) + ': в ' + a.file + ' нет строки «' + a.text + '»');
+      unfixed.push((c.id === undefined ? c.key : c.id) + ': the file ' + a.file + ' carries no line «' + a.text + '»');
     }
   }));
-  assert.deepEqual(unfixed, [], 'совет отдан другой проверке, а она его не исполняет:\n  ' + unfixed.join('\n  '));
+  assert.deepEqual(unfixed, [], 'an advice was handed to another check, and that check does not run it:\n  ' + unfixed.join('\n  '));
 });

@@ -132,7 +132,7 @@ function toolWithoutBin() {
     const entry = path.join(tmp, 'entry.mjs');
     fs.writeFileSync(entry, 'import { main } from ' + JSON.stringify(path.join(home, 'src', 'size-table.js'))
       + ';\nprocess.exitCode = main();\n');
-    return { dir: FIXTURE, target: { name: 'движок без bin', file: entry, env: null } };
+    return { dir: FIXTURE, target: { name: 'the engine without bin', file: entry, env: null } };
   });
 }
 
@@ -166,7 +166,7 @@ const SCENARIOS = {
   }),
   'drift': (caseArgs) => once('drift', () => {
     const dir = cloneFixture(path.join(tmp, 'drift'));
-    const tool = { name: 'движок пакета', file: path.join(ROOT, 'bin', 'size.js'), env: null };
+    const tool = { name: 'the package engine', file: path.join(ROOT, 'bin', 'size.js'), env: null };
     runTool(tool, dir, ['--config', args(caseArgs)[1], '--write']);
     const table = path.join(dir, 'docs', 'size-table.html');
     fs.appendFileSync(table, '<!-- правка только на диске -->\n');
@@ -221,10 +221,10 @@ function runAdvice(cmd, dir, env) {
 function checkRun(a, where, dir) {
   const cmd = adviceCommand(a);
   const res = runAdvice(cmd, dir, a.env);
-  assert.equal(res.code, a.expect, '«' + where + '»: совет «' + cmd + '» отдал код ' + res.code
-    + ' вместо ' + a.expect + ' — ' + (res.stdout + res.stderr).trim().split('\n')[0]);
+  assert.equal(res.code, a.expect, '«' + where + '»: the advice «' + cmd + '» returned code ' + res.code
+    + ' instead of ' + a.expect + ' — ' + (res.stdout + res.stderr).trim().split('\n')[0]);
   assert.equal(hasStack(res.stdout + res.stderr), false,
-    '«' + where + '»: совет «' + cmd + '» упал стеком вместо работы');
+    '«' + where + '»: the advice «' + cmd + '» printed a stack instead of working');
   return res;
 }
 
@@ -234,7 +234,7 @@ function checkFix(c, where, dir) {
   const again = runTool(PACKAGE, dir, args(c.args), c.env);
   const out = again.stdout + again.stderr;
   const still = c.must.filter((phrase) => out.indexOf(phrase) >= 0);
-  assert.deepEqual(still, [], '«' + where + '»: совет не починил состояние — тот же зов снова сказал '
+  assert.deepEqual(still, [], '«' + where + '»: the advice did not repair the state — the same call said '
     + still.join(', ') + ':\n' + out);
 }
 
@@ -244,18 +244,18 @@ function checkFix(c, where, dir) {
 function verifyAdvice(c, where, out, fallback) {
   const lines = adviceOf(out);
   assert.ok(Array.isArray(c.advice),
-    '«' + where + '»: у случая нет строки про совет — каждый отказ обязан назвать, что он советует');
+    '«' + where + '»: the case carries no line about its advice — every refusal has to name what it advises');
   if (lines.length === 0) {
-    assert.deepEqual(c.advice, [], '«' + where + '»: отказ ничего не советует, а каталог объявил совет');
+    assert.deepEqual(c.advice, [], '«' + where + '»: the refusal advises nothing, while the catalogue declared an advice');
     return;
   }
   lines.forEach((line) => {
     const named = c.advice.filter((a) => line.indexOf(fill(a.args === undefined ? a.text : a.args.join(' '))) >= 0);
-    assert.ok(named.length > 0, '«' + where + '»: отказ напечатал совет, которого нет в каталоге: ' + line);
+    assert.ok(named.length > 0, '«' + where + '»: the refusal printed an advice the catalogue does not hold: ' + line);
   });
   c.advice.forEach((a) => {
     const shown = a.args === undefined ? fill(a.text) : 'node ' + PACKAGE_BIN + ' ' + fill(a.args.join(' '));
-    assert.ok(out.indexOf(shown) >= 0, '«' + where + '»: каталог обещает совет, которого в выводе нет: ' + shown);
+    assert.ok(out.indexOf(shown) >= 0, '«' + where + '»: the catalogue promises an advice the output does not carry: ' + shown);
     const dir = adviceDir(a, fallback);
     if (a.kind === 'run') {
       checkRun(a, where, dir);
@@ -263,8 +263,8 @@ function verifyAdvice(c, where, out, fallback) {
       return;
     }
     if (a.kind === 'manual') {
-      assert.ok(a.why.length > 40, '«' + where + '»: совет без команды («' + shown
-        + '») не объяснил, почему его нечем выполнить');
+      assert.ok(a.why.length > 40, '«' + where + '»: the advice with no command («' + shown
+        + '») did not explain why there is nothing to run it with');
       if (a.works !== undefined) {
         const works = Object.assign({ kind: 'run', text: shown }, a.works);
         checkRun(works, where, adviceDir(works, dir));
@@ -275,14 +275,14 @@ function verifyAdvice(c, where, out, fallback) {
       const words = fill(a.args.join(' ')).split(/\s+/);
       words.forEach((w) => {
         if (w[0] === '-') {
-          assert.ok(usageFlags.indexOf(w) >= 0, '«' + where + '»: совет-шаблон зовёт ключ, которого нет в справке: ' + w);
+          assert.ok(usageFlags.indexOf(w) >= 0, '«' + where + '»: the template advice names a flag the help does not carry: ' + w);
         } else if (/^[a-z][a-z-]*$/.test(w)) {
-          assert.ok(usageCommands.indexOf(w) >= 0, '«' + where + '»: совет-шаблон зовёт команду, которой нет: ' + w);
+          assert.ok(usageCommands.indexOf(w) >= 0, '«' + where + '»: the template advice names a command that does not exist: ' + w);
         }
       });
       return;
     }
-    assert.equal(a.kind, 'coveredBy', '«' + where + '»: неизвестный вид совета: ' + a.kind);
+    assert.equal(a.kind, 'coveredBy', '«' + where + '»: unknown kind of advice: ' + a.kind);
   });
 }
 
@@ -299,11 +299,11 @@ function verify(c, group) {
   const res = run(c);
   const out = res.stdout + res.stderr;
   const where = group + ' / ' + (c.id === undefined ? c.key : c.id);
-  assert.equal(res.code, c.code, '«' + where + '»: ожидался код ' + c.code + ', получен ' + res.code
+  assert.equal(res.code, c.code, '«' + where + '»: expected code ' + c.code + ', got ' + res.code
     + ' — ' + out.trim().split('\n')[0]);
-  assert.equal(hasStack(out), false, '«' + where + '»: отказ напечатал стек вместо объяснения:\n' + out);
+  assert.equal(hasStack(out), false, '«' + where + '»: the refusal printed a stack instead of an explanation:\n' + out);
   c.must.forEach((phrase) => {
-    assert.ok(out.indexOf(phrase) >= 0, '«' + where + '»: в отказе нет «' + phrase + '»:\n' + out);
+    assert.ok(out.indexOf(phrase) >= 0, '«' + where + '»: the refusal does not carry «' + phrase + '»:\n' + out);
   });
   verifyAdvice(c, where, out, scenarioOf(c).dir);
 }
@@ -314,9 +314,9 @@ function groupOf(c) {
   // The codes of the table (the comparison with the tree, a shallow history) do not live among the
   // causes with code 2: they have a conversation of their own with a person, hence a group of their
   // own.
-  if (c.id !== undefined || c.key.indexOf('EXIT.') === 0) return 'коды выхода';
+  if (c.id !== undefined || c.key.indexOf('EXIT.') === 0) return 'the codes of the table';
   const g = CONFIG_CAUSES.find((gr) => gr[1].indexOf(c.key) >= 0);
-  assert.ok(g !== undefined, 'в каталоге отказ с причиной, которой нет в CONFIG_CAUSES: ' + c.key);
+  assert.ok(g !== undefined, 'the catalogue holds a refusal with a cause CONFIG_CAUSES does not have: ' + c.key);
   return g[0];
 }
 
@@ -324,7 +324,7 @@ function groupOf(c) {
  * the number of checks a conclusion from the data, while it is read off the files
  * (`test/docs-numbers.test.js`, which also forbids a declaration that is not at the start of a
  * line). */
-test('отказы: каждый вызван и сказал обещанное', () => {
+test('refusals: every one is called and says what was promised', () => {
   const groups = [];
   CASES.forEach((c) => {
     const name = groupOf(c);
