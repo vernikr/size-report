@@ -4,7 +4,7 @@ import { loadOptional } from './optional.js';
 /* The tokenizer follows the same discipline as the minifier: an optional dependency, loaded
  * lazily (how that works: `src/optional.js`). One difference: the tokenizer takes any text and
  * has nothing to refuse, so a missing dependency is not a refusal but a different count — an
- * estimate by length, marked as an approximation in the metric label.
+ * estimate by length, named as such in the metric label.
  *
  * The family is about models, the encoding about the number: the same file counts differently
  * under `cl100k_base` and `o200k_base`, which is why the encoding is chosen next to the family
@@ -21,8 +21,7 @@ export const TOKEN_DEFAULTS = { family: 'openai', encoding: 'o200k_base' };
 /* The estimate without a dictionary. The coefficient was taken from this repository's own
  * texts (Russian documents and code): `README.md` gave 3.1 characters per token, the archived
  * journal `worklog/archive/WORKLOG.md` about 3.0. For Latin script the same estimate overstates
- * the count (about 4 characters per token there), which is why it is marked as an
- * approximation. */
+ * the count (about 4 characters per token there), which is why the method says so in words. */
 export const CHARS_PER_TOKEN = 3;
 
 /* Formats for which counting tokens makes no sense: a picture, a font or an archive is bytes,
@@ -53,7 +52,7 @@ function familyOf(settings) {
 }
 
 /* Counting one text: with the dictionary if there is one, by estimate otherwise. Both answers
- * are a number of text units, and what tells them apart is the metric label (`accuracy`) rather
+ * are a number of text units, and what tells them apart is the metric label (`method`) rather
  * than the value, which is why one cannot be passed off as the other. */
 export function tokenCount(text, settings) {
   const { tool } = tokenizer(settings);
@@ -70,8 +69,8 @@ export function estimate(text) {
 }
 
 /* Whether the file is binary, since counting tokens means nothing for it. The list of formats
- * is owned here, so both the metric label and the cell mark ask about a file here instead of
- * keeping a list of their own. */
+ * is owned here, so the metric label asks about a file here instead of keeping a list of its
+ * own. */
 export function isBinary(file) {
   return BINARY_EXTS.indexOf(path.extname(file).toLowerCase()) >= 0;
 }

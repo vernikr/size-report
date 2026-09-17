@@ -4,8 +4,7 @@ import { compactJson, stripCss, stripHtml, stripLines } from './strip/forms.js';
 
 /* Stripping ballast: which form of text applies to which file. Only text transformation —
  * the module knows no history and reads no settings, only the strategy it is handed. What
- * binds the forms to a file lives here: the extension, the strategy, and which strategies
- * count as exact.
+ * binds the forms to a file lives here: the extension and the strategy.
  *
  * The forms are re-exported from here, so that the package entry point has one address for
  * them and a move inside the parsing stays invisible to whoever relied on them. */
@@ -31,9 +30,9 @@ export const STRATEGIES = ['strip-js', 'strip-html', 'strip-css', 'json', 'strip
 
 /* The strategies that are minification itself: JSON loses only insignificant whitespace
  * (numbers take their shortest form) and nobody can make it shorter. The rest are a
- * simplification — they drop ballast but neither rename nor restructure code, so no exact
- * number can be promised for them. The list is owned here, next to the strategies, and the
- * metric reads it to decide whether its number is exact or approximate. */
+ * simplification — they drop ballast but neither rename nor restructure code. The list is owned
+ * here, next to the strategies, and the metric reads it to decide which formats it counts
+ * another way. */
 export const EXACT_STRATEGIES = ['json'];
 
 export function strategyFor(file, cfg) {

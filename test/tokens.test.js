@@ -107,7 +107,8 @@ test('with no dictionary the count goes by a length estimate — and that is nam
 
   const data = runSize(PLAIN, ['--config', TOK, '--data'], OFF);
   const view = JSON.parse(data.stdout).metrics.find((m) => m.key === 'tok');
-  assert.equal(view.accuracy, 'approximate', 'the estimate is passed off as an exact count');
+  assert.equal(Object.prototype.hasOwnProperty.call(view, 'accuracy'), false,
+    'the metric still carries an accuracy mark');
   assert.match(view.method, new RegExp('1 токен ≈ ' + CHARS_PER_TOKEN + ' знака'),
     'the way names neither the estimate nor its coefficient: ' + view.method);
   assert.ok(view.method.indexOf('недоступен') >= 0, 'способ не говорит, почему счёт оценкой');
@@ -136,10 +137,10 @@ test('a format for which tokens are meaningless is not passed off as counted', (
   const res = runSize(dir, ['--config', file, '--data']);
   assert.equal(res.code, 0, 'the data with a binary column was not built: ' + res.stderr.trim());
   const view = JSON.parse(res.stdout).metrics.find((m) => m.key === 'tok');
-  assert.equal(view.accuracy, 'approximate',
-    'a report with a binary format promises an exact token count: ' + view.method);
+  assert.equal(Object.prototype.hasOwnProperty.call(view, 'accuracy'), false,
+    'the metric still carries an accuracy mark: ' + view.method);
   assert.ok(view.method.indexOf('.png') >= 0,
-    'the approximation is not named by format: ' + view.method);
+    'the other count is not named by format: ' + view.method);
 });
 
 test('an unknown family and an unknown encoding are a settings refusal with a list', () => {
@@ -155,7 +156,7 @@ test('an unknown family and an unknown encoding are a settings refusal with a li
     'the refusal did not name the encodings of the family: ' + res2.stderr.trim());
 });
 
-test('the --init draft leads a new project to tokens, and the first report is exact', () => {
+test('the --init draft leads a new project to tokens, and the first report is counted by the dictionary', () => {
   const { dir, file } = draftedRepo(path.join(tmp, 'fresh'),
     '// комментарий\nfunction width(items) { return items.length; }\n');
   const draft = readJson(file);
@@ -166,7 +167,8 @@ test('the --init draft leads a new project to tokens, and the first report is ex
   const res = runSize(dir, ['--data']);
   assert.equal(res.code, 0, 'the data of a new project was not built: ' + res.stderr.trim());
   const view = JSON.parse(res.stdout).metrics.find((m) => m.key === 'tok');
-  assert.equal(view.accuracy, 'exact', 'the first report of a new project counts the tokens by an estimate');
+  assert.equal(Object.prototype.hasOwnProperty.call(view, 'accuracy'), false,
+    'the metric still carries an accuracy mark');
   assert.match(view.method, /^gpt-tokenizer \d+\.\d+\.\d+, o200k_base \(BPE\)$/,
     'the first report is built with a dictionary other than the one the draft asked for: ' + view.method);
 });

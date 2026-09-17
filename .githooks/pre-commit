@@ -18,6 +18,14 @@ fi
 # have («invalid object … for 'data/table.toml'», «ENOENT: … src/code.js»), and — the real loss — the
 # repository's own index stays empty. Settings the commit itself owns (name, date, editor) are left
 # alone: they have nothing to do with the checks' git reads.
-unset GIT_INDEX_FILE GIT_PREFIX
+# A linked worktree adds one more of the same kind, and a worse one: git hands the hook `GIT_DIR` (its own
+# `.git/worktrees/<id>`), `GIT_COMMON_DIR` and `GIT_WORK_TREE`, and those are not about the index but about
+# **which repository is meant**. Inherited, they follow the checks into their own temporary directories —
+# measured: with `GIT_DIR` in the environment, `git ls-files` run inside an empty repository in `/tmp` lists
+# this repository's 279 files, so a check that commits in its own directory commits *here*, with its own
+# message and its own index (the report's own suite writes a commit called «заметки» and leaves the index
+# holding that one file). The hook therefore drops the whole family, and what is left for the checks is the
+# repository they are standing in.
+unset GIT_INDEX_FILE GIT_PREFIX GIT_DIR GIT_COMMON_DIR GIT_WORK_TREE
 
 exec pnpm run verify:fast

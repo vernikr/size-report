@@ -1,8 +1,8 @@
 import { createRequire } from 'module';
 
 /* Optional dependencies: the minifier and the tokenizer. Missing ones are not a refusal but a
- * different count (a simplification instead of compression, an estimate instead of an exact
- * count), so their loading is shared and shaped the same way: lazy, synchronous
+ * different count (a simplification instead of compression, an estimate instead of a counted
+ * one), so their loading is shared and shaped the same way: lazy, synchronous
  * (`createRequire` — measuring is one synchronous pass, and `import()` would make the whole
  * chain asynchronous for the sake of a single sensor) and without an exception escaping —
  * unavailability comes back as an answer.

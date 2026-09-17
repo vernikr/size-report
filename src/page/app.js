@@ -1,101 +1,150 @@
-import { appData, appUi, appView, appWrite, appNotice, appLinkUse, appRead, appApply, appFoldRead } from './state.js';
-import { appBody, appHead, appState } from './table.js';
-import { appPanel } from './panel.js';
+import { appUnpack } from './payload.js';
+import { appAddressDrop, appApply, appBoot, appData, appFoldRead, appLinkUse, appNotice, appRead, appUi, appView, appWrite } from './state.js';
+import { appColumn, appContribute, appMetrics, appState, appTable, appTotals, appTotalsReset } from './table.js';
+import { appPanel, appPanelAll, appPanelState } from './panel.js';
 
-/* Assembling the table: what to show (the metrics and files the reader left on) and where to put it. The table
- * chapter builds the markup of the head and the rows, the shared calculation gives the numbers — all that is
- * left here is the decision and the insertion, with no numbers of its own. */
-function appTable() {
-  const shown = appData.metrics.filter((m) => appView.metrics[m.key]);
-  const metrics = shown.map((m) => m.key);
-  const on = appView.files;
-  const files = [];
-  appData.files.forEach((f, i) => { if (on[i]) files.push(i); });
-  /* The columns the last commit touched come first: the report is rebuilt after every commit, and a reader's first
-   * question is what that edit brought. Inside each part the order stays as it comes from the settings — `sort` is
-   * stable, and the order of the columns is what the reader is used to. The mark comes from the history (which the
-   * engine knows) rather than from the numbers: an edit that changed no size is an edit too. */
-  files.sort((a, b) => (appData.last[a] === true ? 0 : 1) - (appData.last[b] === true ? 0 : 1));
+/* Assembling the report: the table is built once (`appTable` of the table chapter) and everything afterwards only
+ * shows, hides and recounts. A click on any switch therefore costs a class, a number and the fields it reached — the
+ * whole table used to be destroyed and built again, which was 81 % of the cost of a click and produced a hundred
+ * thousand dead nodes for the collector to walk.
+ *
+ * Hence two paths and no third: `appPaint` draws the whole view (the first drawing, a record from the browser's
+ * memory, a link in the address), while `appSwitch`, `appSwitchGroup` and `appSwitchMetric` are what one click on a
+ * box does. Neither makes a node.
+ */
 
-  const table = document.getElementById('grid');
-  table.textContent = '';
-  appState(metrics.length, files.length);
-  if (metrics.length === 0) return;
+// The table's cache of node references: made once, at the first drawing.
+let appCache = null;
 
-  table.appendChild(appHead(shown, files, metrics));
-  table.appendChild(appBody(metrics, files));
+/* The note under the table: what a row is and how the report was made. It does not depend on the choice, so it is
+ * written once — with the table rather than with every drawing of it. */
+function appNote() {
   document.getElementById('note').textContent = appUi.note
     .replace('{rows}', appData.rows.length)
     .replace('{command}', appData.report.fixCommand);
+}
+
+/* What the empty states are told: how many metrics and how many files are left. The table stands there in either
+ * case (it is built once) — the words are about what is shown. */
+export function appCounts() {
+  appState(appData.metrics.filter((m) => appView.metrics[m.key] === true).length,
+    appView.files.filter((on) => on === true).length);
+}
+
+/* The whole view drawn: every column, the totals of the whole selection, the metrics, the empty states and the panel's
+ * fields. This is what a link, a record from the memory and the first drawing need — and it makes no node either. */
+export function appPaint() {
+  appData.files.forEach((_f, i) => appColumn(appCache, i, appView.files[i]));
+  appTotalsReset(appCache);
+  appMetrics(appCache);
+  appCounts();
+  appPanelAll();
   appWrite();
 }
 
-/* The panel's scroll is a property of the panel rather than of the markup, which is why it survives a rebuild:
- * otherwise every click on a checkbox would send the list back to the top and the files at its end would be
- * unreachable. Both the panel's scroll and the file list's are remembered — each has one of its own, and in a
- * narrow window it is the list that scrolls. The elements are the ones the page really has (`#panel` from the
- * markup, `.files` inside it from the panel): there is no second list of scroll places in the package. */
-const appScrolled = ['#panel', '#panel .files'];
-function appScrollTop() {
-  return appScrolled.map((sel) => {
-    const el = document.querySelector(sel);
-    return el === null ? 0 : el.scrollTop;
-  });
+/* One file switched by the reader: the view, its column, its share of the totals and the fields it shows in — each in
+ * its own place. The message about a link fades here: by this action the reader has read it. */
+export function appSwitch(i, on) {
+  if (appView.files[i] === on) return;
+  appView.files[i] = on;
+  appColumn(appCache, i, on);
+  appContribute(appCache, i, on);
+  appTotals(appCache);
+  appCounts();
+  appPanelState([i]);
+  appWrite();
+  appNotice('');
 }
 
-function appScrollBack(saved) {
-  appScrolled.forEach((sel, i) => {
-    const el = document.querySelector(sel);
-    if (el !== null) el.scrollTop = saved[i];
+/* A group switched at once — a folder or a category: the same work per file, then the totals once and the fields of
+ * the files the choice really reached (switching a folder on when a part of it was already on touches only the rest,
+ * and a field that did not move is not written). */
+export function appSwitchGroup(indexes, on) {
+  const touched = indexes.filter((i) => appView.files[i] !== on);
+  touched.forEach((i) => {
+    appView.files[i] = on;
+    appColumn(appCache, i, on);
+    appContribute(appCache, i, on);
   });
+  appTotals(appCache);
+  appCounts();
+  appPanelState(touched);
+  appWrite();
+  appNotice('');
 }
 
-/* The panel is redrawn whole, so the field under the keyboard and the scroll come back to their places after every
- * rebuild: otherwise switching with Tab and Space would mean walking the panel from the start again, and the scroll
- * would have to find its place anew. A field is identified by its ordinal number — the order of the panel's fields
- * does not change between rebuilds. The focus is set without scrolling (`preventScroll`): it returns the keyboard
- * rather than moving the list. */
-function appRender(keepNotice) {
-  const at = Array.from(document.querySelectorAll('#panel input')).indexOf(document.activeElement);
-  const saved = appScrollTop();
+/* One metric switched: a class on the table and the headings' `colSpan`. The totals do not move with a metric — they
+ * are sums over files — and the metric's own field is the box the reader just clicked. */
+export function appSwitchMetric() {
+  appMetrics(appCache);
+  appCounts();
+  appWrite();
+  appNotice('');
+}
+
+/* The first drawing: the choice is already in the view (the link and the memory are applied above), the panel is
+ * built to match it, the table is built once — every column of every file — and the view is painted over it. */
+function appFirst() {
   appPanel();
-  appScrollBack(saved);
-  if (at >= 0) document.querySelectorAll('#panel input')[at].focus({ preventScroll: true });
-  appTable();
-  /* The message about the link survives the very drawing it caused, and fades on the reader's next action: he has read
-   * it by then. */
-  if (keepNotice !== true) appNotice('');
+  appCache = appTable(document.getElementById('grid'));
+  appNote();
+  appPaint();
 }
+
+/* The page's one asynchronous step, and why there is one. The block in the artifact is packed, and the platform's own
+ * unpacker answers with a promise, so the first drawing waits for it; everything after the first drawing is as
+ * synchronous as it was, and a click costs what it cost. A host that cannot unpack is told in words instead of being
+ * left with an empty table — the reader would not know whether the report or the browser is at fault. */
+let appBooted = false;
 
 /* Restoring happens before the first drawing: for someone opening the page for the first time the view has to be the
  * default rather than someone else's choice. A link outranks the memory: it is the sender's explicit choice, and
  * while the reader has changed nothing it does not replace his own — writing it to the memory is what does not
  * happen. A refused link is not an empty table but a message: the reader sees both what happened and what is shown
  * instead. */
-const appStart = appLinkUse();
-if (appStart === 'ours') appTransient = true;
-else if (appStart === 'refused') appForeign = true;
-if (appStart !== 'ours') {
-  const appSaved = appRead();
-  if (appSaved !== null) appApply(appSaved);
+async function appBegin() {
+  try {
+    appBoot(await appUnpack(document.getElementById('data')));
+  } catch (_e) {
+    appNotice(appUi.unpack);
+    return;
+  }
+  const appStart = appLinkUse();
+  if (appStart === 'ours') appTransient = true;
+  else if (appStart === 'refused') appForeign = true;
+  if (appStart !== 'ours') {
+    const appSaved = appRead();
+    if (appSaved !== null) appApply(appSaved);
+  }
+  /* The folded tree is the onlooker's memory rather than the reader's choice: it comes back even when someone
+   * else's link is open (otherwise a link sent over would unfold the tree again on every visit). */
+  appFoldRead();
+  appFirst();
+  appBooted = true;
+  appStartup = false;
+  appForeign = false;
+  appTransient = false;
 }
-/* The folded tree is the onlooker's memory rather than the reader's choice: it comes back even when someone else's
- * link is open (otherwise a link sent over would unfold the tree again on every visit). */
-appFoldRead();
-appRender(true);
-appStartup = false;
-appForeign = false;
-appTransient = false;
+
+/* Whoever opened the page and has to know when the first drawing is over waits for this promise — the checks do
+ * (`tools/page-harness.js`); the page itself has no use for it. */
+window.appDrawn = appBegin();
 
 /* The anchor changed on an open page: the choice in the new address is applied by the same code as at opening. The
  * page's own address raises no such event (`replaceState` does not), so there is no loop here. A refusal touches
  * neither the view — the reader keeps looking at what he looked at — nor the address: it was sent to the reader,
- * and until he acts it is not ours. */
+ * and until he acts it is not ours. The message about the link stays: this drawing is exactly what it explains. */
 window.addEventListener('hashchange', () => {
+  /* The first drawing has not happened yet: the address the page was opened with is the business of that drawing,
+   * and a change that arrives before it has drawn nothing to replace. */
+  if (!appBooted) return;
+  /* An address that came in from outside is read first and a write this page was still holding is dropped: the reader
+   * has the address they were sent, not the one the previous click armed (see `appAddressDrop`). */
+  appAddressDrop();
   const state = appLinkUse();
   if (state === 'refused') appForeign = true;
   appTransient = state === 'ours';
-  appRender(true);
+  appPaint();
   appForeign = false;
   appTransient = false;
 });

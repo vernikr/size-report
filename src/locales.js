@@ -37,12 +37,6 @@ export const LOCALES = {
       categoryByExtension: 'по расширению',
       all: 'все',
       sub: '{tool} {version} · {artifact}',
-      /* Words of precision: a metric label speaks about the worst in its column, a cell
-       * about its own number. One word serves both the label and the cell hint, so the two
-       * cannot drift or sound differently. */
-      exact: 'точное число',
-      approximate: 'приближение',
-      approximateCell: 'приближённое число: ',
       panelMethod: 'способ:',
       emptyMetrics: 'Ни одна метрика не выбрана — таблицу не из чего собрать. '
         + 'Включите хотя бы одну в панели выше: без метрик нет ни одной колонки с числом.',
@@ -54,6 +48,11 @@ export const LOCALES = {
         + 'что выбрано в этом браузере.',
       linkExtra: 'Часть ссылки пропущена: в этом отчёте нет {n} названных имён. '
         + 'Остальное применено.',
+      /* Данные отчёта лежат в файле сжатыми, и распаковывает их браузер. Текст называет причину
+       * (браузера нет в списке тех, что умеют `DecompressionStream`) и что с этим делать — пустая
+       * таблица не сказала бы читателю ничего. */
+      unpack: 'Данные отчёта сжаты, а браузер не умеет их распаковать: в нём нет DecompressionStream. '
+        + 'Обновите браузер — таблицу показывать не из чего.',
       note: 'Абсолютные размеры стоят один раз — в строке «{now}». Строк: {rows}: коммиты без '
         + 'изменения объёма и коммиты, тронувшие только выключенные файлы, строк не получают. '
         + 'Собрано из истории git: {command}.'
@@ -99,9 +98,6 @@ export const LOCALES = {
       categoryByExtension: 'by extension',
       all: 'all',
       sub: '{tool} {version} · {artifact}',
-      exact: 'an exact number',
-      approximate: 'an approximation',
-      approximateCell: 'an approximate number: ',
       panelMethod: 'method:',
       emptyMetrics: 'No metric is selected — there is nothing to build the table from. '
         + 'Turn on at least one above: without metrics there is no column holding a number.',
@@ -113,6 +109,10 @@ export const LOCALES = {
         + 'has.',
       linkExtra: 'Part of the link is skipped: this report has none of the {n} names '
         + 'it mentions. The rest is applied.',
+      /* The report's data lies in the file compressed and the browser unpacks it; this text is what a
+       * browser without `DecompressionStream` gets instead of an empty table. */
+      unpack: 'The report\u2019s data is compressed and this browser cannot unpack it: there is no '
+        + 'DecompressionStream. Update the browser — there is nothing to build the table from.',
       note: 'Absolute sizes appear once — in the “{now}” row. Rows: {rows}: commits that change '
         + 'no number, and commits touching only the disabled files, get no row. '
         + 'Collected from git history: {command}.'

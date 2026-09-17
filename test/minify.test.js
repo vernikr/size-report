@@ -101,17 +101,21 @@ test('on the fixture real minification is less than stripping — exactly where 
       + ' against ' + before.rows[last].cells[code].min);
 });
 
-test('the metric caption names the approximation by format rather than staying silent', () => {
+test('the metric caption names the formats the minifier does not take rather than staying silent', () => {
   const all = runSize(PLAIN, ['--config', configAs('esbuild', () => {}), '--data']);
   const min = JSON.parse(all.stdout).metrics.find((m) => m.key === 'min');
-  assert.equal(min.accuracy, 'approximate', 'a metric with mixed formats promises exactness');
+  assert.equal(Object.prototype.hasOwnProperty.call(min, 'accuracy'), false,
+    'the metric still carries an accuracy mark');
   assert.match(min.method, /^esbuild \d+\.\d+\.\d+ \(minify, rename\)/,
     'the way names neither the minifier nor its version: ' + min.method);
   ['.md', '.toml', '.txt'].forEach((ext) => {
     assert.ok(min.method.indexOf(ext) >= 0,
-      'the approximation is not named by format: ' + ext + ' is missing from «' + min.method + '»');
+      'the other count is not named by format: ' + ext + ' is missing from «' + min.method + '»');
   });
-  assert.ok(min.method.indexOf('.json') < 0, 'an exact format is written into the approximation: ' + min.method);
+  assert.ok(min.method.indexOf('.json') < 0,
+    'a format the minifier takes is written into the other count: ' + min.method);
+  assert.equal(/approximat|exact/i.test(min.method), false,
+    'the way judges its own numbers instead of describing the count: ' + min.method);
 
   // A report without the formats the minifier does not take promises an exact number.
   const only = configAs('esbuild-exact', (cfg) => {
@@ -119,55 +123,49 @@ test('the metric caption names the approximation by format rather than staying s
   });
   const pure = JSON.parse(runSize(PLAIN, ['--config', only, '--data']).stdout);
   const pureMin = pure.metrics.find((m) => m.key === 'min');
-  assert.equal(pureMin.accuracy, 'exact',
-    'a report made entirely of minifiable formats is called approximate: ' + pureMin.method);
-  assert.ok(pureMin.method.indexOf('приближение') < 0,
+  assert.equal(Object.prototype.hasOwnProperty.call(pureMin, 'accuracy'), false,
+    'the metric still carries an accuracy mark: ' + pureMin.method);
+  assert.equal(/approximat/i.test(pureMin.method), false,
     'the way still carries a warning about approximation: ' + pureMin.method);
 
-  /* The same rule from the other side: accuracy comes from the cells rather than from the method's name.
-   * A report made of one JSON file is exact under ballast removal too — re-serialising loses only
-   * insignificant whitespace and nobody can make it shorter — so the label has to say "exact" rather than
-   * promise an approximation because of what the method is called. */
+  /* The same rule from the other side: the count comes from the columns rather than from the name of the
+   * way. A report made of one JSON file is counted whole under ballast removal too — re-serialising loses
+   * only insignificant whitespace and nobody can make it shorter — so nothing about it may be called
+   * approximate because of what the method is called. */
   const onlyJson = configAs('strip-json', (cfg) => {
     cfg.minify = { engine: 'strip' };
     cfg.columns = cfg.columns.filter((c) => c.label === 'package.json');
   });
   const jsoned = JSON.parse(runSize(PLAIN, ['--config', onlyJson, '--data']).stdout);
   const jsonMin = jsoned.metrics.find((m) => m.key === 'min');
-  assert.equal(jsonMin.accuracy, 'exact',
-    'an exact format under ballast removal is called approximate: the caption looks at the name of the way rather than at the cells');
-  assert.equal(jsoned.approx.min, undefined, 'an exact column got marks of approximation');
+  assert.equal(Object.prototype.hasOwnProperty.call(jsonMin, 'accuracy'), false,
+    'the metric still carries an accuracy mark: the caption looks at the name of the way rather than at the cells');
+  assert.equal(Object.prototype.hasOwnProperty.call(jsoned, 'approx'), false,
+    'the contract still carries marks of approximation');
 });
 
 /* Accuracy reaches the cell itself rather than stopping at the metric label: where the minifier took the
  * file the number is exact, and where the format is foreign to it, it is not. The row of marks comes from
  * the contract (`--data`) rather than from the engine's internals, and is compared with the very columns
  * the drop in numbers was checked on. */
-test('with real minification the accuracy is declared per cell', () => {
+test('with real minification the other formats are named and no cell is marked', () => {
   const all = runSize(PLAIN, ['--config', configAs('esbuild-cells', () => {}), '--data']);
   assert.equal(all.code, 0, 'the run with minification fell over: ' + all.stderr.trim());
   const data = JSON.parse(all.stdout);
-  const min = (data.approx || {}).min;
-  assert.notEqual(min, undefined,
-    'approximate cells are not declared, though the minifier does not take some formats');
-  assert.equal(data.approx.raw, undefined, 'the size of the git object is marked as approximate');
-  const where = (label) => data.files.findIndex((f) => f.label === label);
-  const cell = (r, i) => min.rows.charAt(r * data.files.length + i);
+  assert.equal(Object.prototype.hasOwnProperty.call(data, 'approx'), false,
+    'the contract still carries marks of approximation, though the minifier does not take some formats');
+  const min = data.metrics.find((m) => m.key === 'min');
 
   MINIFIED.forEach((label) => {
-    const i = where(label);
-    assert.equal(min.now.charAt(i), '0', 'the cell «' + label + '» is called approximate for no reason');
-    data.rows.forEach((row, r) => {
-      if (row.values[i] === null) return;
-      assert.equal(cell(r, i), '0',
-        'row ' + (r + 1) + '/«' + label + '»: the number of the minifier is marked approximate');
-    });
+    const ext = label.slice(label.lastIndexOf('.'));
+    assert.equal(min.method.indexOf(ext), -1,
+      'the format «' + label + '» is named as counted another way, though the minifier takes it: ' + min.method);
   });
 
   ['заметки.md', 'table.toml', 'crlf.txt'].forEach((label) => {
-    const i = where(label);
-    assert.equal(min.now.charAt(i), '1',
-      'the number of «' + label + '» is taken without the minifier, while it is declared exact');
+    const ext = label.slice(label.lastIndexOf('.'));
+    assert.ok(min.method.indexOf(ext) >= 0,
+      'the other count of «' + label + '» is not named in the way: ' + min.method);
   });
 });
 
@@ -191,7 +189,8 @@ test('with no optional dependency the metric retreats to stripping — without f
 
   const data = runSize(PLAIN, ['--config', file, '--data'], OFF);
   const min = JSON.parse(data.stdout).metrics.find((m) => m.key === 'min');
-  assert.equal(min.accuracy, 'approximate', 'the retreat is passed off as an exact number');
+  assert.equal(Object.prototype.hasOwnProperty.call(min, 'accuracy'), false,
+    'the retreat is passed off as a mark of accuracy');
   assert.ok(min.method.indexOf('esbuild недоступен') >= 0,
     'the way does not say why the count goes by stripping: ' + min.method);
   assert.ok(min.method.indexOf('0.28.2') < 0, 'the way names the version of a minifier that is not there');
@@ -203,7 +202,7 @@ test('a divergence and a retreat together: both are named, and the verdict belon
    * verdict still goes to the discrepancy (code 1), while the fact of the other count is named as a note:
    * code 4 would assert that the difference is explained by the sensor, and nobody checked that — the
    * discrepancy may be a genuine edit on disk. The order is the same as in `doctor` and in coverage: a
-   * violation outranks an approximation. */
+   * violation outranks a count taken another way. */
   const file = configAs('esbuild-report', () => {});
   const dir = cloneFixture(path.join(tmp, 'report-with-esbuild'));
   assert.equal(runSize(dir, ['--config', file, '--write']).code, EXIT.OK,
@@ -211,7 +210,7 @@ test('a divergence and a retreat together: both are named, and the verdict belon
 
   const check = runSize(dir, ['--config', file], OFF);
   assert.equal(check.code, EXIT.VIOLATION,
-    'the verdict is given to the approximation: code ' + check.code + ', ' + check.stderr.trim());
+    'the verdict is given to the other count: code ' + check.code + ', ' + check.stderr.trim());
   assert.match(check.stderr, /diverged from the git history/,
     'the divergence is not named: ' + check.stderr.trim());
   assert.match(check.stderr, /the minifier is unavailable/,
@@ -259,7 +258,8 @@ test('the --init draft leads a new project to real minification', () => {
   const min = data.metrics.find((m) => m.key === 'min');
   assert.match(min.method, /^esbuild \d+\.\d+\.\d+ \(minify, rename\)$/,
     'the first report of a new project is not built by the minifier: ' + min.method);
-  assert.equal(min.accuracy, 'exact', 'in a new project the number is called approximate');
+  assert.equal(Object.prototype.hasOwnProperty.call(min, 'accuracy'), false,
+    'the metric still carries an accuracy mark');
 });
 
 test('an unknown way of minification is a settings refusal with a ready repair', () => {

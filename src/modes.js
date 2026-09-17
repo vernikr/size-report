@@ -26,9 +26,9 @@ function kmb(bytes) {
 }
 
 /* Degradation is a fact of the report, not an error: the numbers came from a different
- * method (stripping instead of minification, an estimate instead of an exact count) because
+ * method (stripping instead of minification, an estimate instead of a counted one) because
  * an optional dependency is missing. The fact is printed once per sensor and becomes code
- * 4 — otherwise an approximation would travel into CI as success. */
+ * 4 — otherwise a different count would travel into CI as the requested one. */
 function note(gaps) {
   gaps.forEach((gap) => console.error('! ' + gap.why + '\n  fix: ' + gap.fix));
   return gaps.length === 0 ? EXIT.OK : EXIT.SENSOR;
@@ -39,11 +39,11 @@ function sensorNote(cfg) {
 }
 
 /* The mode's verdict together with the sensor notes: the note is printed always — silence
- * about a different count reads as an exact number, and a disagreement would be left without
- * a cause — while the code stays the more important one. A violation outranks an
- * approximation (the same order as in `check` and `doctor`): code 4 claims the numbers are
- * honest but counted differently, and when the table disagrees nobody checked that — the
- * disagreement may be a real edit that went past the report. */
+ * about a different count reads as the requested one, and a disagreement would be left without
+ * a cause — while the code stays the more important one. A violation outranks a sensor note
+ * (the same order as in `check` and `doctor`): code 4 claims the difference is explained by the
+ * missing sensor, and when the table disagrees nobody checked that — the disagreement may be a
+ * real edit that went past the report. */
 function verdict(code, gaps) {
   const sensors = note(gaps);
   return code === EXIT.OK ? sensors : code;
@@ -127,7 +127,7 @@ export function coverageMode(cfg, root, configFile, asJson) {
 /* Diagnostics in one answer (`size doctor`): environment, dependencies, settings and
  * coverage, assembled from the same pieces as the other modes. The exit code is not
  * "something is wrong" but the first by importance (settings → history → coverage →
- * approximation): an agent branches on it, a human reads the text. */
+ * sensor): an agent branches on it, a human reads the text. */
 export function doctorMode(root, configFile, asJson) {
   return answer(doctor(root, configFile), asJson, doctorText).exit;
 }

@@ -10,8 +10,8 @@ import { refuseCause } from './refusal.js';
  * number. */
 
 /* The extensions the minifier answers for. This table is the single source of truth both for
- * the measurement and for the metric label ("the other formats are an approximation"), so the
- * two cannot drift apart. JSX and TSX are not here: the output depends on the project's `jsx`
+ * the measurement and for the metric label ("the other formats lose comments and
+ * indentation"), so the two cannot drift apart. JSX and TSX are not here: the output depends on the project's `jsx`
  * setting (`React.createElement` versus `react/jsx-runtime`), and measuring someone else's
  * decision about a runtime is not this tool's business — such files are honestly counted as a
  * simplification. */

@@ -7,12 +7,11 @@ import { appData, appUi, appView, appFileAt, appFoldSet, appMeasured } from './s
 function appFileBox(i) {
   const f = appData.files[i];
   const where = appFileAt(i) + (f.path === null ? appUi.notOnHead : '');
-  return appBox(f.label, where + appUi.category
+  const box = appBox(f.label, where + appUi.category
     + (f.categoryBy === 'config' ? appUi.categoryFromConfig : appUi.categoryByExtension),
-  appView.files[i], (e) => {
-    appView.files[i] = e.target.checked;
-    appRender();
-  });
+  appView.files[i], (e) => appSwitch(i, e.target.checked));
+  appFields.file[i] = box.querySelector('input');
+  return box;
 }
 
 /* A file that is not in the report: it stands in its place in the tree with its checkbox off and unavailable — no
@@ -48,7 +47,7 @@ function appNode() {
  * a fraction ("2/5"): what matters to the reader is that the folder holds five files while two are measured. A folder
  * without a single measured file stays in place with its checkbox off and unavailable: there is nothing to switch on
  * in it. */
-function appDirHead(name, sub) {
+function appDirHead(name, here, sub) {
   const idx = appIndexes(sub);
   const total = appCount(sub);
   const label = name + '/';
@@ -59,11 +58,9 @@ function appDirHead(name, sub) {
     const on = idx.map((i) => appView.files[i]);
     const every = on.every((v) => v);
     head = appBox(label, appUi.dir.replace('{name}', name).replace('{n}', idx.length),
-      every, (e) => {
-        idx.forEach((i) => { appView.files[i] = e.target.checked; });
-        appRender();
-      }, 'dir');
+      every, (e) => appSwitchGroup(idx, e.target.checked), 'dir');
     head.querySelector('input').indeterminate = !every && on.some((v) => v);
+    appFields.dir[here] = head;
   }
   head.appendChild(appEl('span', 'n', idx.length === total ? String(total) : idx.length + '/' + total));
   return head;
@@ -111,7 +108,7 @@ function appDir(name, sub, prefix) {
   const folded = appView.folded[here] === true;
   const li = appEl('li', folded ? 'folded' : null);
   li.appendChild(appFoldBox(name, here));
-  li.appendChild(appDirHead(name, sub));
+  li.appendChild(appDirHead(name, here, sub));
   li.appendChild(appTreeList(sub, here));
   return li;
 }
@@ -165,6 +162,10 @@ function appTree() {
   return appTreeList(root, '');
 }
 
+/* The panel: built once, at the first drawing, and afterwards only its fields change. A rebuild would count the whole
+ * table for nothing — the tree, the counters and the tooltips are the same after every click — while it would also
+ * take the reader's place in the list away: the scroll of the panel and of the tree, and the field under the
+ * keyboard, would have to be put back by hand. Nothing of that is here, because there is nothing to put back. */
 export function appPanel() {
   const panel = document.getElementById('panel');
   panel.textContent = '';
@@ -173,11 +174,12 @@ export function appPanel() {
   metrics.appendChild(appEl('legend', null, appUi.metrics));
   const mrow = appEl('div', 'row');
   appData.metrics.forEach((m) => {
-    const word = m.accuracy === 'exact' ? appUi.exact : appUi.approximate;
-    mrow.appendChild(appBox(m.label, m.note + ' · ' + word, appView.metrics[m.key], (e) => {
+    const box = appBox(m.label, m.note, appView.metrics[m.key], (e) => {
       appView.metrics[m.key] = e.target.checked;
-      appRender();
-    }, 'metric'));
+      appSwitchMetric();
+    }, 'metric');
+    appFields.metric[m.key] = box.querySelector('input');
+    mrow.appendChild(box);
   });
   metrics.appendChild(mrow);
   /* What produced each number is visible rather than hidden in a tooltip: the token dictionary and the way of
@@ -196,13 +198,102 @@ export function appPanel() {
   appData.categories.forEach((cat) => {
     const idx = [];
     appData.files.forEach((f, i) => { if (f.category === cat.key) idx.push(i); });
-    cats.appendChild(appBox(cat.label, appUi.all + ' · ' + cat.label, idx.every((i) => appView.files[i]),
-      (e) => {
-        idx.forEach((i) => { appView.files[i] = e.target.checked; });
-        appRender();
-      }, 'all'));
+    const box = appBox(cat.label, appUi.all + ' · ' + cat.label, idx.every((i) => appView.files[i]),
+      (e) => appSwitchGroup(idx, e.target.checked), 'all');
+    appFields.cat[cat.key] = box.querySelector('input');
+    cats.appendChild(box);
   });
   files.appendChild(cats);
   files.appendChild(appTree());
   panel.appendChild(files);
+}
+
+/* -------- the panel's fields after a choice -------- */
+
+/* The fields of the panel by name: the markup is built once, so a click needs a reference to the field it changes
+ * rather than a rebuild of the panel. Only a file owns a state — a folder and a category are ways to set the same
+ * boxes — which is why their fields are read from the files below them rather than kept. */
+const appFields = { metric: {}, file: {}, dir: {}, cat: {} };
+
+/* The boxes of a row's own subtree, read from the tree itself: the panel keeps no second list of the files a folder
+ * holds, and what the reader sees is exactly the boxes that are here. A file outside the report stands in the tree
+ * with nothing to switch, hence it is left out. */
+function appRowBoxes(box) {
+  return [...box.closest('li').querySelectorAll('.box:not(.dir):not(.plain) input')];
+}
+
+// A folder's field from its files: all on — checked, some — the third state, none — simply unchecked.
+function appDirState(box) {
+  const boxes = appRowBoxes(box);
+  const on = boxes.filter((b) => b.checked).length;
+  const input = box.querySelector('input');
+  input.checked = on === boxes.length;
+  input.indeterminate = on > 0 && on < boxes.length;
+}
+
+/* A category's field from its files — the same rule, taken from the data: a category's files are named by the
+ * category itself (`category`), and the boxes of the tree are a different view of the same files. */
+function appCatState(key) {
+  let all = 0;
+  let on = 0;
+  appData.files.forEach((f, i) => {
+    if (f.category !== key) return;
+    all++;
+    if (appView.files[i] === true) on++;
+  });
+  const input = appFields.cat[key];
+  input.checked = on === all;
+  input.indeterminate = on > 0 && on < all;
+}
+
+/* The folders a file lies in: the prefixes of its path, from the root down. The tree's folders are exactly those
+ * prefixes — that is how it is built (`appLeafAt`) — so no second naming rule is needed. */
+function appDirPath(path) {
+  const parts = path.split('/');
+  return parts.slice(0, -1).map((_part, i) => parts.slice(0, i + 1).join('/'));
+}
+
+/* A click reaches a folder's field through the files below it: every folder on the path of a switched file shows the
+ * share of what is left on. A folder without measured files has a field of its own too — it is off and unavailable,
+ * which is not the reader's state and must not be overwritten here. */
+function appDirsOf(indexes) {
+  const seen = {};
+  indexes.forEach((i) => {
+    appDirPath(appFileAt(i)).forEach((path) => {
+      if (seen[path] === true) return;
+      seen[path] = true;
+      if (appFields.dir[path] !== undefined) appDirState(appFields.dir[path]);
+    });
+  });
+}
+
+// The same for the quick buttons of the categories: every category one of the switched files belongs to.
+function appCatsOf(indexes) {
+  const seen = {};
+  indexes.forEach((i) => {
+    const key = appData.files[i].category;
+    if (seen[key] === true || appFields.cat[key] === undefined) return;
+    seen[key] = true;
+    appCatState(key);
+  });
+}
+
+/* What a click changed, written where it stands: the files' own boxes, then the fields of the folders and categories
+ * that hold them. Nothing is rebuilt, and no field the choice did not reach is touched. */
+export function appPanelState(indexes) {
+  indexes.forEach((i) => {
+    const input = appFields.file[i];
+    if (input !== undefined) input.checked = appView.files[i] === true;
+  });
+  appDirsOf(indexes);
+  appCatsOf(indexes);
+}
+
+/* The whole panel from the view: what a link, a record from the memory and the first drawing need. The metric boxes
+ * are the reader's own click otherwise, which is why they are not refreshed on a file's switch. */
+export function appPanelAll() {
+  appData.categories.forEach((c) => appCatState(c.key));
+  appData.metrics.forEach((m) => { appFields.metric[m.key].checked = appView.metrics[m.key] === true; });
+  appData.files.forEach((_f, i) => { appFields.file[i].checked = appView.files[i] === true; });
+  Object.keys(appFields.dir).forEach((path) => appDirState(appFields.dir[path]));
 }

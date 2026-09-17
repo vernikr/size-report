@@ -48,12 +48,12 @@ function environment(root) {
 
 /* Dependencies: what counts the metrics here and now. The very loaders the sensors use are asked
  * (`minifier`, `tokenizer`), so the answer cannot drift from the number: without the minifier `min` counts
- * by approximation, without the dictionary `tok` by estimate.
+ * by simplification, without the dictionary `tok` by estimate.
  *
  * Only what the project actually asked for is loaded: the dictionary weighs megabytes, and touching it for
  * the sake of an "installed" line would mean paying for an answer the numbers never needed (the same rule as
  * in the report: `test/tokens.test.js`). An unwanted sensor is named unneeded rather than unknown — it does
- * not affect accuracy, and that is the answer; "unknown" stays for the case where the settings are unreadable
+ * not affect the count, and that is the answer; "unknown" stays for the case where the settings are unreadable
  * and there is nobody to ask. */
 const UNREADABLE = 'unknown: the settings cannot be read';
 
@@ -132,8 +132,8 @@ function hookFindings(hooks) {
 }
 
 /* Coverage is the same answer `size check` gives, plus the kind of trouble if there is one: an incomplete path
- * or an approximating sensor (the kinds weigh differently — `WEIGHT`), with incompleteness outranking, because
- * without it there are no numbers at all.
+ * or a sensor counting another way (the kinds weigh differently — `WEIGHT`), with incompleteness outranking,
+ * because without it there are no numbers at all.
  * What becomes a finding and what does not: the report holds the whole coverage block (the same text as
  * `size check`), so incompleteness is not retold a second time — it weighs. Sensors do get a finding:
  * `size check` prints them as a `!` line, while here they are part of the answer. */

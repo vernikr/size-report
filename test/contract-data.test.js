@@ -6,9 +6,10 @@
  *   1. the contract's numbers are compared with the fixture's frozen golden (taken by the same copy
  *      of the engine) — the contract has to carry the same truth as the artifact;
  *   2. the contract holds no derived quantity (checked by the set of fields, not on trust);
- *   3. accuracy is declared twice and in agreement: the metric says the worst in the column, a cell
- *      its own number;
- *   4. every file has a category, and the category is declared in the data.
+ *   3. the way a number was obtained is one (the metric's method) and no judgement about it is
+ *      carried: no field of precision, no marks per cell;
+ *   4. every file has a category, and the category is declared in the data;
+ *   5. the page's block is this contract in sparse form, and the round trip restores it whole.
  *
  * Derived quantities and the page are neighbouring suites (`contract-derived`, `page-view`,
  * `page-choice`): the file is split by subject, not by size.
@@ -20,8 +21,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { CATEGORY_ORDER } from '../src/size-table.js';
 import { readHistory } from '../src/git.js';
+import { pagePacked, pagePayload } from '../src/page/build.js';
 import { cloneFixture, gitIn, runFixture, tempDir } from '../tools/harness.js';
-import { contractData } from '../tools/page-harness.js';
+import { contractData, pageDecode, unpackPack } from '../tools/page-harness.js';
 import { TOOL_PKG } from '../src/tool.js';
 
 const tmp = tempDir('contract-data');
@@ -35,6 +37,43 @@ test('the contract is reproducible: two runs give the same bytes', () => {
   const second = cloneFixture(path.join(tmp, 'fixture-repro'));
   assert.equal(runFixture(second, ['--data']).stdout, text,
     'the data depend on the run: “floating” values would appear in the report');
+});
+
+/* The page's block is the contract in **sparse form** rather than the contract itself, and that is the seam where a
+ * number can quietly disappear: the encoder writes the history as changes, the decoder unrolls it back
+ * (`src/page/payload.js`, both sides pasted into the page). So what stands here is a round trip on real output — the
+ * contract encoded, decoded by the page's own chapter and compared whole — rather than the format described.
+ *
+ * Three things are declared as not surviving, and each has its reason: the list of skipped commits changes with the
+ * report's own commit and would stop the file from being a fixed point (the encoder's own comment), while the
+ * report's `heading` (the artifact's `<h1>`, built before the block) and `journal` are words the page never reads.
+ * `schema` is not lost but re-marked: 1 is the contract's shape, 2 the block's.
+ *
+ * The second half is the other half of a fixed point: the same contract has to give the same bytes twice — the hook
+ * rebuilds the artifact after every commit and would otherwise commit it forever. */
+test('the sparse block restores the contract whole, through the packing, and twice over the same bytes', () => {
+  const want = JSON.parse(JSON.stringify(data));
+  want.schema = 2;
+  delete want.skipped;
+  delete want.report.heading;
+  delete want.report.journal;
+  assert.deepEqual(pageDecode(pagePayload(data)), want,
+    'the round trip through the sparse block lost or moved something');
+
+  /* The other half of the way: the block travels in the file **packed** (gzip inside base64, `pagePacked`), and the
+   * packing is the page's transport rather than the block's shape. So the round trip is taken through it as well,
+   * with the platform's own zlib (`unpackPack`) rather than with a decoder of the check's own — and the transport
+   * has to be smaller than what it carries, or it would be weight added rather than saved. */
+  const encoded = JSON.stringify(pagePayload(data));
+  assert.deepEqual(unpackPack(pagePacked(encoded)), pagePayload(data),
+    'the packing lost or moved something of the block');
+  assert.ok(pagePacked(encoded).length < encoded.length,
+    'the packed block is larger than the block itself: ' + pagePacked(encoded).length + ' against ' + encoded.length);
+
+  assert.equal(JSON.stringify(pagePayload(data)), JSON.stringify(pagePayload(JSON.parse(text))),
+    'two encodes of one contract gave different bytes: the artifact would stop being a fixed point');
+  assert.equal(pagePacked(encoded), pagePacked(JSON.stringify(pagePayload(JSON.parse(text)))),
+    'two packings of one block gave different bytes: the artifact would stop being a fixed point');
 });
 
 test('the contract carries the same truth as the frozen reference', () => {
@@ -122,52 +161,36 @@ test('the last commit is named by history: exactly the columns it touched are ma
   assert.equal(data.last.length, data.files.length, 'there are fewer marks than columns');
 });
 
-test('a metric that is not minification is marked as an approximation', () => {
+test('a metric describes the way it was counted and judges nothing', () => {
   data.metrics.forEach((m) => {
     assert.ok(m.label && m.note && m.method, 'metric “' + m.key + '” has no description of its method');
-    assert.ok(['exact', 'approximate'].indexOf(m.accuracy) >= 0, 'metric “' + m.key + '” has no accuracy declared');
+    assert.deepEqual(Object.keys(m).sort(), ['key', 'label', 'method', 'note'],
+      'metric “' + m.key + '” carries a field besides the way it was counted');
   });
-  const min = data.metrics.find((m) => m.key === 'min');
-  assert.equal(min.accuracy, 'approximate',
-    'stripping comments is passed off as minification: the metric carries no approximation mark');
+  /* The splitting of numbers into exact and approximate was taken out of the package: a cell is a number,
+   * and how it was obtained is said once, in the method. Checked on the bytes rather than on the parsed
+   * object, because both a field and a record of marks would be its second place. */
+  assert.equal(/"accuracy"|"approx"/.test(text), false,
+    'the contract still carries a judgement about the precision of its numbers');
 });
 
-/* Accuracy is declared twice, and these are not two answers to one question: for the metric it is the
- * worst in the column, for a cell its own number. That is why the fixture is mixed: `package.json` is
- * exact (JSON loses only insignificant whitespace — the one strategy that is minification itself),
- * while every other format is measured by stripping, since the fixture's settings ask for no minifier.
- *
- * The agreement of the two answers is checked, not the presence of a field: a metric with not a single
- * mark cannot say "approximate", and a row of marks has to cover exactly all cells — rows and "now"
- * separately. */
-test('accuracy is declared per cell, while the metric’s label is the worst in the column', () => {
-  data.metrics.forEach((m) => {
-    const marks = data.approx[m.key];
-    if (marks === undefined) {
-      assert.equal(m.accuracy, 'exact',
-        'metric “' + m.key + '” promises accuracy without naming a single approximate cell');
-      return;
-    }
-    assert.equal(m.accuracy, 'approximate',
-      'metric “' + m.key + '” has approximate cells, while its label promises accuracy');
-    assert.equal(marks.rows.length, data.rows.length * data.files.length,
-      'the row of marks does not cover the cells of the rows');
-    assert.equal(marks.now.length, data.files.length, 'the row of marks does not cover the “now” row');
-    assert.equal(/[^01]/.test(marks.rows + marks.now), false,
-      'the marks hold a sign besides “exact/approximate”: ' + marks.rows.slice(0, 40));
-  });
-
-  /* Mixedness is what this row exists for: were all cells of one mark, a per-cell mark would add
-   * nothing to the metric's label. */
-  const min = (data.approx || {}).min;
-  assert.notEqual(min, undefined, 'the contract holds no approximate-cell marks');
-  const json = data.files.findIndex((f) => f.label === 'package.json');
-  const md = data.files.findIndex((f) => f.label === 'заметки.md');
-  assert.equal(min.now.charAt(json), '0',
-    'an exact format (JSON is parsed whole) is marked as an approximation');
-  assert.equal(min.now.charAt(md), '1', 'stripping is passed off as exact minification');
-  assert.ok(min.rows.indexOf('0') >= 0 && min.rows.indexOf('1') >= 0,
-    'the report holds no cells of both signs — there is nothing to check per cell');
+/* What a reader can learn about the way column `min` was measured is the method, and it has to keep naming
+ * the formats counted another way — that is the one answer the removed per-cell marks used to dress. The
+ * fixture is mixed on purpose: `package.json` is minified by parsing (JSON loses only insignificant
+ * whitespace) while every other format is measured by stripping, since the fixture's settings ask for no
+ * minifier. */
+test('the method names the way a number was obtained, and no word of precision is left', () => {
+  const min = data.metrics.find((m) => m.key === 'min');
+  /* The fixture's settings ask for no minifier, so the whole column is counted one way and the method says
+   * which one — in words, rather than as a mark of precision repeated on every cell. */
+  assert.match(min.method, /снятие комментариев и отступов/,
+    'the method does not say how the numbers were obtained: ' + min.method);
+  assert.match(min.method, /не минификация/, 'the method passes stripping off as minification: ' + min.method);
+  assert.equal(/приближ|точно/.test(min.method), false, 'the method judges its numbers: ' + min.method);
+  /* Nothing is counted another way here, so no format is named: that list belongs to a run asking for the
+   * minifier, where part of the column really is measured differently. */
+  assert.equal(min.method.indexOf('остальные форматы'), -1,
+    'a way of counting that no setting asked for is named in the method: ' + min.method);
 });
 
 test('every file has a category, and it is declared in the data', () => {

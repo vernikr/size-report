@@ -12,9 +12,10 @@
  * The configuration is flat (ESLint 9), and the file name is `.js`, not `.mjs`: the package is declared a
  * module (`"type": "module"`), so `.js` already is one here.
  *
- * What is linted: real code — `bin/`, `src/`, `tools/`, `test/` — and the configuration files in the root.
- * `fixtures/` is excluded whole: data lives there (history bundles, the taken standards with their
- * manifests), and the package's rules do not apply to it.
+ * What is linted: real code — `bin/`, `src/`, `tools/`, `test/` — the scripted measurements in `probes/`,
+ * and the configuration files in the root. `fixtures/` and `reports/` are excluded: data lives in the first
+ * (history bundles, the taken standards with their manifests) and machine-readable sensor output in the
+ * second, and the package's rules do not apply to either.
  *
  * Run: `pnpm run lint` (advice, does not block) and `pnpm run lint:strict` (fails). The tree is expected
  * to yield zero findings: no baseline, no "switched it on and let it drown".
@@ -62,17 +63,18 @@ export default [
     // visible to the linter.
     //
     // Hence two sets of names here: the browser itself and the little the chapters share. The shared names
-    // are not a loophole but a record of fact: the panel's switches ask for a redraw (`appRender` is
-    // declared by the assembly chapter), and the three circumstances of the first draw are brought up by
-    // the state chapter and set by the assembly one. An import on these names would make a cycle
-    // (`deps`) that the assembled page does not have: there it is one script, not references between
-    // modules.
+    // are not a loophole but a record of fact: a click in the panel calls the three switches of the
+    // assembly chapter, and the three circumstances of the first draw are brought up by the state chapter
+    // and set by the assembly one. An import on these names would make a cycle (`deps`) that the assembled
+    // page does not have: there it is one script, not references between modules.
     files: ['src/page/*.js'],
     languageOptions: {
       globals: {
         document: 'readonly',
         window: 'readonly',
-        appRender: 'readonly',
+        appSwitch: 'readonly',
+        appSwitchGroup: 'readonly',
+        appSwitchMetric: 'readonly',
         appStartup: 'writable',
         appForeign: 'writable',
         appTransient: 'writable'
