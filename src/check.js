@@ -68,7 +68,7 @@ function pathCoverage(cfg, commits) {
 }
 
 /* The full answer: settings, history, paths, sensors — and the verdict. `ok` means only "nothing went past
- * the report": a sensor counting approximately does not change the verdict (it has an exit code of its own,
+ * the report": a sensor counting another way does not change the verdict (it has an exit code of its own,
  * as in every other mode). */
 export function coverage(cfg, root, configFile) {
   assertFullHistory(root);

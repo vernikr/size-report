@@ -75,26 +75,8 @@ export function reportData(cfg, root) {
      * changed just now rather than the rest. This is a fact from the history rather than a derived quantity:
      * it does not count anything, it says what the edit touched. */
     last: last,
-    approx: approxMarks(rows, state, cfg),
     skipped: dropped.map(skipLine)
   };
-}
-
-/* Marks of approximate cells — one record per metric: a string of marks over the row cells and one over the
- * "now" row. '1' means the number came out of stripping or an estimate, '0' that it is exact. A metric with
- * no mark at all does not appear in the report: all numbers exact — silence.
- *
- * The engine sets a mark where it counts the number, by the same rule as the metric's label. Hence the page
- * derives nothing about paths and formats: it only shows what was said and keeps no second rule of accuracy. */
-function approxMarks(rows, state, cfg) {
-  const out = {};
-  cfg.metrics.forEach((m) => {
-    const mark = (flags) => (flags !== null && flags[m] ? '1' : '0');
-    const inRows = rows.map((r) => r.approx.map(mark).join('')).join('');
-    const now = state.map((s) => mark(s === null ? null : s.approx)).join('');
-    if (inRows.indexOf('1') >= 0 || now.indexOf('1') >= 0) out[m] = { rows: inRows, now: now };
-  });
-  return out;
 }
 
 /* The part of a row shared by both answers: the page's contract (`--data`) and the older `--json` form (frozen

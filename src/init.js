@@ -14,7 +14,8 @@ import { packageManager } from './project.js';
  * pass the very check the first run will apply**, or the advice leads a person into a new dead end.
  */
 
-/* What to say after writing: what was written, what will replace the approximations, and what to do
+/* What to say after writing: what was written, what counts the same numbers when the optional
+ * dependency is missing, and what to do
  * next. The lines are assembled into a list rather than printed as they come, so that "what was said"
  * can be read as a whole. */
 function draftLines(root, target, cfg) {

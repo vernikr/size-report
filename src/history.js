@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { assertFullHistory, diskForm, diskHashes, git, headTree, readBlobs, readHistory } from './git.js';
-import { METRICS, measureBlob, pointExact } from './metrics.js';
+import { METRICS, measureBlob } from './metrics.js';
 import { touchedSection } from './journal.js';
 import { EXIT, refuse } from './refusal.js';
 
@@ -82,15 +82,10 @@ function applyPicks(pass, c, picks) {
     }
     const blob = pass.blobs.get(pick.spec);
     const cells = {};
-    /* Approximation is a property of the path rather than of the blob: whether the format goes to
-     * the minifier depends on its extension. It is computed here along with the measurement, and
-     * so it does not enter the content cache. */
-    const approx = {};
     pass.metrics.forEach((m) => {
       cells[m] = pass.measure(m, blob, pick.path, c.sha);
-      approx[m] = !pointExact(m, pick.path, pass.cfg);
     });
-    pass.state[i] = { path: pick.path, sha: blob.sha, cells: cells, approx: approx };
+    pass.state[i] = { path: pick.path, sha: blob.sha, cells: cells };
   });
 }
 
@@ -127,8 +122,7 @@ function stepCommit(pass, c, ci) {
     when: c.when,
     subject: c.subject,
     section: section,
-    cells: pass.state.map((s) => (s === null ? null : s.cells)),
-    approx: pass.state.map((s) => (s === null ? null : s.approx))
+    cells: pass.state.map((s) => (s === null ? null : s.cells))
   });
 }
 

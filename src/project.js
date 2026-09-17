@@ -220,8 +220,8 @@ export function projectConfig(root) {
     output: output,
     fixCommand: fixCommandOf(root),
     metrics: ['raw', 'min', 'tok'],
-    // Real compression and a real dictionary rather than approximations: a new project must not start
-    // with numbers that are honest only by half. Without the optional dependency the metric falls back
+    // Real compression and a real dictionary rather than their cheaper substitutes: a new project must
+    // not start with numbers counted another way. Without the optional dependency the metric falls back
     // to another count and the run returns code 4 — said by the metric label rather than left to a
     // default.
     minify: { engine: 'esbuild' },
