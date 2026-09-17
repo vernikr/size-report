@@ -41,9 +41,10 @@ export function assertCompilable(min, rev, p, src) {
       + '  fix: remove this extension from minify.guard or give it '
       + 'minify.ext — for example { "' + path.extname(p).toLowerCase() + '": "strip-lines" }');
   }
-  // The reason comes from the parse the file actually was: blaming the other shape would
-  // explain nothing.
-  throw new Error('the stripper broke ' + p + ' at ' + rev.slice(0, 7) + ': '
+  /* The reason comes from the parse the file actually was: blaming the other shape would explain nothing.
+   * A revision is optional: the assembler of the report's page squeezes a text it built itself, and there is no
+   * revision to name it by — then the message says only what broke. */
+  throw new Error('the stripper broke ' + p + (rev === '' ? '' : ' at ' + rev.slice(0, 7)) + ': '
     + (shape ? asModule : asScript));
 }
 
