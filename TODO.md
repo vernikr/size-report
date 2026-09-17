@@ -107,3 +107,11 @@ Opened 2026-09-16 with the string-translation work (`docs/plans/2026-09-16-i18n-
   scripts and does check existence. A sensor's own defect, so the string work records it and does not
   chase it; the fix is one line (compare `m[1]` with `scripts`), and it is a gate-file edit, so it
   needs the trailer.
+- **`tools/docs-facts.js:180-186` — a dead half in `commandsAt()` after the pin moved.** Seen
+  2026-09-17, at the 2.5.0 release. The function reads the help of the pinned revision and accepted
+  **two** spellings of the section markers (`'Команды:'`/`'Режимы:'` and `'Commands:'`/`'Modes:'`)
+  because the pin led to a Russian revision. Since the pin moved to `v2.5.0`, whose help is English,
+  the Russian halves cannot match any more — measured: with them cut out, `test/docs-pin.test.js` is
+  green (5 of 5) against the tag. Nothing behaves differently today; the cost is a reader believing
+  the Russian spelling is still needed. The fix is two `split` halves and the paragraph above them
+  that explains the old cadence.
