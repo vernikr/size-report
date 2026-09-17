@@ -69,14 +69,14 @@ test('the computational part of the page is the engine’s code, not a copy', ()
   assert.equal(comments(script), 0, 'a comment survived into the pasted program: the squeeze is not applied');
 
   assert.deepEqual(defined('\n' + stripModules(appSrc)).sort(), [
-    'appAddressDrop', 'appAddressLater', 'appAll', 'appApply', 'appBegin', 'appBody', 'appBoot', 'appBox',
-    'appBreadth', 'appBytes',
+    'appAll', 'appApply', 'appBar', 'appBegin', 'appBody', 'appBoot', 'appBox', 'appBreadth', 'appBytes',
     'appCatState', 'appCatsOf',
-    'appCell', 'appCellClass', 'appCols', 'appColumn',
+    'appCell', 'appCellClass', 'appCols', 'appColumn', 'appColumnSize', 'appColumnStale', 'appColumns',
     'appCommit', 'appContribute', 'appCount', 'appCounts', 'appDecode', 'appDir', 'appDirHead', 'appDirPath',
-    'appDirState', 'appDirsOf', 'appEl', 'appFileAt', 'appFileBox', 'appFill', 'appFirst', 'appFoldBox', 'appFoldRead',
+    'appDirState', 'appDirsOf', 'appDraw', 'appDrawColumn', 'appEl', 'appFileAt',
+    'appFileBox', 'appFill', 'appFirst', 'appFoldBox', 'appFoldRead',
     'appFoldSet', 'appGroupWide', 'appHash', 'appHead', 'appIndexes', 'appJoined', 'appLeaf', 'appLeafAt', 'appLeaves', 'appLinkRead',
-    'appLinkUse', 'appMetrics', 'appNode', 'appNote', 'appNotice', 'appNow', 'appOffBox', 'appOrder',
+    'appLinkUse', 'appMetrics', 'appName', 'appNode', 'appNote', 'appNotice', 'appNow', 'appOffBox', 'appOrder',
     'appPaint', 'appPanel', 'appPanelAll', 'appPanelState', 'appPassport', 'appRead', 'appRecord', 'appRecordOk',
     'appRow', 'appRowBoxes', 'appRowCells', 'appRowOf', 'appState', 'appStep', 'appSwitch', 'appSwitchGroup',
     'appSwitchMetric', 'appTable', 'appText', 'appTotals', 'appTotalsReset', 'appTree', 'appTreeList', 'appUnknown',

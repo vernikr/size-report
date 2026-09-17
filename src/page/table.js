@@ -253,7 +253,9 @@ export function appBody(files, metrics, cache) {
 export function appTable(grid) {
   const metrics = appData.metrics.map((m) => m.key);
   const files = appOrder();
-  const cache = { grid: grid, keys: metrics, cols: [], spans: [], cells: [], sums: [], all: [] };
+  const cache = { grid: grid, keys: metrics, cols: [], drawn: [], spans: [], cells: [], sums: [], all: [] };
+  /* The columns are built shown: that is the state the nodes carry before anything is drawn. */
+  files.forEach((i) => { cache.drawn[i] = true; });
   metrics.forEach(() => {
     cache.cells.push([]);
     cache.sums.push([]);
@@ -269,10 +271,28 @@ export function appTable(grid) {
   return cache;
 }
 
+/* How many nodes a file's column holds — its cells, its captions and its `<col>`. It is the unit the page's bar
+ * counts in (`appDraw`), so it is answered here, where the column's nodes are: the choice's state costs arithmetic,
+ * and the nodes are the table's business. */
+export function appColumnSize(cache, i) {
+  return cache.cols[i].length;
+}
+
+/* Whether a file's column has to be drawn at all: `drawn` is the state its nodes carry (the table is built with every
+ * column shown), so a column that is on and was never drawn is already right. The first drawing of a report has
+ * nothing switched off and therefore costs nothing, and a record from the memory or a link queues exactly the columns
+ * that differ from it — on a table of a few hundred thousand cells that is the difference between a page that opens
+ * and a page that works for a minute after opening. */
+export function appColumnStale(cache, i) {
+  return cache.drawn[i] !== (appView.files[i] === true);
+}
+
 /* A file's column shown or hidden: its cells and its headings together, one class per node and no new node. A hidden
- * column keeps its place in the markup — the order of the columns is the files' business, not the choice's. */
+ * column keeps its place in the markup — the order of the columns is the files' business, not the choice's. What the
+ * nodes carry is remembered (`drawn`), or a repeated switch would walk a column nobody has to see again. */
 export function appColumn(cache, i, on) {
   cache.cols[i].forEach((node) => node.classList.toggle('off', !on));
+  cache.drawn[i] = on;
 }
 
 /* A file's share of the totals: switched off it takes exactly its own numbers out of the running sums, switched on

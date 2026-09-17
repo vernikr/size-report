@@ -10,14 +10,26 @@
  * How far the reader got — how much of the tree is scrolled and which field is under the keyboard — is checked here
  * too, and it is kept by the shape of the page rather than by putting it back: the panel is built once, so a click has
  * nothing that could take that place away.
+ *
+ * Two rules of the level's order stand here as well: the tree opens **folded** (a project's tree is longer than the
+ * window, and the reader unfolds what he looks at; what the memory keeps is the unfolding), and a hidden name — one
+ * beginning with a dot — stands after every visible one, the alphabet deciding the rest.
  */
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { valueParts } from '../src/size-table.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { stripModules, valueParts } from '../src/size-table.js';
+import { ROOT } from '../tools/harness.js';
 import {
   fileBox, metricBox, nowCells, nowTotal, pageMath, pageReady, stored, toggleBox
 } from '../tools/page-harness.js';
+
+/* The chapter that builds the panel, as the page carries it: the ordering rule is read from there (with the module
+ * syntax stripped, the way the page gets it) rather than restated in a check — a second copy of a rule is a second
+ * answer waiting to happen. */
+const PANEL_SRC = stripModules(fs.readFileSync(path.join(ROOT, 'src', 'page', 'panel.js'), 'utf8'));
 
 /* The expected totals are computed by the same calculation the page carries (`pageMath` of the
  * harness): the check has no rule of its own about what a subtree weighs. */
@@ -206,13 +218,17 @@ test('every field of the panel says what the files below it say, after a mixed c
 });
 
 /* A folder with nothing to switch stays in place, but its box is off and disabled too: every row
- * looks alike, and the reason is in the tooltip. The order within a level is checked as well:
- * everything the report does not hold comes after what it holds rather than being mixed in — or
- * the report would have to be searched among strangers.
+ * looks alike, and the reason is in the tooltip. Two rules of the order within a level stand here as well:
+ * everything the report does not hold comes after what it holds rather than being mixed in — or the report
+ * would have to be searched among strangers — and a hidden name (one beginning with a dot) comes after every
+ * visible one, the alphabet deciding the rest.
  *
  * The set of "folders with nothing to measure" is computed from the data rather than read off the
  * markup: otherwise the check would confirm itself and miss a folder marked unavailable for no
- * reason. */
+ * reason. The hidden-name rule cannot be read off this tree — the shared fixture holds no dot-file — so it
+ * is checked where it is a rule: the comparator is taken from the chapter that uses it (the way `pageMath`
+ * takes the page's calculation) and held to its own cases, and then every level of the assembled tree is
+ * compared against it, which is what a project with one dot-file in it would show. */
 test('folders outside the report come with the box off and after those inside it', async () => {
   const doc = (await openPage()).window.document;
   const measured = data.files.map(where);
@@ -237,48 +253,86 @@ test('folders outside the report come with the box off and after those inside it
         'a row of the report stands after rows it does not hold');
     }
   });
+
+  /* The hidden-name rule, first on its own cases and then on the tree. */
+  const sort = new Function(PANEL_SRC + '\nreturn appName;')();
+  assert.ok(sort('.env', 'src') > 0, 'a hidden name stands before a visible one');
+  assert.ok(sort('src', '.env') < 0, 'a visible name stands after a hidden one');
+  assert.ok(sort('a', 'b') < 0 && sort('b', 'a') > 0 && sort('a', 'a') === 0,
+    'the alphabet is not the rule that decides between two names of one kind');
+  assert.ok(sort('Zed', '.a') < 0, 'the dot outranks the alphabet rather than deciding between equal names');
+
+  /* The rows of a level in groups of their own — a folder and a leaf, what the report holds and what it does not:
+   * the grouping is another rule, and only the names inside one group are held to this one. */
+  const levels = [...doc.querySelectorAll('#panel ul.tree')].map((ul) => [...ul.children].map((li) => {
+    const box = li.querySelector(':scope > .box');
+    return { kind: (box.classList.contains('dir') ? 'd' : 'f') + (box.querySelector('input').disabled ? '0' : '1'),
+      name: box.querySelector('span').textContent.replace(/\/$/, '') };
+  }));
+  assert.ok(levels.length > 0, 'the panel has no tree to read the order off');
+  levels.forEach((level) => [...new Set(level.map((row) => row.kind))].forEach((kind) => {
+    const names = level.filter((row) => row.kind === kind).map((row) => row.name);
+    assert.deepEqual(names, names.slice().sort(sort),
+      'the names of one level stand in an order the rule does not give: ' + names.join(', '));
+  }));
 });
 
 /* Folding is how much of the tree is visible, and it must not touch the numbers: the box is
  * responsible for what is counted, the folder's mark for what is visible. So folding and the
  * memory of it are checked where it shows that the table has not moved and that the tree comes back
- * folded on the next visit — in a tree of any length that is the only way to reach its middle. */
-test('a folder of the tree can be folded, and the fold is remembered on the next visit', async () => {
+ * the way the reader left it on the next visit — in a tree of any length that is the only way to
+ * reach its middle. The tree opens folded; what the memory keeps is the unfolding. */
+test('the tree opens folded, and the folders a reader unfolds come back unfolded', async () => {
   const dom = await openPage();
   const doc = dom.window.document;
   const fold = (d, prefix) => dirBox(d, prefix).closest('li').querySelector(':scope > .fold');
   const row = (d, prefix) => dirBox(d, prefix).closest('li');
+  const click = (d, prefix) => fold(d, prefix).dispatchEvent(new dom.window.Event('click'));
   const before = nowCells(doc);
   const table = doc.querySelector('#grid tbody tr');
 
-  fold(doc, 'src/').dispatchEvent(new dom.window.Event('click'));
+  /* The default: every folder is folded — the mark says so, and the row carries the class the styling
+   * hides the subtree with, while the subtree itself lies in the markup as it did. */
   assert.equal(row(doc, 'src/').classList.contains('folded'), true,
-    'the folder’s row is not marked folded: the subtree cannot be hidden by styling');
+    'the tree did not open folded: a project’s tree is longer than the window');
+  assert.equal(fold(doc, 'src/').textContent, '▸', 'the mark of a folder that opens folded did not say it is folded');
+
+  click(doc, 'src/');
+  assert.equal(fold(doc, 'src/').textContent, '▾', 'the mark of an unfolded folder did not say it is unfolded');
+  assert.equal(row(doc, 'src/').classList.contains('folded'), false,
+    'the folder’s row is still marked folded: the subtree is hidden from the reader who unfolded it');
   assert.equal(dirInput(doc, 'src/').checked, true,
-    'folding the folder changed its choice: the mark is for the look, the box for the numbers');
-  assert.equal(nowCells(doc), before, 'folding the folder took numbers out of the table');
-  assert.equal(fold(doc, 'src/').textContent, '▸', 'the mark of a folded folder did not say it is folded');
+    'unfolding the folder changed its choice: the mark is for the look, the box for the numbers');
+  assert.equal(nowCells(doc), before, 'unfolding the folder took numbers out of the table');
   /* Folding is pure appearance: the table stays the very same markup afterwards rather than being
    * assembled again. Otherwise every click on the mark would count all rows and columns, and a tree
    * with a long history would answer with a visible delay. */
   assert.equal(doc.querySelector('#grid tbody tr'), table,
     'a click on the mark reassembled the table: folding counts numbers it does not change');
 
-  /* Memory: the next visit opens with the same folded tree and the full choice. Folding has a key
-   * of its own — otherwise it would travel into the link, and a link is sent for the numbers
-   * rather than for how somebody arranged their tree. */
+  /* Memory: the next visit opens with the folder unfolded and the rest folded, and the full choice.
+   * The unfolding has a record of its own — otherwise it would travel into a link, and a link is a
+   * matter of numbers rather than of how somebody arranged their tree. */
   const seed = stored(dom);
+  const key = Object.keys(seed)[0];
+  assert.equal(Object.keys(seed).length, 1, 'the record about the tree landed in the wrong place: ' + JSON.stringify(seed));
+  assert.ok(key.indexOf(':tree') > 0, 'the unfolding landed in the record of the choice: ' + key);
+  assert.deepEqual(JSON.parse(seed[key]).open, { src: true },
+    'the record does not keep exactly the folders that were unfolded: ' + seed[key]);
+
   const next = (await openPage(seed)).window.document;
-  assert.equal(fold(next, 'src/').textContent, '▸',
-    'a folded folder unfolded on the next visit');
-  assert.equal(row(next, 'src/').classList.contains('folded'), true,
-    'the memory keeps the mark but not the fold itself');
-  assert.equal(fold(next, 'data/').textContent, '▾', 'another folder folded together with this one');
+  assert.equal(fold(next, 'src/').textContent, '▾', 'an unfolded folder folded on the next visit');
+  assert.equal(row(next, 'src/').classList.contains('folded'), false,
+    'the memory keeps the mark but not the unfold itself');
+  assert.equal(fold(next, 'data/').textContent, '▸',
+    'another folder unfolded together with this one: the tree came back wider than it was left');
   assert.deepEqual([...next.querySelectorAll('#panel input')].filter((b) => !b.checked && !b.disabled), [],
-    'the memory of the fold carried the switched-off files away with it');
-  assert.deepEqual(Object.keys(seed).length, 1, 'the record about the tree landed in the wrong place: ' + JSON.stringify(seed));
-  assert.ok(Object.keys(seed)[0].indexOf(':tree') > 0,
-    'the fold landed in the record of the choice: ' + Object.keys(seed)[0]);
+    'the memory of the unfold carried the switched-off files away with it');
+
+  /* Folding the last unfolded folder back puts the tree in its default state and leaves no record:
+   * the absence of a name is the default, the same way "switched on" is. */
+  click(doc, 'src/');
+  assert.deepEqual(stored(dom), {}, 'folding every folder back left a record of a tree that is at its default');
 });
 
 /* jsdom does not lay the page out, so its elements always scroll by zero and writing to

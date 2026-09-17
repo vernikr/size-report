@@ -2,7 +2,8 @@
 
 What a suite cannot answer — jsdom has no layout, no paint and no `content-visibility` — is measured in **live Chrome**
 over `file://`, spoken to over the DevTools protocol directly (Node's own `WebSocket`; nothing of the package is used).
-Each file belongs to one step of `plans/2026-09-17-page-perf/`, and the numbers in that step's file are that probe's
+Each file belongs to one step of `plans/2026-09-17-page-perf/` — except `step-12-columns.mjs`, which measures the
+drawing of a switch (the work chapter of the page, 2026-09-17) — and the numbers in that step's file are that probe's
 output: the file is the single home of the measurement, and the README rows and worklog entries point here.
 
 **Running one.** Start Chrome with a debug port and run the probe from the repository root:
@@ -50,6 +51,7 @@ two different data sets; the pair above was built twice in a row, in one state.
 | `step-10-tables.mjs` | Where `content-visibility: auto` skips anything at all: rows, `<tbody>`s, a wrapper `<div>`, and plain `<div>`s as the control — the witness is the platform's own `contentvisibilityautostatechange` |
 | `step-10-skip.mjs` | The same artifact with and without the declaration, both witnesses side by side (rectangles, which lie, and the event, which does not), the geometry, a scripted scroll, search and printing |
 | `step-11-borders.mjs` | `border-collapse: collapse` against `separate`: the load's timings, the geometry, the two models laid out in one tab, **and the pixels** — the screenshots are read back in the browser that drew them, so the line positions, their thickness and the difference between the builds need no imaging library |
+| `step-12-columns.mjs` | The price of a switch: what a column-visibility change costs the browser (a class toggled on 1, 750, 6 000 and 20 000 cells, then a forced layout), and the same click on the shipped page and on the page drawn in slices — the synchronous part, every long task, the bar's frames and the browser's own count of layouts (`node probes/step-12-columns.mjs before=/tmp/page-2.6.0.html after=/tmp/page-2.7.0.html`) |
 
 **Not part of the suite, and deliberately outside the sensors.** Probes are instruments rather than product code: they
 live outside the paths the gates walk (`src bin tools test`, and coverage's `src bin`), so no threshold, ratchet or

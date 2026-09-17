@@ -19,7 +19,7 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { CATEGORY_ORDER } from '../src/size-table.js';
+import { CATEGORY_ORDER, categoryOf } from '../src/size-table.js';
 import { readHistory } from '../src/git.js';
 import { pagePacked, pagePayload } from '../src/page/build.js';
 import { cloneFixture, gitIn, runFixture, tempDir } from '../tools/harness.js';
@@ -205,4 +205,20 @@ test('every file has a category, and it is declared in the data', () => {
   });
   assert.ok(data.files.some((f) => f.category === 'docs'), 'the fixture has documentation');
   assert.ok(data.files.some((f) => f.category === 'code'), 'the fixture has code');
+
+  /* A test is recognised by its path rather than by its extension: the folders that hold tests — wherever they
+   * stand in the project — and a name carrying `.test` before its extension. The rule is a function of one column
+   * (`categoryOf`), so it is checked on its own cases here: a fixture that held a test would grow a category the
+   * references do not know, and the check would then be about the fixture rather than about the rule. */
+  const cat = (p) => categoryOf({ label: p, paths: [p] }).key;
+  assert.equal(cat('test/one.js'), 'tests', 'a file of a top-level tests folder is not a test');
+  assert.equal(cat('src/tests/one.js'), 'tests', 'a test is not recognised by a folder deeper in the project');
+  assert.equal(cat('fixtures/parity/data.json'), 'tests', 'a file of the fixtures is not counted with the tests');
+  assert.equal(cat('src/report.test.js'), 'tests', 'a name carrying .test before its extension is not a test');
+  assert.equal(cat('src/code.js'), 'code', 'an ordinary source file stopped being code');
+  assert.equal(cat('docs/notes.md'), 'docs', 'a document stopped being documentation');
+  assert.equal(categoryOf({ label: 'contested', paths: ['test/one.js'], category: 'docs' }).key, 'docs',
+    'the settings stopped outranking the path');
+  assert.ok(CATEGORY_ORDER.indexOf('tests') === CATEGORY_ORDER.indexOf('code') + 1,
+    'the tests do not stand right after the code: ' + CATEGORY_ORDER.join(', '));
 });

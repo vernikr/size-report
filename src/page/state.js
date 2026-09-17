@@ -11,10 +11,10 @@ import { appDecode } from './payload.js';
  * network: the styling arrives in the same file, and the cell markup follows the rules of the shared part of the styling
  * (`clip`, a commit's caption).
  *
- * The panel remembers the reader's choice between visits and can hand it over as a link ("the choice's memory" below):
- * the record is tied to the report's passport and keeps only what is switched off, by name, so someone else's record is
- * not applied while a vanished name simply means nothing. The same record goes into the address — which is what one
- * sends to a colleague.
+ * The panel remembers the reader's choice between visits ("the choice's memory" below): the record is tied to the
+ * report's passport and keeps only what is switched off, by name, so someone else's record is not applied while a
+ * vanished name simply means nothing. The record stays in the browser's memory and nowhere else: a report opened from
+ * disk keeps a clean address, and a link made in an earlier release is still read (`appLinkUse`).
  *
  * The page draws no conclusion about how a number was obtained: the method of each metric arrives in the data, and the
  * page prints it. There is no second rule of counting here, and no vocabulary of precision either. */
@@ -47,7 +47,10 @@ let appFoldKey = null;
  * on the data, and until the block is unpacked there is nothing to count it from. */
 export function appBoot(text) {
   appData = appDecode(JSON.parse(text));
-  appView = { metrics: {}, files: [], folded: {} };
+  /* The tree is folded as it opens: a project's tree is longer than the window, and the reader's first look is at a
+   * short list rather than at everything. What is remembered is the opposite — the folders the reader unfolded
+   * (`appFoldRead`). */
+  appView = { metrics: {}, files: [], open: {} };
   appMetric = {};
   appMeasured = {};
   appData.metrics.forEach((m) => { appView.metrics[m.key] = true; appMetric[m.key] = m; });
@@ -57,14 +60,12 @@ export function appBoot(text) {
 }
 
 /* A link is that same choice in the address, under a name of its own: someone else's anchor on the page does not count
- * as a link, and there is nothing to argue with it about. */
+ * as a link, and there is nothing to argue with it about. The page does not write it any more — it only reads what came
+ * with the address — and this paragraph is what such a link is read by. */
 const APP_LINK = '#size-report=';
 
-/* Three circumstances of the first drawing, which act on it alone: the address is not rewritten during it (it was sent to
- * the reader rather than the other way), the memory is not touched (a link that came in is not the reader's choice), and
- * the message about the link has not faded yet. */
-let appStartup = true;
-let appForeign = false;
+/* One circumstance of the first drawing, and it acts on it alone: the memory is not written while somebody else's link
+ * is open — what came in is not the reader's choice, and only his own action makes it his. */
 let appTransient = false;
 
 /* -------- the reader's memory of his choice -------- */
@@ -121,59 +122,27 @@ function appRecordOk(rec) {
   return rec !== null && typeof rec === 'object' && rec.v === 1 && rec.passport === appPassport();
 }
 
-/* The address is the link for a colleague, while the memory is the reader's own: the memory is written on the click
- * itself — that is what survives a closing — and the address 200 ms after the last of a burst of switches, because a
- * burst is one link rather than five history entries and five URL parses. The delay is short enough for a person and
- * long enough to swallow a run of clicks; a timer that fires after the page is gone writes nothing useful, which is the
- * price of not writing the address five times. */
-const APP_ADDRESS_DELAY = 200;
-let appAddressTimer = null;
-
-/* An address that came in from outside wins over a write this page has not made yet: a click arms a write, a link
- * arrives within the delay, and the choice left behind must not land on the address the reader was sent — a refused link
- * arms nothing to replace it, so without this the page would rewrite someone else's address a fifth of a second later. */
-export function appAddressDrop() {
-  if (appAddressTimer === null) return;
-  clearTimeout(appAddressTimer);
-  appAddressTimer = null;
-}
-
-function appAddressLater(text) {
-  appAddressDrop();
-  appAddressTimer = setTimeout(() => {
-    appAddressTimer = null;
-    try {
-      window.history.replaceState(null, '', APP_LINK + encodeURIComponent(text));
-    } catch (_e) {
-      /* The browser grants no change of the address: the link is then taken from the browser's memory. */
-    }
-  }, APP_ADDRESS_DELAY);
-}
-
-/* One record for a click and two destinations: the same text goes into the memory and — a moment later — into the
- * address, so the two cannot describe different choices. */
+/* The record goes into the browser's memory and nowhere else: it is written on the click itself, which is what survives
+ * a closing, and the page's address keeps a clean tail — the report is a local page whose address is copied as it is,
+ * and a reader's choice belongs in the browser that made it rather than in the tab's title bar. What a link sent from an
+ * earlier release holds is still read (`appLinkUse`), and it is not written into the reader's memory: what came in is
+ * not his choice until he changes something. */
 export function appWrite() {
+  if (appTransient) return;
   const rec = appRecord();
-  const text = JSON.stringify(rec);
   const empty = Object.keys(rec.metrics).length === 0 && Object.keys(rec.files).length === 0;
-  if (!appTransient) {
-    try {
-      if (empty) window.localStorage.removeItem(appKey);
-      else window.localStorage.setItem(appKey, text);
-    } catch (_e) {
-      /* There is no memory (the browser grants this page none): the choice will not survive a closing, while the numbers
-       * and the markup do not depend on it. */
-    }
+  try {
+    if (empty) window.localStorage.removeItem(appKey);
+    else window.localStorage.setItem(appKey, JSON.stringify(rec));
+  } catch (_e) {
+    /* There is no memory (the browser grants this page none): the choice will not survive a closing, while the numbers
+     * and the markup do not depend on it. */
   }
-  /* But not during the first drawing and not when the link turned out to be someone else's: an address that came in is
-   * not ours, and the reader has yet to read it. */
-  if (appStartup || appForeign) return;
-  appAddressLater(text);
 }
 
 /* A reset to "everything on": the border between "this is no longer in the report" and "switched off" is the record
- * rather than a missing value. A link carries the sender's whole choice, which is why it is applied to a clean view rather
- * than on top of someone else's. */
+ * rather than a missing value. A link carries the sender's whole choice, which is why it is applied to a clean view
+ * rather than on top of someone else's. */
 function appAll() {
   appData.metrics.forEach((m) => { appView.metrics[m.key] = true; });
   appData.files.forEach((_f, i) => { appView.files[i] = true; });
@@ -273,14 +242,15 @@ export function appApply(rec) {
   appData.files.forEach((_f, i) => { if (files[appFileAt(i)] === false) appView.files[i] = false; });
 }
 
-/* -------- the folded tree -------- */
+/* -------- the unfolded tree -------- */
 
-
-/* Folded folders are a memory of the same kind as the choice, but of a record of their own: it is about how much of the
- * tree is visible rather than about which numbers are read. Hence it does not go into the address: a link is sent for the
- * sake of the numbers, while an unfolded tree is the onlooker's business. As with the choice, only what is folded is kept
- * (`true`), and a folder's name is its path ("src/page"), so a vanished name simply means nothing. `appFoldKey` is
- * set with the rest of the model (`appBoot`), for the reason the key itself is. */
+/* How much of the tree is visible is a memory of the same kind as the choice, but of a record of its own: it is about
+ * what the onlooker looks at rather than about which numbers are read, which is why it never goes into a link and never
+ * leaves the browser. The tree opens folded, so **the unfolded folders are what is kept** (`true`) — the default is the
+ * absence of the name, the same way "switched on" is the absence of a choice. A folder's name is its path ("src/page"),
+ * so a vanished name simply means nothing, and unfolding nothing is the state the page opens in: then the record is not
+ * kept at all rather than being kept empty. `appFoldKey` is set with the model (`appBoot`), for the reason the key
+ * itself is. */
 export function appFoldRead() {
   let text = null;
   try {
@@ -296,19 +266,19 @@ export function appFoldRead() {
     return;
   }
   if (!appRecordOk(rec)) return;
-  const folded = rec.folded || {};
-  Object.keys(folded).forEach((p) => { if (folded[p] === true) appView.folded[p] = true; });
+  const open = rec.open || {};
+  Object.keys(open).forEach((p) => { if (open[p] === true) appView.open[p] = true; });
 }
 
-export function appFoldSet(path, folded) {
-  if (folded) appView.folded[path] = true;
-  else delete appView.folded[path];
-  const rec = { v: 1, passport: appPassport(), folded: Object.assign({}, appView.folded) };
+export function appFoldSet(path, open) {
+  if (open) appView.open[path] = true;
+  else delete appView.open[path];
+  const rec = { v: 1, passport: appPassport(), open: Object.assign({}, appView.open) };
   try {
-    if (Object.keys(rec.folded).length === 0) window.localStorage.removeItem(appFoldKey);
+    if (Object.keys(rec.open).length === 0) window.localStorage.removeItem(appFoldKey);
     else window.localStorage.setItem(appFoldKey, JSON.stringify(rec));
   } catch (_e) {
-    /* There is no memory: what is folded will not survive a closing, while the view does not depend on it — the tree is
-     * folded exactly the way the reader folded it just now. */
+    /* There is no memory: what is unfolded will not survive a closing, while the view does not depend on it — the tree
+     * is unfolded exactly the way the reader unfolded it just now. */
   }
 }

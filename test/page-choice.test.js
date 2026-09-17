@@ -1,18 +1,24 @@
-/* The reader's choice: the page remembers what they switched off and passes it on as a link.
+/* The reader's choice and the work a click starts.
  *
- * The memory and the link are the browser rather than a request, and both follow one rule: a record
- * is bound to the report's passport and lives in storage under a key of its own. Hence what is
- * checked here in a real DOM (jsdom): a further visit returns the same choice and the same numbers,
- * while switching everything back removes the record; a foreign, outdated or broken record is not
- * applied, and a foreign name switches off nothing of someone else's; a page opened by a link shows
- * the sender's choice without mixing it with its own and without rewriting the address it was sent
- * before the first action; a foreign, broken, incomplete or empty choice is explained in words
- * rather than by an empty grid; a change of the address on an already open page is applied
- * (`hashchange`), or the link would work in a new tab only; the address is written once per burst
- * of switches while the memory is written on the click, and an address that arrives during that
- * moment replaces the pending write rather than being overwritten by it. What the host must be able
- * to do at all stands here too: a browser without an unpacker is told so rather than left with an
- * empty table.
+ * The memory is the browser rather than a request, and it follows one rule: a record is bound to the
+ * report's passport and lives in storage under a key of its own. Hence what is checked here in a real DOM (jsdom): a
+ * further visit returns the same choice and the same numbers, while switching everything back removes the record; a
+ * foreign, outdated or broken record is not applied, and a foreign name switches off nothing of someone else's.
+ *
+ * **The address stays clean.** The page writes the choice into the browser's memory and nowhere else: a report opened
+ * from disk keeps the address it was opened with, and nothing of what a reader switches lands in the tab's title bar.
+ * A link in the address — a name of its own, `#size-report=…` — is still read, because such links were sent before
+ * and a link that stopped working would be a reader's loss; what is checked here is that it is applied to a page
+ * opened by it and to an already open one (`hashchange`), that a foreign, broken, incomplete or empty choice is
+ * explained in words rather than by an empty grid, that the link does not become the reader's own memory before he
+ * changes something, and that the address it was sent with is not rewritten. What the host must be able to do at all
+ * stands here too: a browser without an unpacker is told so rather than left with an empty table.
+ *
+ * What a click costs is the other subject of this file: the columns are drawn by the work chapter, and a long drawing
+ * happens in a task of its own with an indeterminate stripe over the top edge of the window (`src/page/work.js` — the
+ * price of a switch is the browser's relayout of the whole table, so it is paid once rather than once per slice).
+ * Both halves of the rule are checked: the long drawing goes to the next task with the stripe, while work short enough
+ * to be over before the browser could paint one is done on the click itself, with nothing at the top of the page.
  *
  * The assembly of the page itself is a neighbouring suite (`page-view`): the file is split by
  * subject rather than by size.
@@ -20,7 +26,10 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import { totalsOf, valueParts } from '../src/size-table.js';
+import { ROOT } from '../tools/harness.js';
 import {
   allCells as cellsOf, fileBox, linkTo, metricBox, nowCells, nowTotal, pageReady, settled,
   stored, toggleBox as toggleCheck
@@ -31,6 +40,12 @@ const { data, openPage } = pageReady('choice');
 const allCells = () => cellsOf(data);
 const nowTotalCell = nowTotal;
 const topRaw = (off) => totalsOf(data.now, ['raw'], off).raw;
+
+/* The figure above which the drawing is a task of its own is read from the chapter that sets it rather than copied
+ * here: a change there has to reach the checks instead of breaking them with no hint of why. */
+const WORK_SRC = fs.readFileSync(path.join(ROOT, 'src', 'page', 'work.js'), 'utf8');
+const LONG = Number(/APP_LONG = (\d+)/.exec(WORK_SRC)[1]);
+const barOf = (doc) => doc.getElementById('bar');
 
 /* An owner of the report with a choice of their own and the storage that choice leaves — what a sent link is
  * compared against (the link is older than the owner's choice). `pick` names the switch that owner flips: the metric by
@@ -44,20 +59,20 @@ async function ownerChoice(pick) {
     passport: Object.keys(own)[0].slice('size-report:'.length) };
 }
 
-/* A sender: a page that switches off what `pick` names, and the link its address carries once the page has written it.
- * The address is written a moment after the last switch — a burst is one write — so the link is read after the delay. */
+/* A link to a choice: the record the memory holds, in the very shape the address carries it. The page no longer
+ * writes one itself — that is the point of the first check below — so a link is built here from what a sender's memory
+ * holds, which is one and the same record. */
 async function senderLink(pick) {
   const dom = await openPage();
   const doc = dom.window.document;
   pick(doc).forEach((box) => toggleCheck(doc, box, false));
-  await settled(dom);
-  return { dom: dom, doc: doc, link: dom.window.location.hash };
+  const rec = JSON.parse(stored(dom)[Object.keys(stored(dom))[0]]);
+  return { dom: dom, doc: doc, record: rec, link: linkTo(rec) };
 }
 
-/* A page whose address writes are counted: `writes()` is how many have happened so far and `links()` what they carried.
- * The address is written late, so a check counts the calls rather than waiting for the address to settle. jsdom writes
- * the address itself when the fragment changes (`location.hash = …`), which is why the checks look at what a write
- * carried rather than only at how many there were. */
+/* A page whose address writes are counted: `writes()` is how many have happened so far and `links()` what they
+ * carried. The page is not supposed to make any — the memory is where the choice lives — hence a check can look at
+ * the calls rather than wait for an address to settle. */
 async function countingPage() {
   const dom = await openPage();
   const history = dom.window.history;
@@ -66,9 +81,6 @@ async function countingPage() {
   history.replaceState = function (...args) { seen.n++; seen.links.push(String(args[2])); return write(...args); };
   return { dom: dom, doc: dom.window.document, writes: () => seen.n, links: () => seen.links.slice() };
 }
-
-// The record a page's address carries now, read back the way the page writes it.
-const addressRecord = (dom) => JSON.parse(decodeURIComponent(dom.window.location.hash.slice('#size-report='.length)));
 
 test('the memory of a choice: a revisit brings back the same choice and the same numbers', async () => {
   const first = await openPage();
@@ -154,13 +166,33 @@ test('the memory of a choice: a foreign or broken record is not applied', async 
     'the page did not bring the record back to what the report holds');
 });
 
-/* Exchanging a choice by link: the address is the link (the page repeats it), and opening it shows
- * the sender's choice — the same set of columns and the same numbers. The link does not replace the
- * storage of whoever merely shared it and does not touch the address it was sent with before the
- * reader's first action. */
+/* A report opened from disk keeps its address: the page writes the choice into the browser's memory and never into the
+ * address bar. The address is the report's own, and the tail of it belongs to whoever sent the link rather than to the
+ * page that received it — a rewrite would also make a history entry out of every switch. */
+test('the choice stays in the browser: the address is never rewritten', async () => {
+  const reader = await countingPage();
+  const doc = reader.doc;
+
+  toggleCheck(doc, metricBox(doc), false);
+  toggleCheck(doc, fileBox(doc, 'src/code.js'), false);
+  toggleCheck(doc, fileBox(doc, 'package.json'), false);
+  await settled(reader.dom);
+
+  assert.equal(reader.writes(), 0, 'the page rewrote the address: ' + reader.links().join(', '));
+  assert.equal(reader.dom.window.location.hash, '', 'something landed in the address: '
+    + reader.dom.window.location.hash);
+  const saved = stored(reader.dom);
+  assert.equal(Object.keys(saved).length, 1, 'the choice is not written into the browser’s memory');
+  const again = (await openPage(saved)).window.document;
+  assert.equal(metricBox(again).checked, false, 'a reload right after the click lost the metric');
+  assert.equal(fileBox(again, 'src/code.js').checked, false, 'a reload right after the click lost the file');
+});
+
+/* Exchanging a choice by link: the address is read (the page does not repeat it), and opening it shows the sender's
+ * choice — the same set of columns and the same numbers. The link does not replace the storage of whoever merely
+ * shared it and does not touch the address it was sent with before the reader's first action. */
 test('a link: the page opened by it shows the sender’s choice', async () => {
-  const { doc: sd, link } = await senderLink((d) => [metricBox(d), fileBox(d, 'src/code.js')]);
-  assert.equal(link.indexOf('#size-report='), 0, 'the choice did not get into the address: there is nothing to pass by link');
+  const { doc: sd, record, link } = await senderLink((d) => [metricBox(d), fileBox(d, 'src/code.js')]);
   const sentCells = nowCells(sd);
   const sentTotal = nowTotalCell(sd);
 
@@ -179,18 +211,18 @@ test('a link: the page opened by it shows the sender’s choice', async () => {
   assert.equal(guest.window.location.hash, link, 'the address of the sent link was rewritten by the page');
   assert.equal(gd.getElementById('notice').hidden, true, 'something extra was said about a good link');
 
-  /* The reader's action makes the state theirs: both the storage and the address, starting from the
-   * view on screen (the sender's) rather than from their own earlier choice — the page remembers
-   * what it shows. */
+  /* The reader's action makes the state theirs: the storage, starting from the view on screen (the sender's)
+   * rather than from their own earlier choice — the page remembers what it shows — while the address keeps the tail it
+   * was sent with. */
   toggleCheck(gd, fileBox(gd, 'src/code.js'), true);
   assert.notDeepEqual(stored(guest), own, 'the reader’s action was not saved into their memory');
-  await settled(guest);
-  assert.notEqual(guest.window.location.hash, link, 'the address did not become the reader’s choice');
+  assert.equal(guest.window.location.hash, link, 'the address was rewritten by the reader’s own click');
   const rec = JSON.parse(stored(guest)[Object.keys(stored(guest))[0]]);
   assert.deepEqual(rec.metrics, { min: false }, 'a metric that is not theirs landed in the reader’s memory');
   assert.deepEqual(rec.files, {}, 'something other than what they did landed in the reader’s memory');
   assert.equal(nowCells(gd), (data.files.length + 1) * (data.metrics.length - 1),
     'an edit of the sender’s view did not bring every file back');
+  assert.deepEqual(record.files, { 'src/code.js': false }, 'the sender’s record is not the one that was shared');
 });
 
 /* A refused link is a message to the reader rather than an empty table: a foreign report and a
@@ -264,15 +296,11 @@ test('a host without an unpacker is told in words, and nothing is drawn', async 
     'the panel was built although the block was never unpacked');
 });
 
-/* The address is also changed on an already open page: the browser does not reload the document
- * then, it only moves the anchor. The link has to work that way too, or it would only work in a new
+/* The address is also read on an already open page: the browser does not reload the document
+ * then, it only moves the anchor. That has to work too, or a link would only work in a new
  * tab — and it is sent to someone who most likely has the report open already. */
 test('a link: a change of address on an open page is applied too', async () => {
-  const sender = await openPage();
-  const sd = sender.window.document;
-  toggleCheck(sd, metricBox(sd), false);
-  await settled(sender);
-  const link = sender.window.location.hash;
+  const { link, doc: sd } = await senderLink((d) => [metricBox(d)]);
 
   const reader = await openPage();
   const rd = reader.window.document;
@@ -298,100 +326,54 @@ test('a link: a change of address on an open page is applied too', async () => {
     'the page stayed silent about a foreign link on an open page');
   assert.equal(metricBox(rd).checked, false, 'a foreign address changed the reader’s view');
   assert.equal(reader.window.location.hash, foreign, 'the foreign address was rewritten by the page');
-  /* And it is still that address after the moment a write would have taken: the page was holding a write of its own from
-   * the link it applied a moment ago, and an address that came in from outside wins over it. A refusal arms nothing to
-   * replace the pending write, so this is where it would land. */
-  await settled(reader);
-  assert.equal(reader.window.location.hash, foreign,
-    'запись, оставшаяся от прошлого выбора, перекрыла присланный адрес');
 });
 
-/* The address is written once per burst of switches, and the memory on the click itself: a reader who clicks three boxes
- * passes on one link rather than three history entries, while a visit right after a click still keeps the choice. What
- * the link carries is the whole choice — the same record the memory holds. */
-test('the address is written once per burst, the memory on the click', async () => {
-  const reader = await countingPage();
-  const doc = reader.doc;
+/* The stripe of a long drawing, and why there is no share in it. A switch costs the browser a relayout of the whole
+ * table — measured on this repository's own report, `probes/step-12-columns.mjs` — and that price is paid once, in one
+ * task, rather than once per slice: a queue worked off between timeouts was written first and measured at 2.5–4 s a
+ * slice against 1.04 s for the very same click unsliced. So the work is one task, and the stripe over the top edge of
+ * the window says it is going on instead of pretending to know how far it is (nothing can repaint inside that task).
+ *
+ * The work is asked for with its units here rather than through a click: a click's units come from the table
+ * (`appColumnSize`), and a check cannot make the shared fixture's table long enough to be a long switch without lying
+ * about them. This is the same function the page's own switches end in, in the same window. */
+test('a long switch is drawn in the next task, with the stripe over the page', async () => {
+  const dom = await openPage();
+  const doc = dom.window.document;
+  const bar = barOf(doc);
+  assert.equal(bar.hidden, true, 'the stripe stands on the page before any work was asked for');
 
-  toggleCheck(doc, metricBox(doc), false);
-  toggleCheck(doc, fileBox(doc, 'src/code.js'), false);
-  toggleCheck(doc, fileBox(doc, 'package.json'), false);
-  assert.equal(reader.writes(), 0, 'адрес переписан на самом клике: пачка переключений должна дать одну ссылку');
-  const saved = stored(reader.dom);
-  assert.equal(Object.keys(saved).length, 1, 'выбор не записан в память на самом клике');
-  const again = (await openPage(saved)).window.document;
-  assert.equal(metricBox(again).checked, false, 'перезагрузка сразу после клика потеряла метрику');
-  assert.equal(fileBox(again, 'src/code.js').checked, false, 'перезагрузка сразу после клика потеряла файл');
+  const seen = [];
+  const step = (i) => seen.push(i);
+  const items = [{ i: 0, units: LONG }, { i: 1, units: LONG }];
+  dom.window.appDraw(step, items);
 
-  await settled(reader.dom);
-  assert.equal(reader.writes(), 1, 'за пачку из трёх переключений адрес записан ' + reader.writes() + ' раза');
-  const link = reader.dom.window.location.hash;
-  assert.equal(link.indexOf('#size-report='), 0, 'выбор не попал в адрес');
-  assert.deepEqual(addressRecord(reader.dom), JSON.parse(saved[Object.keys(saved)[0]]),
-    'адрес и память описывают разные выборы');
-  const guest = (await openPage({}, link)).window.document;
-  assert.equal(nowCells(guest), nowCells(doc), 'ссылка несёт не тот набор колонок');
-  assert.equal(nowTotal(guest), nowTotal(doc), 'ссылка несёт не те числа');
+  /* The click is answered before the drawing: the reader's page stays alive and the stripe says what is going on. */
+  assert.deepEqual(seen, [], 'the long work was done on the spot instead of in the next task');
+  assert.equal(bar.hidden, false, 'nothing on the page says that the drawing is going on');
 
-  /* A later burst is one write again, and it carries the newest choice rather than the one before it. */
-  toggleCheck(doc, fileBox(doc, 'src/code.js'), true);
-  toggleCheck(doc, fileBox(doc, 'package.json'), true);
-  await settled(reader.dom);
-  assert.equal(reader.writes(), 2, 'вторая пачка переключений дала не одну запись адреса');
-  assert.deepEqual(addressRecord(reader.dom).files, {},
-    'адрес нёс предыдущий выбор: в ссылке остались файлы, которые читатель уже вернул');
+  await settled(dom);
+  assert.deepEqual(seen, [0, 1], 'the drawing did not happen in the next task: ' + JSON.stringify(seen));
+  assert.equal(bar.hidden, true, 'the stripe stayed on the page after the drawing was done');
 });
 
-/* The deferred write of the address changes what a colleague would receive and nothing else: the nodes the click left in
- * place are the same objects after the delay too, and the wait itself appends nothing. The page suite watches a click up
- * to its end, so a write that rebuilds what it can rebuild would show there only under a check of its own — on the page it
- * would look like the reader's scroll and place in the list jumping a fifth of a second after the click. */
-test('the write of the address, once it comes, builds nothing', async () => {
-  const reader = await countingPage();
-  const doc = reader.doc;
-  const add = reader.dom.window.Node.prototype.appendChild;
-  let made = 0;
-  reader.dom.window.Node.prototype.appendChild = function (node) { made++; return add.call(this, node); };
-  const panel = doc.querySelector('#panel');
-  const list = doc.querySelector('#panel .files');
-  const tree = doc.querySelector('#panel .tree');
-  const rows = [...doc.querySelectorAll('#grid tbody tr')];
-  const cells = [...doc.querySelectorAll('#grid td')];
+/* The other half of the rule: work short enough to be over before the browser could paint a stripe is done on the
+ * click itself, and no stripe appears — one that flashed for three milliseconds tells the reader less than nothing.
+ * This is the ordinary case of a small project, and it is what the shared fixture's switches are: the columns are
+ * drawn before the click's own line ends. */
+test('a short switch is drawn on the click, with no stripe', async () => {
+  const dom = await openPage();
+  const doc = dom.window.document;
+  const where = (f) => (f.path === null ? f.paths[0] : f.path);
+  const inSrc = [];
+  data.files.forEach((f, i) => { if (where(f).indexOf('src/') === 0) inSrc.push(i); });
+  assert.ok(inSrc.length > 0, 'the fixture has no folder to switch');
 
-  toggleCheck(doc, fileBox(doc, 'src/code.js'), false);
-  made = 0;
-  await settled(reader.dom);
-  assert.equal(reader.writes(), 1, 'отложенной записи адреса не было — проверять нечего');
-  assert.equal(made, 0, 'отложенная запись адреса создала ' + made + ' узлов: разметку пересобирает таймер');
-  assert.equal(doc.querySelector('#panel'), panel, 'панель пересобрана отложенной записью адреса');
-  assert.equal(doc.querySelector('#panel .files'), list, 'список файлов пересобран отложенной записью адреса');
-  assert.equal(doc.querySelector('#panel .tree'), tree, 'дерево пересобрано отложенной записью адреса');
-  assert.deepEqual([...doc.querySelectorAll('#grid tbody tr')], rows,
-    'строки таблицы стали другими узлами после отложенной записи адреса');
-  assert.deepEqual([...doc.querySelectorAll('#grid td')], cells,
-    'клетки таблицы стали другими узлами после отложенной записи адреса');
-});
+  const dir = [...doc.querySelectorAll('#panel .box.dir')].find((b) => b.textContent.indexOf('src/') === 0);
+  toggleCheck(doc, dir.querySelector('input'), false);
 
-/* An address that arrives while a write is still waiting wins over it: the write the reader's click armed must not land
- * on the link that was just applied. A refusal arms nothing of its own, so nothing would replace the pending write —
- * this is where it would land. The two choices name different files, so a landing write would be visible. */
-test('a link: an address that arrives during the delay wins over the pending write', async () => {
-  const sender = await openPage();
-  toggleCheck(sender.window.document, fileBox(sender.window.document, 'package.json'), false);
-  await settled(sender);
-  const incoming = sender.window.location.hash;
-
-  const reader = await countingPage();
-  const doc = reader.doc;
-  toggleCheck(doc, fileBox(doc, 'src/code.js'), false);
-  reader.dom.window.location.hash = incoming;
-  await settled(reader.dom);
-  assert.equal(reader.dom.window.location.hash, incoming,
-    'запись, оставшаяся от прошлого выбора, перекрыла пришедшую ссылку');
-  assert.deepEqual(reader.links().filter((u) => u !== incoming), [],
-    'задержанная запись читателя легла поверх присланной ссылки');
-  assert.deepEqual(addressRecord(reader.dom).files, { 'package.json': false },
-    'адрес описывает выбор читателя, а не присланную ссылку');
-  assert.equal(fileBox(doc, 'package.json').checked, false, 'пришедшая ссылка не была применена');
-  assert.equal(fileBox(doc, 'src/code.js').checked, true, 'пришедшая ссылка не заменила выбор читателя собой');
+  const off = data.files.map((_f, i) => inSrc.indexOf(i) < 0);
+  assert.equal(nowCells(doc), (off.filter(Boolean).length + 1) * data.metrics.length,
+    'the columns of the switched-off files were not drawn on the click itself');
+  assert.equal(barOf(doc).hidden, true, 'a stripe was shown for work that is over before it could be painted');
 });

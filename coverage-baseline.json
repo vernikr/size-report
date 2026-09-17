@@ -149,6 +149,11 @@
       "branches": 0,
       "functions": 0
     },
+    "src/page/work.js": {
+      "lines": 0,
+      "branches": 0,
+      "functions": 0
+    },
     "src/parse-worker.js": {
       "lines": 34,
       "branches": 4,

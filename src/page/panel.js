@@ -66,27 +66,41 @@ function appDirHead(name, here, sub) {
   return head;
 }
 
+/* The order inside one level, and the two rules of it: a hidden name (a leading dot) stands after every visible one —
+ * a project's service files are not what a reader looks for first — and otherwise the alphabet decides. "Other things
+ * being equal" is the whole of it: what the report holds stands before what it does not, and that partition is made
+ * before the names are compared. The rule is a function of two strings, which is what lets it be checked on its own
+ * rather than through a tree of a fixture that has no hidden files in it. */
+export function appName(a, b) {
+  const hidden = (name) => (name.charAt(0) === '.' ? 1 : 0);
+  if (hidden(a) !== hidden(b)) return hidden(a) - hidden(b);
+  return a < b ? -1 : (a > b ? 1 : 0);
+}
+
 /* The folder's sign is a click target of its own, separate from the checkbox: the checkbox answers for the numbers (it
  * switches the subtree's files on), while the sign answers for how much of the tree is visible. One target for two
  * different decisions would mean a folder can be folded only together with switching its files on. The sign is drawn
  * as a span rather than a button and stands beside the label rather than inside it: a label is one click target, and a
  * control nested in it would be reached as that same target.
  *
+ * The tree opens folded — the sign of an untouched folder says so — and the reader's unfolding is what the memory
+ * keeps (`appFoldSet`).
+ *
  * A click on the sign rebuilds nothing: the subtree lies in the markup and a class on the row hides it. A rebuild here
  * would be honest work for nothing — it counts the whole table (every row by every column) and so pays for numbers
  * folding does not change. That is why only the three things the reader sees change: the class, the sign and the note
  * in the memory. */
 function appFoldBox(name, path) {
-  const folded = appView.folded[path] === true;
-  const box = appEl('span', 'fold', folded ? '▸' : '▾');
-  box.title = (folded ? appUi.foldOpen : appUi.foldClose).replace('{name}', name);
+  const open = appView.open[path] === true;
+  const box = appEl('span', 'fold', open ? '▾' : '▸');
+  box.title = (open ? appUi.foldClose : appUi.foldOpen).replace('{name}', name);
   box.addEventListener('click', () => {
-    const now = !(appView.folded[path] === true);
+    const now = !(appView.open[path] === true);
     appFoldSet(path, now);
     const li = box.closest('li');
-    if (li !== null) li.classList.toggle('folded', now);
-    box.textContent = now ? '▸' : '▾';
-    box.title = (now ? appUi.foldOpen : appUi.foldClose).replace('{name}', name);
+    if (li !== null) li.classList.toggle('folded', !now);
+    box.textContent = now ? '▾' : '▸';
+    box.title = (now ? appUi.foldClose : appUi.foldOpen).replace('{name}', name);
   });
   return box;
 }
@@ -98,14 +112,14 @@ function appLeaves(node) {
   node.others.forEach((entry) => {
     items.push({ name: entry.path.split('/').pop(), i: null, entry: entry });
   });
-  return items.sort((a, b) => (a.name < b.name ? -1 : (a.name > b.name ? 1 : 0)));
+  return items.sort((a, b) => appName(a.name, b.name));
 }
 
 /* A folder row: the folding sign, the checkbox with the number of files and the subtree. A folded folder differs by
  * its class alone — the markup stays the same. */
 function appDir(name, sub, prefix) {
   const here = prefix === '' ? name : prefix + '/' + name;
-  const folded = appView.folded[here] === true;
+  const folded = appView.open[here] !== true;
   const li = appEl('li', folded ? 'folded' : null);
   li.appendChild(appFoldBox(name, here));
   li.appendChild(appDirHead(name, here, sub));
@@ -126,7 +140,7 @@ function appLeaf(leaf) {
  * it does not distract from what is in the table, while it can still be found — in the same place where it was. */
 function appTreeList(node, prefix) {
   const list = appEl('ul', 'tree');
-  const dirs = [...node.dirs.keys()].sort()
+  const dirs = [...node.dirs.keys()].sort(appName)
     .map((name) => ({ name: name, sub: node.dirs.get(name), inReport: appIndexes(node.dirs.get(name)).length > 0 }));
   const leaves = appLeaves(node);
   const inside = leaves.filter((leaf) => leaf.entry === null);

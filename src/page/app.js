@@ -1,6 +1,7 @@
 import { appUnpack } from './payload.js';
-import { appAddressDrop, appApply, appBoot, appData, appFoldRead, appLinkUse, appNotice, appRead, appUi, appView, appWrite } from './state.js';
-import { appColumn, appContribute, appMetrics, appState, appTable, appTotals, appTotalsReset } from './table.js';
+import { appApply, appBoot, appData, appFoldRead, appLinkUse, appNotice, appRead, appUi, appView, appWrite } from './state.js';
+import { appColumn, appColumnSize, appColumnStale, appContribute, appMetrics, appState, appTable, appTotals, appTotalsReset } from './table.js';
+import { appDraw } from './work.js';
 import { appPanel, appPanelAll, appPanelState } from './panel.js';
 
 /* Assembling the report: the table is built once (`appTable` of the table chapter) and everything afterwards only
@@ -10,11 +11,31 @@ import { appPanel, appPanelAll, appPanelState } from './panel.js';
  *
  * Hence two paths and no third: `appPaint` draws the whole view (the first drawing, a record from the browser's
  * memory, a link in the address), while `appSwitch`, `appSwitchGroup` and `appSwitchMetric` are what one click on a
- * box does. Neither makes a node.
+ * box does. The numbers are counted on the click itself — that is arithmetic over the data — while the nodes of the
+ * columns are handed to the work chapter (`appDraw`), which draws the short work on the click and the long one in the
+ * next task with a stripe over the page (`src/page/work.js` says what was measured: the price of a switch is the
+ * browser's own relayout of the table, and it is paid once here rather than once per slice). Neither path makes a
+ * node.
  */
 
 // The table's cache of node references: made once, at the first drawing.
 let appCache = null;
+
+/* One file's column drawn from the view — the state is read when the slice runs rather than kept from the click that
+ * queued it, so a click that arrives while the queue is running is drawn by the next slice rather than after it. */
+function appDrawColumn(i) {
+  appColumn(appCache, i, appView.files[i] === true);
+}
+
+/* The columns of a switch that have to be drawn, as the units the work chapter weighs (`{i, units}` — the file and the
+ * nodes of its column). Only the columns whose nodes are out of step with the view are asked for (`appColumnStale`): a
+ * report opened with everything switched on has nothing to draw, and a column that is already right would cost its
+ * nodes again. The count is the table's (`appColumnSize`), because the table is the only place that knows how many
+ * nodes a column has. */
+function appColumns(indexes) {
+  const todo = indexes.filter((i) => appColumnStale(appCache, i));
+  appDraw(appDrawColumn, todo.map((i) => ({ i: i, units: appColumnSize(appCache, i) })));
+}
 
 /* The note under the table: what a row is and how the report was made. It does not depend on the choice, so it is
  * written once — with the table rather than with every drawing of it. */
@@ -34,7 +55,7 @@ export function appCounts() {
 /* The whole view drawn: every column, the totals of the whole selection, the metrics, the empty states and the panel's
  * fields. This is what a link, a record from the memory and the first drawing need — and it makes no node either. */
 export function appPaint() {
-  appData.files.forEach((_f, i) => appColumn(appCache, i, appView.files[i]));
+  appColumns(appData.files.map((_f, i) => i));
   appTotalsReset(appCache);
   appMetrics(appCache);
   appCounts();
@@ -42,28 +63,29 @@ export function appPaint() {
   appWrite();
 }
 
-/* One file switched by the reader: the view, its column, its share of the totals and the fields it shows in — each in
- * its own place. The message about a link fades here: by this action the reader has read it. */
+/* One file switched by the reader: the view, its share of the totals, the fields it shows in and its column — the
+ * last through the queue, because a column may be long. The message about a link fades here: by this action the
+ * reader has read it. */
 export function appSwitch(i, on) {
   if (appView.files[i] === on) return;
   appView.files[i] = on;
-  appColumn(appCache, i, on);
   appContribute(appCache, i, on);
   appTotals(appCache);
   appCounts();
   appPanelState([i]);
   appWrite();
   appNotice('');
+  appColumns([i]);
 }
 
 /* A group switched at once — a folder or a category: the same work per file, then the totals once and the fields of
  * the files the choice really reached (switching a folder on when a part of it was already on touches only the rest,
- * and a field that did not move is not written). */
+ * and a field that did not move is not written). The columns of the whole group go into the queue together, so the bar
+ * counts them as one piece of work. */
 export function appSwitchGroup(indexes, on) {
   const touched = indexes.filter((i) => appView.files[i] !== on);
   touched.forEach((i) => {
     appView.files[i] = on;
-    appColumn(appCache, i, on);
     appContribute(appCache, i, on);
   });
   appTotals(appCache);
@@ -71,6 +93,7 @@ export function appSwitchGroup(indexes, on) {
   appPanelState(touched);
   appWrite();
   appNotice('');
+  appColumns(touched);
 }
 
 /* One metric switched: a class on the table and the headings' `colSpan`. The totals do not move with a metric — they
@@ -110,19 +133,18 @@ async function appBegin() {
     return;
   }
   const appStart = appLinkUse();
-  if (appStart === 'ours') appTransient = true;
-  else if (appStart === 'refused') appForeign = true;
+  /* A link that came in is the sender's choice rather than the reader's: while it is drawn, the memory is not touched
+   * (`appWrite`), so opening a link does not make it the reader's own. */
+  appTransient = appStart === 'ours';
   if (appStart !== 'ours') {
     const appSaved = appRead();
     if (appSaved !== null) appApply(appSaved);
   }
-  /* The folded tree is the onlooker's memory rather than the reader's choice: it comes back even when someone
+  /* The unfolded tree is the onlooker's memory rather than the reader's choice: it comes back even when someone
    * else's link is open (otherwise a link sent over would unfold the tree again on every visit). */
   appFoldRead();
   appFirst();
   appBooted = true;
-  appStartup = false;
-  appForeign = false;
   appTransient = false;
 }
 
@@ -138,13 +160,10 @@ window.addEventListener('hashchange', () => {
   /* The first drawing has not happened yet: the address the page was opened with is the business of that drawing,
    * and a change that arrives before it has drawn nothing to replace. */
   if (!appBooted) return;
-  /* An address that came in from outside is read first and a write this page was still holding is dropped: the reader
-   * has the address they were sent, not the one the previous click armed (see `appAddressDrop`). */
-  appAddressDrop();
-  const state = appLinkUse();
-  if (state === 'refused') appForeign = true;
-  appTransient = state === 'ours';
+  /* An address that came in from outside is read here the way it is read at opening, and a link is not the reader's
+   * choice until he changes something — the memory stays his own. The address itself is never rewritten: the page has
+   * no business in the tab's title bar, and what a link holds is read rather than made. */
+  appTransient = appLinkUse() === 'ours';
   appPaint();
-  appForeign = false;
   appTransient = false;
 });

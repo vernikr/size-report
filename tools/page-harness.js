@@ -102,14 +102,12 @@ export function pageHtml(tmp, name) {
   return fs.readFileSync(file, 'utf8');
 }
 
-/* The page writes the address a moment after the last switch of a burst (a burst is one link rather
- * than one per click), so a check that reads the address has to let that moment pass. The delay is
- * read from the chapter that sets it rather than copied here: a change there has to reach the checks
- * instead of breaking them with no hint of why. */
-const STATE_SRC = fs.readFileSync(path.join(ROOT, 'src', 'page', 'state.js'), 'utf8');
-export const ADDRESS_DELAY = Number(/APP_ADDRESS_DELAY = (\d+)/.exec(STATE_SRC)[1]);
+/* A moment of the page's own clock: what the chapter of the background work waits with between two
+ * slices (`setTimeout(…, 0)`). A check that reads the bar cannot look beside the timer, and a
+ * timeout of the check's own making would be a guess about the platform's clock — hence the wait is
+ * taken from the window the page runs in. */
 export const settled = (dom) => new Promise((done) => {
-  dom.window.setTimeout(done, ADDRESS_DELAY + 60);
+  dom.window.setTimeout(done, 0);
 });
 
 /* What the platform gives a browser and jsdom has not: the page's block is packed, and the page unpacks it with

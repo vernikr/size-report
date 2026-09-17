@@ -10,7 +10,7 @@ shows.
 
 ## Status
 
-**Release 2.6.0 (2026-09-17).** The tool lives as a package of its own: the registry name is
+**Release 2.7.0 (2026-09-17).** The tool lives as a package of its own: the registry name is
 `@vernikr/size-report` (published by tag from CI, with no secret). A project may keep no settings at
 all: without a config file the tool derives them from the project itself and says so in one line,
 and `--init` pins what was derived into a file. The report is **one file**, the self-contained page
@@ -18,6 +18,28 @@ and `--init` pins what was derived into a file. The report is **one file**, the 
 is installed and on the first run. The version is in the manifest, and every release is recorded in
 the journal — `worklog/` for today's entries, `worklog/archive/WORKLOG.md` for the earlier ones:
 what changes in the numbers is measured rather than retold.
+
+2.7.0 is about the page and what a reader does with it, and its figures are measured rather than retold.
+**The report's address stays clean:** a switch writes the record into the browser's memory and nothing into the
+address bar — the page no longer puts a `#size-report=…` tail on the report it was opened with — while a link
+made by an earlier release is still read, and a foreign or broken one is still explained in words. **A test
+is a category of its own**, right after Code: the files of `test`, `tests` and `fixtures` folders wherever
+they stand, and every name carrying `.test` before its extension — on this repository's own history Tests
+holds **47 of 317 columns**, and the checkbox of the documentation is called **Docs**. **The tree opens
+folded**, and the unfolding is what the memory keeps, under a key of its own; inside a level a hidden name —
+one beginning with a dot — stands after every visible one. **The drawing of a switch is measured, and it is one
+task**: the click is counted and answered, a drawing short enough to be over before the browser could paint is
+done on the click, and a longer one happens in the next task with a stripe over the top edge of the window. The
+price of a switch is the browser's own relayout of the table — 234.5 ms of layout for a *single* cell of this
+repository's report (249 rows, 317 columns, 238 thousand cells), 287 ms for 750, 539 ms for 6 000 — while the
+class changes are about 2 µs a node; on this page the whole Table of Contents of the report (73 columns) is
+867 ms blocked with a 742 ms task. A queue worked off in slices was written first and refused by measurement:
+the same click in 37 slices paid that relayout 37 times — **169 layouts and 151.9 s of pure layout time against
+1.04 s**, with the tab growing to gigabytes of repaint and the reader waiting four minutes for a switch that
+costs him less than a second unsliced. Within one task nothing can repaint, so a bar that filled would be a bar
+nobody could read: the stripe travels and says the work is going on (`probes/step-12-columns.mjs`, the records in
+`worklog/0207-page-choice-bar.md`). The order of the columns did not change there: what the last commit touched
+still stands first, the rest after it in the settings' order.
 
 2.6.0 changes the numbers themselves, and they are measured rather than retold: on this repository's own
 history the page this engine writes is **85 955 B against 1 899 370 B** written by 2.5.0 — 22.1 times
@@ -76,7 +98,8 @@ selection" are impossible in principle. The contract tells how each number was o
 no rule of counting of its own, and the split of numbers into exact and approximate was taken out of the
 package. The page's panel is a
 tree of files by folder, with a switch per folder for the whole subtree; a reader's choice survives
-a revisit and travels in a link — the page's address is the link. The contract carries the **project
+a revisit in the browser's memory, and the address keeps a clean tail — an address with a link of its
+own is read and never written (release 2.7.0). The contract carries the **project
 catalogue** too: every path git sees, so the page's tree is the project's tree, while numbers exist
 only for the files that became columns (release 2.2.0).
 
@@ -287,7 +310,9 @@ choice. The report itself is always in the catalogue, whether or not it is track
 of the moment, and the page must not depend on it, or the first rebuild in a fresh clone would give
 different bytes. A folder whose files are only partly in the report writes its count as a fraction
 ("2/5"), and everything outside the report stands after everything inside it — folders and leaves
-alike — so that the report is seen at once in a list where half the rows do not switch
+alike — so that the report is seen at once in a list where half the rows do not switch. The name of a level
+holds a second rule: a hidden name — one beginning with a dot — stands after every visible one, the alphabet
+deciding the rest, so the service files of a project do not stand in the reader's way
 (`test/page-tree.test.js`).
 
 **A folder is a switch like a file, and its sign is a decision of its own.** The checkbox of a folder
@@ -296,8 +321,10 @@ next to it. Neither a folder nor a category button keeps state of its own: both 
 checkboxes, so the tree, the buttons and the table cannot drift apart. The sign beside a folder answers
 a different question — how much of the tree is visible, which is the onlooker's business rather than the
 reader's choice — so it is remembered between visits in a record of its own, under a key of its own and
-the same report passport, and it never goes into the link; unfolding every folder removes that record,
-just as turning the checkboxes back on removes the choice.
+the same report passport, and it never goes into a link. The tree opens **folded**: a project's tree is
+longer than the window, and the reader looks at a short list first, so what the record keeps is the
+unfolding rather than the folding — folding every folder back removes the record, just as turning the
+checkboxes back on removes the choice.
 
 **The list scrolls, and there is one scroll.** On a narrow window it is the file list that scrolls —
 the panel grows with the page there — while on a wide one the whole panel does: otherwise the controls
@@ -308,6 +335,22 @@ its middle is out of reach.
 row hides it, so a click on the sign changes exactly the three things the reader sees — the class, the
 sign and the note in the memory. What guards this is that after folding the table is the same markup
 rather than a rebuilt one (`test/page-tree.test.js`).
+
+**A switch draws its columns in one task, with a stripe over the page while it is going on.** The class
+changes are cheap — about 2 µs a node, so a category of this repository's report (73 columns, 55 042 nodes) is
+120 ms of them — while the browser lays the whole table out again for any change of a column's visibility, and
+that is where the seconds are (`probes/step-12-columns.mjs`). So `src/page/work.js` asks for the drawing once:
+work short enough to be over before the browser could paint goes on the click itself, and a longer one goes to
+the next task with the stripe over the top edge of the window. **The stripe carries no share, and that is the
+measurement rather than a shortcut**: inside one task the browser cannot repaint, so a length would be a length
+nobody could keep; what moves is an indeterminate highlight. A queue worked off between timeouts was written
+first and refused by the same probe — 37 slices paid the table's relayout 37 times (2.5–4 s each, 169 layouts
+against 1) — and the numbers stay out of all of it, because the totals are counted on the click itself, where
+they cost arithmetic rather than nodes. Nothing is asked for a column that is already right either
+(`appColumnStale`): a report opened with everything switched on has nothing to draw, and a record from the
+memory or a link queues exactly the columns that differ from it. What guards the two halves is
+`test/page-choice.test.js` — a long drawing that leaves the click's line at once, runs in the next task and
+takes the stripe away, and a short one that is over before the click returns.
 
 **A click shows and hides rather than builds.** The table is assembled once, with every column of every
 file, and a switch afterwards changes only what is visible: a metric is one class on the table plus the
@@ -372,17 +415,18 @@ neither the numbers nor the markup. The passport holds neither the tool's versio
 history, and on purpose: updating the tool does not change what a column means, while a grown history is
 the very history the reader comes back to.
 
-**The same choice travels as a link.** The page's address is the link: the record that goes into the
-browser's memory goes into the anchor too (`#size-report=…`), so the sender copies the address and the
-recipient sees that choice with no action at all. The link outranks the memory — it is the sender's
-explicit choice — while it does not replace the reader's own until he changes something. A foreign or
-broken address is not applied, and is not silent either: a line above the table names the reason ("the
-link was made in another report" / "the choice in the address is unreadable"), the view stays the
-reader's own, and the incoming address is not rewritten; names the report does not hold are reported by
-count, skipped, and the rest is applied. The link works on an already open page as well: the browser does
-not reload the document when the anchor changes, so the page reads the address itself, or a link would
-only work in a new tab. The page makes no request to the network at all, and that is an assertion of a
-check rather than a promise (`test/page-view.test.js`, `test/parity.test.js`).
+**The link is read and never written.** The page's address is the report's own: a choice lives in the
+browser's memory, and the page puts nothing into the address bar — a report opened from disk keeps the
+address it was opened with, and not one switch lands in the tab's title bar. What an earlier release sent
+as a link is still read, though — the record in `#size-report=…`, in the same shape the memory holds it —
+and such a link outranks the memory while it does not replace the reader's own until he changes something.
+A foreign or broken address is not applied, and is not silent either: a line above the table names the
+reason ("the link was made in another report" / "the choice in the address is unreadable"), the view stays
+the reader's own, and the incoming address is not rewritten; names the report does not hold are reported
+by count, skipped, and the rest is applied. The link works on an already open page as well: the browser
+does not reload the document when the anchor changes, so the page reads the address itself, or a link
+would only work in a new tab. The page makes no request to the network at all, and that is an assertion of
+a check rather than a promise (`test/page-view.test.js`, `test/parity.test.js`).
 
 **The `min` metric can count for real.** The way of counting is chosen in the settings:
 `"minify": {"engine": "esbuild"}` minifies JS/TS/CSS for real through an optional dependency, while
@@ -516,11 +560,12 @@ acceptance for each.
 | `src/table.css` | The report's table: the geometry of a cell, the sticky header and commit column, the colour of deltas |
 | `src/page/app.css` | The page's styling on top of the shared part: the panel with the file tree and its sticky row of categories (a column on the left on a wide screen, the page fitting the window), the empty states, a narrow window |
 | `src/page/payload.js` | The page's block in sparse form, and the one place that unrolls it back: the history as changes (a file's appearance, its moves, its disappearance) turned into the snapshots the calculation and the table already speak — a value that did not move is one object shared by the rows that hold it |
-| `src/page/state.js` | The page's state: the report's data (the block unrolled by the payload chapter), the view of the checkboxes, the pointer "which path is which column", folded folders, the record's passport, the browser's memory and the exchange by link — a chapter of the page's program |
+| `src/page/state.js` | The page's state: the report's data (the block unrolled by the payload chapter), the view of the checkboxes, the pointer "which path is which column", the unfolded folders, the record's passport, the browser's memory and the link that is read out of the address — a chapter of the page's program |
 | `src/page/dom.js` | The page's nodes: the small helpers of markup (`appEl`, `appBox`) — one set for the panel and the table alike |
-| `src/page/panel.js` | The panel of choices: the switches of metrics and files, the categories, the tree of the project's paths (files outside the report keep a checkbox off with a reason and stand after the rest; folders carry a folding sign that hides the subtree by a class rather than by a rebuild); built once, with the fields of the switches and of the folders and categories written where they stand |
-| `src/page/table.js` | The page's table, built once: a cell, a commit's caption, the header, the empty states and the cache of the nodes of every column — markup over the shared calculation, with the totals carried rather than recounted |
-| `src/page/app.js` | Assembling and starting the page: the first drawing, then a switch that shows, hides and rewrites the totals without making a node; an anchor change; pasted into the assembled page |
+| `src/page/panel.js` | The panel of choices: the switches of metrics and files, the categories, the tree of the project's paths (files outside the report keep a checkbox off with a reason and stand after the rest, and a hidden name after every visible one; the tree opens folded and folders carry a sign that hides the subtree by a class rather than by a rebuild); built once, with the fields of the switches and of the folders and categories written where they stand |
+| `src/page/table.js` | The page's table, built once: a cell, a commit's caption, the header, the empty states and the cache of the nodes of every column — markup over the shared calculation, with the totals carried rather than recounted, and the count answerable for how many nodes a column holds |
+| `src/page/work.js` | The page's long drawing: the columns of a switch in one task, on the click when they are few and in the next task with an indeterminate stripe over the top edge of the window when they are many — one task because the browser's relayout of the table is the price, and it is paid once (this is where the measurement that refused the slices stands) |
+| `src/page/app.js` | Assembling and starting the page: the first drawing, then a switch that counts the numbers on the click, hands the columns to the queue and writes the fields it reached without making a node; an anchor change; pasted into the assembled page |
 | `src/page/build.js` | Assembling the page: data, styling and program in one file with no external references — the pasted text is **squeezed** on the way in (comments and indentation out, the same stripping the `min` metric counts) while the sources keep them, and the result is guarded by the stripper's own `assertCompilable` |
 | `src/git.js` | The only border where git is called: the pinned settings, blobs by the batch, the history, the comparison with the working tree |
 | `src/strip.js` | Removing ballast: which form goes to which file (extension, strategy) and which strategies are minification itself — the entry to the parsing of forms |
@@ -541,7 +586,7 @@ acceptance for each.
 | `bin/postinstall.js` | Installing the hook after the package is added: it looks for the consumer project and stays silent when there is nowhere to install |
 | `src/artifact.js` | The report on disk: the only place where it becomes a file (both `--write` and the hook use it); the report is a self-contained page |
 | `src/journal.js` | The journal and links: which section a commit belongs to and where a description leads |
-| `src/data.js` | The file categories and the contract with the page (`--data`): the numbers, the shape of the table and the catalogue of the project's paths |
+| `src/data.js` | The file categories (a test by its path — a `test`, `tests` or `fixtures` folder, or `.test` before the extension — otherwise the extension, and the settings above both) and the contract with the page (`--data`): the numbers, the shape of the table and the catalogue of the project's paths |
 | `src/config.js` | The consumer project's settings: the defaults, reading them, checking them |
 | `src/project.js` | The settings derived from the project itself (its tree and history): columns, the journal, the exceptions, the catalogue of paths for the page's tree. Without a settings file it *is* the settings; `--init` pins it as a file |
 | `src/locales.js`, `src/refusal.js`, `src/tool.js` | The report's texts; the exit codes and the help; the package's name and version |
@@ -569,8 +614,8 @@ acceptance for each.
 | `test/contract-data.test.js` | The data contract: the numbers against the reference, the set of fields against the derived quantities, the metric's method against the way the numbers were counted — and the round trip through the page's sparse block, which restores the contract whole and twice over the same bytes |
 | `test/contract-derived.test.js` | The derived quantities against the artifact's numbers: a row's totals, a cell's delta and the delta of a total — on the code that lies in the tree |
 | `test/page-view.test.js` | The assembled page: pasted with no copy of the calculation, self-contained, the empty states, the styling, the switches, a click that makes no table and the carried totals against the engine's own sums |
-| `test/page-tree.test.js` | The panel's file tree: folders by the project's paths, three states, the subtree, files and folders outside the report (a checkbox off, a place after the rest), folding without a rebuild and a scroll a click does not touch |
-| `test/page-choice.test.js` | The memory of the choice and the exchange by link: a revisit, someone else's report, a foreign and a broken record, an address change on an open page |
+| `test/page-tree.test.js` | The panel's file tree: folders by the project's paths, three states, the subtree, files and folders outside the report (a checkbox off, a place after the rest), the hidden names at the end of a level, the tree that opens folded and the unfolding the memory keeps, folding without a rebuild and a scroll a click does not touch |
+| `test/page-choice.test.js` | The reader's choice and the work a click starts: the memory and a revisit, someone else's report, a foreign and a broken record, an address that stays clean, a link read at opening and on an open page, and the drawing of a long switch in a task of its own behind the stripe |
 | `test/page-cols.test.js` | The fixed layout the page carries: a column's width is counted from the model rather than measured in a laid-out cell, the clip keeps a caption inside its column, the sticky header and commit column keep their edges, and the table names its own width (`width: auto` would hand the layout back to the automatic algorithm) |
 | `test/module.test.js` | A module under a `.js` extension: measured without touching the settings; the stripper's guard is alive (proved by mutation) and does not accuse the innocent |
 | `test/guard.test.js` | Parsing a module: it goes through a thread, both paths give one verdict, the fallback works with the thread's file away, and hundreds of parses are cheaper than a launch |
@@ -651,7 +696,7 @@ The same release can be taken by a reference to the repository — installation 
 registry, but stays tied to a revision:
 
 ```bash
-pnpm add -D github:vernikr/size-report#v2.6.0
+pnpm add -D github:vernikr/size-report#v2.7.0
 ```
 
 With no network (or nothing to fetch from codeload) — the tarball: `pnpm pack` in the package clone, then
@@ -663,7 +708,7 @@ the branch moves on the installation fails with `Could not resolve <sha> to a co
 observation rather than reasoning: the short pin `6530237` installed while `main` stood on it and stopped
 working at the very next commit, while the same sha in full installed. A branch name (`#main`) and a tag
 are both accepted, but a branch is a moving target and a tag is constant: this release stands on the tag
-`v2.6.0`, which is also the one in the example (forty characters work as well, but they have to be copied
+`v2.7.0`, which is also the one in the example (forty characters work as well, but they have to be copied
 out of the history by eye).
 
 The revision in the example is a part of the claim rather than decoration: what is described below is

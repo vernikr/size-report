@@ -127,6 +127,33 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
 /* Numbers are denser than the page's text: there are more of them, they are shorter, and they are read by their digits. */
 #grid { font-size: 12.5px; }
 
+/* The stripe of a long drawing: over the window's own top edge for as long as a switch is being drawn (`src/page/work.js`).
+ * It is fixed rather than laid out — the page's shape is a grid of five rows, and a stripe appearing inside it would move the
+ * numbers every time a switch is drawn — and it is taken away as soon as the drawing is over, so the reader never sees it at
+ * rest. It **does not fill**: the drawing is one task of the browser's own layout, inside which nothing can repaint, so a
+ * share would be a share nobody has (`src/page/work.js` says what was measured). What moves instead is an indeterminate
+ * stripe — a travelling highlight, which is what this state is in the language of progress — and it moves by a transform,
+ * so the stripe itself costs the compositor rather than the page. Its colour is the system accent, the one colour the page
+ * uses for anything but the numbers, and it carries a role and a name, because a reader without eyes has to be told that
+ * work is going on rather than that the report is broken. */
+.bar { position: fixed; top: 0; left: 0; right: 0; z-index: 5; height: 3px; overflow: hidden; }
+.bar[hidden] { display: none; }
+.bar > i {
+  display: block;
+  width: 30%;
+  height: 100%;
+  background: AccentColor;
+  animation: bar-run 1.1s linear infinite;
+}
+@keyframes bar-run {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(333%); }
+}
+/* Whoever asked the system for less motion gets a still stripe: the state is what matters, not its travelling. */
+@media (prefers-reduced-motion: reduce) {
+  .bar > i { animation: none; width: 100%; }
+}
+
 /* The message about a link that came in stands above the table, so that it cannot be missed, while it does not push the
  * table away: one line in the place of the page. Its colour is the system one (the accent), for the page keeps no colours
  * of its own. */

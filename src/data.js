@@ -10,19 +10,35 @@ import { TOOL_PKG } from './tool.js';
  * derived quantity at all. Everything the page counts itself begins where this module ends. */
 
 /* A file's category is only for the page's quick on/off buttons for a group: it does not reach the
- * numbers. The rule is one: the extension gives the category, everything else counts as code; a category
- * set in the column's settings outranks that rule, and the data says where it came from (`categoryBy`) — a
- * manual decision is explainable, while a table of extensions is a guess by file name. */
+ * numbers. The rule is: a category set in the column's settings outranks everything, a test is
+ * recognised by its path rather than by its extension, and for the rest the extension gives the
+ * category while everything else counts as code. The data says where the category came from
+ * (`categoryBy`) — a manual decision is explainable, while a table of extensions is a guess by file
+ * name. */
 export const CATEGORY_EXTS = {
   docs: ['.md', '.markdown', '.rst', '.txt', '.adoc'],
   chore: ['.json', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.conf', '.lock', '.editorconfig'],
   assets: ['.svg', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.woff', '.woff2', '.ttf', '.otf']
 };
-export const CATEGORY_ORDER = ['code', 'docs', 'chore', 'assets'];
+/* Tests stand next to code: they are files of the same kind (`*.test.js` is JavaScript too), and a reader
+ * switching code off wants to see what the tests weigh separately. */
+export const CATEGORY_ORDER = ['code', 'tests', 'docs', 'chore', 'assets'];
+
+/* What makes a file a test: the folder it lies in, wherever that folder is in the project, or a name
+ * carrying `.test` before its extension. Both are read off the path rather than off the extension, which is
+ * how a test is recognised in practice — a test may be written in any language the tool can measure. */
+const TEST_DIRS = ['test', 'tests', 'fixtures'];
+const TEST_NAME = /\.test\.[^./]+$/;
+
+function isTest(p) {
+  return p.split('/').some((part) => TEST_DIRS.indexOf(part) >= 0) || TEST_NAME.test(path.basename(p));
+}
 
 export function categoryOf(col) {
   if (col.category) return { key: col.category, by: 'config' };
-  const ext = path.extname(col.paths[col.paths.length - 1]).toLowerCase();
+  const last = col.paths[col.paths.length - 1];
+  if (isTest(last)) return { key: 'tests', by: 'auto' };
+  const ext = path.extname(last).toLowerCase();
   const known = CATEGORY_ORDER.find((key) => (CATEGORY_EXTS[key] || []).indexOf(ext) >= 0);
   return { key: known === undefined ? 'code' : known, by: 'auto' };
 }

@@ -43,7 +43,7 @@ export function pageSource(file) {
 /* The list of chapters lives here rather than in the tests: one copy for the builder and for the guard
  * (`test/page-view.test.js` reads the same program and compares it with the sources). The payload chapter comes
  * first of the page's own: it is what turns the block into the data everything else reads. */
-export const PAGE_PARTS = ['./payload.js', './state.js', './dom.js', './panel.js', './table.js', './app.js'];
+export const PAGE_PARTS = ['./payload.js', './state.js', './dom.js', './work.js', './panel.js', './table.js', './app.js'];
 
 /* The form the artifact carries: the same stripping the `min` metric counts (`src/strip.js`) — comments out,
  * indentation and blank lines out — applied to what is pasted, while the sources on disk keep everything: they are
@@ -255,6 +255,11 @@ export function pageHtml(data, cfg) {
     + squeezedCss(TABLE_CSS) + '\n' + squeezedCss(PAGE_CSS) + '\n</style>\n</head>\n<body>\n'
     + '<header>\n<h1>' + esc(data.report.heading) + '</h1>\n'
     + '<p class="sub">' + esc(subText(data, loc.page)) + '</p>\n</header>\n'
+    /* The stripe of the drawing stands first in the page and is fixed to the window's top edge rather than laid out
+     * with the rest: the page's shape is a grid of five rows (`src/page/app.css`), and a stripe that appeared and
+     * disappeared inside it would move the numbers under the reader's eyes every time a switch is drawn. It holds an
+     * empty child rather than a share: the length of an indeterminate stripe is the styling's business. */
+    + '<div id="bar" class="bar" role="progressbar" aria-label="' + esc(loc.page.working) + '" hidden><i></i></div>\n'
     + '<div id="panel" class="panel"></div>\n'
     + '<p id="notice" class="notice" hidden></p>\n'
     + '<div id="shell" class="shell"><table id="grid"></table></div>\n'
