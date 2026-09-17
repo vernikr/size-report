@@ -18,7 +18,7 @@ import {
 const tmp = tempDir('docs-paths');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-test('пути, названные документацией, есть в дереве', () => {
+test('the paths the documentation names exist in the tree', () => {
   // The files the fixture knew: its history is not one tree, and the documentation may name a file
   // under a name that lived before a rename.
   const fixture = new Set(gitIn(sharedClone('plain', tmp), ['log', '--name-only', '--pretty=format:'])
@@ -33,11 +33,11 @@ test('пути, названные документацией, есть в де�
     });
   });
   assert.deepEqual(missing, [],
-    'документация называет пути, которых нет ни в дереве, ни в фикстуре, ни среди чужих:\n  '
+    'the documentation names paths that are in neither the tree nor the fixture nor the foreign ones:\n  '
     + missing.join('\n  '));
 });
 
-test('таблица файлов README совпадает с деревом в обе стороны', () => {
+test('the file table of README agrees with the tree both ways', () => {
   const named = [];
   const table = read('README.md').match(/## What is in the repository[\s\S]*?(?=\n## |$)/)[0];
   table.split('\n').forEach((line) => {
@@ -49,10 +49,10 @@ test('таблица файлов README совпадает с деревом в
       if (tok !== '' && tok !== 'File' && tok.indexOf('—') < 0) named.push(tok);
     });
   });
-  assert.ok(named.length > 0, 'таблица файлов README не разобралась');
+  assert.ok(named.length > 0, 'the file table of README did not parse');
 
   const absent = named.filter((p) => !inTree(p));
-  assert.deepEqual(absent, [], 'README называет файлы, которых нет:\n  ' + absent.join('\n  '));
+  assert.deepEqual(absent, [], 'README names files that are not there:\n  ' + absent.join('\n  '));
 
   // The other side: a file missing from the table is a gap nobody noticed. A directory covers everything
   // beneath it; the table does not list itself, because that is its heading rather than a row of
@@ -61,5 +61,5 @@ test('таблица файлов README совпадает с деревом в
     || (dirs.has(p) && f.indexOf(p + '/') === 0));
   const undescribed = tracked.filter((f) => f !== 'README.md' && !covered(f));
   assert.deepEqual(undescribed, [],
-    'в дереве есть файлы, которых нет в таблице README:\n  ' + undescribed.join('\n  '));
+    'the tree holds files that are missing from the table of README:\n  ' + undescribed.join('\n  '));
 });

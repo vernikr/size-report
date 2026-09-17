@@ -4,8 +4,10 @@ Subplan of `plan.md` (T0). Owns fourteen checks, **226 lines measured** — `gat
 `gates-files` 26, `docs-commands` 23, `gates-metrics` 22, `suites` 16, `parity` 16, `frozen` 16,
 `gates-coverage` 16, `docs-pin` 14, `gates-dup` 13, `git-pins` 12, `docs-numbers` 12, `gates-deps` 8,
 `docs-paths` 6 — the tracker's row, confirmed file by file (26+26+23+22+16+16+16+16+14+13+12+12+8+6 =
-226). Written 2026-09-16, not started. Last of the checks, and the last portion that touches a file a
-sensor is configured by.
+226). Written 2026-09-16. Last of the checks, and the last portion that touches a file a
+sensor is configured by. **Step 0 re-measured it on 2026-09-17: the fourteen files answer 222**, not
+226 — `docs-commands` 22, `parity` 15, `gates-coverage` 14 — and **after step 1 the owner reads 209**
+(`docs-paths` 0, `git-pins` 5).
 
 **Six of these files are gate files** (`test/gates-[a-z-]+\.test\.js` matches the gate list in
 `tools/gates/gatefiles.js`): `gates-verify`, `gates-files`, `gates-metrics`, `gates-coverage`,
@@ -95,15 +97,39 @@ a message is free.
 
 ## Steps — one commit each, red first, and a trailer on the six gate-file commits
 
-0. **Re-measure and verify the moved lines.** S1–S5, W1, W2, C1 and C2 have landed, so the eight W2
-   verdict reads, S1's markers and the `README.md` row are English; this step measures them and writes
-   the counter's baseline for the fourteen files and the per-file check counts into the journal. If a
-   reader line was missed, the fix belongs to the owner of the text, and the gap goes to `TODO.md`
-   rather than being patched here.
-1. **`test/docs-paths.test.js` (6) + `test/git-pins.test.js` (12)** — the smallest, and both are
-   shape readers. Red first: unpin one setting in `src/git.js` (`git-pins` reddens) and remove one
-   file from the table of `README.md` (`docs-paths` reddens); then put both back and translate the
-   messages.
+0. **Re-measure and verify the moved lines — done 2026-09-17.** The counter answers **222**, not 226:
+   `docs-commands` 23 → 22, `parity` 16 → 15, `gates-coverage` 16 → 14, everything else as planned;
+   the fourteen files' check counts are 5/3/4/4/3/3/4/3/1/4/2/1/4/2. **All nine reads of W2's verdicts
+   are English** (`gates-files` 77/106/115, `gates-dup` 72/88, `gates-coverage` 49/63, `gates-deps` 48,
+   `gates-metrics` 144 — the exact patterns are in the tracker's row), and so are S1's readers: the
+   help block is parsed by the English marker (`usageCauses()` splits on `'Causes of a code-2 refusal'`
+   at `:35`), the internal error by `/refusal cause is not declared/` (`:147`), the summary shape by
+   `/: (\d+) rows × (\d+) files/` (`parity.test.js:57`). `gates-verify`'s reads are the protocol's and
+   D1's (`/pnpm run verify:fast/`, `/tools\/gates\/gatefiles\.js/`, `.gitignore`'s `/^reports\/$/m`) and
+   are untouched. Nothing was missed, so `TODO.md` gets nothing. **The allow-list's quotation row was
+   re-measured as the plan demanded: 33 lines, all `BLOCKERS.md`; `README.md` and `AGENTS.md` read 0**
+   (the code-2 row is the contract S1 moved, the `!` note S4's, the hook subject S5's). The tolerance
+   is still **dead in the tree**: `docs/requirements.md` and `docs/module-design.md` carry no Cyrillic;
+   the only Russian instances of the three regexes are the file's own comment (`:155`). No negative
+   match over Cyrillic in this owner, re-measured.
+1. **`test/docs-paths.test.js` (6 → **0**) + `test/git-pins.test.js` (12 → **5**) — done 2026-09-17.**
+   Both red-first experiments were run and are more interesting than the plan expected. (a) `docs-paths`:
+   a row removed from the file table of `README.md` reddens it at check 2 with the sentence the plan
+   names (`the tree holds files that are missing from the table of README`), the table restored
+   byte-identical. (b) `git-pins`: the pin taken out of `GIT_PINS` (`'core.quotePath=false'`, restored
+   byte-identical) reddens check 2 **only where the machine's settings do not stand in the way** — on
+   this machine the ordinary run stays green because its global config already carries
+   `core.quotePath=false`, and the same run with `GIT_CONFIG_GLOBAL=/dev/null` and an empty `HOME` goes
+   red with `the shared reading quoted a non-English path`. That is B1's own note met from this side,
+   and it is recorded rather than smoothed over. (c) The Cyrillic file name was proved **load-bearing**
+   the other way round: made ASCII, the check reddens *even with the pin in place*, with its own
+   verdict `the unpinned reading handed the path back as it is: the pin then proves nothing` — so the
+   five lines that stay are not decoration but the witness's data (`'заметки.md'` written and read by
+   the check, the identity `'Тест'`, the commit subject `'заметки'`). Both files put back to `HEAD`
+   ran green (2 of 2 each), so no machine reads a word of their own; `dup` asked before and after
+   (`clones 5, lines 29` both times — no new clone); checks unchanged (2 each; 70 fast, 175 full); the
+   artifact's content digest `1bdb27e1…` and the reference file's own sha256 `cdda8d01…` unmoved;
+   neither file is a gate file, so the commit carries no trailer (checked by the hook).
 2. **`test/gates-deps.test.js` (8) + `test/gates-dup.test.js` (13) — trailer.** Red first: translate
    `'dup: новых клонов N'` alone in the sensor → `:72` reddens; and `'deps: находок нет'` alone →
    `:48`. W2's steps do both; here they are re-measured against the now English verdicts.
