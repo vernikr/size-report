@@ -1,41 +1,22 @@
 import { appUnpack } from './payload.js';
 import { appApply, appBoot, appData, appFoldRead, appLinkUse, appNotice, appRead, appUi, appView, appWrite } from './state.js';
-import { appColumn, appColumnSize, appColumnStale, appContribute, appMetrics, appState, appTable, appTotals, appTotalsReset } from './table.js';
-import { appDraw } from './work.js';
+import { appState, appTable, appWindow } from './table.js';
 import { appPanel, appPanelAll, appPanelState } from './panel.js';
 
-/* Assembling the report: the table is built once (`appTable` of the table chapter) and everything afterwards only
- * shows, hides and recounts. A click on any switch therefore costs a class, a number and the fields it reached — the
- * whole table used to be destroyed and built again, which was 81 % of the cost of a click and produced a hundred
- * thousand dead nodes for the collector to walk.
+/* Assembling the report: the table is a window of the grid (`appWindow` of the table chapter) and nothing is built
+ * that the reader cannot see. Two paths and no third, as before: `appPaint` draws the whole view (the first drawing, a
+ * record from the browser's memory, a link in the address), while a click on a box does the same work for the choice
+ * it made — and the difference between them is only how much of the view moved.
  *
- * Hence two paths and no third: `appPaint` draws the whole view (the first drawing, a record from the browser's
- * memory, a link in the address), while `appSwitch`, `appSwitchGroup` and `appSwitchMetric` are what one click on a
- * box does. The numbers are counted on the click itself — that is arithmetic over the data — while the nodes of the
- * columns are handed to the work chapter (`appDraw`), which draws the short work on the click and the long one in the
- * next task with a stripe over the page (`src/page/work.js` says what was measured: the price of a switch is the
- * browser's own relayout of the table, and it is paid once here rather than once per slice). Neither path makes a
- * node.
+ * What a click costs now: the window of rows and columns is built again — a few hundred cells, measured at 1–5 ms on
+ * this repository's report — instead of a class on every node of a column of a table the browser lays out whole. The
+ * stripe that used to stand over a long drawing (`src/page/work.js`) is gone with the reason for it: a switch no
+ * longer has anything to wait for, and an indicator over work that is over before it could be painted would be a
+ * promise the page does not keep.
  */
 
-// The table's cache of node references: made once, at the first drawing.
+// The table's window: made once, at the first drawing.
 let appCache = null;
-
-/* One file's column drawn from the view — the state is read when the slice runs rather than kept from the click that
- * queued it, so a click that arrives while the queue is running is drawn by the next slice rather than after it. */
-function appDrawColumn(i) {
-  appColumn(appCache, i, appView.files[i] === true);
-}
-
-/* The columns of a switch that have to be drawn, as the units the work chapter weighs (`{i, units}` — the file and the
- * nodes of its column). Only the columns whose nodes are out of step with the view are asked for (`appColumnStale`): a
- * report opened with everything switched on has nothing to draw, and a column that is already right would cost its
- * nodes again. The count is the table's (`appColumnSize`), because the table is the only place that knows how many
- * nodes a column has. */
-function appColumns(indexes) {
-  const todo = indexes.filter((i) => appColumnStale(appCache, i));
-  appDraw(appDrawColumn, todo.map((i) => ({ i: i, units: appColumnSize(appCache, i) })));
-}
 
 /* The note under the table: what a row is and how the report was made. It does not depend on the choice, so it is
  * written once — with the table rather than with every drawing of it. */
@@ -45,68 +26,59 @@ function appNote() {
     .replace('{command}', appData.report.fixCommand);
 }
 
-/* What the empty states are told: how many metrics and how many files are left. The table stands there in either
- * case (it is built once) — the words are about what is shown. */
+/* What the empty states are told: how many metrics and how many files are left. The window stands there in either
+ * case — the words are about what is shown. */
 export function appCounts() {
   appState(appData.metrics.filter((m) => appView.metrics[m.key] === true).length,
     appView.files.filter((on) => on === true).length);
 }
 
-/* The whole view drawn: every column, the totals of the whole selection, the metrics, the empty states and the panel's
- * fields. This is what a link, a record from the memory and the first drawing need — and it makes no node either. */
+/* The whole view drawn: the window of the grid, the metrics, the empty states and the panel's fields. This is what a
+ * link, a record from the memory and the first drawing need. */
 export function appPaint() {
-  appColumns(appData.files.map((_f, i) => i));
-  appTotalsReset(appCache);
-  appMetrics(appCache);
+  appWindow(appCache, true);
   appCounts();
   appPanelAll();
   appWrite();
 }
 
-/* One file switched by the reader: the view, its share of the totals, the fields it shows in and its column — the
- * last through the queue, because a column may be long. The message about a link fades here: by this action the
- * reader has read it. */
+/* One file switched by the reader: the view, the window (its column is simply not among the columns that are built),
+ * the fields it shows in. The message about a link fades here: by this action the reader has read it. */
 export function appSwitch(i, on) {
   if (appView.files[i] === on) return;
   appView.files[i] = on;
-  appContribute(appCache, i, on);
-  appTotals(appCache);
+  appWindow(appCache, true);
   appCounts();
   appPanelState([i]);
   appWrite();
   appNotice('');
-  appColumns([i]);
 }
 
-/* A group switched at once — a folder or a category: the same work per file, then the totals once and the fields of
- * the files the choice really reached (switching a folder on when a part of it was already on touches only the rest,
- * and a field that did not move is not written). The columns of the whole group go into the queue together, so the bar
- * counts them as one piece of work. */
+/* A group switched at once — a folder or a category: the same work per file, then the fields of the files the choice
+ * really reached (switching a folder on when a part of it was already on touches only the rest, and a field that did
+ * not move is not written). The columns of the whole group leave or enter the window together. */
 export function appSwitchGroup(indexes, on) {
   const touched = indexes.filter((i) => appView.files[i] !== on);
-  touched.forEach((i) => {
-    appView.files[i] = on;
-    appContribute(appCache, i, on);
-  });
-  appTotals(appCache);
+  touched.forEach((i) => { appView.files[i] = on; });
+  appWindow(appCache, true);
   appCounts();
   appPanelState(touched);
   appWrite();
   appNotice('');
-  appColumns(touched);
 }
 
-/* One metric switched: a class on the table and the headings' `colSpan`. The totals do not move with a metric — they
- * are sums over files — and the metric's own field is the box the reader just clicked. */
+/* One metric switched: the columns of that metric are not among the columns that are built any longer, so this is the
+ * same drawing as a file's switch. The metric's own field is the box the reader just clicked. */
 export function appSwitchMetric() {
-  appMetrics(appCache);
+  appWindow(appCache, true);
   appCounts();
   appWrite();
   appNotice('');
 }
 
 /* The first drawing: the choice is already in the view (the link and the memory are applied above), the panel is
- * built to match it, the table is built once — every column of every file — and the view is painted over it. */
+ * built to match it, the window of the grid is built — the columns the choice leaves and the rows the shell shows —
+ * and the panel's fields are written from the view. */
 function appFirst() {
   appPanel();
   appCache = appTable(document.getElementById('grid'));

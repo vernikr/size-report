@@ -102,10 +102,9 @@ export function pageHtml(tmp, name) {
   return fs.readFileSync(file, 'utf8');
 }
 
-/* A moment of the page's own clock: what the chapter of the background work waits with between two
- * slices (`setTimeout(…, 0)`). A check that reads the bar cannot look beside the timer, and a
- * timeout of the check's own making would be a guess about the platform's clock — hence the wait is
- * taken from the window the page runs in. */
+/* A moment of the page's own clock, taken from the window the page runs in rather than made up by a
+ * check: a timeout of the check's own would be a guess about the platform's clock, and a wait that
+ * misses reads as a bug in the page. */
 export const settled = (dom) => new Promise((done) => {
   dom.window.setTimeout(done, 0);
 });

@@ -7,8 +7,8 @@ import fs from 'node:fs';
  *
  * There are two sets, each with a role of its own:
  *
- *   1. `table.css` — the **table**: cell geometry, the sticky header and commit column, a commit's caption,
- *      the colours of the deltas.
+ *   1. `table.css` — the **table**: the geometry of the window (a column, a row, the header), the sticky header
+ *      and commit column, a commit's caption, the colours of the deltas.
  *   2. `page/app.css` — the page's look **on top of the table**: the canvas, the panel of choices, the empty
  *      states and the adaptation to a narrow window.
  *

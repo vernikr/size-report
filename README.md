@@ -10,7 +10,7 @@ shows.
 
 ## Status
 
-**Release 2.7.0 (2026-09-17).** The tool lives as a package of its own: the registry name is
+**Release 2.8.0 (2026-09-18).** The tool lives as a package of its own: the registry name is
 `@vernikr/size-report` (published by tag from CI, with no secret). A project may keep no settings at
 all: without a config file the tool derives them from the project itself and says so in one line,
 and `--init` pins what was derived into a file. The report is **one file**, the self-contained page
@@ -18,6 +18,26 @@ and `--init` pins what was derived into a file. The report is **one file**, the 
 is installed and on the first run. The version is in the manifest, and every release is recorded in
 the journal — `worklog/` for today's entries, `worklog/archive/WORKLOG.md` for the earlier ones:
 what changes in the numbers is measured rather than retold.
+
+2.8.0 is about what the report costs whoever opens it, and its figures are measured rather than retold.
+**The table is a window of itself:** every row and every column in sight is built, plus four beyond each edge so that
+the edge of the window is never seen empty, while the rest of the table exists as the extent of the scrolled box and
+nothing else. This repository's own report was a `<table>` of 238 500 cells — 253 770 nodes in the document, 377 396 in
+the browser, 1.46 GB of a fresh Chrome's memory with the page open and nothing else — and the window of it is
+**2 460 nodes, 7 320 and 0.15 GB**: a hundredth of the nodes and a tenth of the memory. Scrolling the whole table cost
+**1.1 s of task time over 251 steps**, against **36 s over 60 steps** for the same page as a full table (a median of
+571 ms a frame, which is the freeze a reader felt). **Every column is 70px wide and fixed** — the numbers are short and
+of one kind, and a width that came out of the text is a measurement of every cell of the column — while a file's name
+that does not fit its group is cut with an ellipsis rather than wrapped (the whole name stands in the tooltip). **The
+stripe over a drawing is gone with the freeze it was drawn for**: a switch costs a few milliseconds, so there is nothing
+for an indicator to indicate, and `src/page/work.js` left the tree with it. A virtualizer library was measured and not
+taken — `@tanstack/virtual-core` is ~6.7 kB gzip and headless, `virtua`'s grid is experimental and `Clusterize.js`
+knows rows and not columns — because each would be vendored into the artifact, which the report then measures as its own
+bytes. **The checks of the old table are deactivated while it is rebuilt:** `test/page-view.test.js`, `page-cols`,
+`page-tree` and `page-choice` skip every check with its reason at the top of the file, and this document names them
+where they are the promise-holders of what they described; `test/page-grid.test.js` is what guards the window meanwhile.
+The figures and the reasoning stand in `worklog/0208-table-window.md`. The checks grow with the work: 81 → **88** in the
+fast profile and 186 → **193** in the full one.
 
 2.7.0 is about the page and what a reader does with it, and its figures are measured rather than retold.
 **The report's address stays clean:** a switch writes the record into the browser's memory and nothing into the
@@ -217,8 +237,8 @@ commits and installs hooks; the reason for each expensive file is named line by 
 
 | Run | Command | Checks |
 |---|---|---|
-| Fast — every edit | `pnpm test` | **81 of 186** |
-| Full — release and CI | `pnpm test:all` | **186** |
+| Fast — every edit | `pnpm test` | **88 of 193** |
+| Full — release and CI | `pnpm test:all` | **193** |
 
 No check is lost or weakened: the full run starts all 186 with the same files, the fast one takes part
 of them. The default is the full run — a file becomes fast only explicitly and with a reason — so new
@@ -336,35 +356,36 @@ row hides it, so a click on the sign changes exactly the three things the reader
 sign and the note in the memory. What guards this is that after folding the table is the same markup
 rather than a rebuilt one (`test/page-tree.test.js`).
 
-**A switch draws its columns in one task, with a stripe over the page while it is going on.** The class
-changes are cheap — about 2 µs a node, so a category of this repository's report (73 columns, 55 042 nodes) is
-120 ms of them — while the browser lays the whole table out again for any change of a column's visibility, and
-that is where the seconds are (`probes/step-12-columns.mjs`). So `src/page/work.js` asks for the drawing once:
-work short enough to be over before the browser could paint goes on the click itself, and a longer one goes to
-the next task with the stripe over the top edge of the window. **The stripe carries no share, and that is the
-measurement rather than a shortcut**: inside one task the browser cannot repaint, so a length would be a length
-nobody could keep; what moves is an indeterminate highlight. A queue worked off between timeouts was written
-first and refused by the same probe — 37 slices paid the table's relayout 37 times (2.5–4 s each, 169 layouts
-against 1) — and the numbers stay out of all of it, because the totals are counted on the click itself, where
-they cost arithmetic rather than nodes. Nothing is asked for a column that is already right either
-(`appColumnStale`): a report opened with everything switched on has nothing to draw, and a record from the
-memory or a link queues exactly the columns that differ from it. What guards the two halves is
-`test/page-choice.test.js` — a long drawing that leaves the click's line at once, runs in the next task and
-takes the stripe away, and a short one that is over before the click returns.
+**The table is a window of itself, and the window is what a scroll moves.** A row stands at its own `top` inside the
+scrolled content and a column at its own `left`, so scrolling costs the browser nothing but painting — no layout of the
+table to redo and no script to run — while the page works only when the window has really moved, and then only on what
+left it and what entered it. The header sticks to the top of the shell and the commit column to its left, so the commit a
+number belongs to and the file it stands under are always in sight. The price of a table is what this step removed:
+238 500 cells were 253 770 nodes in the document and 377 396 in the browser, **1.46 GB** of a fresh Chrome's memory at
+rest, and any change of a column's visibility meant the browser laying the whole of it out again — 234.5 ms of layout for
+a *single* cell of this repository's report, 539 ms for 6 000 (`probes/step-12-columns.mjs`). A window of the same
+table is **2 460 nodes and 0.15 GB**, a hundredth of the nodes and a tenth of the memory, and the whole-table scroll
+pass that took 36 s of task time over 60 steps takes **1.1 s over 251** (`worklog/0208-table-window.md`). **The columns
+are one width and fixed, 70px each**: the numbers are short and of one kind, and a width that came out of the text is a
+measurement of every cell of the column — the very cost this step removed. A file's name over its group is cut with an
+ellipsis rather than wrapped (the header is one line high and the whole name stands in the tooltip). The geometry is
+three figures — a column, a row, the header — written in the styling and in the script that counts the window's ordinals
+in them, and `test/page-grid.test.js` reads both and holds them together.
 
-**A click shows and hides rather than builds.** The table is assembled once, with every column of every
-file, and a switch afterwards changes only what is visible: a metric is one class on the table plus the
-`colSpan` of the group headings, a file's column is a class per node of it, and a folder or a category is
-the same for each file of its subtree. The table's own nodes stay the objects the first drawing made:
-`test/page-view.test.js` counts what a click appends (a metric: nothing at all; a file, a folder or a
-category: at most the cells of the totals, rows × metrics) and checks that the rows and the cells are
-still the very same objects. What makes this possible is that the order of the columns depends on the
-files rather than on the choice — the last commit's first, then the settings' order — so a hidden column
-keeps its place and the visible ones do not move. The totals are the only numbers a choice changes, and
-they are carried rather than recounted: a sum is linear, so a file switched off subtracts exactly its own
-values, which costs its own rows instead of rows × files. That arithmetic is the step's one new piece,
-and it is held against the engine's own `rowModel` cell by cell for a mixed choice, so that counting a
-row stays in one place (`test/page-view.test.js`).
+**A click builds the window again, and that is cheap now.** A file switched off is simply not among the columns that
+are built, and a metric switched off not among the metrics: there is nothing to hide and nothing to carry, and the
+window is built from the choice as it is — a few hundred cells, 1–5 ms on this repository's report against the ~1 s the
+same click cost as a table. The totals are the sum over the files that are on, counted by the shared `rowModel` for the
+rows the window holds (`src/derived.js`), rather than kept in a running cache that a second road would have to agree
+with. **There is no stripe over the page any longer, and that is a measurement rather than an omission:** it stood over
+the browser's relayout of the whole table, and work that is over before a frame could paint it has no moment to be
+shown in (`src/page/work.js` left the tree with the freeze it was drawn for). **Nothing of it is a library**, and that
+was measured too: a virtualizer of both axes is not a solved problem for a page like this one —
+`@tanstack/virtual-core` is ~6.7 kB gzip and headless (the rows and the columns are two virtualizers, and every node
+is still yours to write), `virtua` calls its grid `experimental_VGrid` and has no sticky pieces, `Clusterize.js`
+virtualizes rows out of a string of all of them and knows nothing of columns — and each would have to be vendored into
+the artifact, whose bytes this very tool measures. What is left to write after any of them is what the chapter is: the
+window, the cells, the header and the pinned column.
 
 **The columns the last commit touched come first.** The report is rebuilt after every commit, and a
 reader's first question is what that edit brought. The mark comes from the history rather than from the
@@ -374,7 +395,7 @@ the report itself, which the hook commits, is skipped, or the mark would depend 
 commit, the same run would give different bytes and the hook would commit the report a second time.
 Inside each part the order stays as it comes from the settings (the sort is stable): the order of the
 columns is what the reader is used to, and his choice of files does not rearrange it
-(`test/page-view.test.js`, the contract's `last` field).
+(`test/page-grid.test.js`, the contract's `last` field).
 
 **On a wide window the panel stands to the left of the table and takes no room from the numbers** (from
 900px, `src/page/app.css`). That is not decoration: a desktop has much side room and little vertical
@@ -557,15 +578,14 @@ acceptance for each.
 | `src/size-table.js` | The package's entry point: a re-export of the public API (55 names) and no calculation of its own |
 | `src/derived.js` | The report's shared calculation: totals, deltas, a cell, a commit's caption — one for the engine and the page's program |
 | `src/css.js` | Reading the styling from disk: which sets of styles exist and what role each has |
-| `src/table.css` | The report's table: the geometry of a cell, the sticky header and commit column, the colour of deltas |
+| `src/table.css` | The report's table: the geometry of the window — one width per column, one height per row, the header — the sticky header and commit column, a file's caption cut with an ellipsis, the colour of deltas |
 | `src/page/app.css` | The page's styling on top of the shared part: the panel with the file tree and its sticky row of categories (a column on the left on a wide screen, the page fitting the window), the empty states, a narrow window |
 | `src/page/payload.js` | The page's block in sparse form, and the one place that unrolls it back: the history as changes (a file's appearance, its moves, its disappearance) turned into the snapshots the calculation and the table already speak — a value that did not move is one object shared by the rows that hold it |
 | `src/page/state.js` | The page's state: the report's data (the block unrolled by the payload chapter), the view of the checkboxes, the pointer "which path is which column", the unfolded folders, the record's passport, the browser's memory and the link that is read out of the address — a chapter of the page's program |
 | `src/page/dom.js` | The page's nodes: the small helpers of markup (`appEl`, `appBox`) — one set for the panel and the table alike |
 | `src/page/panel.js` | The panel of choices: the switches of metrics and files, the categories, the tree of the project's paths (files outside the report keep a checkbox off with a reason and stand after the rest, and a hidden name after every visible one; the tree opens folded and folders carry a sign that hides the subtree by a class rather than by a rebuild); built once, with the fields of the switches and of the folders and categories written where they stand |
-| `src/page/table.js` | The page's table, built once: a cell, a commit's caption, the header, the empty states and the cache of the nodes of every column — markup over the shared calculation, with the totals carried rather than recounted, and the count answerable for how many nodes a column holds |
-| `src/page/work.js` | The page's long drawing: the columns of a switch in one task, on the click when they are few and in the next task with an indeterminate stripe over the top edge of the window when they are many — one task because the browser's relayout of the table is the price, and it is paid once (this is where the measurement that refused the slices stands) |
-| `src/page/app.js` | Assembling and starting the page: the first drawing, then a switch that counts the numbers on the click, hands the columns to the queue and writes the fields it reached without making a node; an anchor change; pasted into the assembled page |
+| `src/page/table.js` | The page's table as a window: the rows and the columns the reader can see (plus four beyond each edge), a cell, a commit's caption, the header, the empty states and the two figures of the window — markup over the shared calculation, with the totals counted per row from the choice, the geometry in pixels that the styling mirrors, and the reason a library was not taken |
+| `src/page/app.js` | Assembling and starting the page: the first drawing, then a switch that builds the window again and writes the fields it reached without making a node of the panel; an anchor change; pasted into the assembled page |
 | `src/page/build.js` | Assembling the page: data, styling and program in one file with no external references — the pasted text is **squeezed** on the way in (comments and indentation out, the same stripping the `min` metric counts) while the sources keep them, and the result is guarded by the stripper's own `assertCompilable` |
 | `src/git.js` | The only border where git is called: the pinned settings, blobs by the batch, the history, the comparison with the working tree |
 | `src/strip.js` | Removing ballast: which form goes to which file (extension, strategy) and which strategies are minification itself — the entry to the parsing of forms |
@@ -597,7 +617,7 @@ acceptance for each.
 | `test/api.test.js` | The package's public API: the list of names is frozen, and splitting the engine may not change it |
 | `eslint.config.js` | The rules of formatting: the same as the consumer project's, plus a ban on gluing operators into one line (`pnpm run lint`, `pnpm run lint:strict`) |
 | `tools/harness.js` | The harness of the checks: paths, clones of the fixture (including one shared per suite and one with CRLF), running the tool, reading refusals, hashes |
-| `tools/page-harness.js` | The harness of the contract and page checks: the contract data, the assembled page, reading it in a real DOM, the panel's switches, the page's calculation and its decoder evaluated from their sources, the block unpacked, and the platform's unpacker put into jsdom (which has none) — one for six suites |
+| `tools/page-harness.js` | The harness of the contract and page checks: the contract data, the assembled page, reading it in a real DOM, the panel's switches, the page's calculation and its decoder evaluated from their sources, the block unpacked, and the platform's unpacker put into jsdom (which has none) — one for seven suites |
 | `tools/suites.js` | The split of the suite: which files go into the fast run (with a reason for each) and why every dear one is in the full run |
 | `tools/run-tests.js` | Running the suite (`pnpm test`, `pnpm test:all`, `pnpm run suites:measure`): each file's duration measured on its own, and the counts of checks adding up |
 | `tools/docs-facts.js` | Reading facts out of the documentation — one layer for the four checks of the documentation guard: what a document names (paths, calls, section addresses) against what the repository holds |
@@ -613,10 +633,11 @@ acceptance for each.
 | `test/refusals-catalog.test.js` | The guard of the refusal catalogue: every refusal site in the sources has an entry, every entry declares its advice, and refusals handed to another check are really accepted by it (the named file and line are checked) |
 | `test/contract-data.test.js` | The data contract: the numbers against the reference, the set of fields against the derived quantities, the metric's method against the way the numbers were counted — and the round trip through the page's sparse block, which restores the contract whole and twice over the same bytes |
 | `test/contract-derived.test.js` | The derived quantities against the artifact's numbers: a row's totals, a cell's delta and the delta of a total — on the code that lies in the tree |
-| `test/page-view.test.js` | The assembled page: pasted with no copy of the calculation, self-contained, the empty states, the styling, the switches, a click that makes no table and the carried totals against the engine's own sums |
-| `test/page-tree.test.js` | The panel's file tree: folders by the project's paths, three states, the subtree, files and folders outside the report (a checkbox off, a place after the rest), the hidden names at the end of a level, the tree that opens folded and the unfolding the memory keeps, folding without a rebuild and a scroll a click does not touch |
-| `test/page-choice.test.js` | The reader's choice and the work a click starts: the memory and a revisit, someone else's report, a foreign and a broken record, an address that stays clean, a link read at opening and on an open page, and the drawing of a long switch in a task of its own behind the stripe |
-| `test/page-cols.test.js` | The fixed layout the page carries: a column's width is counted from the model rather than measured in a laid-out cell, the clip keeps a caption inside its column, the sticky header and commit column keep their edges, and the table names its own width (`width: auto` would hand the layout back to the automatic algorithm) |
+| `test/page-grid.test.js` | The grid of the page as a window: what the reader sees is built and no more, the geometry of the styling against the script's, the rows and the columns that a scroll builds and drops, a number under its own caption, a file and a metric switched off, and every row of the window against the engine's own calculation |
+| `test/page-view.test.js` | The assembled page: pasted with no copy of the calculation, self-contained, the empty states, the styling, the switches, a click that makes no table and the carried totals against the engine's own sums — **deactivated** while the table is rebuilt, every check skipped with its reason in the file |
+| `test/page-tree.test.js` | The panel's file tree: folders by the project's paths, three states, the subtree, files and folders outside the report (a checkbox off, a place after the rest), the hidden names at the end of a level, the tree that opens folded and the unfolding the memory keeps, folding without a rebuild and a scroll a click does not touch — **deactivated** with the table, the checks skipped with their reason |
+| `test/page-choice.test.js` | The reader's choice and the work a click starts: the memory and a revisit, someone else's report, a foreign and a broken record, an address that stays clean, a link read at opening and on an open page, and the drawing of a long switch in a task of its own behind the stripe — **deactivated**: the choice and the link are the same, while the counts and the stripe are not |
+| `test/page-cols.test.js` | The fixed layout the page carries: a column's width is counted from the model rather than measured in a laid-out cell, the clip keeps a caption inside its column, the sticky header and commit column keep their edges, and the table names its own width — **deactivated** with the table: the columns are one fixed width now |
 | `test/module.test.js` | A module under a `.js` extension: measured without touching the settings; the stripper's guard is alive (proved by mutation) and does not accuse the innocent |
 | `test/guard.test.js` | Parsing a module: it goes through a thread, both paths give one verdict, the fallback works with the thread's file away, and hundreds of parses are cheaper than a launch |
 | `test/runner.test.js` | Reading a process's output: chunks are glued as buffers rather than appended to a string — a multi-byte character at a chunk border does not turn into two replacement characters |
@@ -696,7 +717,7 @@ The same release can be taken by a reference to the repository — installation 
 registry, but stays tied to a revision:
 
 ```bash
-pnpm add -D github:vernikr/size-report#v2.7.0
+pnpm add -D github:vernikr/size-report#v2.8.0
 ```
 
 With no network (or nothing to fetch from codeload) — the tarball: `pnpm pack` in the package clone, then
@@ -708,7 +729,7 @@ the branch moves on the installation fails with `Could not resolve <sha> to a co
 observation rather than reasoning: the short pin `6530237` installed while `main` stood on it and stopped
 working at the very next commit, while the same sha in full installed. A branch name (`#main`) and a tag
 are both accepted, but a branch is a moving target and a tag is constant: this release stands on the tag
-`v2.7.0`, which is also the one in the example (forty characters work as well, but they have to be copied
+`v2.8.0`, which is also the one in the example (forty characters work as well, but they have to be copied
 out of the history by eye).
 
 The revision in the example is a part of the claim rather than decoration: what is described below is

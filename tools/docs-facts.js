@@ -65,7 +65,11 @@ export const FOREIGN = [
   'docs/METHODS.md', 'docs/DATA-FORMAT.md', 'docs/ARCHITECTURE.md',
   'docs/ROADMAP.md', 'docs/TESTING.md', 'tests/harness.js', 'tests/doc-sync.js',
   // an example in the text: how the tool's refusal on someone else's broken project looks
-  'src/only-in-merge.js'
+  'src/only-in-merge.js',
+  // past: the stripe over a long drawing left the tree with the freeze it was drawn for — the table is a
+  // window now and a switch costs milliseconds (`worklog/0208-table-window.md`), so the documents name the
+  // chapter that is gone where they tell that story
+  'src/page/work.js'
 ];
 
 /* Documents other documents point at by section — the target of a reference, not a source of

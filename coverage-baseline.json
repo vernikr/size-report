@@ -45,14 +45,14 @@
       "functions": 1
     },
     "src/data.js": {
-      "lines": 115,
-      "branches": 34,
-      "functions": 5
+      "lines": 113,
+      "branches": 30,
+      "functions": 4
     },
     "src/derived.js": {
-      "lines": 84,
-      "branches": 35,
-      "functions": 5
+      "lines": 92,
+      "branches": 42,
+      "functions": 6
     },
     "src/doctor.js": {
       "lines": 274,
@@ -70,8 +70,8 @@
       "functions": 13
     },
     "src/history.js": {
-      "lines": 224,
-      "branches": 96,
+      "lines": 218,
+      "branches": 93,
       "functions": 9
     },
     "src/hook.js": {
@@ -80,7 +80,7 @@
       "functions": 22
     },
     "src/init.js": {
-      "lines": 74,
+      "lines": 75,
       "branches": 24,
       "functions": 3
     },
@@ -95,9 +95,9 @@
       "functions": 1
     },
     "src/metrics.js": {
-      "lines": 266,
-      "branches": 70,
-      "functions": 12
+      "lines": 248,
+      "branches": 58,
+      "functions": 11
     },
     "src/minify.js": {
       "lines": 68,
@@ -120,9 +120,9 @@
       "functions": 0
     },
     "src/page/build.js": {
-      "lines": 131,
-      "branches": 14,
-      "functions": 9
+      "lines": 275,
+      "branches": 70,
+      "functions": 17
     },
     "src/page/dom.js": {
       "lines": 0,
@@ -145,11 +145,6 @@
       "functions": 0
     },
     "src/page/table.js": {
-      "lines": 0,
-      "branches": 0,
-      "functions": 0
-    },
-    "src/page/work.js": {
       "lines": 0,
       "branches": 0,
       "functions": 0
@@ -180,7 +175,7 @@
       "functions": 0
     },
     "src/strip.js": {
-      "lines": 54,
+      "lines": 53,
       "branches": 17,
       "functions": 3
     },
@@ -190,17 +185,17 @@
       "functions": 4
     },
     "src/strip/guard.js": {
-      "lines": 55,
+      "lines": 56,
       "branches": 15,
       "functions": 2
     },
     "src/strip/js.js": {
       "lines": 133,
-      "branches": 59,
+      "branches": 61,
       "functions": 11
     },
     "src/tokens.js": {
-      "lines": 77,
+      "lines": 76,
       "branches": 11,
       "functions": 5
     },

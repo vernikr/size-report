@@ -53,9 +53,6 @@ export const LOCALES = {
        * таблица не сказала бы читателю ничего. */
       unpack: 'Данные отчёта сжаты, а браузер не умеет их распаковать: в нём нет DecompressionStream. '
         + 'Обновите браузер — таблицу показывать не из чего.',
-      /* Полоска вверху страницы: имя для тех, кто читает страницу не глазами, — она показывает,
-       * что идёт отрисовка колонок, а не что отчёт завис. */
-      working: 'отрисовка колонок',
       note: 'Абсолютные размеры стоят один раз — в строке «{now}». Строк: {rows}: коммиты без '
         + 'изменения объёма и коммиты, тронувшие только выключенные файлы, строк не получают. '
         + 'Собрано из истории git: {command}.'
@@ -116,9 +113,6 @@ export const LOCALES = {
        * browser without `DecompressionStream` gets instead of an empty table. */
       unpack: 'The report\u2019s data is compressed and this browser cannot unpack it: there is no '
         + 'DecompressionStream. Update the browser — there is nothing to build the table from.',
-      /* The bar at the top of the page: a name for whoever reads the page without eyes — it shows
-       * that the columns are being drawn rather than that the report has hung. */
-      working: 'drawing the columns',
       note: 'Absolute sizes appear once — in the “{now}” row. Rows: {rows}: commits that change '
         + 'no number, and commits touching only the disabled files, get no row. '
         + 'Collected from git history: {command}.'

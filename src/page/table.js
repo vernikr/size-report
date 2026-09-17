@@ -1,51 +1,88 @@
-import { cellParts, commitParts, deltaOf, nowModel, rowModel, valueParts } from '../derived.js';
+import { cellParts, commitParts, nowModel, rowModel, valueParts } from '../derived.js';
 import { appEl } from './dom.js';
 import { appData, appUi, appView } from './state.js';
 
-/* The table is built once and then only shown and hidden. That rests on three things that do not depend on the
- * reader: a cell's content and colour come from the pair (commit, file) and a metric (`cellParts`, `valueParts`),
- * the order of the columns comes from the files alone, and only the visibility and the totals are the choice's.
- * Hence nothing below builds a node after the first drawing — a click writes a class and a number.
+/* The table: a grid of plain elements (`<div>`), of which only the part the reader looks at is built. The file's
+ * length is the report's, but the price of a report is paid by whoever opens it, so the table is no longer a
+ * `<table>` with every cell of every column in it.
  *
- * What makes this cheap is a cache of references to the nodes of every column (`appTable` returns it): reaching a
- * cell through the markup costs several times what changing it does (measured: `tr.children[i]` 0.0254 ms against
- * `classList.toggle` 0.0070 ms), and the first drawing creates every node anyway, so collecting them is free. The
- * columns of the fixed layout — a `<col>` per column, carrying the counted width — are collected there too.
+ * **Why not a `<table>`.** Measured on this repository's own report (238 500 cells = 370 758 nodes, a table 71 712 ×
+ * 5 982 px): about 1.4 GB of a browser's memory, of which roughly half the nodes and half the painted area, and a
+ * browser's relayout of it costs close to a second on any switch (`probes/step-12-columns.mjs`). `content-visibility:
+ * auto`, the cheap way out, is ignored on a table row by Chrome 153 (`probes/step-10-tables.mjs`), so the answer is
+ * to build less rather than to promise the browser will skip it. A grid of `position: absolute` rows has no layout to
+ * be redone: a row is placed by its `top`, a column by the `left` of the group of cells that starts it, and the
+ * browser never measures a cell to decide a width — every column is `--col` wide (70px), which is what the numbers
+ * need and no more (the counted widths this step replaced were 47–70px).
  *
- * The totals are the only numbers that move with the choice, and they are carried rather than recounted: a sum is
- * linear, so a file switched off subtracts exactly its own numbers — the same integers the first drawing wrote.
+ * **Why not a library.** A virtualizer for two axes is not a solved problem for a page like this one — measured from
+ * the tarballs, `@tanstack/virtual-core` is ~6.7 kB gzip and headless (the rows and columns are two virtualizers and
+ * every node is yours to write), `virtua` (~6.1 kB) calls its grid `experimental_VGrid` and has no sticky pieces,
+ * `Clusterize.js` virtualizes rows from a string of all of them and knows nothing of columns. All three would have to
+ * be vendored into the artifact — the page is one file, opens from disk and resolves no import — and the report
+ * measures its own bytes, so the library would be measured by the very tool it is inside. What is left to write
+ * after any of them is what this file is: the window, the cells, the header and the pinned column.
+ *
+ * **What is built.** The window is the rows and the columns the shell shows, plus `APP_OVER` beyond each edge: what
+ * the reader is about to reach is already there, so the edge of the window is never seen empty. Scrolling costs no
+ * JavaScript, the rows sit in the scrolled content at their own `top`; the script works only when the window has
+ * really moved, and then only on what left it and what entered it (measured on the prototype: 0.9 ms a step down the
+ * table, against 6.5 ms for building the whole window again). The header sticks to the shell's top and the commit
+ * column to its left (both `position: sticky`), so the row and the column a number belongs to are always in sight.
+ *
+ * The choice is applied by building the window again: the columns of a switched-off file are simply not among the
+ * columns that are built, so there is nothing to hide and nothing to recount — the totals are the sum over the files
+ * that are on, counted by `rowModel` for the rows the window holds (`src/derived.js`, one place for that
+ * arithmetic).
  */
 
-/* The cell's class: the metric's track (`m0`, `m1`, … — one class per metric, which is what hides a whole metric
- * at once), the group it belongs to (every cell of a group, not the first one: the group's left border is carried
- * by the first *enabled* metric, and the styling decides which that is), and the gap ("no such file"). */
-function appCellClass(mi, miss) {
-  return 'num g m' + mi + (miss ? ' miss' : '');
+/* The geometry in pixels: written here and read by the styling (`src/table.css`), which is one copy too many — hence
+ * `test/page-grid.test.js` holds the two together, and the report says the same numbers in its journal. */
+export const APP_COL = 70;
+export const APP_ROW = 25;
+export const APP_HEAD = 44;
+
+/* How much more than the visible window is built, in rows and in columns. A window that ends exactly at the edge of
+ * the shell shows an empty band while the browser scrolls a notch; four rows and four columns of slack are cheaper
+ * than that band, and they are what makes a scroll with the wheel or the trackpad look like a scroll. */
+export const APP_OVER = 4;
+
+/* The window of a shell that has no size: jsdom lays nothing out, and a shell with no metrics is hidden. A page is
+ * not written for that case, but its checks are: without these figures a check would read an empty table and say
+ * nothing rather than say it about the right thing. */
+export const APP_MIN_ROWS = 24;
+export const APP_MIN_COLS = 10;
+
+/* The order of the columns: the files the last commit touched come first — the report is rebuilt after every
+ * commit, and a reader's first question is what that edit brought. Inside each part the order is the settings', and
+ * it depends on the files rather than on the choice: that is what lets a column be switched off without moving the
+ * others. */
+export function appOrder() {
+  const files = [];
+  appData.files.forEach((_f, i) => files.push(i));
+  files.sort((a, b) => (appData.last[a] === true ? 0 : 1) - (appData.last[b] === true ? 0 : 1));
+  return files;
 }
 
-/* A cell filled where it stands: the totals are written again on every click, and a cell has to forget its own
- * content first — a delta is a node of its own, so `textContent` alone would leave it behind. */
-function appFill(td, parts) {
-  td.textContent = '';
-  if (parts.dir === null) td.textContent = parts.text;
-  else td.appendChild(appEl('span', 'delta ' + parts.dir, parts.text));
-  return td;
+/* The files whose columns are built, in the order of the columns: what is switched off is not among them, which is
+ * the whole of what a switch changes about the grid. */
+function appList() {
+  const out = [];
+  appOrder().forEach((i) => { if (appView.files[i] === true) out.push(i); });
+  return out;
 }
 
-// The markup of a commit row's cell: the rules live in cellParts, only the node is here.
-export function appCell(cell, mi) {
-  const parts = cellParts(cell.value, cell.delta, '−');
-  return appFill(appEl('td', appCellClass(mi, parts.miss)), parts);
+/* A number with its sign: the rules of a cell's content live in `cellParts` and `valueParts`, only the node is here —
+ * and its class, which carries the alignment (`num`), the group's left edge (`g`), the gap (`miss`) and the colour of
+ * the change (`up`/`down`). The colour stands on the cell itself rather than on a child of it: a report of this
+ * repository's size has a quarter of a million of these numbers, and one node instead of two is half of the window. */
+function appNum(parts, cls) {
+  return appEl('span', cls + (parts.miss ? ' miss' : '') + (parts.dir === null ? '' : ' ' + parts.dir), parts.text);
 }
 
-// The markup of the top row's cell: the rules live in valueParts.
-export function appValueCell(value, mi) {
-  const parts = valueParts(value);
-  return appFill(appEl('td', appCellClass(mi, parts.miss)), parts);
-}
-
-/* A commit's caption: the date, the subject, the journal section's mark. The column's width and the clipping of a long
- * subject come from the shared part of the styling, which is why the column does not jump when files are switched. */
+/* A commit's caption: the date, the subject, the journal section's mark. The column has a fixed width, so the
+ * caption is clipped with an ellipsis rather than wrapped (`.clip` in the styling), while the whole subject stands
+ * in the tooltip. */
 export function appCommit(row) {
   const parts = commitParts(row, appData.report.showSha, row.href);
   const name = parts.href ? appEl('a', 'subj', parts.subject) : appEl('span', 'subj', parts.subject);
@@ -58,14 +95,12 @@ export function appCommit(row) {
   clip.appendChild(appEl('span', 'when', parts.when));
   clip.appendChild(name);
   clip.appendChild(mark);
-  const th = appEl('th', 'c-commit');
-  th.appendChild(clip);
-  return th;
+  return clip;
 }
 
-/* The empty states: when there will be no numbers at all, the page says so in words rather than showing a grid without
- * columns. Every file can be switched off — then the total volume remains, and the note explains why there are no
- * columns. The table itself stands there either way: this is about what is shown, not about what exists. */
+/* The empty states: when there will be no numbers at all, the page says so in words rather than showing a grid
+ * without columns. Every file can be switched off — then the total volume remains, and the note explains why there
+ * are no columns. The shell stays where it is either way: this is about what is shown, not about what exists. */
 export function appState(metricsCount, filesCount) {
   const state = document.getElementById('state');
   const text = metricsCount === 0 ? appUi.empty : (filesCount === 0 ? appUi.noFiles : '');
@@ -74,276 +109,168 @@ export function appState(metricsCount, filesCount) {
   document.getElementById('shell').hidden = metricsCount === 0;
 }
 
-/* The order of the columns: the files the last commit touched come first — the report is rebuilt after every
- * commit, and a reader's first question is what that edit brought. Inside each part the order stays as it comes
- * from the settings, and it depends on the files rather than on the choice: that is what lets a column be hidden
- * without moving the others. */
-export function appOrder() {
-  const files = [];
-  appData.files.forEach((_f, i) => files.push(i));
-  files.sort((a, b) => (appData.last[a] === true ? 0 : 1) - (appData.last[b] === true ? 0 : 1));
-  return files;
+/* One cell of the window: the column decides what it holds. The group is the column's ordinal divided by the number of
+ * metrics — `0` is the total over the files, `g ≥ 1` is the g-th column of the order — and it is the same arithmetic
+ * the header is placed by, so a column and its caption cannot drift apart. The model lists the *enabled* files in the
+ * order of the data (that is what its mask means), while the columns stand in the order of the settings, which is why
+ * the ordinal of the column is turned into the ordinal of the model by `slot` (counted once per window). */
+function appCell(model, c, now, cache) {
+  const mi = c % cache.keys.length;
+  const group = (c - mi) / cache.keys.length;
+  const cls = 'num' + (mi === 0 ? ' g' : '');
+  const at = group === 0 ? null : cache.slot[group - 1];
+  const cell = at === null ? model.total[mi] : (model.files[at] || [])[mi];
+  if (cell === undefined) return appEl('span', cls);
+  return appNum(now ? valueParts(cell) : cellParts(cell.value, cell.delta, '−'), cls);
 }
 
-/* The header: a row of groups (the total and the files) and a row of metrics under it — every metric of every file,
- * because nothing here knows the choice. The headings whose `colSpan` follows the number of enabled metrics and the
- * headings of each file's column are collected in the cache: they are the nodes a click has to touch. */
-export function appHead(files, metrics, cache) {
-  const head = appEl('tr');
-  const commit = appEl('th', 'c-commit', appUi.commit);
-  commit.rowSpan = 2;
-  head.appendChild(commit);
-  const subs = appEl('tr');
-  const group = (label, i) => {
-    const th = appEl('th', 'gh', label);
-    th.colSpan = metrics.length;
-    head.appendChild(th);
-    cache.spans.push(th);
-    /* The group's own heading belongs to the column: hiding a file has to take its caption with it, or the header
-     * would keep a name over numbers that are gone. */
-    if (i !== null) cache.cols[i].push(th);
-    metrics.forEach((_key, mi) => {
-      const cell = appEl('th', 'g m' + mi, appData.metrics[mi].label);
-      subs.appendChild(cell);
-      if (i !== null) cache.cols[i].push(cell);
-    });
-  };
-  group(appUi.total, null);
-  files.forEach((i) => {
-    cache.cols[i] = [];
-    group(appData.files[i].label, i);
-  });
-  const thead = appEl('thead');
-  thead.appendChild(head);
-  thead.appendChild(subs);
-  return thead;
-}
-
-/* A text's breadth in `ch`, the unit a column is measured in: a digit is exactly one `ch` in this table's font
- * (measured in Chrome: 8.67px against 8.67px), and a thin space is counted as a third of a digit — nothing else is
- * discounted. Without that one fraction every number column would come out a fifth wider than the number in it (the
- * grouping makes a text 21 % narrower than its characters, measured), which would give back more than the padding and
- * the clipping of this step save. What is left over-measures — a letter is 0.84 of a `ch`, a slash 0.48 — and that is
- * the safe side: a cell clips nothing, so a column a character short would show a number running over its neighbour. */
-function appBreadth(text) {
-  let wide = 0;
-  for (let i = 0; i < text.length; i++) wide += text[i] === '\u2009' ? 0.35 : 1;
-  return wide;
-}
-
-/* The widest text of every column, counted before a single node is made: the numbers of the commit rows — through
- * `rowModel`, the very model the cells are drawn from, so a column cannot be sized for a number other than the one
- * that will stand in it — the absolute sizes of the "now" row and the metric's own caption. */
-function appWidest(files, keys) {
-  const wide = files.map(() => keys.map(() => 0));
-  const total = keys.map(() => 0);
-  const put = (into, mi, breadth) => { if (breadth > into[mi]) into[mi] = breadth; };
-  const delta = (cell) => appBreadth(cellParts(cell.value, cell.delta, '−').text);
-  const value = (v) => appBreadth(valueParts(v).text);
-  appData.rows.forEach((row, r) => {
-    const model = rowModel(row.values, r === 0 ? null : appData.rows[r - 1].values, keys);
-    model.total.forEach((cell, mi) => put(total, mi, delta(cell)));
-    files.forEach((i) => model.files[i].forEach((cell, mi) => put(wide[i], mi, delta(cell))));
-  });
-  const now = nowModel(appData.now, keys);
-  now.total.forEach((v, mi) => put(total, mi, value(v)));
-  files.forEach((i) => now.files[i].forEach((v, mi) => put(wide[i], mi, value(v))));
-  keys.forEach((_key, mi) => {
-    const caption = appBreadth(appData.metrics[mi].label);
-    put(total, mi, caption);
-    wide.forEach((per) => put(per, mi, caption));
-  });
-  return { total: total, files: wide };
-}
-
-/* A group's heading — a file's name, the word over the total — is one line over the columns of that group
- * (`white-space: nowrap` in the shared styling), so the group as a whole has to be wide enough for it, or the names of
- * two neighbouring groups would run into one another. The caption is divided among the metrics of the group rather than
- * weighed against their sum: every column carries at least its share, so the group can never come out narrower than the
- * caption, while a column that is wider anyway keeps its own count. */
-function appGroupWide(per, label) {
-  const share = Math.ceil(appBreadth(label) / per.length);
-  return per.map((n) => Math.max(n, share));
-}
-
-/* The columns, before the rows: `table-layout: fixed` reads the first row of the table and takes the widths from there,
- * so they are known while the table is built rather than measured by the browser over every cell of it. A column
- * carries the metric's class (`m0`, `m1`, …) — which is what hides a whole metric at once — and its counted width in
- * `ch`; the styling adds the padding and the border to it (`#grid col`), because a count and a drawing are one sum
- * rather than two. The columns of a file are collected where its cells are, so one switch writes one class over both. */
-function appCols(files, wide, cache) {
-  const group = appEl('colgroup');
-  const add = (n, mi) => {
-    const col = appEl('col', 'm' + mi);
-    col.style.setProperty('--ch', n + 'ch');
-    group.appendChild(col);
-    return col;
-  };
-  group.appendChild(appEl('col', 'c-commit'));
-  appGroupWide(wide.total, appUi.total).forEach(add);
-  files.forEach((i) => appGroupWide(wide.files[i], appData.files[i].label)
-    .forEach((n, mi) => { cache.cols[i].push(add(n, mi)); }));
-  return group;
-}
-
-/* A file's share of a row: one cell per metric, in the order of the table's columns, and each is put into its
- * column's cache while it is made. The maker is what tells a commit's delta from an absolute size at HEAD — the walk
- * over the files is one, and there is no second one to drift away. */
-function appRowCells(tr, model, files, cache, make) {
-  files.forEach((i) => {
-    model.files[i].forEach((value, mi) => {
-      const td = make(value, mi);
-      cache.cols[i].push(td);
-      tr.appendChild(td);
-    });
-  });
-}
-
-/* A commit row: the caption and the numbers. The deltas come from the shared calculation (`rowModel`) rather than
- * from here — two ways to count one row would be two answers. The model is taken whole (every file) because the
- * table holds every column, and the column order of the table is applied by taking the model by the file's own
- * index: the model lists the files the way the data does, not the way the columns stand. */
-export function appRow(r, files, metrics, cache) {
-  const row = appData.rows[r];
-  const prev = r === 0 ? null : appData.rows[r - 1];
-  const model = rowModel(row.values, prev === null ? null : prev.values, metrics);
-  const tr = appEl('tr');
-  tr.appendChild(appCommit(row));
-  model.total.forEach((cell, mi) => {
-    const td = appCell(cell, mi);
-    cache.sums[mi][r] = cell.value;
-    cache.cells[mi][r] = td;
-    tr.appendChild(td);
-  });
-  appRowCells(tr, model, files, cache, appCell);
-  return tr;
-}
-
-/* The top row holds the absolute sizes at HEAD: an absolute number stands in the table once, and it is the one every
- * delta below it adds up to. Its numbers are the state at HEAD rather than the last commit's cells, which is why the
- * running sums take them from here instead of assuming they are the row above. */
-export function appNow(files, metrics, cache) {
-  const tr = appEl('tr', 'now');
-  tr.appendChild(appEl('th', 'c-commit', appUi.now));
-  const model = nowModel(appData.now, metrics);
+/* A row of the window: the caption of the commit and the numbers of the columns the window holds. The top row is the
+ * state at HEAD (`nowModel`) rather than the last commit's cells: an absolute number stands in the table once, and
+ * the deltas below it add up to it. */
+function appRow(cache, r, span) {
   const last = appData.rows.length;
-  model.total.forEach((v, mi) => {
-    const td = appValueCell(v, mi);
-    cache.sums[mi][last] = v;
-    cache.cells[mi][last] = td;
-    tr.appendChild(td);
+  const now = r === 0;
+  const i = last - r;
+  const model = now
+    ? nowModel(appData.now, cache.keys, appView.files)
+    : rowModel(appData.rows[i].values, i === 0 ? null : appData.rows[i - 1].values, cache.keys, appView.files);
+  const row = appEl('div', 'row' + (now ? ' now' : ''));
+  row.style.top = (APP_HEAD + r * APP_ROW) + 'px';
+  const commit = appEl('div', 'c-commit');
+  if (now) commit.textContent = appUi.now;
+  else commit.appendChild(appCommit(appData.rows[i]));
+  row.appendChild(commit);
+  const cells = appEl('div', 'cells');
+  cells.style.left = (span.c0 * APP_COL) + 'px';
+  for (let c = span.c0; c <= span.c1; c++) cells.appendChild(appCell(model, c, now, cache));
+  row.appendChild(cells);
+  return row;
+}
+
+/* A built row into the window: the map is what says which rows are in the markup, so a row goes into it where it is
+ * made — otherwise a window that moved would build its rows beside the ones that are still there. */
+function appPlace(cache, r, span) {
+  const row = appRow(cache, r, span);
+  cache.rows.set(r, row);
+  cache.grid.appendChild(row);
+  return row;
+}
+
+/* A caption of the header: a file's name or a metric's. The room is a fixed number of columns, so a name that does
+ * not fit is cut with an ellipsis (the styling) rather than wrapped — the header is one line high, and the whole name
+ * is reachable in the tooltip. */
+function appCaption(text, cls, span) {
+  const el = appEl('span', cls, text);
+  if (span > 1) el.style.gridColumn = 'span ' + span;
+  el.title = text;
+  return el;
+}
+
+/* The header: the total and the enabled files over their columns, and one caption per metric column under them. It
+ * holds the window's columns alone and is built again only when the window moves sideways — scrolling down leaves it
+ * untouched, and the two rows of it are placed by `grid-column`, so a group of metrics is a group in the grid. */
+function appHead(cache, span) {
+  const count = cache.keys.length;
+  const g0 = Math.floor(span.c0 / count);
+  const g1 = Math.floor(span.c1 / count);
+  const left = (g0 * count * APP_COL) + 'px';
+  const head = appEl('div', 'head');
+  head.appendChild(appEl('div', 'c-commit', appUi.commit));
+  const groups = appEl('div', 'hgroups');
+  groups.style.left = left;
+  const metrics = appEl('div', 'hmetrics');
+  metrics.style.left = left;
+  for (let g = g0; g <= g1; g++) {
+    const label = g === 0 ? appUi.total : appData.files[cache.list[g - 1]].label;
+    groups.appendChild(appCaption(label, 'gh', count));
+    for (let mi = 0; mi < count; mi++) {
+      metrics.appendChild(appCaption(cache.labels[mi], mi === 0 ? 'g' : '', 1));
+    }
+  }
+  head.appendChild(groups);
+  head.appendChild(metrics);
+  return head;
+}
+
+/* The window the shell shows: the rows and the columns, in the ordinals of the whole grid, and the size of that
+ * grid. The rows are counted from the top of the content, under the header: the header is stuck to the top of the
+ * shell and covers the first rows of the content, hence the offset at both ends of the window. */
+export function appSpan(cache) {
+  const shell = cache.shell;
+  /* The metrics and the files of the window are read from the view here rather than kept: a switch changes them, and
+   * what is built has to be the choice as it is now — the keys, their captions and the ordinals of both below. */
+  cache.keys = [];
+  cache.labels = [];
+  appData.metrics.forEach((m) => {
+    if (appView.metrics[m.key] === true) { cache.keys.push(m.key); cache.labels.push(m.label); }
   });
-  appRowCells(tr, model, files, cache, appValueCell);
-  return tr;
+  const count = cache.keys.length;
+  cache.list = appList();
+  /* The ordinals of the model: `rowModel` lists the enabled files in the order of the data, the columns stand in the
+   * order of the settings, and `rank` is the bridge between the two — counted once per window, asked per cell. */
+  let rank = 0;
+  cache.rank = [];
+  appData.files.forEach((_f, i) => { cache.rank[i] = appView.files[i] === true ? rank++ : -1; });
+  cache.slot = cache.list.map((i) => cache.rank[i]);
+  const cols = count * (cache.list.length + 1);
+  const rows = appData.rows.length + 1;
+  cache.grid.style.width = (cols * APP_COL) + 'px';
+  cache.grid.style.height = (APP_HEAD + rows * APP_ROW) + 'px';
+  if (count === 0) return { r0: 0, r1: -1, c0: 0, c1: -1 };
+  const high = shell.clientHeight || APP_MIN_ROWS * APP_ROW;
+  const wide = shell.clientWidth || APP_MIN_COLS * APP_COL;
+  const top = shell.scrollTop + APP_HEAD;
+  return {
+    r0: Math.max(0, Math.floor(top / APP_ROW) - APP_OVER),
+    r1: Math.min(rows - 1, Math.floor((top + high) / APP_ROW) + APP_OVER),
+    c0: Math.max(0, Math.floor(shell.scrollLeft / APP_COL) - APP_OVER),
+    c1: Math.min(cols - 1, Math.floor((shell.scrollLeft + wide) / APP_COL) + APP_OVER)
+  };
 }
 
-/* The body: the commit rows from the newest down, plus the "now" row with the absolute sizes at HEAD. The deltas
- * under it add up to it, which is why it stands first. */
-export function appBody(files, metrics, cache) {
-  const body = appEl('tbody');
-  for (let r = appData.rows.length - 1; r >= 0; r--) body.appendChild(appRow(r, files, metrics, cache));
-  body.insertBefore(appNow(files, metrics, cache), body.firstChild);
-  return body;
+/* The window drawn. A scroll costs what left the window and what entered it, and nothing else: the row that is
+ * already built is not touched. Sideways — the window of columns is another window — the header and the rows are
+ * built again, because a column that is not there cannot be shown; the reader's own choice (`redraw`) is the same
+ * kind of change, and comes here by the same road. */
+export function appWindow(cache, redraw) {
+  const span = appSpan(cache);
+  const was = cache.win;
+  cache.win = span;
+  if (redraw === true || was === null || was.c0 !== span.c0 || was.c1 !== span.c1) {
+    const head = cache.grid.querySelector('.head');
+    if (head !== null) head.remove();
+    cache.grid.insertBefore(appHead(cache, span), cache.grid.firstChild);
+    cache.rows.clear();
+    [...cache.grid.querySelectorAll('.row')].forEach((row) => row.remove());
+    for (let r = span.r0; r <= span.r1; r++) appPlace(cache, r, span);
+    return;
+  }
+  [...cache.rows.keys()].forEach((r) => {
+    if (r >= span.r0 && r <= span.r1) return;
+    cache.rows.get(r).remove();
+    cache.rows.delete(r);
+  });
+  for (let r = span.r0; r <= span.r1; r++) {
+    if (!cache.rows.has(r)) appPlace(cache, r, span);
+  }
 }
 
-/* The whole table, built once. What the cache holds is what the reader's choice works with: the nodes of each file's
- * column — its cells, its headings and its `<col>` (`cols`), the group headings whose colSpan follows the enabled
- * metrics (`spans`), the cells of the totals (`cells`), the running sums (`sums`) and those same sums with every
- * column on (`all`) — the sums a view painted again starts from. */
+/* The grid: the shell whose scroll it follows, the metrics it counts in and the window at the place the reader is.
+ * The first drawing happens where the view is known (`appPaint` of the assembling chapter): what is built here is the
+ * place the table stands in, and no cell of it. */
 export function appTable(grid) {
-  const metrics = appData.metrics.map((m) => m.key);
-  const files = appOrder();
-  const cache = { grid: grid, keys: metrics, cols: [], drawn: [], spans: [], cells: [], sums: [], all: [] };
-  /* The columns are built shown: that is the state the nodes carry before anything is drawn. */
-  files.forEach((i) => { cache.drawn[i] = true; });
-  metrics.forEach(() => {
-    cache.cells.push([]);
-    cache.sums.push([]);
-  });
-  grid.textContent = '';
-  grid.appendChild(appHead(files, metrics, cache));
-  grid.appendChild(appBody(files, metrics, cache));
-  /* The columns stand before the rows rather than beside them: a `<colgroup>` is where the fixed layout reads its
-   * widths from, and it has to be in the markup before the browser settles on a layout — the drawing is one pass, not
-   * two. */
-  grid.insertBefore(appCols(files, appWidest(files, metrics), cache), grid.firstChild);
-  cache.all = cache.sums.map((row) => row.slice());
+  const cache = {
+    grid: grid,
+    shell: document.getElementById('shell'),
+    keys: [],
+    labels: [],
+    list: [],
+    rank: [],
+    slot: [],
+    rows: new Map(),
+    win: null
+  };
+  cache.shell.addEventListener('scroll', () => appWindow(cache));
+  window.addEventListener('resize', () => appWindow(cache, true));
   return cache;
-}
-
-/* How many nodes a file's column holds — its cells, its captions and its `<col>`. It is the unit the page's bar
- * counts in (`appDraw`), so it is answered here, where the column's nodes are: the choice's state costs arithmetic,
- * and the nodes are the table's business. */
-export function appColumnSize(cache, i) {
-  return cache.cols[i].length;
-}
-
-/* Whether a file's column has to be drawn at all: `drawn` is the state its nodes carry (the table is built with every
- * column shown), so a column that is on and was never drawn is already right. The first drawing of a report has
- * nothing switched off and therefore costs nothing, and a record from the memory or a link queues exactly the columns
- * that differ from it — on a table of a few hundred thousand cells that is the difference between a page that opens
- * and a page that works for a minute after opening. */
-export function appColumnStale(cache, i) {
-  return cache.drawn[i] !== (appView.files[i] === true);
-}
-
-/* A file's column shown or hidden: its cells and its headings together, one class per node and no new node. A hidden
- * column keeps its place in the markup — the order of the columns is the files' business, not the choice's. What the
- * nodes carry is remembered (`drawn`), or a repeated switch would walk a column nobody has to see again. */
-export function appColumn(cache, i, on) {
-  cache.cols[i].forEach((node) => node.classList.toggle('off', !on));
-  cache.drawn[i] = on;
-}
-
-/* A file's share of the totals: switched off it takes exactly its own numbers out of the running sums, switched on
- * it puts them back. Two rows per file are the whole of it — the numbers are the data's, and a sum of integers is
- * exact in either direction. */
-export function appContribute(cache, i, on) {
-  const sign = on ? 1 : -1;
-  appData.rows.forEach((row, r) => {
-    const values = row.values[i];
-    if (values === null) return;
-    cache.keys.forEach((key, mi) => { cache.sums[mi][r] += sign * values[key]; });
-  });
-  const values = appData.now[i];
-  if (values === null) return;
-  const last = appData.rows.length;
-  cache.keys.forEach((key, mi) => { cache.sums[mi][last] += sign * values[key]; });
-}
-
-/* The totals written where they stand: a data row shows the change against the row below it, the "now" row the
- * absolute size — the same rules the first drawing used (`cellParts`, `valueParts`), so the reader sees one kind of
- * number and not two. */
-export function appTotals(cache) {
-  const last = appData.rows.length;
-  cache.cells.forEach((cells, mi) => {
-    cells.forEach((td, r) => {
-      if (r === last) { appFill(td, valueParts(cache.sums[mi][r])); return; }
-      appFill(td, cellParts(cache.sums[mi][r], deltaOf(cache.sums[mi][r], r === 0 ? null : cache.sums[mi][r - 1]), '−'));
-    });
-  });
-}
-
-/* The running sums of the whole view again: a link, a record from the memory and the first drawing change the choice
- * as a whole rather than a column, so the sums start from the sums with every column on and take the switched-off
- * ones out — one copy of the numbers instead of a recount. */
-export function appTotalsReset(cache) {
-  cache.sums = cache.all.map((row) => row.slice());
-  appData.files.forEach((_f, i) => { if (!appView.files[i]) appContribute(cache, i, false); });
-  appTotals(cache);
-}
-
-/* The metrics of the choice: a class on the table hides every cell of a metric at once, and the group headings follow
- * how many are left — two things that change, instead of a pass over the metric's cells (measured: 2.20 ms and 265
- * operations against 433 ms and 56 496 for walking them). `.m-none` is what the styling reads to drop the group's
- * left border when there is nothing left to separate. */
-export function appMetrics(cache) {
-  let on = 0;
-  cache.keys.forEach((key, mi) => {
-    const visible = appView.metrics[key] === true;
-    if (visible) on++;
-    cache.grid.classList.toggle('m-off-' + mi, !visible);
-  });
-  cache.grid.classList.toggle('m-none', on === 0);
-  cache.spans.forEach((th) => { th.colSpan = on === 0 ? 1 : on; });
 }
