@@ -1153,3 +1153,19 @@ references stayed the same after the fix.
   owner (`test/cli-paths.test.js`, step 3's) and a tools file, which is why the commit is named in `tests-cli.md`
   rather than hidden inside the translation.
 
+- **N35. The coverage baseline's note explains one kind of honest zero but not the other.** Measured
+  2026-09-17 while taking the new unit (N32): the files reading zero executed lines are the same six before
+  and after the change — `src/page/app.js`, `dom.js`, `panel.js`, `state.js`, `table.js` and
+  `bin/postinstall.js` — and the note the sensor writes names only the first kind (the page chapters node
+  pastes into the assembled page and never executes). The sixth is a different kind: the postinstall script
+  is run by `pnpm install` in a consumer project, not by this suite, so its zero is honest for a reason the
+  note does not say. The gap is pre-existing rather than introduced by N32 (the previous baseline held the
+  same `{"lines":0,"branches":0,"functions":0}` for it).
+
+  **For the user to decide:** whether to name that second kind in the note. Price of naming it: one
+  sentence in the sensor's literal, which is a gate file, so a commit of its own with the `Gate-Change:`
+  trailer (and a re-take so the file's copy of the note matches the script's). Price of leaving it: a reader
+  of the baseline who meets a zero in `bin/` has to work out for themselves whether it is honest — the
+  note's sentence about the page chapters does not cover it, and a reader who takes it as the only exception
+  may read the sixth zero as an oversight.
+
