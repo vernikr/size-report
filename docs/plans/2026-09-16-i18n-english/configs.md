@@ -132,11 +132,24 @@ Two things that rule does not cover, named rather than left to luck:
 
 0. **Re-measure before starting.** Take the counter's baseline for the ten files and write it into
    the journal: the expectation is **127 of this owner's own, 3 allow-listed, 1 comment**, and it is
-   a measurement rather than a guess.
-1. **`templates/ci.yml`** (33) — comments only, no reader. Red first: the counter, plus
+   a measurement rather than a guess. **Done 2026-09-17: the expectation held to the line** —
+   `release.yml` 48, `templates/ci.yml` 33, `ci.yml` 19, `verify-slow.yml` 11, `.dependency-cruiser.cjs`
+   7, `eslint.metrics.config.js` 6, `.gitignore` 4, `size-report.config.json` 2, `package.json` 1,
+   `templates/README.md` **0** = **131 gross**, that is 127 own + 3 allow-listed + 1 English comment.
+   This is the first owner whose plan's number survived its own step 0 without a correction.
+1. **`templates/ci.yml`** (33) — **the file's text that no check reads, and it is not only comments:**
+   28 comment lines and 5 step names, measured. Red first: the counter, plus
    `test/templates.test.js` staying green after a translated comment (it reads the parsed document,
    not the prose). Constraint: a command keeps its flags (the help is the list). No trailer —
-   `templates/**` is not a gate file. **These bytes ship** (below).
+   `templates/**` is not a gate file. **These bytes ship** (below). **Done 2026-09-17: 33 → 0.**
+   Red first, four probes over the file, each restored byte for byte: a **step name** renamed
+   (`- name: Установка` → `- name: Setup`) — green; a **flag in a comment** broken (`--write` →
+   `--writ`, the only occurrence of the flag is in the comment at `:28`) — green; a **comment**
+   rewritten — green; a **flag inside a `run:`** broken (`--data` → `--dat` at `:60`) — **red** at
+   check 2 (`the CI workflow parses, and it runs what it declares`), and `fetch-depth: 0` → `1` —
+   also **red** at check 2. So the split is measured rather than argued: comments *and* step names
+   are free, the parsed document is the contract. `pnpm run dup` cannot see this file at all
+   (below). No trailer needed, and the hook confirmed it (`gate files 0`).
 2. **`.gitignore`** (4) — red first: fold the `reports/` line into another comment and watch
    `test/gates-verify.test.js` redden with its own message; translating the comment above it does
    not. No trailer.
@@ -174,7 +187,9 @@ Two things that rule does not cover, named rather than left to luck:
   answer first).
 - The parsers stay green: `test/release.test.js`, `test/gates-verify.test.js`,
   `test/templates.test.js`, `test/docs-paths.test.js` (this owner adds no file, so the README's file
-  table does not move).
+  table does not move). Measured for step 1: `test/templates.test.js` **3 of 3** green after the
+  translation, and `tools/pack-check.js:110-112`'s byte comparison of `templates/**` is unaffected
+  because it compares the tree against the tarball built from that same tree.
 - The instruments still answer 0: `pnpm run check:standards`, `pnpm run pack:check`, `pnpm run deps`,
   `pnpm run metrics`.
 - **A free detector of behaviour change:** `git diff --stat` over the ten files shows only literal

@@ -1,31 +1,31 @@
-# Проверка объёма для проекта, подключившего @vernikr/size-report.
-# Положите файл в .github/workflows/size-report.yml — правок он не требует.
+# Checking the size for a project that has installed @vernikr/size-report.
+# Put the file in .github/workflows/size-report.yml — it needs no edits.
 #
-# Что проверяется и почему так:
-#   * отчёт на диске сходится с историей git — это его числа (отчёт один:
-#     самодостаточная страница `size-report.html`);
-#   * тот же снимок чисел, снятый в среде, где настроек git нет вовсе,
-#     совпадает побайтово: вывод инструмента не должен зависеть от того, что
-#     настроено на машине (BLOCKERS.md §B1, §B2).
+# What is checked, and why it is done this way:
+#   * the report on disk agrees with the git history — these are its numbers (the report is one:
+#     the self-contained page `size-report.html`);
+#   * the same snapshot of numbers, taken in an environment where there are no git settings at all,
+#     is byte-identical: the output of the tool must not depend on what is
+#     configured on the machine (BLOCKERS.md §B1, §B2).
 #
-# Секретов шаблон не требует и не может потребовать: пакет ставится из
-# публичного репозитория, а pnpm тянет его архив с codeload.github.com по HTTPS —
-# ни ключа, ни токена установке не нужно (проверено установкой в окружении без
-# настроек git и без помощника учётных данных; README пакета, §1). Если проект
-# уйдёт на приватный registry, шаг с ключом придётся добавить самому.
+# The template requires no secrets and cannot require any: the package comes from
+# a public repository, and pnpm pulls its archive from codeload.github.com over HTTPS —
+# the install needs neither a key nor a token (proved by an install in an environment without
+# git settings and without a credential helper; the package's README, §1). If the project
+# moves to a private registry, the step with a key is yours to add.
 #
-# Менеджер пакетов: ниже pnpm. Для npm — `npm ci` вместо `pnpm install`,
-# для yarn — `yarn --immutable`. Сама проверка — всегда одна и та же команда
-# `size`: локальный бинарь, поставленный установкой пакета (`pnpm exec size` после
-# `pnpm install`, `npm exec size` после `npm ci`).
-# Имени пакета как команды здесь нет намеренно: `npx <имя>` в проекте без
-# установленного пакета уходит в реестр и тянет пакет оттуда по сети, тогда как
-# шаг проверки обязан работать на том, что поставлено установкой.
-# Нужен явный путь — `node node_modules/@vernikr/size-report/bin/size.js`.
+# The package manager: pnpm below. For npm — `npm ci` instead of `pnpm install`,
+# for yarn — `yarn --immutable`. The check itself is always the same command
+# `size`: the local binary the install puts there (`pnpm exec size` after
+# `pnpm install`, `npm exec size` after `npm ci`).
+# The package name as a command is deliberately absent here: `npx <name>` in a project
+# without the package installed goes to the registry and pulls it over the network, while
+# the check step has to work on what the install put there.
+# An explicit path is what is needed — `node node_modules/@vernikr/size-report/bin/size.js`.
 #
-# Отчёт не в git? Такое тоже задумано требованиями (отчёт — выводимый артефакт):
-# тогда вместо шага «Отчёт совпадает с историей» поставьте сборку —
-# `pnpm exec size --write` — и этот шаг будет проверять, что отчёт собирается.
+# The report is not in git? The requirements foresee that too (the report is a derived artifact):
+# then instead of the step «the report agrees with the history» put the build —
+# `pnpm exec size --write` — and that step will check that the report assembles.
 
 name: size-report
 
@@ -35,8 +35,8 @@ jobs:
   size:
     runs-on: ubuntu-latest
     steps:
-      # История нужна целиком: отчёт строится по коммитам, и на обрезанном
-      # клоне инструмент отказывается работать (код 3), а не пишет короткую.
+      # The whole history is needed: the report is built from the commits, and on a truncated
+      # clone the tool refuses to work (code 3) rather than writing a short one.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
@@ -48,21 +48,21 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Установка
+      - name: Setup
         run: pnpm install --frozen-lockfile
 
-      # Проверка — та же команда `size` без ключей: она собирает отчёт заново
-      # и сверяет с файлом на диске. Своего набора тестов потребителю не нужно.
-      - name: Отчёт совпадает с историей
+      # The check is the same `size` command without flags: it assembles the report anew
+      # and compares it with the file on disk. A consumer needs no test set of its own.
+      - name: The report agrees with the history
         run: pnpm exec size
 
-      - name: Снимок чисел контракта
+      - name: A snapshot of the contract numbers
         run: pnpm exec size --data > /tmp/size-report-data.json
 
-      - name: Снимок чисел без настроек git на машине
+      - name: A snapshot of numbers without the machine's git settings
         run: pnpm exec size --data > /tmp/size-report-data-null.json
         env:
           GIT_CONFIG_GLOBAL: /dev/null
 
-      - name: Числа не зависят от настроек машины
+      - name: The numbers do not depend on the machine's settings
         run: diff -u /tmp/size-report-data.json /tmp/size-report-data-null.json
