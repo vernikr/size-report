@@ -126,11 +126,13 @@ function uiText(page, loc) {
  * one (`src/page/payload.js`, `appDecode`), so the two places it is read are the encoder here and the decoder there.
  * `test/contract-data.test.js` holds the round trip between them.
  *
- * What the block leaves out besides the sparse form is the list of skipped commits: it changes with the report's own
- * commit (one with nothing to say lands in the list), and the file would stop being a **fixed point** — a rebuild
- * after its own commit would yield different bytes and the hook would commit the report forever. The page has no use
- * for the list at all: it does not show it. It stays available to the reader — `--data`, `--json` and `explain`
- * answer from the same run.
+ * What the block leaves out besides the sparse form are two facts the page does not read. The list of skipped commits
+ * changes with the report's own commit (one with nothing to say lands in the list), and the file would stop being a
+ * **fixed point** — a rebuild after its own commit would yield different bytes and the hook would commit the report
+ * forever; the page does not show it. The other is `last`, the columns the newest commit touched: the page orders the
+ * columns by the numbers themselves, which is a different fact (`src/page/table.js` says why), and the block would
+ * carry a list nothing asks for. Both stay available to the reader — `--data`, `--json` and `explain` answer from the
+ * same run.
  *
  * How much this is worth: the artifact of this repository carried 1 370 627 B of data as a snapshot per commit — 95 %
  * of the whole file — while nine tenths of the cells repeat the row above; the same history as changes is about 84 000
@@ -139,7 +141,7 @@ function uiText(page, loc) {
 /* The block's fields, in the order the encoder writes them. The shape is closed: a field added here has to be read in
  * the decoder, and the page's checks compare the block with this list rather than with a description of it. */
 export const PAGE_KEYS = ['schema', 'tool', 'report', 'hrefPrefix', 'strs', 'metrics', 'cats', 'files',
-  'catalog', 'rows', 'last', 'hist'];
+  'catalog', 'rows', 'hist'];
 
 /* The texts of the block, each written once. The dictionary is extended in the order of the walk `pagePayload` makes
  * — files in the column order, rows in the history order — and the order of the first appearance is what decides an
@@ -227,10 +229,8 @@ export function pagePayload(data) {
       r.section === null ? null : dict.of(r.section.head),
       r.section !== null && r.section.added ? 1 : 0,
       r.href === null ? null : dict.of(r.href.slice(prefix.length))]),
-    last: [],
     hist: history(keys, data.files, data.rows)
   };
-  data.last.forEach((on, i) => { if (on) out.last.push(i); });
   return out;
 }
 

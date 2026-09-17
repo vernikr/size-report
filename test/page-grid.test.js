@@ -28,7 +28,7 @@ const { data, openPage } = pageReady('grid');
  * the paste into the page does, and its functions are never called (they want the document). */
 const chapter = stripModules(fs.readFileSync(path.join(ROOT, 'src', 'page', 'table.js'), 'utf8'));
 const G = new Function(chapter
-  + '\nreturn { col: APP_COL, row: APP_ROW, head: APP_HEAD, over: APP_OVER };')();
+  + '\nreturn { col: APP_COL, row: APP_ROW, head: APP_HEAD, commit: APP_COMMIT, over: APP_OVER };')();
 
 const CSS = fs.readFileSync(path.join(ROOT, 'src', 'table.css'), 'utf8');
 const declared = (name) => Number(new RegExp('--' + name + ':\\s*(\\d+)px').exec(CSS)[1]);
@@ -39,12 +39,40 @@ const nowRow = (doc) => GRID(doc).querySelector('.row.now');
 const numbers = (row) => [...row.querySelectorAll('.cells > span')].map((span) => span.textContent.trim());
 const captions = (doc) => [...GRID(doc).querySelectorAll('.hgroups > span')].map((span) => span.textContent);
 const where = (f) => (f.path === null ? f.paths[0] : f.path);
+const placed = (el) => Number(el.style.left.replace('px', ''));
 
-/* Where a file's column stands: the files the last commit touched first, the rest in the settings' order — the rule
- * the panel and the header share (`appOrder`). Written here rather than taken from the page because a check has to
- * have an expectation of its own; it is the same sentence the documentation says about the order. */
-const columnOrder = () => data.files.map((_f, i) => i)
-  .sort((a, b) => (data.last[a] === true ? 0 : 1) - (data.last[b] === true ? 0 : 1));
+/* The shared sheet read as rules: the comments out, every block with the selectors that open it. Two places write one
+ * geometry and one border down — the styling and the script — and no number of the page's own would report a clash
+ * between them, so the rules are read here rather than trusted. */
+const SHEET = CSS.replace(/\/\*[\s\S]*?\*\//g, '');
+const BLOCKS = [...SHEET.matchAll(/([^{}]+)\{([^}]*)\}/g)]
+  .map((m) => ({ sel: m[1].split(',').map((s) => s.trim()), body: m[2] }));
+const rule = (selector) => {
+  const found = BLOCKS.filter((b) => b.sel.indexOf(selector) >= 0);
+  assert.ok(found.length > 0, 'в таблице стилей нет правила для «' + selector + '»');
+  return found.map((b) => b.body).join(' ').replace(/\s+/g, ' ').trim();
+};
+const decl = (selector, name) => {
+  const found = new RegExp('(?:^|;)\\s*' + name + ':\\s*([^;]+)').exec(rule(selector));
+  assert.notEqual(found, null, 'правило «' + selector + '» не задаёт «' + name + '»');
+  return found[1].trim();
+};
+
+/* Where a file's column stands: the files whose numbers moved most recently come first, and a file the history never
+ * moved anywhere comes last — the rule the header and the window share (`appOrder`). The expectation is counted here
+ * from the contract's own rows rather than taken from the page: a column of empty cells standing in front of the table
+ * is what the order is about, and the check says so in the numbers the reader sees. */
+const columnOrder = () => {
+  const rank = data.files.map(() => -1);
+  let was = null;
+  data.rows.forEach((row, i) => {
+    row.values.forEach((cell, j) => {
+      if (was === null || JSON.stringify(cell) !== JSON.stringify(was[j])) rank[j] = i;
+    });
+    was = row.values;
+  });
+  return data.files.map((_f, i) => i).sort((a, b) => rank[b] - rank[a]);
+};
 
 /* A viewport and a place in it, given rather than measured: jsdom has no layout and remembers no scroll, so the check
  * hands the shell the four figures the page reads — the same properties a browser fills in — and sends the event a
@@ -98,8 +126,8 @@ test('the grid is a window of the table: what the reader sees is built, and no m
 test('the grid is as wide as its columns and as tall as its rows, and the styling agrees with the script', async () => {
   const doc = (await openPage()).window.document;
   const columns = (data.files.length + 1) * data.metrics.length;
-  assert.equal(Number(GRID(doc).style.width.replace('px', '')), columns * G.col,
-    'the grid is not as wide as its columns: the scrollbar would answer about another extent');
+  assert.equal(Number(GRID(doc).style.width.replace('px', '')), G.commit + columns * G.col,
+    'the grid is not as wide as its columns and the pinned commit column: the scrollbar would answer about another extent');
   assert.equal(Number(GRID(doc).style.height.replace('px', '')), G.head + (data.rows.length + 1) * G.row,
     'the grid is not as tall as its rows: the scrollbar would answer about another extent');
 
@@ -108,12 +136,64 @@ test('the grid is as wide as its columns and as tall as its rows, and the stylin
   assert.equal(declared('col'), G.col, 'the column of the styling is not the column of the script');
   assert.equal(declared('row'), G.row, 'the row of the styling is not the row of the script');
   assert.equal(declared('head'), G.head, 'the header of the styling is not the header of the script');
+  assert.equal(declared('commit'), G.commit, 'the pinned column of the styling is not the one the script places the numbers beside');
+  assert.equal(declared('head'), 2 * declared('row'),
+    'the header is not exactly two rows: its two lines would have a height of their own');
   assert.match(CSS, /\.cells\s*\{[^}]*grid-auto-columns:\s*var\(--col\)/,
     'the cells of a row are not one grid of the same track per column');
   assert.match(CSS, /\.hgroups > span\s*\{[^}]*text-overflow:\s*ellipsis/,
     'файл с длинным именем не обрезается многоточием: имя выйдет за свою группу');
   assert.equal((CSS.match(/--ch\b|table-layout|colgroup/g) || []).length, 0,
     'the styling still counts a width per column: the columns are one width now');
+});
+
+/* The three rules of the drawing a reader sees at once, each of which one declaration of another kind had broken: one
+ * border, rows of one height (the header's two lines among them), a file's name centred over its group — and the panel,
+ * which the table's styling must not reach at all (an unscoped `.row` took the panel's own row out of the flow). The
+ * panel is not a matter of taste here but of one sheet being shared: `#grid` is the border between the two. */
+test('one border, rows of one height, captions centred, and the panel outside the table’s styling', async () => {
+  /* The lines of the table — under a row, under a cell of the header, along the left edge of a group — are one line.
+   * The dotted underline of a journal mark is not among them: it is a mark on a word rather than an edge of the table. */
+  const edges = ['#grid .cells > span', '#grid .c-commit', '#grid .hgroups > span', '#grid .hmetrics > span']
+    .map((sel) => decl(sel, 'border-bottom'))
+    .concat(['#grid .cells > .g', '#grid .hmetrics > .g', '#grid .hgroups > .gh']
+      .map((sel) => decl(sel, 'border-left')));
+  assert.deepEqual([...new Set(edges)], ['1px solid var(--grid-line)'],
+    'бордеры разной толщины или цвета: ' + JSON.stringify([...new Set(edges)]));
+
+  /* And the page's chrome is framed in the very same line. Two greys for one drawing is the kind of difference nobody
+   * names in a report and everybody sees, so the two declarations are read against each other rather than trusted. */
+  const OWN = fs.readFileSync(path.join(ROOT, 'src', 'page', 'app.css'), 'utf8');
+  const line = /--line:\s*([^;]+)/.exec(OWN.replace(/\/\*[\s\S]*?\*\//g, ''))[1].replace(/\s+/g, ' ').trim();
+  assert.equal(line, /--grid-line:\s*([^;]+)/.exec(SHEET)[1].replace(/\s+/g, ' ').trim(),
+    'линия рамки страницы не того же цвета, что линии таблицы');
+
+  /* A cell of the numbers and a cell of the header carry the same padding, line height and line: the header is two
+   * rows of the same rhythm as the table rather than a band of its own size. */
+  ['padding', 'line-height', 'border-bottom'].forEach((name) => assert.equal(
+    decl('#grid .cells > span', name), decl('#grid .hgroups > span', name),
+    'ячейка заголовка и ячейка чисел разной высоты: «' + name + '» расходится'));
+  assert.equal(decl('#grid .hgroups', 'height'), 'var(--row)', 'строка имён файлов не равна строке таблицы');
+  assert.equal(decl('#grid .hmetrics', 'top'), 'var(--row)', 'строка метрик не стоит под строкой имён');
+  assert.equal(decl('#grid .hmetrics', 'height'), 'var(--row)', 'строка метрик не равна строке таблицы');
+  assert.equal(decl('#grid .head', 'height'), 'var(--head)', 'шапка не двухстрочная');
+
+  // A file's name stands over its group of metrics, centred on it.
+  assert.equal(decl('#grid .hgroups > span', 'text-align'), 'center',
+    'название файла не выровнено по центру своей группы');
+
+  /* One sheet, two consumers: every rule of the table's part is tied to `#grid`, or it reaches the panel standing beside
+   * the table — which is exactly what the panel's own `.row` suffered. */
+  const loose = BLOCKS.map((b) => b.sel).flat().filter((sel) => sel.indexOf('#grid') !== 0);
+  assert.deepEqual(loose, [], 'правило таблицы не привязано к #grid и достанет до панели: ' + loose.join(' | '));
+
+  /* And the numbers begin beside the pinned commit column rather than under it: the total (the first group of every
+   * row) is the one a reader misses first when the column is laid over it. */
+  const doc = (await openPage()).window.document;
+  assert.equal(placed(nowRow(doc).querySelector('.cells')), G.commit,
+    'числа первой группы уехали под закреплённую колонку коммита');
+  assert.equal(placed(GRID(doc).querySelector('.hgroups')), G.commit,
+    'подписи первой группы уехали под закреплённую колонку коммита');
 });
 
 test('the window follows the scroll: the rows in sight are built, and those that left are dropped', async () => {

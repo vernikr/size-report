@@ -1,25 +1,29 @@
 /* The report's table: a grid of plain elements rather than a `<table>`, and only the part of it the reader looks at is
  * built (`src/page/table.js` says why, and what was measured).
  *
- * Three figures are the whole geometry — a metric column, a row and the header — and they are written twice, here and
- * in the script that counts the window's ordinals in them. Two copies of a number are two answers waiting to happen,
- * hence `test/page-grid.test.js` reads these three declarations and holds the script to them. The fourth, the commit
- * column's width, is the styling's alone: the script places the numbers from the left edge of the grid, and the caption
- * is pinned over them.
+ * Everything here hangs off `#grid`, and that is not a habit: this sheet is the package's **shared** part (`src/css.js`)
+ * while the page brings a `.panel .row` of its own, and an unscoped rule for the table's rows took that row out of the
+ * flow with it (the panel's switches stood on top of one another until the rules were scoped).
+ *
+ * Four figures are the whole geometry — a metric column, a row, the header and the commit column — and they are written
+ * twice, here and in the script that counts the window's ordinals in them. Two copies of a number are two answers waiting
+ * to happen, hence `test/page-grid.test.js` reads these four declarations and holds the script to them.
+ *
+ * One border: 1px of one colour — a row's bottom edge, a group's left edge, the lines of the header. A heavier line or a
+ * second colour would promise a hierarchy to be worked out rather than read.
  *
  * One type face for the whole table; numbers line up by their digits thanks to tabular-nums rather than through a
- * monospaced font. Every column is the same width and fixed: the numbers are short and of one kind, and a width that
- * came out of the text would have to be measured over every cell of the column — the very cost this step removed.
- * A file's caption over its group is cut with an ellipsis rather than wrapped (`appCaption`), because the header is one
- * line high and the grid is built of rows of one height.
+ * monospaced font. Every column is the same width and fixed: the numbers are short and of one kind, and a width that came
+ * out of the text would have to be measured over every cell of the column — the very cost this step removed. The header is
+ * two lines of one row each — `--head` is exactly two `--row` — and a name too long for its group is cut with an ellipsis
+ * rather than wrapped (`appCaption`) or run over its neighbour.
  */
 #grid {
   --col: 70px;
   --row: 25px;
-  --head: 44px;
+  --head: 50px;
   --commit: 220px;
   --grid-line: rgba(127, 127, 127, .25);
-  --grid-edge: rgba(127, 127, 127, .35);
   position: relative;
   font-variant-numeric: tabular-nums;
 }
@@ -28,8 +32,8 @@
  * painting — no layout and no script — while the width of the content gives the scrollbar its length and the script its
  * ordinals. The cells of a row are one grid of fixed tracks (`grid-auto-columns`): a cell cannot change the width of a
  * column, and it cannot push its neighbour. */
-.row { position: absolute; left: 0; width: 100%; height: var(--row); }
-.cells {
+#grid .row { position: absolute; left: 0; width: 100%; height: var(--row); }
+#grid .cells {
   position: absolute;
   top: 0;
   display: grid;
@@ -37,32 +41,42 @@
   grid-auto-columns: var(--col);
   height: var(--row);
 }
-.cells > span, .hgroups > span, .hmetrics > span { box-sizing: border-box; white-space: nowrap; }
-.cells > span { padding: 2px 4px; line-height: 20px; border-bottom: 1px solid var(--grid-line); }
-.num { text-align: right; }
+#grid .cells > span, #grid .hgroups > span, #grid .hmetrics > span { box-sizing: border-box; white-space: nowrap; }
+/* Two pixels of padding and a line of twenty: with the border, a cell is one `--row` high — the same for the header's
+ * cells as for the numbers, or the header would be a band of another rhythm. */
+#grid .cells > span {
+  padding: 2px 4px;
+  line-height: 20px;
+  border-bottom: 1px solid var(--grid-line);
+}
+#grid .num { text-align: right; }
 /* The left edge of a group — the total, and every file — is carried by the group's first metric. One class instead of
  * the four rules of "which metric is switched on": the window is built out of the files that are on, so which column
  * stands first in a group is the page's own answer rather than something the styling has to work out. */
-.cells > .g, .hmetrics > .g, .hgroups > .gh { border-left: 1px solid var(--grid-edge); }
+#grid .cells > .g, #grid .hmetrics > .g, #grid .hgroups > .gh { border-left: 1px solid var(--grid-line); }
 
 /* The header: one row of groups (the total and the files) over one row of metrics, stuck to the top edge of the shell,
  * and the commit column stuck to its left edge. Both carry an opaque background (Canvas), or the numbers would show
- * through them while the reader scrolls. */
-.head { position: sticky; top: 0; left: 0; z-index: 3; height: var(--head); background: Canvas; }
-.hgroups, .hmetrics { position: absolute; display: grid; grid-auto-flow: column; grid-auto-columns: var(--col); }
-.hgroups { top: 0; height: 22px; }
-.hmetrics { top: 22px; height: 22px; }
-.hgroups > span, .hmetrics > span { padding: 0 4px; line-height: 20px; border-bottom: 2px solid var(--grid-edge); }
-.hgroups > span { text-align: left; }
-/* A file's name is one line of a fixed room: a name that does not fit is cut with an ellipsis (`appCaption` puts the
- * whole of it into the tooltip) rather than wrapped — the grid is rows of one height — or run over its neighbour. */
-.hgroups > span { overflow: hidden; text-overflow: ellipsis; }
-.hmetrics > span { text-align: center; color: CanvasText; }
+ * through them while the reader scrolls. The two lines are placed by `top` and are one row high each, so the header
+ * aligns with the table below it rather than standing a size of its own. */
+#grid .head { position: sticky; top: 0; left: 0; z-index: 3; height: var(--head); background: Canvas; }
+#grid .hgroups, #grid .hmetrics { position: absolute; display: grid; grid-auto-flow: column; grid-auto-columns: var(--col); }
+#grid .hgroups { top: 0; height: var(--row); }
+#grid .hmetrics { top: var(--row); height: var(--row); }
+#grid .hgroups > span, #grid .hmetrics > span {
+  padding: 2px 4px;
+  line-height: 20px;
+  border-bottom: 1px solid var(--grid-line);
+}
+/* A file's name stands over its group of metrics and is centred on it: the group is a column of numbers, and a caption
+ * that began at its left edge would carry the eye to the wrong place. */
+#grid .hgroups > span { text-align: center; overflow: hidden; text-overflow: ellipsis; }
+#grid .hmetrics > span { text-align: center; color: CanvasText; }
 
-/* The commit column: a sticky cell of every row, so the commit a number belongs to is in sight while the reader
- * scrolls sideways. Its width is fixed, and a caption longer than it is clipped — the whole subject stands in the
- * tooltip. */
-.c-commit {
+/* The commit column: a sticky cell of every row, so the commit a number belongs to is in sight while the reader scrolls
+ * sideways. Its width is fixed and is the script's `APP_COMMIT` as well — the numbers are placed from the left edge of
+ * the grid *beside* the column, and a caption longer than it is clipped (the whole subject stands in the tooltip). */
+#grid .c-commit {
   position: sticky;
   left: 0;
   z-index: 2;
@@ -79,24 +93,24 @@
   white-space: nowrap;
   border-bottom: 1px solid var(--grid-line);
 }
-.c-commit a { color: inherit; }
-.head .c-commit { z-index: 6; height: var(--head); line-height: var(--head); border-bottom-width: 2px; }
+#grid .c-commit a { color: inherit; }
+#grid .head .c-commit { z-index: 6; height: var(--head); line-height: var(--head); }
 /* This block fills the commit column: the cell clips what does not fit, and the subject is what gives way (the flex
  * item of `flex: 1 1 auto`), while the date and the journal mark keep their own width. */
-.clip { display: flex; align-items: baseline; gap: 6px; width: 100%; }
-.when { flex: none; opacity: .7; }
-.subj { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; display: block; }
-.subj.plain { opacity: .7; }
-.sect { flex: none; opacity: .7; font-size: 11px; text-decoration: none; border-bottom: 1px dotted currentColor; }
+#grid .clip { display: flex; align-items: baseline; gap: 6px; width: 100%; }
+#grid .when { flex: none; opacity: .7; }
+#grid .subj { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; display: block; }
+#grid .subj.plain { opacity: .7; }
+#grid .sect { flex: none; opacity: .7; font-size: 11px; text-decoration: none; border-bottom: 1px dotted currentColor; }
 /* Growth green, fall red — by agreement with whoever asked for the report (growth is "more logic" rather than alarm). */
-.up { color: #1e8449; }
-.down { color: #c0392b; }
-.miss { opacity: .5; }
-/* The top row holds the current sizes: it is also what explains what the deltas below refer to. */
-.row.now > .c-commit { font-weight: 600; }
-.row.now > .c-commit, .row.now > .cells > span { border-bottom-width: 2px; }
+#grid .up { color: #1e8449; }
+#grid .down { color: #c0392b; }
+#grid .miss { opacity: .5; }
+/* The top row holds the current sizes: it is also what explains what the deltas below refer to — by its weight rather
+ * than by a heavier line, which would be a second border among the rows. */
+#grid .row.now > .c-commit { font-weight: 600; }
 /* A row's highlight is laid over rather than swapped in: the sticky column has to stay opaque, or numbers show through
  * it while the reader scrolls sideways. */
-.row:hover > .c-commit, .row:hover > .cells > span {
+#grid .row:hover > .c-commit, #grid .row:hover > .cells > span {
   background-image: linear-gradient(rgba(127, 127, 127, .08), rgba(127, 127, 127, .08));
 }

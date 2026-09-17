@@ -15,7 +15,9 @@
  * moved (deltas against its own previous record) or disappeared, and this chapter puts the snapshots back
  * together. The whole history walk is O(number of changes) rather than O(rows × files).
  *
- * The model after `appDecode` is exactly `--data`: the calculation (`rowModel`, `totalsOf`, `cellParts`,
+ * The model after `appDecode` is exactly `--data` but for one field: the history's mark `last` (the columns the
+ * newest commit touched) is not carried, because the page orders its columns by the numbers rather than by the
+ * commit's list of paths (`src/page/table.js`). The calculation (`rowModel`, `totalsOf`, `cellParts`,
  * `valueParts`), the table and the panel know nothing about the sparse form, so there is no second way to
  * count a row. A value that did not move is **one object shared by the rows that hold it** — the heap keeps
  * the distinct numbers rather than a copy per commit — and because every consumer reads `v[metric]` and
@@ -149,8 +151,6 @@ function appRowOf(p, r, values) {
 export function appDecode(p) {
   const keys = p.metrics.map((m) => appText(p, m[0]));
   const hist = appUnroll(p, keys);
-  const last = p.files.map(() => false);
-  p.last.forEach((i) => { last[i] = true; });
   return {
     schema: p.schema,
     tool: p.tool,
@@ -162,7 +162,6 @@ export function appDecode(p) {
       paths: f[2].map((i) => p.strs[i]), category: appText(p, f[3]), categoryBy: appText(p, f[4]) })),
     catalog: p.catalog.map((e) => ({ path: appText(p, e[0]), why: appText(p, e[1]) })),
     rows: p.rows.map((r, ri) => appRowOf(p, r, hist.rows[ri])),
-    now: hist.now,
-    last: last
+    now: hist.now
   };
 }

@@ -10,7 +10,7 @@ shows.
 
 ## Status
 
-**Release 2.8.0 (2026-09-18).** The tool lives as a package of its own: the registry name is
+**Release 2.8.1 (2026-09-18).** The tool lives as a package of its own: the registry name is
 `@vernikr/size-report` (published by tag from CI, with no secret). A project may keep no settings at
 all: without a config file the tool derives them from the project itself and says so in one line,
 and `--init` pins what was derived into a file. The report is **one file**, the self-contained page
@@ -18,6 +18,22 @@ and `--init` pins what was derived into a file. The report is **one file**, the 
 is installed and on the first run. The version is in the manifest, and every release is recorded in
 the journal — `worklog/` for today's entries, `worklog/archive/WORKLOG.md` for the earlier ones:
 what changes in the numbers is measured rather than retold.
+
+2.8.1 is the drawing of the page put right after its table became a window, and its figures are measured rather than
+retold. **The panel and the table were sharing one class:** the table's rows were styled by a bare `.row` while the
+panel's own rows are `.panel .row`, so the table's rule took the metrics row and the three method lines out of the flow
+and painted them over one another — every rule of the shared part now hangs off `#grid`, and a check reads the selector
+list of that sheet rather than a sample of the page. **The numbers were placed from the grid's left edge while the commit
+column is pinned over it**, which hid the first column — the overall total — completely; they begin at the column's right
+edge now, a 220px figure written in the script and in the styling and held together like the three beside it. **The order
+of the columns comes from the numbers rather than from the commit's list of paths**: a commit can touch a file without
+moving it — this package's own attachment to itself, 2.7.0 → 2.8.0, is one character for another — and a column of empty
+cells standing in front of the table is what a reader calls a broken order, so a file's newest move decides its place;
+the engine's mark `last` stays in `--data` while the page's block no longer carries it. **One border and one height:**
+every line of the table is 1px of one colour (the header's two lines were 2px and another shade) and the header is two rows
+of the table's own height, while a file's name is centred over its group. The artifact grows 351 B for it — 85 495 B
+against 85 144 B of one history. The checks go 88 → **89** in the fast profile and 193 → **194** in the full one; the
+figures and the reasoning stand in `worklog/0209-page-drawing-order.md`.
 
 2.8.0 is about what the report costs whoever opens it, and its figures are measured rather than retold.
 **The table is a window of itself:** every row and every column in sight is built, plus four beyond each edge so that
@@ -237,11 +253,10 @@ commits and installs hooks; the reason for each expensive file is named line by 
 
 | Run | Command | Checks |
 |---|---|---|
-| Fast — every edit | `pnpm test` | **88 of 193** |
-| Full — release and CI | `pnpm test:all` | **193** |
+| Fast — every edit | `pnpm test` | **89 of 194** |
+| Full — release and CI | `pnpm test:all` | **194** |
 
-No check is lost or weakened: the full run starts all 186 with the same files, the fast one takes part
-of them. The default is the full run — a file becomes fast only explicitly and with a reason — so new
+No check is lost or weakened: the full run starts every file, the fast one takes part of them. The default is the full run — a file becomes fast only explicitly and with a reason — so new
 expensive work cannot quietly move into the fast one. Two declarations guard that:
 `test/suites.test.js` (every file classified, and a reason for each) and the documentation guard
 `test/docs-numbers.test.js` (the numbers in the table above).
@@ -367,10 +382,14 @@ a *single* cell of this repository's report, 539 ms for 6 000 (`probes/step-12-c
 table is **2 460 nodes and 0.15 GB**, a hundredth of the nodes and a tenth of the memory, and the whole-table scroll
 pass that took 36 s of task time over 60 steps takes **1.1 s over 251** (`worklog/0208-table-window.md`). **The columns
 are one width and fixed, 70px each**: the numbers are short and of one kind, and a width that came out of the text is a
-measurement of every cell of the column — the very cost this step removed. A file's name over its group is cut with an
-ellipsis rather than wrapped (the header is one line high and the whole name stands in the tooltip). The geometry is
-three figures — a column, a row, the header — written in the styling and in the script that counts the window's ordinals
-in them, and `test/page-grid.test.js` reads both and holds them together.
+measurement of every cell of the column — the very cost this step removed. A file's name stands centred over its group
+and is cut with an ellipsis rather than wrapped — the whole name stays in the tooltip. The header is two lines of one
+row each, the numbers begin at the
+right edge of the pinned commit column rather than under it, and every line of the table — under a row, under a header
+cell, along a group's left edge — is one pixel of one colour: a heavier line would promise a hierarchy to work out
+rather than read. The geometry is four figures — a column, a row, the header, the pinned column — written in the styling
+and in the script that counts the window's ordinals in them, and `test/page-grid.test.js` reads both and holds them
+together.
 
 **A click builds the window again, and that is cheap now.** A file switched off is simply not among the columns that
 are built, and a metric switched off not among the metrics: there is nothing to hide and nothing to carry, and the
@@ -387,15 +406,16 @@ virtualizes rows out of a string of all of them and knows nothing of columns —
 the artifact, whose bytes this very tool measures. What is left to write after any of them is what the chapter is: the
 window, the cells, the header and the pinned column.
 
-**The columns the last commit touched come first.** The report is rebuilt after every commit, and a
-reader's first question is what that edit brought. The mark comes from the history rather than from the
-numbers — an edit that changed no size is an edit too — and it is taken from the last commit that
-touched at least one column, counting back from the top: a commit that went past the columns, above all
-the report itself, which the hook commits, is skipped, or the mark would depend on the report's own
-commit, the same run would give different bytes and the hook would commit the report a second time.
-Inside each part the order stays as it comes from the settings (the sort is stable): the order of the
-columns is what the reader is used to, and his choice of files does not rearrange it
-(`test/page-grid.test.js`, the contract's `last` field).
+**The columns whose numbers last moved come first.** The report is rebuilt after every commit, and a
+reader's first question is what that edit brought. The mark is taken from the numbers rather than from
+the commit's list of paths, and that is the whole of the difference: a commit can touch a column without
+moving it — a version bumped inside a line of the same length, this package's own attachment to itself is
+one — and a column of empty cells standing in front of the table is what a reader calls a broken order.
+The rest follows in the settings' order (the sort is stable), so the order of the columns is what the
+reader is used to, and his choice of files does not rearrange it (`src/page/table.js`; the rule is counted
+from the contract's own rows in `test/page-grid.test.js`). The engine still answers with `last` — the
+columns the newest commit touched — in `--data`; the page no longer reads it, and the block it carries no
+longer holds it.
 
 **On a wide window the panel stands to the left of the table and takes no room from the numbers** (from
 900px, `src/page/app.css`). That is not decoration: a desktop has much side room and little vertical
@@ -578,13 +598,13 @@ acceptance for each.
 | `src/size-table.js` | The package's entry point: a re-export of the public API (55 names) and no calculation of its own |
 | `src/derived.js` | The report's shared calculation: totals, deltas, a cell, a commit's caption — one for the engine and the page's program |
 | `src/css.js` | Reading the styling from disk: which sets of styles exist and what role each has |
-| `src/table.css` | The report's table: the geometry of the window — one width per column, one height per row, the header — the sticky header and commit column, a file's caption cut with an ellipsis, the colour of deltas |
+| `src/table.css` | The report's table: the geometry of the window — one width per column, one height per row, the two lines of the header, the pinned commit column — the sticky header and commit column, one 1px line of one colour for every border, a file's caption centred over its group and cut with an ellipsis, the colour of deltas |
 | `src/page/app.css` | The page's styling on top of the shared part: the panel with the file tree and its sticky row of categories (a column on the left on a wide screen, the page fitting the window), the empty states, a narrow window |
 | `src/page/payload.js` | The page's block in sparse form, and the one place that unrolls it back: the history as changes (a file's appearance, its moves, its disappearance) turned into the snapshots the calculation and the table already speak — a value that did not move is one object shared by the rows that hold it |
 | `src/page/state.js` | The page's state: the report's data (the block unrolled by the payload chapter), the view of the checkboxes, the pointer "which path is which column", the unfolded folders, the record's passport, the browser's memory and the link that is read out of the address — a chapter of the page's program |
 | `src/page/dom.js` | The page's nodes: the small helpers of markup (`appEl`, `appBox`) — one set for the panel and the table alike |
 | `src/page/panel.js` | The panel of choices: the switches of metrics and files, the categories, the tree of the project's paths (files outside the report keep a checkbox off with a reason and stand after the rest, and a hidden name after every visible one; the tree opens folded and folders carry a sign that hides the subtree by a class rather than by a rebuild); built once, with the fields of the switches and of the folders and categories written where they stand |
-| `src/page/table.js` | The page's table as a window: the rows and the columns the reader can see (plus four beyond each edge), a cell, a commit's caption, the header, the empty states and the two figures of the window — markup over the shared calculation, with the totals counted per row from the choice, the geometry in pixels that the styling mirrors, and the reason a library was not taken |
+| `src/page/table.js` | The page's table as a window: the rows and the columns the reader can see (plus four beyond each edge), a cell, a commit's caption, the header, the empty states and the order of the columns — markup over the shared calculation, with the totals counted per row from the choice, the geometry in pixels that the styling mirrors, and the reason a library was not taken |
 | `src/page/app.js` | Assembling and starting the page: the first drawing, then a switch that builds the window again and writes the fields it reached without making a node of the panel; an anchor change; pasted into the assembled page |
 | `src/page/build.js` | Assembling the page: data, styling and program in one file with no external references — the pasted text is **squeezed** on the way in (comments and indentation out, the same stripping the `min` metric counts) while the sources keep them, and the result is guarded by the stripper's own `assertCompilable` |
 | `src/git.js` | The only border where git is called: the pinned settings, blobs by the batch, the history, the comparison with the working tree |
@@ -633,7 +653,7 @@ acceptance for each.
 | `test/refusals-catalog.test.js` | The guard of the refusal catalogue: every refusal site in the sources has an entry, every entry declares its advice, and refusals handed to another check are really accepted by it (the named file and line are checked) |
 | `test/contract-data.test.js` | The data contract: the numbers against the reference, the set of fields against the derived quantities, the metric's method against the way the numbers were counted — and the round trip through the page's sparse block, which restores the contract whole and twice over the same bytes |
 | `test/contract-derived.test.js` | The derived quantities against the artifact's numbers: a row's totals, a cell's delta and the delta of a total — on the code that lies in the tree |
-| `test/page-grid.test.js` | The grid of the page as a window: what the reader sees is built and no more, the geometry of the styling against the script's, the rows and the columns that a scroll builds and drops, a number under its own caption, a file and a metric switched off, and every row of the window against the engine's own calculation |
+| `test/page-grid.test.js` | The grid of the page as a window: what the reader sees is built and no more, the geometry of the styling against the script's, the rows and the columns that a scroll builds and drops, a number under its own caption, a file and a metric switched off, every row of the window against the engine's own calculation, and the drawing's own rules — the order of the columns by the numbers, one border, the header's rows of one height, and the panel out of the shared styling's reach |
 | `test/page-view.test.js` | The assembled page: pasted with no copy of the calculation, self-contained, the empty states, the styling, the switches, a click that makes no table and the carried totals against the engine's own sums — **deactivated** while the table is rebuilt, every check skipped with its reason in the file |
 | `test/page-tree.test.js` | The panel's file tree: folders by the project's paths, three states, the subtree, files and folders outside the report (a checkbox off, a place after the rest), the hidden names at the end of a level, the tree that opens folded and the unfolding the memory keeps, folding without a rebuild and a scroll a click does not touch — **deactivated** with the table, the checks skipped with their reason |
 | `test/page-choice.test.js` | The reader's choice and the work a click starts: the memory and a revisit, someone else's report, a foreign and a broken record, an address that stays clean, a link read at opening and on an open page, and the drawing of a long switch in a task of its own behind the stripe — **deactivated**: the choice and the link are the same, while the counts and the stripe are not |
@@ -717,7 +737,7 @@ The same release can be taken by a reference to the repository — installation 
 registry, but stays tied to a revision:
 
 ```bash
-pnpm add -D github:vernikr/size-report#v2.8.0
+pnpm add -D github:vernikr/size-report#v2.8.1
 ```
 
 With no network (or nothing to fetch from codeload) — the tarball: `pnpm pack` in the package clone, then
@@ -729,7 +749,7 @@ the branch moves on the installation fails with `Could not resolve <sha> to a co
 observation rather than reasoning: the short pin `6530237` installed while `main` stood on it and stopped
 working at the very next commit, while the same sha in full installed. A branch name (`#main`) and a tag
 are both accepted, but a branch is a moving target and a tag is constant: this release stands on the tag
-`v2.8.0`, which is also the one in the example (forty characters work as well, but they have to be copied
+`v2.8.1`, which is also the one in the example (forty characters work as well, but they have to be copied
 out of the history by eye).
 
 The revision in the example is a part of the claim rather than decoration: what is described below is

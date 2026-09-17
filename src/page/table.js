@@ -13,7 +13,8 @@ import { appData, appUi, appView } from './state.js';
  * to build less rather than to promise the browser will skip it. A grid of `position: absolute` rows has no layout to
  * be redone: a row is placed by its `top`, a column by the `left` of the group of cells that starts it, and the
  * browser never measures a cell to decide a width — every column is `--col` wide (70px), which is what the numbers
- * need and no more (the counted widths this step replaced were 47–70px).
+ * need and no more (the counted widths this step replaced were 47–70px), and they begin at the right edge of the
+ * pinned commit column (`APP_COMMIT`) rather than under it.
  *
  * **Why not a library.** A virtualizer for two axes is not a solved problem for a page like this one — measured from
  * the tarballs, `@tanstack/virtual-core` is ~6.7 kB gzip and headless (the rows and columns are two virtualizers and
@@ -37,10 +38,12 @@ import { appData, appUi, appView } from './state.js';
  */
 
 /* The geometry in pixels: written here and read by the styling (`src/table.css`), which is one copy too many — hence
- * `test/page-grid.test.js` holds the two together, and the report says the same numbers in its journal. */
+ * `test/page-grid.test.js` holds the two together, and the report says the same numbers in its journal. The header is
+ * two lines of one row each, and the commit column is as wide as the styling pins it. */
 export const APP_COL = 70;
 export const APP_ROW = 25;
-export const APP_HEAD = 44;
+export const APP_HEAD = APP_ROW * 2;
+export const APP_COMMIT = 220;
 
 /* How much more than the visible window is built, in rows and in columns. A window that ends exactly at the edge of
  * the shell shows an empty band while the browser scrolls a notch; four rows and four columns of slack are cheaper
@@ -53,15 +56,41 @@ export const APP_OVER = 4;
 export const APP_MIN_ROWS = 24;
 export const APP_MIN_COLS = 10;
 
-/* The order of the columns: the files the last commit touched come first — the report is rebuilt after every
- * commit, and a reader's first question is what that edit brought. Inside each part the order is the settings', and
- * it depends on the files rather than on the choice: that is what lets a column be switched off without moving the
- * others. */
+/* The order of the columns: the files whose numbers last moved come first, and the older the move the further right the
+ * column stands. A reader opens the report after a commit, and what he looks for is what that edit brought — while the
+ * rest may as well be ordered by the settings, which is the order of the ties.
+ *
+ * The mark is taken from the numbers rather than from the history's list of paths, and that is the whole of the
+ * difference: a commit can touch a column without moving it (a version bumped inside a line of the same length, this
+ * package's own attachment to itself is one), and a column of empty cells standing in front of the table is what a
+ * reader sees as a broken order. The list of paths is the engine's (`--data`), which is where a fact about a commit
+ * belongs; what stands here is a fact about the numbers.
+ *
+ * The order depends on the files rather than on the choice: that is what lets a column be switched off without moving
+ * the others. Counted once per document — the model does not change while the page is open — because every window the
+ * reader scrolls to asks for it. */
+function appRank() {
+  const rank = appData.files.map(() => -1);
+  let was = null;
+  appData.rows.forEach((row, i) => {
+    /* The rows of a file are the same object until it moves (`src/page/payload.js`), so one comparison per file and
+     * row says whether the file appeared, moved or went away at this commit — the three cases a cell is not empty. */
+    row.values.forEach((v, j) => { if (was === null || was[j] !== v) rank[j] = i; });
+    was = row.values;
+  });
+  return rank;
+}
+
+let appOrderValue = null;
+
 export function appOrder() {
-  const files = [];
-  appData.files.forEach((_f, i) => files.push(i));
-  files.sort((a, b) => (appData.last[a] === true ? 0 : 1) - (appData.last[b] === true ? 0 : 1));
-  return files;
+  if (appOrderValue === null) {
+    const rank = appRank();
+    const files = [];
+    appData.files.forEach((_f, i) => files.push(i));
+    appOrderValue = files.sort((a, b) => rank[b] - rank[a]);
+  }
+  return appOrderValue;
 }
 
 /* The files whose columns are built, in the order of the columns: what is switched off is not among them, which is
@@ -141,7 +170,9 @@ function appRow(cache, r, span) {
   else commit.appendChild(appCommit(appData.rows[i]));
   row.appendChild(commit);
   const cells = appEl('div', 'cells');
-  cells.style.left = (span.c0 * APP_COL) + 'px';
+  /* The numbers stand beside the commit column rather than under it: the column is pinned over the content, so what the
+   * grid holds begins where the column ends. */
+  cells.style.left = (APP_COMMIT + span.c0 * APP_COL) + 'px';
   for (let c = span.c0; c <= span.c1; c++) cells.appendChild(appCell(model, c, now, cache));
   row.appendChild(cells);
   return row;
@@ -173,7 +204,7 @@ function appHead(cache, span) {
   const count = cache.keys.length;
   const g0 = Math.floor(span.c0 / count);
   const g1 = Math.floor(span.c1 / count);
-  const left = (g0 * count * APP_COL) + 'px';
+  const left = (APP_COMMIT + g0 * count * APP_COL) + 'px';
   const head = appEl('div', 'head');
   head.appendChild(appEl('div', 'c-commit', appUi.commit));
   const groups = appEl('div', 'hgroups');
@@ -214,7 +245,7 @@ export function appSpan(cache) {
   cache.slot = cache.list.map((i) => cache.rank[i]);
   const cols = count * (cache.list.length + 1);
   const rows = appData.rows.length + 1;
-  cache.grid.style.width = (cols * APP_COL) + 'px';
+  cache.grid.style.width = (APP_COMMIT + cols * APP_COL) + 'px';
   cache.grid.style.height = (APP_HEAD + rows * APP_ROW) + 'px';
   if (count === 0) return { r0: 0, r1: -1, c0: 0, c1: -1 };
   const high = shell.clientHeight || APP_MIN_ROWS * APP_ROW;

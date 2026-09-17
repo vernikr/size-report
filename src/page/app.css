@@ -14,7 +14,10 @@
   --pad: clamp(16px, 3vw, 34px);
   --radius: 10px;
   --muted: rgba(127, 127, 127, .85);
-  --line: rgba(127, 127, 127, .32);
+  /* The same grey as the table's own lines (`--grid-line` of `src/table.css`): the frame around the numbers and the rows
+   * inside it are one drawing, and a second grey for the chrome is what makes a page look assembled from two. The two
+   * declarations are held together by the check that reads the borders of both sheets. */
+  --line: rgba(127, 127, 127, .25);
   --tint: rgba(127, 127, 127, .07);
 }
 
@@ -231,7 +234,8 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
   h1 { font-size: 18px; }
   #grid { font-size: 12px; }
   .shell { max-height: calc(100vh - 260px); }
-  /* The commit column needs no rule of its own here any more: its width is the measure `--clip` of the shared part
-   * (`src/table.css`), and on a narrow screen that measure stands as it is. A shorter one would be `--clip: 150px`
-   * here — the adaptation the shared part cannot make for itself. */
+  /* The commit column keeps its width on a narrow screen, and that is deliberate rather than forgotten: the numbers
+   * are placed beside it by the script (`APP_COMMIT`), so a narrower column here would leave a band of empty grid
+   * between the two — one number would have to be read from the styling by the script, which is a second copy of a
+   * geometry the check holds together (`test/page-grid.test.js`). */
 }
