@@ -963,6 +963,47 @@ references stayed the same after the fix.
   has 8, which a reader of the file has to notice for themselves. Nothing else moves either way, and the same
   question will be measured for `coverage-baseline.json` in W2's step 4 rather than assumed to be identical.
 
+- **N33. A translated block inside an accepted clone pair becomes a *new* clone: `test/minify.test.js` ↔
+  `test/tokens.test.js`.** Measured 2026-09-16 in C2's steps 4–5, after translating those two files' prose.
+  `node tools/gates/dup.js` answers `✗ dup: new clones 4 (the baseline holds 15 fingerprints, the tree has 7)`
+  with two pairs, each counted twice (`[the baseline file]` and `[against origin/main]`, the sensor's two looks):
+  `8 lines, 109 tokens: minify.test.js:252 ↔ tokens.test.js:158` and
+  `7 lines, 71 tokens: minify.test.js:260 ↔ tokens.test.js:165`.
+
+  **The pairs are not new in substance — only their fingerprints are.** With the four files put back to their
+  `HEAD` version the sensor answers `✓ dup: no new clones (clones 7, lines 42, the baseline holds 15
+  fingerprints)` (measured, then restored byte-identical): the same two blocks are **accepted twins** of the
+  baseline, whose fingerprint was taken while their words were Russian. The fragment carries a test name and a
+  message (`'the --init draft leads a new project to …'`, `'the draft was not built: ' + made.stderr.trim()`),
+  so translating them changes the token sequence, the fingerprint changes with it, and `newer()` counts the pair
+  as new. It is the same class as **N29** (`firstDiff` in `tools/harness.js` / `tools/parity-live.js`), and the
+  same mechanism: the sensor measures a shape, and a translation is a different shape.
+
+  **What is actually duplicated.** Both files set up the same fresh project by hand — `fs.mkdirSync(src)`,
+  `git init -q -b main`, the three `git config` lines — although `initRepo` (`tools/harness.js:116`) already
+  does exactly that and is used by `doctor`, `disk` and `cli-paths`; then both write their own `src/code.js`,
+  commit it, run `--init` and assert the same `the draft was not built: …`. So the twin is **real duplication of
+  setup**, not a coincidence of wording.
+
+  **What was not done.** No word was varied to hide the twin and no baseline was edited — `AGENTS.md` forbids
+  both ("fix the code, not the sensor"; "a baseline is updated by a person"), and this portion's frame says the
+  answer to a twin is not to "tinker with words without need".
+
+  **Decided by the user on 2026-09-17: take the shared part out** (way 1 of the three that were put to the
+  user: the sensor's own advice, and the repair **N29** took). No word was varied to hide the twin and no
+  baseline was touched. The repair landed as a commit of its own, `897a780`: `tools/harness.js` gained
+  `draftedRepo(dir, code)` — `initRepo` plus the file under measure, the two git commands, `--init` and the
+  assertion that the draft was built, returning `{ dir, file }` — and the two checks' seven hand-rolled lines
+  (four of which were already what `initRepo` does) became a two-line call. Measured after it: both files green
+  (9 + 7 checks), `dup` green with the count **falling** — `clones 7, lines 42` before, `clones 5, lines 29`
+  after — and the two files' remaining Russian lines are their payloads and the `ru` dictionary reads alone.
+  The one literal that belonged to both, the scenario's commit subject, moved into the helper; nothing asserts
+  on it.
+
+  **Left for the user, as the same family of questions:** whether the two baselines are re-taken at all —
+  **N31** (the seven stale `dup` fingerprints) and **N32** (the coverage ratchet, red on the tree before any
+  translation). Neither has anything to do with this repair, and neither is touched by it.
+
 - **N32. The coverage ratchet is red on the tree: 13 regressions, and the baseline is 261 commits old.**
   Measured 2026-09-16 in W2's step 4, **before** anything was translated: `pnpm run cover` answers
   `✗ cover: regressions 13 (the baseline holds 39 files)` with the totals `lines 80.6%, branches 89.05%,

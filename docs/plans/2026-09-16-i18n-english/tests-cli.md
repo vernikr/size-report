@@ -149,7 +149,9 @@ literal** are not.
    experiment: one test name renamed in `test/cli.test.js` left both `checksIn` (**9**) and the probe
    green, so the count is of `test(` calls rather than of names.
 3. **`test/cli-paths.test.js` (30 → **3**) + `test/cli.test.js` (74 → **2**) — done 2026-09-16.**
-   Twenty-seven names and messages in the first, seventy-two in the second. **Red first by the whole
+   Twenty-seven names and messages in the first, seventy-two in the second (**125 lines of the four files
+   of steps 2–3 turned English, not 116 as the first version of this entry said** — the counter settles it:
+   the owner went from 662 to **537**; the arithmetic was corrected while doing steps 4–5). **Red first by the whole
    file, which is the method W1 used for its two files** (per-phrase sweeps over 97 phrases would cost
    half an hour for evidence of the same class): each of these two files put back to its `HEAD` version
    wholesale left its own probe **green**, so no machine reads a word of either. The five lines that stay
@@ -168,13 +170,37 @@ literal** are not.
    lines 47 → 42). Both sides of that pair are this owner's or this owner's neighbour, so step 6
    (`doctor`) is where the pair can form again with different wording — the answer then is a varied
    wording, never the baseline.
-4. **`test/templates.test.js` (33) + `test/release.test.js` (41).** Red first: change one workflow step
-   name alone in `.github/workflows/release.yml` → `test/release.test.js:62` or `:66` reddens (that is
-   D1's experiment, quoted here so its owner has the red ready).
-5. **`test/minify.test.js` (75) + `test/tokens.test.js` (54).** Red first: translate the
-   **dictionary**'s `method` instead of the sensor's note → `:195` (`esbuild недоступен`) and
-   `tokens.test.js:113` redden against the Russian data; then leave them alone. This is S3's trap seen
-   from the check's side, and it is the one place in this owner where the wrong target is tempting.
+4. **`test/templates.test.js` (33 → **0**) + `test/release.test.js` (41 → **7**) — done 2026-09-16.**
+   Thirty-three names and messages in the first, thirty-four in the second. **Red first by the whole file**
+   (both files put back to their `HEAD` version wholesale left their own probes green). The seven lines
+   that stay are **D1's contract**: they fetch workflow steps by their exact Russian names, and the
+   measurement corrected the plan's own figure — the plan (and `configs.md`) named **six** such reads
+   (`:62,66,101,114,127,132`) while the file has **seven** (the missing one is `:86`,
+   `step(doc, 'npm поновее (для trusted publishing)')`); a measurement of all eight step names in
+   `.github/workflows/release.yml` against the file's seven readers is what showed it. That the reads are a
+   live contract was measured rather than assumed: renaming one step in the workflow (`- name: …` →
+   `- name: RENAMED STEP`, restored byte-identical) reddens `test/release.test.js` at check 2. `templates`
+   reads no wording of D1's at all — it fetches the template **files** by name (`note.indexOf(file)`).
+5. **`test/minify.test.js` (72 → **10**) + `test/tokens.test.js` (54 → **5**) — done 2026-09-16.**
+   Sixty-one names and messages in the first, forty-eight in the second; the lines that stay are the
+   payloads the two files write into their scenarios (a JS sample, its CSS twin, a broken record, the
+   fixture's labels) and the **dictionary reads**: `minify.test.js:124` (`pureMin.method.indexOf('приближение') < 0`),
+   `:195` (`min.method.indexOf('esbuild недоступен') >= 0`) and `tokens.test.js:111` (`new RegExp('1 токен ≈ '
+   + CHARS_PER_TOKEN + ' знака')`), `:113` (`view.method.indexOf('недоступен') >= 0`). **Red first by the
+   whole file** (both back to `HEAD` wholesale → both probes green), and **the dictionary reads were proved
+   live the other way round**: translating the `ru` side of those very phrases in `src/metrics.js:40,55`
+   (restored byte-identical) reddens `minify` at check 5 and `tokens` at check 3 — so they assert the `ru`
+   data, which is why they must not be translated. `tools/refusals.js`'s twin check has one of the same
+   shape to thank for the rule.
+   **What this step cost beyond the words (N33, decided by the user the same day).** Translating the two
+   files turned an accepted clone pair into a *new* one for `dup` — `minify.test.js:252 ↔ tokens.test.js:158`
+   and `:260 ↔ :165` — because a fingerprint is a shape and the words had changed inside it
+   (`✗ dup: new clones 4`; with the two files as at `HEAD` the same pairs are accepted: `clones 7, lines 42`,
+   measured). No word was varied to hide it and no baseline was re-taken: the shared part was **taken out**
+   instead — the hand-rolled fresh-project setup of both files, four lines of which were already what
+   `initRepo` does, became one helper (`draftedRepo`, `tools/harness.js`) — so the twin left by removing the
+   duplication (commit `897a780`: `clones 7, lines 42` → `clones 5, lines 29`, both files green). The same
+   commit moved the one literal that belonged to both — the scenario's commit subject — into the helper.
 6. **`test/doctor.test.js` (83).** Red first: the long list of S4's reads — pick `/не спрашивается/`
    (a dependency note) and translate it alone in `src/doctor.js` → reddens.
 7. **`test/check.test.js` (84) + `test/disk.test.js` (68).** Red first: the three negatives of section
