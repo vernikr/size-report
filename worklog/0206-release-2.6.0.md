@@ -47,3 +47,22 @@ removed from the project by the same portion that removed their only reader.
 - The report of this repository is rebuilt by hand for the release: the attached copy is still 2.5.0, so the
   `post-commit` hook would write the pre-portion page over the new one. Its line is switched off in the
   working tree for the length of the release and goes back with the commit that attaches the released copy.
+
+## Measured after the release
+
+- **The published tarball is what the tag holds — all of it.** `npm pack @vernikr/size-report@2.6.0` was
+  compared file by file with `git show v2.6.0:<path>`: **48 of 48 byte-identical**, and the tarball's sha1
+  `a0770fe9c5fe0aee8c8f5b40436ecc9327a8af30` is the `dist.shasum` the registry answers. The manifest's keys
+  are the same 18 on both sides (npm re-orders them; it adds and loses nothing).
+- **The runs:** CI on the tag green (`35241768642`), CI on `main` green (`35241768421`), and the Release
+  workflow green in 1 m 2 s (`35241768908`) — it published with a provenance statement
+  (`logIndex 2878946948`) and `npm notice + @vernikr/size-report@2.6.0`; `latest` moved to `2.6.0` five
+  polls later.
+- **This repository's page is built by the attached copy again:** the `post-commit` hook rebuilt it after
+  the attach commit and committed it as `494c678` (86 085 B, md5 `8dfb0b2883161760c86d36c88e39a095`). The
+  packed block of that page decodes to `schema: 2`, `tool {name, version: "2.6.0"}` and the keys
+  `schema, tool, report, hrefPrefix, strs, metrics, cats, files, catalog, rows, last, hist` — no `approx`
+  and no `accuracy` anywhere in the contract (the two words survive only inside commit subjects of `strs`).
+- **The hook is back on in the working tree** (`git checkout -- .githooks/post-commit`): the line was
+  switched off only while the attached copy was older than the tree, which is the window this release
+  closed.
