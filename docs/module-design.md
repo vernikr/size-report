@@ -184,13 +184,12 @@ built. The keys of the contract (`--data` hands over the contract itself, `--jso
 | `schema` | the contract's version |
 | `tool` | the package's name and version |
 | `report` | the passport: locale, title, heading, the artifact's path, the fix command, the journal, whether the sha is shown |
-| `metrics[]` | per metric: `key`, `label`, `note`, `method`, `accuracy` |
+| `metrics[]` | per metric: `key`, `label`, `note`, `method` |
 | `categories[]` | the categories that are present, with their labels |
 | `files[]` | per column: `label`, `path`, the chain of renames `paths`, `category` and how it was decided (`categoryBy`) |
 | `catalog[]` | every path outside the report with the reason it is not a column (`why`: a rule, a declared exception, or null for a column) |
 | `rows[]` | per commit: `sha`, `when`, `subject`, the journal's `section` or null, the commit's `href`, and `values` — one object per column with the absolute numbers |
 | `now`, `last` | the state at `HEAD`, and which cells are the last change of their column |
-| `approx` | which cells are approximations: a bit string per metric over the cells of `rows` and of `now` |
 | `skipped[]` | the commits that got no row, each with the reason in words |
 
 Notes:
@@ -199,13 +198,11 @@ Notes:
 task, and it depends on which files the reader switched on. There is no compression into "points of change"
 either: every row carries a number per column, and the page reads the ones it needs.
 - **`method` and `note`** are the promised mark of information: beside every number it is visible *how* it was
-obtained — which minifier version, which tokenizer, or the word "approximation".
-- **Honesty is per cell, not only per column** (`approx`): the metric's `accuracy` speaks about the **worst in
-the column** (one format without a minifier makes the metric approximate as a whole), while `approx` shows
-which cells are approximations and which are not — under stripping `package.json` is exact, `code.js` is not.
-The marks are set by the engine where the number is counted, by the same rule as the label (`pointExact`), so
-the page never derives accuracy from paths and formats of its own: there is no second rule of accuracy in the
-package.
+  obtained — which minifier version, which tokenizer, and which formats that way does not take.
+- **Nothing is marked on a cell.** The division of numbers into exact and approximate is not in the package: a
+  metric describes the way its column was counted (`method`), naming the formats the way does not take, so the
+  reader sees where a number comes from rather than a mark that judges it. The page derives nothing of its own
+  from paths and formats: the way is named in one place, and that place is the engine.
 
 An agent reads the same data through the "hand over the data" mode rather than parsing the layout.
 
@@ -220,8 +217,9 @@ A sensor is an entry of the registry declaring:
 - what it needs (only the size of a version of the file, or its content);
 - how the number is counted;
 - the human-readable way it was obtained (`method`, with the tool's version inside where there is one — esbuild,
-  the tokenizer), which is what makes the number reproducible;
-- how honest the number is (`accuracy`, plus a `note` for the reader).
+  the tokenizer — and the formats that way does not take), which is what makes the number reproducible and what
+  tells two counts in one column apart;
+- a `note` for the reader where the way needs one.
 
 The first version's set is three of them (`raw`, `min`, `tok`); the registry holds a fourth, `gzip`, which the
 settings may switch on — a sensor is an entry rather than an edit to the core.
@@ -242,7 +240,7 @@ The first version's "minified" size is not minification but a cosmetic removal o
 - **real compression by esbuild** is switched on in the settings per extension: the library is called through
   its JS API (`transformSync`, `minify: true`, UTF-8, no legal comments), which keeps one service process for
   the whole run instead of paying for a start per cell. Its loaders are `js`, `ts` and `css`; there is **no
-  markup minifier**, so HTML goes through stripping and is marked as an approximation.
+  markup minifier**, so HTML goes through stripping, and the metric says so in `method`.
 - An unfamiliar format is stripped the same way — **but it has to say so**: the word goes into `method` and
   stands beside the number on the page, which is what keeps a simplification from passing as real compression
   (§6, §7.1).
@@ -250,8 +248,8 @@ The first version's "minified" size is not minification but a cosmetic removal o
 Consequences:
 
 - esbuild and the tokenizers are **optional** dependencies of the package. The engine stays usable without them:
-  the count falls back to stripping and the lost sensor is reported (exit code 4), so an approximation never
-  travels as an exact number; `raw` works always.
+  the count falls back to stripping and the lost sensor is reported (exit code 4), and `method` names the way
+  actually used, so a fallback cannot pass for real compression; `raw` works always.
 - Minification is counted **per file** (files are never bundled into one): what is measured is the size of a
   source.
 - The minifier's settings (`minify.engine`, `minify.ext`, `minify.guard`) are part of what a number means, and
