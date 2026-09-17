@@ -87,3 +87,18 @@ report (249 rows, 317 columns, 3 metrics, 238 500 cells) — the shipped one and
   earlier releases are still read. That is what "the tail stays clean" costs, and it is the ask.
 - **Live hosts are read over `file://` by the probe**, and the stripe's look (a travelling highlight, still under
   `prefers-reduced-motion`) is a decision taken on the page rather than measured against a reader.
+
+## Measured after the release
+
+- **The published tarball is what the tag holds — all of it.** `npm pack @vernikr/size-report@2.7.0` compared file
+  by file with `git show v2.7.0:<path>`: **49 of 49 byte-identical**, and the tarball's sha1
+  `3a98d755900f364e2771e5ea9e091e60536db69e` is the `dist.shasum` the registry answers.
+- **The runs:** CI on the tag green (`35253954773`), CI on `main` green (`35253954808`), the Release workflow green in
+  49 s (`35253954745`) — it published with a provenance statement (`logIndex 2879341548`), and `latest` moved to
+  `2.7.0` at the fifth poll; the CI run of the attach commit is green as well (`35254742274`).
+- **This repository's page is built by the attached copy again:** the `post-commit` hook rebuilt it after the attach
+  commit and committed it as `ba9536a` (87 396 B, md5 `209a3237806700ba4bac64aac92f4a4f`). Its decoded block is
+  `schema: 2`, `tool.version: "2.7.0"`, 250 rows, 320 files, 3 metrics, and the categories read **Code, Tests, Docs,
+  Chores**. The page's program carries the work chapter unstripped (`APP_LONG` is in it, twice), which is exactly what
+  the report commit before the attach could not have: `3cb524d` (86 609 B) was written by the attached 2.6.0 copy, so
+  the two commits are the same report by two engines — and the copy in this tree was 2.6.0 while the tree was 2.7.0.
