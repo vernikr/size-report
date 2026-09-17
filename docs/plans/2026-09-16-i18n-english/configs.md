@@ -170,16 +170,59 @@ and `package.json` is a gate file, so the hook demanded the `Gate-Change:` line 
 (`gate files 1`). The counter over the ten files now reads **93**: 89 of this owner's own, 3
 allow-listed, 1 English comment. The owner reads **89 own**.
 4. **`.dependency-cruiser.cjs`** (7) — red first: the counter, and `pnpm run deps` green with the
-   same numbers (a rule's `comment` is not a rule's name). **Trailer.**
+   same numbers (a rule's `comment` is not a rule's name). **Trailer.** **Done 2026-09-17: 7 → 0**,
+   the seven `comment:` values. Measured: `pnpm run deps` answers `no findings (113 modules, 472
+   relations)` before and after, and `require`ing the config gives the same seven names with the same
+   `severity: 'error'` — so the diff's changed lines are `comment:` alone. The file's own header says
+   these comments are the sensor's verdict printed with the finding, and that is now measured the
+   other way round too: a scratch copy of the config with one rule made to fire answers 17 findings
+   and the `comment` **is carried into the machine report** as well as printed, so the text is what a
+   person reads when the sensor speaks. **And the sensor does read the file:** while writing this
+   step an apostrophe got into one comment, breaking the string — `pnpm run deps` failed at
+   `tools/gates/deps.js:33` and `test/gates-deps.test.js` went red at four checks. The slip is
+   recorded because it is the cheapest possible proof that the config is parsed rather than ignored.
 5. **`eslint.metrics.config.js`** (4 messages) — red first: the counter, and `pnpm run metrics`
    green with the same finding counts (the sensor counts rather than reads the text; `reports/` is
-   gitignored). `DEBT_TERMS` and the comment above it are left. **Trailer.**
+   gitignored). `DEBT_TERMS` and the comment above it are left. **Trailer.** **Done 2026-09-17:
+   4 messages → 0**, the rule names, the schema and every number untouched — the diff is four
+   `messages:` values. Measured: `pnpm run metrics` answers `no new violations (the baseline holds 0
+   in 0 files)` before and after (`.eslint-suppressions.json` is `{}` and holds no message text at
+   all), the placeholders `{{what}}`/`{{term}}` survive, and `rg` for the four messages answers
+   nothing outside the file itself. The report does carry a `message` field per finding
+   (`tools/gates/metrics.js:47`) — today it holds none, and nothing compares the text.
 6. **`.github/workflows/verify-slow.yml`** (11) — red first: break a `run:` prefix in a scratch copy
    (`git fetch` → `git clone`) and read `test/gates-verify.test.js`'s "не входит ни в один профиль";
    that line is the only thing in this file a check reads, so the experiment proves the check would
-   notice a translated command while it does not notice a translated comment. **Trailer.**
+   notice a translated command while it does not notice a translated comment. **Trailer.** **Done
+   2026-09-17: 11 → 0** — seven comments, three step names and the echo of the preparation step.
+   Measured, each file restored byte for byte: `git fetch` → `git clone` in `ci.yml` reddens
+   `gates-verify` with its own message (`the step «git clone --no-tags origin main || echo …» is in
+   no profile`), while the workflow's **top-level `name:`** translated and a step name translated
+   leave it green (5 of 5) — so the display name and the step names are read by nobody, and the
+   comments that quote the display name (the `Actions → … → Run workflow` line) were moved with it
+   by the C2 rule (a quote of a translated text travels with it). The `name:` of a workflow is what
+   the Actions UI shows: changing it is cosmetic and no check reads it (measured).
 7. **`.github/workflows/ci.yml`** (19) — the same, plus the job key: red first, rename `verify` in a
-   scratch copy and watch `test/gates-verify.test.js:119` redden. **Trailer.**
+   scratch copy and watch `test/gates-verify.test.js:119` redden. **Trailer.** **Done 2026-09-17:
+   19 → 0** — fourteen comment lines, three step names, the echo of the preparation step and the
+   top-level `name:` (already ASCII, left alone). The job key `verify` was **not** touched, and the
+   measurement says why: renaming it reddens `gates-verify` with `the CI description holds no job
+   «verify»`, because branch protection requires that check — a contract outside the tree. The
+   measurement also settled the sibling: `verify-slow`'s job key is read by no check at all (renamed
+   in a scratch copy → green), so its key was left for the same reason it was never a text — it is
+   an identifier, and the rule of this campaign is literals only. The two echo lines of the two
+   workflows are the twin lines the plan named, and `pnpm run dup` cannot see them
+   (`.jscpd.json` scans `src`, `bin`, `tools`, `test`).
+
+**These four steps (4–7) landed in one commit that carries the trailer** — the portion's rule is one
+commit, and all four files are gate files, so the hook demanded the `Gate-Change:` line and accepted
+it (`gate files 4` of 7). `release.yml`, step 8, went to a portion of its own together with its
+reader (`test/release.test.js`), as the mission asked. The counter over the ten files now reads
+**52**: 48 of this owner's own — all of them `release.yml` — plus 3 allow-listed and 1 English
+comment; **the owner reads 48 own**. The `.eslint-suppressions.json` baseline and the dup baselines were
+not touched; the artifact's content digest `1bdb27e1…` and the reference file's own sha256
+`cdda8d01…` did not move; checks stay at 70 fast and 175 full.
+
 8. **`.github/workflows/release.yml`** (48) — the six step names **and** their six assertion lines in
    one commit; keep `$GITHUB_REF_NAME`, `$WANT`, `'next'`, `'latest'`, the four `run:` commands the
    check matches, `default: true`, and the basename `release.yml` in the comment at `:11`. Red
@@ -194,8 +237,10 @@ allow-listed, 1 English comment. The owner reads **89 own**.
 
 - The counter over the ten files answers **only** the named exceptions:
   `rg -cP '[\p{Cyrillic}]' .github/workflows/ci.yml .github/workflows/release.yml .github/workflows/verify-slow.yml templates/ci.yml templates/size-report.config.json templates/README.md package.json .dependency-cruiser.cjs eslint.metrics.config.js .gitignore`
-  — expecting `size-report.config.json` 2, `eslint.metrics.config.js` 1 (the term line; the comment
-  at `:29` is English prose that quotes it and stays), everything else empty.
+  — expecting `size-report.config.json` 2 and, until step 8, `release.yml` 48, `eslint.metrics.config.js`
+  **2** (the term line at `:30` and the English comment at `:29` that quotes the term in Cyrillic —
+  the scope table counted the comment as one line, this acceptance sentence counted the same file as
+  one, and the measurement corrected it to two; both lines are allow-listed), everything else empty.
 - `pnpm run verify:fast` after every commit, `pnpm run verify` before the portion is pushed; the six
   gate-file commits carry the trailer (`git log --format='%b' <range>` shows it, and the hooks
   answer first).

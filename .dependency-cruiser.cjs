@@ -16,49 +16,49 @@ module.exports = {
   forbidden: [
     {
       name: 'no-circular',
-      comment: 'Кольцо связей: модули держат друг друга, и ни один нельзя прочитать первым.',
+      comment: 'A cycle: the modules hold each other, and neither can be read first.',
       severity: 'error',
       from: {},
       to: { circular: true }
     },
     {
       name: 'no-orphans',
-      comment: 'Никто не зовёт и модуль никого не зовёт: либо забытый файл, либо потерянная связь.',
+      comment: 'Nobody calls it and it calls nobody: either a forgotten file or a lost link.',
       severity: 'error',
       from: { orphan: true, pathNot: ['\\.css$'] },
       to: {}
     },
     {
       name: 'src-no-devdep',
-      comment: 'Продукт не может зависеть от инструмента разработки: потребитель его не ставит.',
+      comment: 'The product cannot depend on a development tool: the consumer does not install it.',
       severity: 'error',
       from: { path: '^src' },
       to: { dependencyTypes: ['npm-dev'] }
     },
     {
       name: 'src-no-tools',
-      comment: 'Слой считается один раз: прода нет смысла в обвязке проверок.',
+      comment: 'A layer is counted once: the product has no business inside the checks harness.',
       severity: 'error',
       from: { path: '^src' },
       to: { path: '^tools' }
     },
     {
       name: 'src-no-test',
-      comment: 'Продукт, тянущий тест, — признак того, что проверка переехала в код.',
+      comment: 'A product pulling in a test is a sign that a check has moved into the code.',
       severity: 'error',
       from: { path: '^src' },
       to: { path: '^test' }
     },
     {
       name: 'test-no-bin',
-      comment: 'Проверки зовут точку входа процессом, а не импортом: иначе проверяется не та поверхность.',
+      comment: 'The checks call the entry point as a process rather than through an import: otherwise the wrong surface is checked.',
       severity: 'error',
       from: { path: '^test' },
       to: { path: '^bin' }
     },
     {
       name: 'not-to-unresolvable',
-      comment: 'Импорт, который никто не может разрешить, — это сломанная связь, а не мелочь.',
+      comment: 'An import nobody can resolve is a broken link rather than a trifle.',
       severity: 'error',
       from: {},
       to: { couldNotResolve: true }

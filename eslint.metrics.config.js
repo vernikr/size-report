@@ -107,7 +107,7 @@ function callsAny(body, names) {
 const local = {
   rules: {
     'assert-in-test': {
-      meta: { type: 'problem', schema: [], messages: { none: 'проверка без утверждения: тест не проверяет ничего' } },
+      meta: { type: 'problem', schema: [], messages: { none: 'a check with no assertion: the test asserts nothing' } },
       create(ctx) {
         let helpers = [];
         return {
@@ -125,7 +125,7 @@ const local = {
       }
     },
     'weak-assert': {
-      meta: { type: 'problem', schema: [], messages: { weak: 'утверждение без сравнения: проходит на любом верном значении' } },
+      meta: { type: 'problem', schema: [], messages: { weak: 'an assertion with no comparison: it passes on any correct value' } },
       create(ctx) {
         return {
           CallExpression(node) { if (isWeakAssert(node)) ctx.report({ node, messageId: 'weak' }); }
@@ -133,7 +133,7 @@ const local = {
       }
     },
     'no-skipped-test': {
-      meta: { type: 'problem', schema: [], messages: { skipped: 'проверка выключена («{{what}}»): набор считает её пройденной' } },
+      meta: { type: 'problem', schema: [], messages: { skipped: 'a check is switched off ("{{what}}"): the suite counts it as passed' } },
       create(ctx) {
         const ways = ['only', 'skip', 'todo', 'failing'];
         return {
@@ -164,7 +164,7 @@ const local = {
       meta: {
         type: 'problem',
         schema: [],
-        messages: { marker: 'пометка долга «{{term}}»: без ратчета долг копится молча' }
+        messages: { marker: 'a debt marker ("{{term}}"): with no ratchet debt piles up in silence' }
       },
       create(ctx) {
         /* Comments are read through `sourceCode`, not through `Line`/`Block` listeners: a walk over the

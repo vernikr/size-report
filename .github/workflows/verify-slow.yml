@@ -1,12 +1,12 @@
-name: Проверки по расписанию
+name: Scheduled checks
 
-# Slow-профиль: то, что дороже обычной правки и потому не в каждом прогоне, —
-# покрытие под c8 (полный набор под ним идёт десятки секунд). Здесь же идёт всё, что
-# и в `pnpm run verify`: slow-профиль накрывает полный, чтобы «по расписанию» не
-# значило «какие-то другие проверки» (`test/gates-verify.test.js`).
+# The slow profile: what costs more than an ordinary edit and is therefore not in every run —
+# coverage under c8 (the full suite under it runs for tens of seconds). Everything that runs in
+# `pnpm run verify` runs here too: the slow profile covers the full one, so that "by schedule"
+# does not come to mean "some other checks" (`test/gates-verify.test.js`).
 #
-# Запуск — по расписанию и руками: `Actions → Проверки по расписанию → Run workflow`.
-# Ветка — только основная: расписание работает по ветке по умолчанию.
+# Run: by schedule and by hand: `Actions → Scheduled checks → Run workflow`.
+# The branch is the main one only: a schedule runs on the default branch.
 on:
   schedule:
     - cron: '17 4 * * 1'
@@ -30,11 +30,11 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Установка
+      - name: Setup
         run: pnpm install --frozen-lockfile
 
-      - name: Ветка main для взгляда на дубли
-        run: git fetch --no-tags origin main || echo "origin/main недоступен — взгляд на ветку пропущен"
+      - name: The main branch for the duplicate reading
+        run: git fetch --no-tags origin main || echo "origin/main is unavailable — the duplicate reading was skipped"
 
-      - name: Проверки slow-профиля — те же команды, что локально
+      - name: The slow profile checks — the same commands as locally
         run: pnpm run verify:slow
