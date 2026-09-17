@@ -44,6 +44,7 @@ export const FAST = [
   { file: 'test/contract-data.test.js', why: 'the data contract: the numbers against the reference and the set of fields — it counts in memory and calls the tool once' },
   { file: 'test/contract-derived.test.js', why: 'the derived values against the artifact\'s numbers: the computational part counts the totals and the deltas from a file, and calls the tool once' },
   { file: 'test/page-view.test.js', why: 'the assembled page in a real DOM: the program pasted in, emptiness, the layout, switching — two assemblies, both on the shared fixture' },
+  { file: 'test/page-cols.test.js', why: 'the columns of the table in a real DOM: their order, the widths counted for them and the switches reaching them — one page assembly, on the shared fixture' },
   { file: 'test/page-tree.test.js', why: 'the panel\'s file tree in a real DOM: folders by the project\'s paths, a subtree, scrolling on a rebuild — one page assembly, on the shared fixture' },
   { file: 'test/page-choice.test.js', why: 'the memory of a choice and the link in a real DOM: revisits and address changes — it counts in memory, one page assembly' },
   { file: 'test/suites.test.js', why: 'the guard of the split itself: it reads the declaration and the sources, and runs nothing' },
