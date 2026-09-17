@@ -62,6 +62,15 @@ them) and `docs-facts.js` 4 → 3. Of the 235:
   and one comment in `run-tests.js` (`:22`, the example naming a Russian test). Nothing else in this owner is
   left to translate; what is left is the two allow-lists of other owners and one comment of prose.
 
+**Four of those 23 went on 2026-09-17, in the compactness portion** (a portion about stale explanations and dead
+branches rather than about language): `tools/docs-facts.js` 3 → **0** — the two Russian section names of the
+pinned help went dead when the pin moved to an English help (**N20**), measured with
+`test/docs-pin.test.js` green at 5 of 5 with them cut out, and the comment naming them now says so in words — and
+`tools/run-tests.js` 1 → **0** (the usage example, replaced by the measurement that the flags it showed never
+reach `node --test` in the runner's command order, which is now a `TODO.md` defect). **So the twelve files read 19**
+and the folder reads **107** by the same `rg -cP '[\p{Cyrillic}]'` reading (the tracker's closing inventory carries
+the same number): what is left of this owner is the two allow-lists of other owners alone.
+
 And the same measurement for step 8: `tools/refusals.js`'s 55 Cyrillic lines are `truth` **37** +
 `advice.why` **12** + the case `id`s **2** + the `uncatchable` prose **2** + `ADVICE_LINE` **1** +
 one comment **1**, and **not one `must` phrase carries Cyrillic any more** — the catalogue half of

@@ -308,5 +308,5 @@ test('--json answers exactly where a call has an answer', () => {
 test('the exit codes agree with the plan table', async () => {
   const { EXIT } = await import('../src/size-table.js');
   assert.deepEqual(EXIT, { OK: 0, VIOLATION: 1, CONFIG: 2, SHALLOW: 3, SENSOR: 4, INTERNAL: 5 },
-    'the exit codes diverged from PLAN.md §4.1');
+    'the exit codes diverged from plans/archive/PLAN.md §4.1');
 });

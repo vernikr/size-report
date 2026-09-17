@@ -18,9 +18,12 @@
  * `measure` prints the same duration by running every file one at a time: numbers from a pool are about the pool, while
  * the reference is needed about the file itself.
  *
- * Extra flags after the run's name go to `node --test`, for example
- * `node tools/run-tests.js fast --test-name-pattern=паритет`.
- */
+ * Extra flags after the run's name are handed to `node --test` in that same position. Measured 2026-09-17
+ * (node 22): with the file given first, node ignores them — a pattern selects every test — so the usage example this
+ * comment used to carry (a Russian test-name pattern, and a name no test holds any more either) selected
+ * nothing. The order is left as it is: repairing it is behaviour rather than prose, so it waits for a portion of
+ * its own, and the defect is written down among the open notes. */
+
 
 import fs from 'node:fs';
 import os from 'node:os';
