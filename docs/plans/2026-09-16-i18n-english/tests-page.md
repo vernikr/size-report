@@ -149,14 +149,37 @@ data, untranslated.
    green on its own. The data side of this file was proved by experiment: translating the fixture's label
    `'заметки.md'` reddens the check, while changing the dictionary value keeps it green — the same two
    shapes as in steps 3 and 5.
-7. **`test/module.test.js`** (66) — only its own names and messages; the five joint lines are other
-   owners' and already moved.
-8. **The verification commit** (no translation of its own, or folded into step 7): the three reads that
-   can rot silently are re-checked and their state written down — `:120` and `:195` (the negative
-   matches now name the English sentence and still redden if the tool ever blames the stripper),
-   `:163` (the mutation still produces the internal error's text), and `:258`, `:284` (the hint's regex
-   still extracts a path from the English hint). If any of them is out of line, the fix belongs to the
-   subplan that moved the text, and it is named rather than patched here.
+7. **`test/module.test.js` — done 2026-09-16, 58 → 7.** Fifty-one of this file's own names and messages
+   (two test names, the rest assertion messages), measured 58 → **7**; the seven that stay are **data**
+   and no message of another owner is among them. The five joint lines and the `:163` mutation read were
+   not touched — the diff over the file carries only lines that held Cyrillic, which is how "not touched"
+   was measured rather than promised. **Red first, one phrase at a time:** all forty-four pairs went back
+   to Russian on their own and `node --test test/module.test.js` stayed green — no reader of a check's
+   words. **The two negative matches at `:120` and `:195` were re-checked and both still guard**, and the
+   form of the proof differs between them because their paths do: `:195` sits on a path where a refusal is
+   in hand, so a temporary probe that pushed the word `stripper` into the minifier's printed text
+   (`src/minify.js:54`, restored byte-identical) reddens the `jsx-in-js` check while the module-in-`.js`
+   check stays green; `:120` sits on the healthy path, and measuring that path directly shows its stderr
+   is **201 bytes** (the hook note) rather than empty — so the negative match is a bound on real text, not
+   a vacuous line. The seven lines that stay are the fixture's payloads: a JS sample's comment and its
+   `'Приветствие'`/`'Привет, '` strings, the git identity `Тест` and two commit subjects — all written
+   and read by the check itself, none of them a message to a person. `dup` green (8 clones, 47 lines);
+   the artifact hash stands (`cdda8d01…`), the built page is byte-identical (66 427 B).
+8. **The verification commit — done 2026-09-16, folded into step 7** (nothing to translate of its own).
+   The reads that can rot silently were re-checked and their state written down: `:120` and `:195` (see
+   step 7 — one proved trip-able on its own path, the other a bound on text that is really there),
+   `:163` (the mutation still produces `the stripper broke`, proved by a temporary probe that reddens the
+   check when the cause's text is changed), and `:258`, `:284` (the hint's regex `/pin them with a file
+   of their own[^:]*: (.+)$/m` still extracts a path from the English hint — it was already English when
+   C1 began, and step 0 measured it in line). Nothing was out of line, so nothing was named to another
+   subplan.
+
+**Closed 2026-09-16.** The counter over the nine files answers **18**, and every one of the 18 is data
+proved by experiment in the step that met it: `runner` 5 (the payload's multi-byte letter and two
+sentinels), `guard` 1 (the sample), `contract-derived` 1, `contract-data` 1, `page-tree` 1,
+`page-choice` 1, `page-view` 1 (the fixture's labels and the dictionary reads) and `module` 7. The
+check counts are unchanged (44 over the nine files, 70 in the fast run, 175 in the full one) and
+`test/docs-numbers.test.js` holds `README.md`'s table against them.
 
 **Why the tree is green between the commits.** The nine files' own words are read by nobody but a
 person meeting a failure, and the two counters read their counts; the data reads stay Russian by
