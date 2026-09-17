@@ -10,6 +10,13 @@ if ! command -v pnpm >/dev/null 2>&1; then
   echo "pre-push: pnpm is not in PATH — the fast profile did not run" >&2
   exit 1
 fi
+# The same family the `pre-commit` drops, and for the same measured reason: in a linked worktree git hands
+# the hook `GIT_DIR`, `GIT_COMMON_DIR` and `GIT_WORK_TREE`, and inherited they follow the checks into their
+# own temporary directories — the parity check, the templates and the documentation guard redden on projects
+# that are not the ones they made (measured: with `GIT_DIR` set, `git ls-files` inside an empty repository
+# under `/tmp` lists this repository's files). Settings the push itself owns are left alone.
+unset GIT_INDEX_FILE GIT_PREFIX GIT_DIR GIT_COMMON_DIR GIT_WORK_TREE
+
 pnpm run verify:fast
 if git rev-parse --verify --quiet origin/main^{commit} >/dev/null; then
   exec node tools/gates/gatefiles.js --range origin/main
