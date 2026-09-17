@@ -6,13 +6,17 @@
  * Checked against the assembled page in a real DOM (jsdom) rather than against a description. The
  * numbers, the pasted program and the empty states are a neighbouring suite (`page-view`), and the
  * memory of a choice is `page-choice`: the file is split by subject rather than by size.
+ *
+ * How far the reader got — how much of the tree is scrolled and which field is under the keyboard — is checked here
+ * too, and it is kept by the shape of the page rather than by putting it back: the panel is built once, so a click has
+ * nothing that could take that place away.
  */
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { valueParts } from '../src/size-table.js';
 import {
-  fileBox, nowCells, nowTotal, pageMath, pageReady, stored, toggleBox
+  fileBox, metricBox, nowCells, nowTotal, pageMath, pageReady, stored, toggleBox
 } from '../tools/page-harness.js';
 
 /* The expected totals are computed by the same calculation the page carries (`pageMath` of the
@@ -99,8 +103,8 @@ function subtreeAndCategories(doc) {
   assert.equal(dirInput(doc, 'data/').checked, true, 'switching the category on did not bring its files back');
 }
 
-test('the file tree: folders by the paths, three states and the whole subtree', () => {
-  const doc = openPage().window.document;
+test('the file tree: folders by the paths, three states and the whole subtree', async () => {
+  const doc = (await openPage()).window.document;
   foldersMatchPaths(doc);
   folderStates(doc);
   subtreeAndCategories(doc);
@@ -112,8 +116,8 @@ test('the file tree: folders by the paths, three states and the whole subtree', 
  * the engine as a mark: "such a file cannot be a column" is the package's rule, "not in the set of
  * columns" is the project's choice. A folder of mixed content counts a share: how many of how
  * many are in the report. */
-test('the tree shows every file of the project, and those outside the report with the box off', () => {
-  const doc = openPage().window.document;
+test('the tree shows every file of the project, and those outside the report with the box off', async () => {
+  const doc = (await openPage()).window.document;
   const others = notMeasured();
   assert.ok(others.length > 0, 'the fixture has no file outside the columns — there is nothing to check');
   assert.equal(plains(doc).length, others.length, 'the tree does not hold every file of the project');
@@ -155,6 +159,52 @@ test('the tree shows every file of the project, and those outside the report wit
 
 });
 
+/* The panel keeps no state of its own: a file's box is the state, and a folder's and a category's fields
+ * are what the boxes below them say. That is one promise about every field at once, so it is checked as
+ * one — after a mixed sequence of switches (files, two folders, a category and a metric) every field of the
+ * panel is compared with the leaves it speaks for, and the files' boxes with the table. The rebuild this
+ * step removed made that promise true by construction; nothing does now, and a field a click forgot would
+ * drift in silence: the numbers would stay right while a checkbox would lie about what is counted. */
+test('every field of the panel says what the files below it say, after a mixed choice', async () => {
+  const doc = (await openPage()).window.document;
+  /* The leaves of the tree — and only they: the metric switches and the category buttons are `.box` alike, so
+   * the tree's own list is what separates the files' boxes from the rest of the panel. */
+  const subs = (node) => [...node.querySelectorAll('.tree .box:not(.dir):not(.plain) input')];
+  const pathOf = (input) => input.title.split(' · ')[0];
+  const files = subs(doc);
+  assert.equal(files.length, data.files.length, 'the tree does not hold every measurable file');
+
+  toggleBox(doc, leaves(doc)[0].querySelector('input'), false);
+  toggleBox(doc, dirInput(doc, 'src/'), false);
+  toggleBox(doc, dirInput(doc, 'notes/'), true);
+  toggleBox(doc, dirInput(doc, 'docs/'), false);
+  toggleBox(doc, doc.querySelector('#panel .row .box.all input'), true);
+  toggleBox(doc, metricBox(doc), false);
+
+  dirs(doc).forEach((box) => {
+    const input = box.querySelector('input');
+    if (input.disabled) return;
+    const inside = subs(box.closest('li'));
+    const on = inside.filter((b) => b.checked).length;
+    assert.equal(input.checked, on === inside.length,
+      'поле папки «' + box.textContent.replace(/\/\d+(\/\d+)?$/, '') + '» не то, что говорят её файлы');
+    assert.equal(input.indeterminate, on > 0 && on < inside.length,
+      'третье состояние папки «' + box.textContent.replace(/\/\d+(\/\d+)?$/, '') + '» не то, что говорят её файлы');
+  });
+  data.categories.forEach((cat) => {
+    const box = [...doc.querySelectorAll('#panel .row .box.all')].find((b) => b.textContent === cat.label);
+    const mine = files.filter((b) => data.files.find((f) => where(f) === pathOf(b)).category === cat.key);
+    const on = mine.filter((b) => b.checked).length;
+    assert.equal(box.querySelector('input').checked, on === mine.length,
+      'кнопка категории «' + cat.label + '» не то, что говорят её файлы');
+  });
+  /* And the panel with the table: they are two views of one state, and the numbers behind them are counted
+   * per file — the row «сейчас» holds one cell per shown metric per switched-on file plus the total. */
+  const shown = data.metrics.length - 1;
+  assert.equal(nowCells(doc), (files.filter((b) => b.checked).length + 1) * shown,
+    'число показанных колонок не то, что говорят переключатели файлов');
+});
+
 /* A folder with nothing to switch stays in place, but its box is off and disabled too: every row
  * looks alike, and the reason is in the tooltip. The order within a level is checked as well:
  * everything the report does not hold comes after what it holds rather than being mixed in — or
@@ -163,8 +213,8 @@ test('the tree shows every file of the project, and those outside the report wit
  * The set of "folders with nothing to measure" is computed from the data rather than read off the
  * markup: otherwise the check would confirm itself and miss a folder marked unavailable for no
  * reason. */
-test('folders outside the report come with the box off and after those inside it', () => {
-  const doc = openPage().window.document;
+test('folders outside the report come with the box off and after those inside it', async () => {
+  const doc = (await openPage()).window.document;
   const measured = data.files.map(where);
   const empty = [...new Set(data.catalog.map((e) => e.path.split('/').slice(0, -1).join('/')))]
     .filter((d) => d !== '' && !measured.some((p) => p.indexOf(d + '/') === 0)).sort();
@@ -193,8 +243,8 @@ test('folders outside the report come with the box off and after those inside it
  * responsible for what is counted, the folder's mark for what is visible. So folding and the
  * memory of it are checked where it shows that the table has not moved and that the tree comes back
  * folded on the next visit — in a tree of any length that is the only way to reach its middle. */
-test('a folder of the tree can be folded, and the fold is remembered on the next visit', () => {
-  const dom = openPage();
+test('a folder of the tree can be folded, and the fold is remembered on the next visit', async () => {
+  const dom = await openPage();
   const doc = dom.window.document;
   const fold = (d, prefix) => dirBox(d, prefix).closest('li').querySelector(':scope > .fold');
   const row = (d, prefix) => dirBox(d, prefix).closest('li');
@@ -218,7 +268,7 @@ test('a folder of the tree can be folded, and the fold is remembered on the next
    * of its own — otherwise it would travel into the link, and a link is sent for the numbers
    * rather than for how somebody arranged their tree. */
   const seed = stored(dom);
-  const next = openPage(seed).window.document;
+  const next = (await openPage(seed)).window.document;
   assert.equal(fold(next, 'src/').textContent, '▸',
     'a folded folder unfolded on the next visit');
   assert.equal(row(next, 'src/').classList.contains('folded'), true,
@@ -232,7 +282,7 @@ test('a folder of the tree can be folded, and the fold is remembered on the next
 });
 
 /* jsdom does not lay the page out, so its elements always scroll by zero and writing to
- * `scrollTop` means nothing. To check that a rebuild does not lose the scroll, the window is given
+ * `scrollTop` means nothing. To check that a click does not touch the scroll, the window is given
  * a memory of it: the same `scrollTop`, only remembered. This stands in for layout, not for
  * behaviour — the page reads and writes the same property as in a browser. */
 function scrollMemory(dom) {
@@ -243,23 +293,26 @@ function scrollMemory(dom) {
   });
 }
 
-/* A click on a box redraws the whole panel, and the scroll of the list is what the reader set up
- * (how far they got): a rebuild has to bring it back, while the field under the keyboard must not
- * drag the list towards itself. Both the panel's scroll and the list's are checked: in a wide
- * window the panel scrolls, in a narrow one the list. */
-test('the scroll of the panel and of the file list survives a rebuild', () => {
-  const dom = openPage();
+/* The panel is built once, and that is what makes the reader's place in it safe: a click has nowhere to lose it. Both
+ * the panel's scroll and the list's are checked — in a wide window the panel scrolls, in a narrow one the list —
+ * together with the very nodes they belong to, or "the scroll stayed" would mean only that somebody put it back. */
+test('a click does not touch the scroll of the panel or of the file list', async () => {
+  const dom = await openPage();
   const doc = dom.window.document;
   scrollMemory(dom);
   const panel = doc.getElementById('panel');
-  const list = () => doc.querySelector('#panel .files');
+  const list = doc.querySelector('#panel .files');
+  const tree = doc.querySelector('#panel .tree');
   panel.scrollTop = 137;
-  list().scrollTop = 48;
+  list.scrollTop = 48;
 
   toggleBox(doc, fileBox(doc, 'src/code.js'), false);
 
   assert.equal(panel.scrollTop, 137,
-    'the panel’s rebuild brought its scroll back to the top: the lower metrics have to be hunted again');
-  assert.equal(list().scrollTop, 48,
-    'the rebuild brought the file list back to the top: the lower files of the tree are out of reach');
+    'клик вернул прокрутку панели наверх: нижние метрики приходится искать заново');
+  assert.equal(list.scrollTop, 48,
+    'клик вернул список файлов наверх: нижние файлы дерева недостижимы');
+  assert.equal(doc.querySelector('#panel .files'), list, 'панель собрана заново: список файлов стал другим узлом');
+  assert.equal(doc.querySelector('#panel .tree'), tree,
+    'дерево собрано заново: прокрутку и место под клавиатурой пришлось бы возвращать руками');
 });

@@ -1,3 +1,5 @@
+import { appDecode } from './payload.js';
+
 /* The page's choice state: what is switched on, how it survives a closing and how it travels as a link.
  *
  * An ordinary source file rather than a string inside the engine: a linter sees it, and it is pasted into the assembled
@@ -14,26 +16,45 @@
  * not applied while a vanished name simply means nothing. The same record goes into the address — which is what one
  * sends to a colleague.
  *
- * The page does not derive a number's accuracy itself: the marks of approximate cells arrive in the data, from the same
- * rule that names a metric's accuracy. The page draws no such conclusion from paths and formats — there will be no
- * second rule of accuracy. */
+ * The page draws no conclusion about how a number was obtained: the method of each metric arrives in the data, and the
+ * page prints it. There is no second rule of counting here, and no vocabulary of precision either. */
 
-export const appData = JSON.parse(document.getElementById('data').textContent);
 export const appUi = JSON.parse(document.getElementById('ui').textContent);
-export const appView = { metrics: {}, files: [], folded: {} };
-appData.metrics.forEach((m) => { appView.metrics[m.key] = true; });
-appData.files.forEach(() => { appView.files.push(true); });
 
-/* A metric's description by key: the tooltip of an approximate cell names the way its number was obtained — the same one
- * that stands in the metric's caption, so the page holds no two answers about "counted with what". */
-export const appMetric = {};
-appData.metrics.forEach((m) => { appMetric[m.key] = m; });
+/* The model is not a constant any longer: the block in the file is **packed** (gzipped and base64 encoded,
+ * `appUnpack` of the payload chapter), so unpacking is asynchronous and the model is set once, by `appBoot`,
+ * before anything is drawn and before any chapter below reads it. The names, their shapes and their order are what
+ * they were; only their appearance moved — from the parse to that one call. */
+export let appData = null;
+export let appView = null;
+export let appMetric = null;
+export let appMeasured = null;
+let appKey = null;
+let appFoldKey = null;
 
-/* A column by a file's path: the page's tree is the project's tree (every path of the catalogue) while the numbers
- * belong to columns only, so this pointer is what decides whether a leaf is a checkbox or a caption. The name follows the
- * same rule as the choice's record (`appFileAt`), so the tree and the reader's memory cannot drift apart. */
-export const appMeasured = {};
-appData.files.forEach((_f, i) => { appMeasured[appFileAt(i)] = i; });
+/* One place that turns the unpacked block into what the chapters speak: the sparse form is unrolled by the payload
+ * chapter into the dense contract every number comes from — snapshots per commit, the texts themselves, "now" as
+ * the state at HEAD — and the view starts switched on whole.
+ *
+ * A metric's description by key stands here too: the way the number was obtained is text under the switches, so the
+ * page holds no second answer about "counted with what".
+ *
+ * A column by a file's path is the pointer that decides whether a leaf of the tree is a checkbox or a caption (the
+ * page's tree is the project's tree while the numbers belong to columns only); the name follows the same rule as the
+ * choice's record (`appFileAt`), so the tree and the reader's memory cannot drift apart.
+ *
+ * The key the reader's memory lives under is counted here as well, because it is the report's passport: it depends
+ * on the data, and until the block is unpacked there is nothing to count it from. */
+export function appBoot(text) {
+  appData = appDecode(JSON.parse(text));
+  appView = { metrics: {}, files: [], folded: {} };
+  appMetric = {};
+  appMeasured = {};
+  appData.metrics.forEach((m) => { appView.metrics[m.key] = true; appMetric[m.key] = m; });
+  appData.files.forEach((_f, i) => { appView.files.push(true); appMeasured[appFileAt(i)] = i; });
+  appKey = 'size-report:' + appPassport();
+  appFoldKey = appKey + ':tree';
+}
 
 /* A link is that same choice in the address, under a name of its own: someone else's anchor on the page does not count
  * as a link, and there is nothing to argue with it about. */
@@ -70,12 +91,19 @@ function appHash(text) {
  * report's order. It is what tells one report from another — the record's key is chosen by it, so a choice made in
  * someone else's report is not picked up. The package version and the top of the history are absent on purpose: this is
  * the same report — updating the tool does not change what a column means, while a grown history is the very history the
- * reader comes back to. */
+ * reader comes back to.
+ *
+ * Counted once per document: it is a constant of the report, which depends on nothing the reader can change, and every
+ * click asks for it (the key of the memory and the passport of the record). A second count would be a second answer
+ * waiting to happen, and the labels it reads do not change while the page is open. */
+let appPassportValue = null;
 function appPassport() {
-  return appHash([appData.tool.name, appData.schema, appData.report.artifact,
-    appData.report.title, appData.files.map((f) => f.label).join('|')].join('\n'));
+  if (appPassportValue === null) {
+    appPassportValue = appHash([appData.tool.name, appData.schema, appData.report.artifact,
+      appData.report.title, appData.files.map((f) => f.label).join('|')].join('\n'));
+  }
+  return appPassportValue;
 }
-const appKey = 'size-report:' + appPassport();
 
 /* One record of the choice for everything: it goes both into the memory and into the address, so there are no two formats
  * of one state. Only what is switched off is kept, by name: "switched on" and "no record" are the same state, which is
@@ -93,27 +121,54 @@ function appRecordOk(rec) {
   return rec !== null && typeof rec === 'object' && rec.v === 1 && rec.passport === appPassport();
 }
 
+/* The address is the link for a colleague, while the memory is the reader's own: the memory is written on the click
+ * itself — that is what survives a closing — and the address 200 ms after the last of a burst of switches, because a
+ * burst is one link rather than five history entries and five URL parses. The delay is short enough for a person and
+ * long enough to swallow a run of clicks; a timer that fires after the page is gone writes nothing useful, which is the
+ * price of not writing the address five times. */
+const APP_ADDRESS_DELAY = 200;
+let appAddressTimer = null;
+
+/* An address that came in from outside wins over a write this page has not made yet: a click arms a write, a link
+ * arrives within the delay, and the choice left behind must not land on the address the reader was sent — a refused link
+ * arms nothing to replace it, so without this the page would rewrite someone else's address a fifth of a second later. */
+export function appAddressDrop() {
+  if (appAddressTimer === null) return;
+  clearTimeout(appAddressTimer);
+  appAddressTimer = null;
+}
+
+function appAddressLater(text) {
+  appAddressDrop();
+  appAddressTimer = setTimeout(() => {
+    appAddressTimer = null;
+    try {
+      window.history.replaceState(null, '', APP_LINK + encodeURIComponent(text));
+    } catch (_e) {
+      /* The browser grants no change of the address: the link is then taken from the browser's memory. */
+    }
+  }, APP_ADDRESS_DELAY);
+}
+
+/* One record for a click and two destinations: the same text goes into the memory and — a moment later — into the
+ * address, so the two cannot describe different choices. */
 export function appWrite() {
   const rec = appRecord();
+  const text = JSON.stringify(rec);
   const empty = Object.keys(rec.metrics).length === 0 && Object.keys(rec.files).length === 0;
   if (!appTransient) {
     try {
       if (empty) window.localStorage.removeItem(appKey);
-      else window.localStorage.setItem(appKey, JSON.stringify(rec));
+      else window.localStorage.setItem(appKey, text);
     } catch (_e) {
       /* There is no memory (the browser grants this page none): the choice will not survive a closing, while the numbers
        * and the markup do not depend on it. */
     }
   }
-  /* The address is the link for a colleague, which is why it repeats the choice. But not during the first drawing and not
-   * when the link turned out to be someone else's: an address that came in is not ours, and the reader has yet to read
-   * it. */
+  /* But not during the first drawing and not when the link turned out to be someone else's: an address that came in is
+   * not ours, and the reader has yet to read it. */
   if (appStartup || appForeign) return;
-  try {
-    window.history.replaceState(null, '', APP_LINK + encodeURIComponent(JSON.stringify(rec)));
-  } catch (_e) {
-    /* The browser grants no change of the address: the link is then taken from the browser's memory. */
-  }
+  appAddressLater(text);
 }
 
 /* A reset to "everything on": the border between "this is no longer in the report" and "switched off" is the record
@@ -220,12 +275,12 @@ export function appApply(rec) {
 
 /* -------- the folded tree -------- */
 
+
 /* Folded folders are a memory of the same kind as the choice, but of a record of their own: it is about how much of the
  * tree is visible rather than about which numbers are read. Hence it does not go into the address: a link is sent for the
  * sake of the numbers, while an unfolded tree is the onlooker's business. As with the choice, only what is folded is kept
- * (`true`), and a folder's name is its path ("src/page"), so a vanished name simply means nothing. */
-const appFoldKey = appKey + ':tree';
-
+ * (`true`), and a folder's name is its path ("src/page"), so a vanished name simply means nothing. `appFoldKey` is
+ * set with the rest of the model (`appBoot`), for the reason the key itself is. */
 export function appFoldRead() {
   let text = null;
   try {

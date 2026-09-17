@@ -1,23 +1,59 @@
 /* One type face for the whole table; numbers line up by their digits thanks to tabular-nums rather than through a
- * monospaced font. */
-table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
-th, td { padding: 2px 7px; border-bottom: 1px solid rgba(127, 127, 127, .25); white-space: nowrap; }
+ * monospaced font.
+ *
+ * The layout is **fixed**, and the widths come from the `<colgroup>` the page builds along with the table (`appCols`):
+ * laying this table out as `auto` means measuring every cell of it — 174 468 of them here — to assign the widths of
+ * 265 columns.
+ *
+ * **Both declarations are needed, and the width is the one that is easy to lose.** A fixed layout with `width: auto`
+ * falls back to the automatic algorithm — the specification says so, and Chrome does it: the columns' widths are then
+ * ignored, the cells are measured all the same, and nothing looks wrong except that nothing is won. `100%` is what
+ * gives the table a definite width: it is the window, and the columns are wider than it, so the table keeps the widths
+ * it was given (`check` and the browser probe both watch this). */
+table { border-collapse: collapse; font-variant-numeric: tabular-nums; table-layout: fixed; width: 100%; }
+/* A counted width is the **border box** of a column — the padding of its cells and the group's border are inside it
+ * (measured in Chrome: `7ch` gave a 47px content box with 4px of padding each side). `--ch` is that count in
+ * characters, written by the page per column; `--clip` is the fixed measure a commit's caption is clipped to, and the
+ * one a narrow window may shorten (app.css). */
+#grid { --cell-pad: 4px; --col-line: 1px; --clip: 190px; }
+th, td { padding: 2px var(--cell-pad); border-bottom: 1px solid rgba(127, 127, 127, .25); white-space: nowrap; }
+/* The count over-measures a sign and a thin space, which is the safe side: a cell clips nothing, so a column a
+ * character short would show a number running over its neighbour. */
+#grid col { width: calc(var(--ch, 0px) + var(--cell-pad) * 2 + var(--col-line)); }
+#grid col.c-commit { width: calc(var(--clip) + var(--cell-pad) * 2 + var(--col-line)); }
 /* A two-row header: both rows stick, so the second is offset by exactly the first one's height (line-height 20 plus the
  * 2px bottom border), or the rows would overlap. */
-thead th { position: sticky; top: 0; z-index: 3; background: Canvas; text-align: center; line-height: 20px; padding: 0 7px; }
+thead th { position: sticky; top: 0; z-index: 3; background: Canvas; text-align: center; line-height: 20px; padding: 0 var(--cell-pad); }
 thead tr:first-child th { border-bottom-width: 2px; }
 thead tr:last-child th { top: 22px; }
 .num { text-align: right; }
-.g { border-left: 1px solid rgba(127, 127, 127, .35); }
+/* The group's left border is carried by the first *enabled* metric: four rules instead of the eight combinations of
+ * "which of them is first", so switching a metric off moves the border by itself and no line of JS knows about it.
+ * The registry holds four metrics (`raw`, `min`, `tok`, `gzip`) — that is the count below, and `test/page-view.test.js`
+ * reddens if a fifth name appears. A group's heading (`.gh`) spans its metrics rather than belonging to one, so its
+ * own left edge is there while any metric is on (`.m-none` is set when the reader switched them all off). */
+#grid .g { border-left: 0; }
+#grid:not(.m-off-0) .g.m0,
+#grid.m-off-0:not(.m-off-1) .g.m1,
+#grid.m-off-0.m-off-1:not(.m-off-2) .g.m2,
+#grid.m-off-0.m-off-1.m-off-2:not(.m-off-3) .g.m3 { border-left: 1px solid rgba(127, 127, 127, .35); }
+#grid:not(.m-none) .gh { border-left: 1px solid rgba(127, 127, 127, .35); }
+/* A metric switched off hides all of its cells and both of its headings at once — one class on the table instead of a
+ * pass over the metric's cells (measured: 265 operations against 56 496). */
+#grid.m-off-0 .m0, #grid.m-off-1 .m1, #grid.m-off-2 .m2, #grid.m-off-3 .m3 { display: none; }
+/* A file's column switched off: its cells and its headings together. The hidden column keeps its place in the markup,
+ * so the columns that stay do not move. */
+#grid .off { display: none; }
 /* The sticky left column: an opaque background (Canvas), or numbers would show through the cell when scrolling sideways. A
  * tier above the neighbouring cells (2) and below the header (3); the header's corner is above them all, or the column groups
  * would crawl over the commit column. */
 .c-commit { position: sticky; left: 0; z-index: 2; background: Canvas; text-align: left; font-weight: 400; }
 .c-commit a { color: inherit; }
 thead .c-commit { z-index: 6; }
-/* This block sets the column's width. Without it the cell's content went past its borders and was drawn over the neighbouring
- * numbers: a table cell clips nothing. */
-.clip { display: flex; align-items: baseline; gap: 6px; width: 300px; }
+/* This block fills the commit column, whose width is set by the column itself (`#grid col.c-commit`). It took the
+ * column's measure with it: the cell's content would otherwise go past its borders and be drawn over the neighbouring
+ * numbers, because a table cell clips nothing. */
+.clip { display: flex; align-items: baseline; gap: 6px; width: 100%; }
 .when { flex: none; opacity: .7; }
 .subj { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; display: block; }
 .subj.plain { opacity: .7; }

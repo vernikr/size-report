@@ -6,7 +6,7 @@
  *
  * The shared part is frozen by the artifact's bytes (`src/css.js`), which is why everything where the page departs from
  * its geometry is gathered in the "adaptations" section together with its reason: the shared part cannot grow, while on a
- * narrow screen the 300px commit column would eat the whole screen. */
+ * narrow screen the commit column would eat the whole screen. */
 
 :root {
   color-scheme: light dark;
@@ -111,12 +111,8 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
 .box.plain input { cursor: default; }
 
 /* There is no legend under the file tree, and on purpose: below the list it pushed the numbers away, while its content
- * already stands next to what it explains — the colour of a delta is named by the sign of the number itself, accuracy
- * stands under the metric switches, and the mark of a file that is not there yet lives in the cell's tooltip.
- *
- * An approximate number is marked by a dashed line rather than a colour: colour in the table is taken by the delta (growth
- * and fall), and a second meaning on the same sign would read as the first. */
-#grid td.approx { text-decoration: underline dotted; text-underline-offset: 2.5px; }
+ * already stands next to what it explains — the colour of a delta is named by the sign of the number itself, the way each
+ * number was counted stands under the metric switches, and the mark of a gap lives in the cell's text. */
 
 /* The table has a frame and a scroll of its own: the header and the commit column stick to it (the rules of stickiness
  * live in the shared part) rather than to the page, so scrolling sideways shows whose row it is while scrolling down shows
@@ -230,5 +226,7 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
   h1 { font-size: 18px; }
   #grid { font-size: 12px; }
   .shell { max-height: calc(100vh - 260px); }
-  .clip { width: 190px; }
+  /* The commit column needs no rule of its own here any more: its width is the measure `--clip` of the shared part
+   * (`src/table.css`), and on a narrow screen that measure stands as it is. A shorter one would be `--clip: 150px`
+   * here — the adaptation the shared part cannot make for itself. */
 }
