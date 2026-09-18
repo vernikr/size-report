@@ -1,9 +1,9 @@
 # @vernikr/size-report
 
-A tool that watches how much code and documentation a project carries, commit by commit. Every
-change is shown in three measures at once — as written (`raw`), minified (`min`) and in tokens for a
-language model (`tok`) — so a person can see where a project is swelling and an agent can see what a
-change weighs in its own context. It forbids nothing and blocks nothing: it only shows.
+Watches how much code and documentation a project carries, commit by commit. Every file is measured
+as written (`raw`), minified (`min`) and in tokens for a language model (`tok`), so a person sees
+where a project swells and an agent sees what a change weighs in its own context. It forbids nothing
+and blocks nothing: it only shows.
 
 The report is a single self-contained page (`docs/size-report.html`) — no server, no network — and it
 refreshes itself after every commit. A project needs no settings to start: with no config file the
@@ -30,16 +30,12 @@ pnpm exec size install-hook       # rebuild the report after every commit and me
 
 ## Where the rest is
 
-- [`docs/architecture.md`](docs/architecture.md) — how the tool is put together: the engine, the report
-  page, the checks and the promises they hold, the gate against bloat, the traps of the engine and what
-  is not here yet.
-- [`docs/wiring.md`](docs/wiring.md) — wiring the tool into a project step by step, the settings and its
-  surface for an agent.
-- [`docs/files.md`](docs/files.md) — what is in the repository: the role of every file and module.
-- [`docs/archive/README_old.md`](docs/archive/README_old.md) — the release notes the main page used to
-  carry.
-- [`AGENTS.md`](AGENTS.md) — how to work inside this repository: what to run, what to do when a sensor
-  is red.
+- [`docs/architecture.md`](docs/architecture.md) — how the tool is built, the checks and the gate
+  against bloat.
+- [`docs/wiring.md`](docs/wiring.md) — wiring it into a project, the settings, the surface for an
+  agent.
+- [`docs/files.md`](docs/files.md) — what is in this repository.
+- [`AGENTS.md`](AGENTS.md) — how to work inside this repository.
 
 ## License
 
