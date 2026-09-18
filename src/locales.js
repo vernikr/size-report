@@ -36,7 +36,6 @@ export const LOCALES = {
       categoryFromConfig: 'из настроек',
       categoryByExtension: 'по расширению',
       all: 'все',
-      sub: '{tool} {version} · {artifact}',
       panelMethod: 'способ:',
       emptyMetrics: 'Ни одна метрика не выбрана — таблицу не из чего собрать. '
         + 'Включите хотя бы одну в панели выше: без метрик нет ни одной колонки с числом.',
@@ -49,10 +48,7 @@ export const LOCALES = {
       linkExtra: 'Часть ссылки пропущена: в этом отчёте нет {n} названных имён. '
         + 'Остальное применено.',
       unpack: 'Данные отчёта сжаты, а браузер не умеет их распаковать: в нём нет DecompressionStream. '
-        + 'Обновите браузер — таблицу показывать не из чего.',
-      note: 'Абсолютные размеры стоят один раз — в строке «{now}». Строк: {rows}: коммиты без '
-        + 'изменения объёма и коммиты, тронувшие только выключенные файлы, строк не получают. '
-        + 'Собрано из истории git: {command}.'
+        + 'Обновите браузер — таблицу показывать не из чего.'
     },
     note: {
       intro: 'Строка — коммит, колонка — файл. ',
@@ -94,7 +90,6 @@ export const LOCALES = {
       categoryFromConfig: 'from the settings',
       categoryByExtension: 'by extension',
       all: 'all',
-      sub: '{tool} {version} · {artifact}',
       panelMethod: 'method:',
       emptyMetrics: 'No metric is selected — there is nothing to build the table from. '
         + 'Turn on at least one above: without metrics there is no column holding a number.',
@@ -109,10 +104,7 @@ export const LOCALES = {
       /* The report's data lies in the file compressed and the browser unpacks it; this text is what a
        * browser without `DecompressionStream` gets instead of an empty table. */
       unpack: 'The report\u2019s data is compressed and this browser cannot unpack it: there is no '
-        + 'DecompressionStream. Update the browser — there is nothing to build the table from.',
-      note: 'Absolute sizes appear once — in the “{now}” row. Rows: {rows}: commits that change '
-        + 'no number, and commits touching only the disabled files, get no row. '
-        + 'Collected from git history: {command}.'
+        + 'DecompressionStream. Update the browser — there is nothing to build the table from.'
     },
     note: {
       intro: 'A row is a commit, a column is a file. ',

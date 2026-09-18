@@ -1,6 +1,6 @@
 import fs from 'fs';
 import zlib from 'zlib';
-import { fill, LOCALES } from '../locales.js';
+import { LOCALES } from '../locales.js';
 import { PAGE_CSS, TABLE_CSS } from '../css.js';
 import { assertCompilable, stripCss, stripJs, stripLines } from '../strip.js';
 
@@ -71,16 +71,6 @@ export function pageScript() {
   return code;
 }
 
-/* The note under the heading: what built the report and where it lies. The path is plain text rather than a link: the
- * page opens from disk and depends on nothing. */
-function subText(data, page) {
-  return fill(page.sub, {
-    tool: data.tool.name,
-    version: data.tool.version,
-    artifact: data.report.artifact
-  });
-}
-
 /* The page's texts: column captions, panel labels, the legend and the empty states. They are the page's dictionary
  * rather than the report's: the data block carries none of them, and the report's own words live in the locale. */
 function uiText(page, loc) {
@@ -114,9 +104,7 @@ function uiText(page, loc) {
     categoryByExtension: page.categoryByExtension,
     methodLabel: page.panelMethod,
     empty: page.emptyMetrics,
-    noFiles: page.noFiles,
-    /* {command} is substituted by the page, which holds the data, while {now} is filled in here. */
-    note: page.note.replace(/\{now\}/g, loc.now)
+    noFiles: page.noFiles
   };
 }
 
@@ -208,13 +196,13 @@ export function pagePayload(data) {
   const out = {
     schema: 2,
     tool: data.tool,
-    /* The report's own words are the ones the page reads: `heading` is the artifact's `<h1>` and `journal` is null
-     * today, so neither is carried — the page builds no heading and prints no journal. */
+    /* The report's own words are the ones the page reads: `heading` is the artifact's `<h1>`, built before the block,
+     * `journal` is null today, and `fixCommand` was quoted by the note under the table, which the page no longer has —
+     * the page builds no heading, prints no journal and suggests no command. */
     report: {
       locale: data.report.locale,
       title: data.report.title,
       artifact: data.report.artifact,
-      fixCommand: data.report.fixCommand,
       showSha: data.report.showSha
     },
     hrefPrefix: prefix,
@@ -248,20 +236,23 @@ export function pagePacked(text) {
 }
 
 /* The report's page is one file: the data lies in it, the script is pasted in, there are no external references. Hence
- * it opens with a double click and works without a network. */
+ * it opens with a double click and works without a network.
+ *
+ * The page's chrome is the panel and the table, and nothing stands above the numbers: the report's heading opens the
+ * panel (the one place that holds the reader's own controls) rather than a band of its own, and neither the tool, nor the
+ * version, nor the artifact's path is printed anywhere — the file is opened from a directory whose name already says
+ * where it lies. The panel's card is the markup's and the fields inside it are the script's: `#panel` is emptied and
+ * rebuilt on every opening, which is why the heading is the card's other child rather than one more field. */
 export function pageHtml(data, cfg) {
   const loc = LOCALES[cfg.locale];
   return '<!doctype html>\n<html lang="' + esc(loc.html) + '">\n<head>\n<meta charset="utf-8">\n'
     + '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
     + '<title>' + esc(data.report.title) + '</title>\n<style>\n'
     + squeezedCss(TABLE_CSS) + '\n' + squeezedCss(PAGE_CSS) + '\n</style>\n</head>\n<body>\n'
-    + '<header>\n<h1>' + esc(data.report.heading) + '</h1>\n'
-    + '<p class="sub">' + esc(subText(data, loc.page)) + '</p>\n</header>\n'
-    + '<div id="panel" class="panel"></div>\n'
+    + '<div class="panel">\n<h1>' + esc(data.report.heading) + '</h1>\n<div id="panel"></div>\n</div>\n'
     + '<p id="notice" class="notice" hidden></p>\n'
     + '<div id="shell" class="shell"><div id="grid" class="grid"></div></div>\n'
     + '<p id="state" class="state" hidden></p>\n'
-    + '<p id="note" class="note"></p>\n'
     + '<script type="application/octet-stream" id="data" data-pack="base64+gzip">'
     + pagePacked(jsonInHtml(pagePayload(data))) + '</script>\n'
     + '<script type="application/json" id="ui">' + jsonInHtml(uiText(loc.page, loc)) + '</script>\n'

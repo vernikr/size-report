@@ -66,7 +66,7 @@ Edited most often:
 | `journal` | where to look for the journal sections the rows refer to |
 | `links.commitUrl` | the commit link template, e.g. `https://github.com/org/repo/commit/{sha}`; derived from the `origin` address for GitHub and GitLab (for other hosts — empty rather than a guess) |
 | `skip` | the paths that did not become columns: both those that cannot be (the report itself, dependency locks) and those that did not fit |
-| `fixCommand` | the command the report's signature quotes and a refusal suggests; derived: your `sizes` script, or the path to the installed package inside the project |
+| `fixCommand` | the command a refusal suggests and the contract hands to an agent (the page prints nothing of it); derived: your `sizes` script, or the path to the installed package inside the project |
 | `locale`, `title`, `heading` | the language of the report's texts and its headings; an empty `title`/`heading` means "take them from the locale" |
 | `minify.guard` | the extensions whose stripper output is checked by parsing; a module in `.js` the guard understands by itself, so there is nothing to touch there |
 | `hooks.enabled` | the switch of the self-updating hook (`false` — the hook is not installed by itself and keeps quiet if it is already there; it is removed only by `size uninstall-hook`) |

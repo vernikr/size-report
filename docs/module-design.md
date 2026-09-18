@@ -118,7 +118,7 @@ parity reference. The keys:
 |---|---|
 | `schema` | the contract's version |
 | `tool` | the package's name and version |
-| `report` | the passport: locale, title, heading, the artifact's path, the fix command, the journal, whether the sha is shown |
+| `report` | what the report says about itself: locale, title, heading, the artifact's path, the fix command, the journal, whether the sha is shown |
 | `metrics[]` | per metric: `key`, `label`, `note`, `method` |
 | `categories[]` | the categories present, with their labels |
 | `files[]` | per column: `label`, `path`, the chain of renames `paths`, `category` and how it was decided (`categoryBy`) |
@@ -188,7 +188,10 @@ names the way actually used and the lost sensor is reported (exit code 4), while
 One self-contained file: the styles, a mount point, the data, the printed words and the program, with no
 external libraries, so it works offline. The program is assembled from the package's own chapters with the
 module syntax stripped out, and the words travel as a block of their own — which is why the report reads in
-the language of the run rather than in the browser's.
+the language of the run rather than in the browser's. The page's chrome is the panel and the table and
+nothing else: the report's heading opens the panel — the tool, its version and the artifact's path are
+printed nowhere, the file lies in a directory whose name already says where — and under the table there
+stands no note: what a reader needs to know about a number stands with the switch that produced it.
 
 ### 8.2. The controls
 
@@ -199,8 +202,8 @@ the language of the run rather than in the browser's.
 3. **Buttons by category** — all files of a category at once; a button works the tree's checkboxes, never
    the data itself.
 4. **No switch of the model family**: the page receives ready numbers and counts nothing itself, so the
-   choice lives in the settings and the page **names** it — the method of each metric stands under the
-   switches in words.
+   choice lives in the settings and the page **names** it — what a metric is and the way it was counted stand
+   in the tooltip of that metric's own switch.
 
 ### 8.3. How the recount works
 
@@ -212,14 +215,19 @@ browser, with no second look at git.
 
 ### 8.4. The memory of the view
 
-The reader's choice is remembered **in the browser** between openings, in one record keyed by the report's
-passport — the tool's name, the schema, the artifact's path, the title and the column labels in the
-report's order — so a choice made in someone else's report is not picked up. The tool's version and the top
-of the history are absent from the passport on purpose: updating the tool does not change what a column
-means, while a grown history is the very report the reader comes back to. What is written down is what is
-switched **off**, by name, and a record with nothing to say is removed. These are view settings: they touch
-neither the settings file nor git, and while a choice once carried in the address is still read, the page
-writes nothing into the address bar.
+The reader's choice is remembered **in the browser** between openings, in one record per report, under an
+address counted from the report's passport — the tool's name, the data schema, the artifact's path, the
+title and the oldest commit of the history — so a choice made in someone else's report is not picked up.
+The passport holds neither the tool's version nor the top of the history: updating the tool does not
+change what a column means, while a grown history is the very report the reader comes back to. It holds
+no column either, and the oldest commit stands where the column labels stood: they move with the numbers
+(a project without pinned settings derives the columns on every run, ordered by size within an extension),
+so they gave every rebuild of a report an address of its own. What is written down is what is switched
+**off**: the fact of a whole category where the reader decided by groups — so a file joining that category
+later is switched with it — and the names of the files where he decided one by one; a record with nothing
+to say is removed. The addresses the earlier naming left in the browser are swept when a report of this
+release is opened, and a choice once carried in the address is still read. These are view settings: they
+touch neither the settings file nor git, and the page writes nothing into the address bar.
 
 ## 9. The module's settings
 

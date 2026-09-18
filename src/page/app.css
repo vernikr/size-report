@@ -31,11 +31,11 @@ body {
   font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   -webkit-text-size-adjust: 100%;
 }
-h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em; }
-.sub { margin: 0 0 calc(var(--gap) + 4px); color: var(--muted); font-size: 12.5px; }
+h1 { margin: 0 0 9px; font-size: 21px; font-weight: 650; letter-spacing: -.012em; }
 
 /* The panel of choices is a card: it separates the controls from the data and does not merge with the table that begins
- * below. */
+ * below. The report's heading opens it — the page has no band above the numbers, and the title belongs where the file it
+ * names is read from (see the markup in `src/page/build.js`). */
 .panel {
   margin: 0 0 var(--gap);
   padding: 12px 14px 13px;
@@ -54,10 +54,6 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
   letter-spacing: .07em;
 }
 .panel .row { display: flex; flex-wrap: wrap; gap: 3px 6px; align-items: center; }
-/* The way of counting is visible text under the switches: the token dictionary and the way of compression come from the
- * settings of the run rather than from a checkbox, so pointing a mouse is not enough — the reader has to see what produced
- * the number. */
-.panel .about { margin: 5px 0 0; color: var(--muted); font-size: 11.5px; }
 
 /* The file tree: nesting is shown by an indent and a level line, and a folder is a switch like a file — only its checkbox
  * answers for the whole subtree, while the number beside it says for how many files. The list is longer than the window,
@@ -155,9 +151,6 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
 }
 .state[hidden], .shell[hidden] { display: none; }
 
-.note { margin: 14px 0 0; max-width: 90em; color: var(--muted); font-size: 12px; }
-.note code { background: var(--tint); padding: 0 3px; border-radius: 3px; }
-
 /* The keyboard: the focus ring is visible on any background (the system accent colour) and shifts no layout. Journal links
  * and every switch are reachable with Tab. */
 :focus-visible { outline: 2px solid AccentColor; outline-offset: 2px; border-radius: 3px; }
@@ -169,10 +162,11 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
  *
  * The layout is a grid on `body` rather than a wrapper in the markup: the page is assembled by pasting chapters
  * (`src/page/build.js`), and adding nodes to it for the sake of styling would mean changing the page's shape in two places
- * instead of one. There are five rows, named by subject: the heading, the message about a link, the **working row**, the
- * empty state and the note. Only the working row stretches — the table gets all the remaining height and the panel no more
- * than that; the panel's own height is not "whatever came out" (it would push the table off the screen) but that same
- * working row, inside which it scrolls: a file list longer than the window is the usual case.
+ * instead of one. There are three rows, named by subject: the message about a link, the **working row** and the empty
+ * state — while the panel of choices spans them all in the left column, its heading inside it. Only the working row
+ * stretches — the table gets all the remaining height and the panel no more than that; the panel's own height is not
+ * "whatever came out" (it would push the table off the screen) but that same working row, inside which it scrolls: a file
+ * list longer than the window is the usual case.
  *
  * The threshold of 900px is the same as the adaptations' below: one border between "wide" and "narrow", or the page would
  * be left with no rule at all between two thresholds. */
@@ -185,21 +179,18 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
     overflow: auto;
     display: grid;
     grid-template-columns: minmax(230px, 300px) minmax(0, 1fr);
-    grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     column-gap: var(--gap);
     align-items: stretch;
   }
-  header { grid-area: 1 / 1 / 2 / -1; }
-  #notice { grid-area: 2 / 2 / 3 / 3; }
-  #shell { grid-area: 3 / 2 / 4 / 3; }
-  #state { grid-area: 4 / 2 / 5 / 3; align-self: start; }
-  #note { grid-area: 5 / 2 / 6 / 3; }
+  #notice { grid-area: 1 / 2 / 2 / 3; }
+  #shell { grid-area: 2 / 2 / 3 / 3; }
+  #state { grid-area: 3 / 2 / 4 / 3; align-self: start; }
   /* The working row runs the full height, as the table does: the panel ends where it ends. The panel scrolls rather than the
-   * page. It has no top padding here: the list drives under it, and the sticky row of categories would stand not flush with
-   * the edge but under a band of passing files. The padding has not gone anywhere — it is on the first field and travels
-   * away with it. */
-  #panel { grid-area: 2 / 1 / -1 / 2; min-height: 0; margin-bottom: 0; padding-top: 0; overflow: auto; }
-  .panel > fieldset:first-child { padding-top: 12px; }
+   * page, and its top padding is gone: the heading carries that room instead, and it travels away with the list, while the
+   * sticky row of categories stands flush with the card's edge rather than under a band of passing rows. */
+  .panel { grid-area: 1 / 1 / -1 / 2; min-height: 0; margin-bottom: 0; padding-top: 0; overflow: auto; }
+  .panel h1 { padding-top: 12px; }
   /* Here the row rather than the window sets the table's height: it needs a height rule of its own only in a narrow window,
    * where the whole page scrolls. */
   .shell { max-height: none; }
@@ -217,7 +208,7 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
   }
   /* Without metrics there is no table, and a stretched empty row has no place there: the empty state takes the free space of
    * that row rather than the band above it. */
-  body:has(#shell[hidden]) #state { grid-area: 3 / 2 / 4 / 3; }
+  body:has(#shell[hidden]) #state { grid-area: 2 / 2 / 3 / 3; }
 }
 
 /* Adaptations: the one place where the page overrides the shared geometry — because the shared part is frozen by the
@@ -226,7 +217,7 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
  * empty space under it at that single window size. */
 @media (max-width: 899px) {
   body { padding: 14px 14px 32px; }
-  h1 { font-size: 18px; }
+  h1 { font-size: 19px; }
   #grid { font-size: 12px; }
   .shell { max-height: calc(100vh - 260px); }
   /* The commit column keeps its width on a narrow screen, and that is deliberate rather than forgotten: the numbers

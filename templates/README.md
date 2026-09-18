@@ -40,7 +40,8 @@ What is worth knowing about the template's values:
   without the optional dependencies, a platform that has none) the tool still works, but says that the
   numbers were counted another way, and returns **code 4** — that is a named different count rather than an
   error of the settings.
-- `fixCommand` — the command the report's signature and the refusals quote. In the template it is
+- `fixCommand` — the command the refusals quote and the contract hands to an agent (the page prints
+  nothing of it). In the template it is
   `node node_modules/@vernikr/size-report/bin/size.js --write` — the path to the installed package inside
   the project. **The package name as a command cannot stand here:** `npx <name>` in a project without the
   installed package goes to the registry and pulls the package over the network, so the advice that is meant

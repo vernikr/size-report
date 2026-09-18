@@ -42,11 +42,12 @@ test('the contract is reproducible: two runs give the same bytes', () => {
  * (`src/page/payload.js`, both sides pasted into the page). So what stands here is a round trip on real output — the
  * contract encoded, decoded by the page's own chapter and compared whole — rather than the format described.
  *
- * Four things are declared as not surviving, and each has its reason: the list of skipped commits changes with the
- * report's own commit and would stop the file from being a fixed point (the encoder's own comment), the report's
- * `heading` (the artifact's `<h1>`, built before the block) and `journal` are words the page never reads, and the mark
- * `last` — the columns the newest commit touched — is a fact the page counts for itself from the numbers, so the block
- * would carry a list nobody asks for. `schema` is not lost but re-marked: 1 is the contract's shape, 2 the block's.
+ * Five things are declared as not surviving, and each has its reason: the list of skipped commits changes with the
+ * report's own commit and would stop the file from being a fixed point (the encoder's own comment); the report's
+ * `heading` (the artifact's `<h1>`, built before the block), `journal` and `fixCommand` (quoted by a note under the
+ * table the page no longer has) are words the page never reads; and the mark `last` — the columns the newest commit
+ * touched — is a fact the page counts for itself from the numbers, so the block would carry a list nobody asks for.
+ * `schema` is not lost but re-marked: 1 is the contract's shape, 2 the block's.
  *
  * The second half is the other half of a fixed point: the same contract has to give the same bytes twice — the hook
  * rebuilds the artifact after every commit and would otherwise commit it forever. */
@@ -56,6 +57,7 @@ test('the sparse block restores the contract whole, through the packing, and twi
   delete want.skipped;
   delete want.report.heading;
   delete want.report.journal;
+  delete want.report.fixCommand;
   delete want.last;
   assert.deepEqual(pageDecode(pagePayload(data)), want,
     'the round trip through the sparse block lost or moved something');
