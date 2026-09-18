@@ -215,18 +215,14 @@ browser, with no second look at git.
 
 ### 8.4. The memory of the view
 
-The reader's choice is remembered **in the browser** between openings, in one record per report, under an
-address counted from the report's passport — the tool's name, the data schema, the artifact's path, the
-title and the oldest commit of the history — so a choice made in someone else's report is not picked up.
-The passport holds neither the tool's version nor the top of the history: updating the tool does not
-change what a column means, while a grown history is the very report the reader comes back to. It holds
-no column either, and the oldest commit stands where the column labels stood: they move with the numbers
-(a project without pinned settings derives the columns on every run, ordered by size within an extension),
-so they gave every rebuild of a report an address of its own. What is written down is what is switched
-**off**: the fact of a whole category where the reader decided by groups — so a file joining that category
-later is switched with it — and the names of the files where he decided one by one; a record with nothing
-to say is removed. The addresses the earlier naming left in the browser are swept when a report of this
-release is opened, and a choice once carried in the address is still read. These are view settings: they
+The reader's choice is remembered **in the browser** between openings, as one record for the browser: the
+choice is the reader's rather than a report's — all `file://` pages share one storage — and two names
+carry it, the choice and the unfolded tree, under the page's own namespace. Every other name there is
+swept when a report is opened. What is written down is what is switched **off**: the fact of a whole
+category where the reader decided by groups — so a file joining that category later is switched with it —
+and the names of the files where he decided one by one; a record with nothing to say is removed. Reading
+is **by name** (a path, a metric's key, a category's key), so a name a report does not hold matches
+nothing, and a choice once carried in the address is still read. These are view settings: they
 touch neither the settings file nor git, and the page writes nothing into the address bar.
 
 ## 9. The module's settings

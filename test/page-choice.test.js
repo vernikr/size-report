@@ -1,11 +1,11 @@
 /* The reader's choice: the memory of it in the browser, and the link that carries somebody else's.
  *
- * The memory is the browser rather than a request, and it follows one rule: one record per report, under an address
- * counted from the report's identity rather than from its data (`appPassport`). Hence what is checked here in a real DOM
- * (jsdom): a further visit returns the same choice and the same numbers, and so does the report rebuilt after a commit;
- * switching everything back removes the record; a foreign, outdated or broken record is not applied, and a foreign name
- * switches off nothing of someone else's; a group decided as a group is remembered as the group's own fact, a file that
- * joined it later switched with it; and an address of any other form of the passport is swept.
+ * The memory is the browser rather than a request, and it follows one rule: the choice is the reader's, written under
+ * two names of the page's own, and read by name. Hence what is checked here in a real DOM (jsdom): a further visit
+ * returns the same choice and the same numbers, and so does the report rebuilt after a commit; switching everything back
+ * removes the record; a record of another format or an unreadable one is not applied, and a name a report does not hold
+ * switches nothing off; a group decided as a group is remembered as the group's own fact, a file that joined it later
+ * switched with it; and every other name in the page's namespace is swept when a report is opened.
  *
  * **The address stays clean.** The page writes the choice into the browser's memory and nowhere else: a report opened
  * from disk keeps the address it was opened with, and nothing of what a reader switches lands in the tab's title bar.
@@ -33,9 +33,9 @@ import {
   settled, stored, toggleBox, where
 } from '../tools/page-harness.js';
 
-/* The address of the memory, as `src/page/state.js` writes it: the tool's namespace, the form of the address and the
- * report's passport. A check looks for the record where the page left it rather than inventing a name of its own. */
-const APP_KEY = 'size-report:2:';
+/* The name of the choice's record, as `src/page/state.js` writes it: the page's namespace and that name. A check looks
+ * for the record where the page left it rather than inventing a name of its own; the unfolded tree has its own key. */
+const APP_KEY = 'size-report:choice';
 
 const { data, pageText, openPage } = pageReady('choice');
 
@@ -66,8 +66,7 @@ async function ownerChoice(pick) {
   const doc = owner.window.document;
   toggleBox(doc, (pick === undefined ? metricBox : pick)(doc), false);
   const own = stored(owner);
-  return { owner: owner, doc: doc, own: own,
-    passport: Object.keys(own)[0].slice(APP_KEY.length) };
+  return { owner: owner, doc: doc, own: own };
 }
 
 /* A link to a choice: the record the memory holds, in the very shape the address carries it. The page no longer
@@ -128,7 +127,7 @@ test('the memory of a choice: a revisit brings back the same choice and the same
   assert.equal(nowCells(doc2), allCells(data), 'bringing the boxes back did not return the window to its default');
 });
 
-test('the memory of a choice: a foreign or broken record is not applied', async () => {
+test('the memory of a choice: a record of another format and an unreadable one are not applied', async () => {
   const first = await openPage();
   const doc = first.window.document;
   toggleBox(doc, metricBox(doc), false);
@@ -137,27 +136,19 @@ test('the memory of a choice: a foreign or broken record is not applied', async 
   const key = Object.keys(saved)[0];
   const rec = JSON.parse(saved[key]);
 
-  /* The record explains itself: the format's version, the passport (which is also the address' tail,
-   * or the record would be looked for where it does not lie) and only what is off. */
+  /* The record explains itself: the format's version and only what is off. */
   assert.equal(rec.v, 1, 'the record did not declare the format version');
-  assert.equal(rec.passport, key.slice(APP_KEY.length),
-    'the record’s key and its passport diverged');
   assert.deepEqual(rec.metrics, { min: false }, 'the record did not name the switched-off metric');
   assert.deepEqual(rec.files, { 'src/code.js': false }, 'the record did not name the switched-off file');
   /* The file was switched one by one, so its category is in the third state and stands nowhere in the record — while the
    * groups the reader never touched are written down as the facts they are: wholly on. */
   assert.deepEqual(rec.cats, { docs: true, chore: true }, 'the record did not keep the groups as the facts they are');
 
-  /* A foreign report: its record lies under its own passport and has to stay whole. */
-  const foreignKey = APP_KEY + '2f1a';
-  const other = await openPage({ [foreignKey]: JSON.stringify({ v: 1, passport: '2f1a',
-    metrics: { min: false }, files: { 'src/code.js': false } }) });
-  assert.equal(nowCells(other.window.document), allCells(data), 'another report’s choice was applied to this one');
-  assert.deepEqual(Object.keys(stored(other)), [foreignKey], 'the page wiped another report’s record');
-
-  /* The right key but a foreign passport is the same as no record at all. */
-  const stranger = await openPage({ [key]: JSON.stringify(Object.assign({}, rec, { passport: 'deadbeef' })) });
-  assert.equal(nowCells(stranger.window.document), allCells(data), 'a record with a foreign passport was applied');
+  /* A name in the page's namespace but not one of its two keys: it is another naming's, and it goes. */
+  const otherName = 'size-report:2:2f1a';
+  const other = await openPage({ [otherName]: JSON.stringify({ v: 1, metrics: { min: false }, files: {} }) });
+  assert.equal(nowCells(other.window.document), allCells(data), 'a record of another naming was applied');
+  assert.deepEqual(stored(other), {}, 'a record of another naming outlived the report that opened');
 
   /* A record of another format and a broken one read the same way: not at all. */
   const older = await openPage({ [key]: JSON.stringify(Object.assign({}, rec, { v: 0 })) });
@@ -168,15 +159,14 @@ test('the memory of a choice: a foreign or broken record is not applied', async 
   /* A name the report no longer holds: a name that is there applies, an unknown one means nothing
    * and switches off nothing of someone else's, and the record is brought back to what the report
    * holds. */
-  const ghost = await openPage({ [key]: JSON.stringify({ v: 1, passport: rec.passport,
+  const ghost = await openPage({ [key]: JSON.stringify({ v: 1,
     metrics: { tok: false, min: false }, files: { 'src/gone.js': false, 'src/code.js': false } }) });
   const gd = ghost.window.document;
   assert.equal(metricBox(gd).checked, false, 'the named metric was not applied');
   assert.equal(fileBox(gd, 'src/code.js').checked, false, 'the named file was not applied');
   assert.equal(fileBox(gd, 'src/empty.js').checked, true, 'a name that vanished switched off a file of someone else');
   assert.deepEqual(JSON.parse(stored(ghost)[key]),
-    { v: 1, passport: rec.passport, metrics: { min: false }, cats: { docs: true, chore: true },
-      files: { 'src/code.js': false } },
+    { v: 1, metrics: { min: false }, cats: { docs: true, chore: true }, files: { 'src/code.js': false } },
     'the page did not bring the record back to what the report holds');
 });
 
@@ -206,25 +196,22 @@ test('the memory of a choice: a rebuilt report brings the same choice back', asy
     'the rebuild switched off a file the reader never touched');
 });
 
-/* An address of another form is dead weight rather than a memory: the identity behind it is counted from the data, so a
- * history leaves one per build. They go when a report of this form is opened, while a record of another report of the
- * same form stays: what is swept is the mark of the form, not a guess about whose record lies under it. */
-test('the memory of a choice: the addresses of an earlier release are swept', async () => {
+/* The memory is read under this page's two keys and under nothing else: every other name in the namespace is what
+ * another naming of it left — one address per build, a record of an older form — and it goes when a report is opened,
+ * while what this page writes stays whole. */
+test('the memory of a choice: what other namings left is swept', async () => {
   const legacy = 'size-report:7b3288ef';
   const dom = await openPage({
-    [legacy]: JSON.stringify({ v: 1, passport: '7b3288ef', metrics: { min: false }, files: {} }),
-    [legacy + ':tree']: JSON.stringify({ v: 1, passport: '7b3288ef', open: { src: true } })
+    [legacy]: JSON.stringify({ v: 1, metrics: { min: false }, files: {} }),
+    [legacy + ':tree']: JSON.stringify({ v: 1, open: { src: true } }),
+    'size-report:2:2f1a': JSON.stringify({ v: 1, metrics: { min: false }, cats: { docs: false } })
   });
   assert.deepEqual(stored(dom), {},
-    'the addresses of an earlier release outlived the report that should have swept them');
+    'the names of another naming outlived the report that should have swept them');
 
-  const foreign = APP_KEY + '2f1a';
-  const other = await openPage({
-    [legacy]: JSON.stringify({ v: 1, passport: '7b3288ef', metrics: { min: false }, files: {} }),
-    [foreign]: JSON.stringify({ v: 1, passport: '2f1a', metrics: { min: false }, cats: { docs: false } })
-  });
-  assert.deepEqual(Object.keys(stored(other)), [foreign],
-    'a record of another report of this release was swept with the addresses of an earlier one');
+  const ours = await openPage({ [APP_KEY]: JSON.stringify({ v: 1, metrics: { min: false }, files: {} }) });
+  assert.equal(metricBox(ours.window.document).checked, false, 'the choice under this page’s own key was refused');
+  assert.deepEqual(Object.keys(stored(ours)), [APP_KEY], 'the page wrote the choice under another name');
 });
 
 /* A report opened from disk keeps its address: the page writes the choice into the browser's memory and never into the
@@ -286,10 +273,10 @@ test('a link: the page opened by it shows the sender’s choice', async () => {
   assert.deepEqual(record.files, { 'src/code.js': false }, 'the sender’s record is not the one that was shared');
 });
 
-/* A refused link is a message to the reader rather than an empty table: a foreign report and a
- * broken record read the same way — not at all — and each is told in its own text, while the
- * reader's previous view and the address they were sent stay whole. */
-test('a link: a foreign and a broken address are explained in words', async () => {
+/* A refused link is a message to the reader rather than an empty table: a record that cannot be
+ * read is not applied, and the reader is told in words, while his previous view and the address
+ * he was sent stay whole. */
+test('a link: an address that cannot be read is explained in words', async () => {
   const { doc: od, own } = await ownerChoice();
   const ui = JSON.parse(od.getElementById('ui').textContent);
   const notice = (doc) => doc.getElementById('notice');
@@ -298,16 +285,15 @@ test('a link: a foreign and a broken address are explained in words', async () =
   const anchor = await openPage({}, '#top');
   assert.equal(notice(anchor.window.document).hidden, true, 'an ordinary anchor was taken for a link');
 
-  /* A link of another report: not applied, the reader is told, the address is untouched. */
-  const foreignHash = linkTo({ v: 1, passport: 'deadbeef',
-    metrics: { min: false }, files: { 'src/code.js': false } });
-  const foreign = await openPage(own, foreignHash);
-  const fd = foreign.window.document;
-  assert.equal(notice(fd).textContent, ui.linkForeign, 'nothing was said about a foreign link');
-  assert.equal(notice(fd).hidden, false, 'the page stayed silent about a foreign link');
-  assert.equal(fileBox(fd, 'src/code.js').checked, true, 'a foreign choice was applied after all');
-  assert.equal(metricBox(fd).checked, false, 'the reader’s choice was not applied after the link was refused');
-  assert.equal(foreign.window.location.hash, foreignHash, 'the foreign address was rewritten by the page');
+  /* A link of another format: not applied, the reader is told, the address is untouched. */
+  const oldHash = linkTo({ v: 0, metrics: { min: false }, files: { 'src/code.js': false } });
+  const older = await openPage(own, oldHash);
+  const ld = older.window.document;
+  assert.equal(notice(ld).textContent, ui.linkBroken, 'nothing was said about a link of another format');
+  assert.equal(notice(ld).hidden, false, 'the page stayed silent about a link it cannot read');
+  assert.equal(fileBox(ld, 'src/code.js').checked, true, 'a choice of another format was applied after all');
+  assert.equal(metricBox(ld).checked, false, 'the reader’s choice was not applied after the link was refused');
+  assert.equal(older.window.location.hash, oldHash, 'the refused address was rewritten by the page');
 
   /* A broken link: told too, and the markup stays at the default. */
   const broken = await openPage({}, '#size-report=%7B%D1%8D%D1%82%D0%BE-%D0%BD%D0%B5-JSON');
@@ -319,10 +305,10 @@ test('a link: a foreign and a broken address are explained in words', async () =
  * as a number — or the reader would look in the table for what is not in it. A sender who switched
  * everything off is explained in words rather than by an empty grid. */
 test('a link: an incomplete or empty choice is explained by a number', async () => {
-  const { doc: od, passport } = await ownerChoice();
+  const { doc: od } = await ownerChoice();
   const ui = JSON.parse(od.getElementById('ui').textContent);
 
-  const ghost = await openPage({}, linkTo({ v: 1, passport: passport,
+  const ghost = await openPage({}, linkTo({ v: 1,
     metrics: { tok: false, min: false }, files: { 'src/gone.js': false, 'src/code.js': false } }));
   const gd = ghost.window.document;
   assert.equal(metricBox(gd).checked, false, 'the named metric was not applied from the link');
@@ -330,7 +316,7 @@ test('a link: an incomplete or empty choice is explained by a number', async () 
   assert.equal(gd.getElementById('notice').textContent, ui.linkExtra.replace('{n}', '2'),
     'nothing was said about the skipped names');
 
-  const all = { v: 1, passport: passport, metrics: {}, files: {} };
+  const all = { v: 1, metrics: {}, files: {} };
   data.metrics.forEach((m) => { all.metrics[m.key] = false; });
   data.files.forEach((f) => { all.files[where(f)] = false; });
   const empty = await openPage({}, linkTo(all));
@@ -378,13 +364,13 @@ test('a link: a change of address on an open page is applied too', async () => {
   assert.equal(reader.window.location.hash, link, 'the address was rewritten while the link was applied');
   assert.deepEqual(stored(reader), {}, 'the choice that was sent was written into the reader’s memory');
 
-  /* A foreign link on an open page: a message, the previous view and a whole address. */
-  const foreign = linkTo({ v: 1, passport: 'deadbeef', metrics: { min: false }, files: {} });
+  /* An unreadable link on an open page: a message, the previous view and a whole address. */
+  const unreadable = linkTo({ v: 0, metrics: { min: false }, files: {} });
   const refused = new Promise((done) => reader.window.addEventListener('hashchange', () => done()));
-  reader.window.location.hash = foreign;
+  reader.window.location.hash = unreadable;
   await refused;
-  assert.equal(rd.getElementById('notice').textContent, ui.linkForeign,
-    'the page stayed silent about a foreign link on an open page');
-  assert.equal(metricBox(rd).checked, false, 'a foreign address changed the reader’s view');
-  assert.equal(reader.window.location.hash, foreign, 'the foreign address was rewritten by the page');
+  assert.equal(rd.getElementById('notice').textContent, ui.linkBroken,
+    'the page stayed silent about an unreadable link on an open page');
+  assert.equal(metricBox(rd).checked, false, 'an address that cannot be read changed the reader’s view');
+  assert.equal(reader.window.location.hash, unreadable, 'the refused address was rewritten by the page');
 });

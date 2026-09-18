@@ -146,8 +146,9 @@ function appRowOf(p, r, values) {
   };
 }
 
-/* The whole block, unrolled into the dense contract the page reads: `schema: 2` is refused by `appRecordOk`
- * rather than unrolled — a record written for a block of another form describes another choice. */
+/* The whole block, unrolled into the dense contract the page reads: the block is a shape of that contract rather than a
+ * subset of it, so `schema` and `tool` come over with the rest although the page reads neither — the form mark and the
+ * author belong to the answer an agent is given, and one shape is cheaper to keep than two. */
 export function appDecode(p) {
   const keys = p.metrics.map((m) => appText(p, m[0]));
   const hist = appUnroll(p, keys);

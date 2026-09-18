@@ -76,10 +76,10 @@ test('the computational part of the page is the engine’s code, not a copy', ()
     'appAll', 'appApply', 'appBegin', 'appBoot', 'appBox', 'appBytes', 'appCaption', 'appCatOf', 'appCatState',
     'appCell', 'appCells', 'appChanged', 'appCommit', 'appCounts', 'appDecode', 'appDir', 'appDirHead', 'appDirPath',
     'appDirState', 'appEl', 'appFileAt', 'appFileBox', 'appFirst', 'appFoldBox', 'appFoldRead',
-    'appFoldSet', 'appHash', 'appHead', 'appHeadNew', 'appJoined', 'appKeep', 'appLeaf', 'appLeafAt', 'appLeaves',
+    'appFoldSet', 'appHead', 'appHeadNew', 'appJoined', 'appKeep', 'appLeaf', 'appLeafAt', 'appLeaves',
     'appLinkRead', 'appLinkUse', 'appList', 'appLoad', 'appName', 'appNode', 'appNotice',
     'appNum', 'appOffBox', 'appOrder', 'appPaint', 'appPanel', 'appPanelAll', 'appPanelState',
-    'appPassport', 'appPlace', 'appRank', 'appReach', 'appRead', 'appRecord', 'appRecordOk', 'appRow',
+    'appPlace', 'appRank', 'appReach', 'appRead', 'appRecord', 'appRecordOk', 'appRow',
     'appRowBoxes', 'appRowOf', 'appSpan', 'appState', 'appStep', 'appStrip', 'appSub', 'appSweep', 'appSwitch',
     'appSwitchGroup',
     'appSwitchMetric', 'appTable', 'appText', 'appTree', 'appTreeList', 'appUnknown', 'appUnmeasuredBox',
@@ -122,9 +122,9 @@ test('the page is self-contained and carries the contract’s data', () => {
   assert.deepEqual(embedded, pagePayload(data), 'the page holds data other than what --data hands out');
 
   /* The block is the contract in sparse form (`src/page/payload.js`) rather than the contract: its fields are a
-   * closed list, and `schema: 2` is what refuses a record written for the previous form (`appRecordOk`). The skipped
-   * commits are absent as before — that list changes with the report's own commit, so the file would stop being a
-   * fixed point (outwards it still goes, in `--data` and `--json`). */
+   * closed list, and `schema: 2` marks the block's own form. The skipped commits are absent as before — that list
+   * changes with the report's own commit, so the file would stop being a fixed point (outwards it still goes, in
+   * `--data` and `--json`). */
   assert.deepEqual(Object.keys(embedded), PAGE_KEYS,
     'the sparse block’s fields diverged from the declared shape');
   assert.equal(embedded.schema, 2, 'the page carries the contract itself rather than the sparse block');

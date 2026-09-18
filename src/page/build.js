@@ -85,7 +85,6 @@ function uiText(page, loc) {
     foldClose: page.foldClose,
     foldOpen: page.foldOpen,
     all: page.all,
-    linkForeign: page.linkForeign,
     linkBroken: page.linkBroken,
     linkExtra: page.linkExtra,
     /* What a host that cannot unpack the block is told: the page's one message about its own file rather than about

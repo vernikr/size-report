@@ -62,7 +62,7 @@ Edited most often:
 | `metrics` | what a number is made of: `raw` (the size of the git object), `min` (the minified form — which one, `minify.engine` decides), `tok` (tokens), `gzip` |
 | `tokens.family`, `tokens.encoding` | the dictionary for `tok` (`openai`, `o200k_base` or `cl100k_base`) — the encoding changes the number, which is why it is in the settings and in the metric's label |
 | `minify.engine` | what counts `min`: `strip` (comments and indentation — a simplification, and the method names it as one) or `esbuild` (real compression; a format the minifier does not take counts as stripping) |
-| `output` | the report file (derived: `docs/size-report.html`; the directory is created by the writer). The path enters the report's passport, so a changed path means a fresh choice of columns |
+| `output` | the report file (derived: `docs/size-report.html`; the directory is created by the writer). The path is where the file is written and nothing else: the reader's choice of columns lives in his browser and does not follow the path |
 | `journal` | where to look for the journal sections the rows refer to |
 | `links.commitUrl` | the commit link template, e.g. `https://github.com/org/repo/commit/{sha}`; derived from the `origin` address for GitHub and GitLab (for other hosts — empty rather than a guess) |
 | `skip` | the paths that did not become columns: both those that cannot be (the report itself, dependency locks) and those that did not fit |

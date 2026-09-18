@@ -71,7 +71,7 @@ share a row — a folder in the list covers everything beneath it.
 | `src/page/dom.js` | The page's nodes: the small helpers of markup, one set for the panel and the table alike |
 | `src/page/panel.js` | The panel of choices: the switches of metrics and files, the categories and the tree of the project's paths; built once, with the fields written where they stand |
 | `src/page/payload.js` | The page's block in sparse form, and the one place that unrolls it back into the contract |
-| `src/page/state.js` | The page's state: the data, the view of the checkboxes, the unfolded folders, the record's passport, the memory and the link read out of the address |
+| `src/page/state.js` | The page's state: the data, the view of the checkboxes, the unfolded folders, the two records of the browser's memory and the link read out of the address |
 | `src/page/table.js` | The page's table as a window: the visible rows and columns, a cell, the header, the empty states and the order of the columns |
 | `tools/gates/` | The sensors and the profiles: `run.js` (the single list of steps), `metrics.js`, `dup.js`, `deps.js`, `coverage.js`, `gatefiles.js` (the trailer guard), `common.js` (what they share) |
 | `tools/synthetic/` | The subjects of the fixture's assembly, one per matter: `repo.js` (how git is spoken to), `content.js`, `history.js`, `note.js` |
