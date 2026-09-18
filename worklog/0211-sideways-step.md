@@ -75,3 +75,28 @@ The artifact of the same history, the two engines side by side, is measured afte
 
 ## Measured after the release
 
+- **The published tarball is what the tag holds — all of it.** `npm pack @vernikr/size-report@2.8.3` compared file by
+  file with `git show v2.8.3:<path>`: **48 of 48 byte-identical**, and the tarball's sha1
+  `deac0f673626c636b4ae91c2eb066865fb2d17f1` is the `dist.shasum` the registry answers.
+- **The runs:** CI on the tag green (`35294410065`), the Release workflow green (`35294409946`), `latest` moved to
+  `2.8.3` at the seventh poll of the registry; CI on `main` green for the release push (`35294409558`) and for the
+  attach (`35294951006`).
+- **The attached copy is the tree:** `diff -rq node_modules/@vernikr/size-report/src src` says nothing, so the pages the
+  two engines build are built by the same code.
+- **The artifact, two engines over one history** (the tree at the attach commit, `--write` into `/tmp`, the same index
+  state for both): **85 646 B** from 2.8.2 against **86 802 B** from 2.8.3, and the whole of the **+1 156 B** is the
+  pasted program — the squeezed text of `src/page/table.js` grows 6 370 → 7 526 B, which is the +57 lines of the
+  chapter — while the data and the styling are byte-identical between the two runs. The step is bought with 1.2 KB of
+  the file a reader opens.
+- **This repository's page is built by the attached copy again:** the `post-commit` hook rebuilt it after the attach and
+  committed it as `3e1ab3a` (86 776 B), the page naming 2.8.3 in its own subtitle.
+
+## Still open
+
+- The layout of a step (5.9 ms of the 6.5 ms left) is the grid's own and not this step's: moving a row's strip and the
+  cells that entered invalidates the layout of the scrolled content. A virtualized *height* — a spacer per row rather
+  than a row per row — is the next move if that figure ever matters.
+- A jump clear of the window's range (a dragged scrollbar of the whole 67 202 px of this report) rebuilds the strips of
+  the rows that are in the markup: the rows stay, the columns of them are made again. It is the case the strip's empty
+  range covers, and it is one task of the size the first build of the window was.
+
