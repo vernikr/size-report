@@ -44,6 +44,25 @@ the passport that lived in the block's decoder (`src/page/payload.js`) and in th
 `test/page-view.test.js`, `docs/architecture.md`, `docs/module-design.md`, `docs/wiring.md`, `docs/files.md`,
 `worklog/0224-the-memory-keeps-no-passport.md`, and `docs/size-report.html` (rebuilt).
 
-**Owed:** the section of this journal in the release commit, the tag, and the re-pin of the attached copy. Like 0223,
-this portion changes `src/` and ships in a release of its own — the tooltip-and-comments step of 0223 and this correction
-of 0222 are two refactors, so they land as one PATCH.
+**Owed:** the section of this journal in the release commit, the tag, and the re-pin of the attached copy.
+
+## Release 2.9.1 — what changes in the numbers
+
+Two refactors of the page ship in one PATCH: 0223's comments say what the code is, and this one takes the identity out of
+the memory. Both live in `src/`, which the tarball carries, so the release is due; nothing of either is a repair of a
+broken behaviour, which is why it is not a MINOR.
+
+The two are measured against each other on one and the same tree and history, and the same output path, so nothing but
+the page's own program and words differ:
+
+- **The artifact: 90 791 B built by 2.9.0 → 89 957 B built by these sources (−834 B).** Of that, the program loses 696 B
+  (the FNV fingerprint, the passport and the form's mark, with `appBoot` no longer counting anything from the data) and
+  the page's dictionary loses 138 B (the key `linkForeign` in two languages).
+- **The packed data is byte-identical:** the same history, the same columns, the same numbers — the change is in the page
+  around them.
+- **What a reader's browser holds** is now `{"v":1,"metrics":…,"cats":…,"files":…}` under `size-report:choice`, and
+  the unfolded tree under `size-report:tree`; every other name in the namespace goes on the first opening, so his boxes
+  are set once more — the same price as 2.9.0, paid for a smaller result.
+- **The engine's answers are what they were:** `--data`, `--json`, both references, parity with the fixture and with the
+  consumer's live history, the tarball's entries, and the shape of the block (`schema: 2`, `PAGE_KEYS`).
+- **The attached copy** is re-pinned to 2.9.1 in a commit of its own, with the `Gate-Change:` trailer.
