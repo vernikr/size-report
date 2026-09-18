@@ -28,8 +28,8 @@ export function refuse(code, message) {
 }
 
 /* The causes of a code-2 refusal in one list, and this is the only place where they are
- * spelled out: the help prints them from it, the code table in `README.md` is checked
- * against it (`test/docs-commands.test.js`), and `refuseCause` lets no refusal through
+ * spelled out: the help prints them from it, the code table in `docs/archive/README_old.md` is
+ * checked against it (`test/docs-commands.test.js`), and `refuseCause` lets no refusal through
  * without a named cause. So "the documentation says less than happens" cannot pass here
  * silently. The groups say where a cause comes from: the command line, settings and the
  * project, history, the hook, measurement. */
@@ -133,5 +133,5 @@ export const USAGE = [
   'internal error. doctor has an order of its own: 2, 3, 1, 4 — by the weight of a finding',
   'rather than by what came first.',
   '',
-  'Causes of a code-2 refusal (the code table in README.md names them too):'
+  'Causes of a code-2 refusal:'
 ].concat(CAUSE_LINES, ['']).join('\n');

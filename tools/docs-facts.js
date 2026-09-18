@@ -32,9 +32,14 @@ export const PKG = TOOL_PKG.name;
 const ESC = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const CALL = ESC('node node_modules/' + PKG + '/bin/size.js');
 
+/* The README the main page used to be, kept whole under `docs/archive/`. It is no longer the entry
+ * point, but it still holds the checked facts — the file table and the code-2 table — so it stays in
+ * the fact check as if it were still the README. */
+export const ARCHIVE = 'docs/archive/README_old.md';
+
 /* The documents describing the repository's state **today**. */
 export const DOCS = [
-  'README.md', 'plans/archive/PLAN.md', 'plans/archive/REFACTOR.md', 'BLOCKERS.md',
+  'README.md', ARCHIVE, 'plans/archive/PLAN.md', 'plans/archive/REFACTOR.md', 'BLOCKERS.md',
   'templates/README.md'
 ];
 
@@ -79,7 +84,7 @@ export const FOREIGN = [
 /* Documents other documents point at by section — the target of a reference, not a source of
  * claims. The name matches by basename: text writes both `PLAN.md` and `docs/requirements.md`. */
 export const TARGETS = [
-  'README.md', 'plans/archive/PLAN.md', 'plans/archive/REFACTOR.md', 'BLOCKERS.md',
+  'README.md', ARCHIVE, 'plans/archive/PLAN.md', 'plans/archive/REFACTOR.md', 'BLOCKERS.md',
   'worklog/archive/WORKLOG.md', 'docs/requirements.md', 'docs/module-design.md'
 ];
 
@@ -108,8 +113,12 @@ function withoutSection(text, title) {
  * the `>` remark explaining the caveat): checking those as promises would be nitpicking at
  * wording. The section about wiring the tool into another project is dropped only where
  * **paths** are concerned: its paths are someone else's, its commands are ours and must work. */
-export const NOT_TODAY = { 'README.md': ['What is not here yet', 'For an AI agent'] };
-export const OWN_PROJECT = { 'README.md': ['Wiring it into your project'] };
+const NOT_TODAY_SECTIONS = ['What is not here yet', 'For an AI agent'];
+export const NOT_TODAY = { 'README.md': NOT_TODAY_SECTIONS, [ARCHIVE]: NOT_TODAY_SECTIONS };
+export const OWN_PROJECT = {
+  'README.md': ['Wiring it into your project'],
+  [ARCHIVE]: ['Wiring it into your project']
+};
 export function facts(doc, sections) {
   let text = read(doc);
   (sections || []).forEach((title) => { text = withoutSection(text, title); });

@@ -83,5 +83,5 @@ well. About a single commit `pnpm exec size explain <sha>` answers.
 
 A block for the project's own agent files (`AGENTS.md` and the like) is deliberately absent here: the
 requirements do not ask for such a file, and inventing the format of someone else's repository is not
-something the tool should do. What an agent needs to know it will take from `size --help` and `size --data` —
-the commands and the data are described in the package's `README.md`, section "For an AI agent".
+something the tool should do. What an agent needs to know it will take from `size --help` and
+`size --data` — the commands and the data are described there rather than in a file of the tool's own.
