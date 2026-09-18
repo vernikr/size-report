@@ -67,7 +67,9 @@ this project is updated — that is part of the work, not a separate decision.
    the numbers — in one commit.
 2. The tag `v<version>` is placed on that commit and the push is **one command with the tag first**:
    `git push origin v<version> main`. The release itself runs from CI on GitHub Actions
-   attestation (the tag and the manifest version are compared).
+   attestation (the tag and the manifest version are compared). **Place the tag by sha**, not on
+   `HEAD`: the `post-commit` hook lands the report's commit right after the release commit, so
+   `HEAD` is already that one — `git tag v<version> <sha of the release commit>`.
 3. After the release — `pnpm add -D -E @vernikr/size-report@<version>` (`package.json` plus the
    lockfile) and a commit carrying the `Gate-Change:` trailer. That commit **needs no new
    release**: the registry already holds the same code, and releasing for it again would mean
