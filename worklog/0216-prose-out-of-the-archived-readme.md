@@ -20,6 +20,14 @@ The prose was copied, not rewritten: `diff` of the archive's old lines 136–590
 reports no difference. The guards follow it — `test/docs-paths.test.js` and `test/docs-commands.test.js`
 green (6 checks) once the new file is tracked, and the full `verify` green (8 steps) besides.
 
+## Release 2.8.6 — what changes in the numbers
+
+This portion ships: `README.md` is in `files`, so the tarball's own text moves, and it takes its own
+PATCH. Nothing of the measurement moves — no line of `src/` is touched, only the documents and the
+guards that read them: the engine's output on the fixture and on the consumer's live history is as it
+was (parity with the live project 95 × 27, both references reproduced, the tarball 6 entries). The
+tool's own report is rebuilt by the post-commit hook as a commit of its own, as always.
+
 ## Suggested next steps
 
 - `docs/architecture.md` is a wall of bold paragraphs; a table of contents or the section split it
