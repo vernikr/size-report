@@ -38,3 +38,18 @@ the calls and the section addresses of the rewritten documents still lead somewh
 `README.md`, `AGENTS.md`, `docs/architecture.md`, `docs/files.md`, `docs/wiring.md`,
 `docs/requirements.md`, `worklog/0218-docs-rewritten-from-scratch.md`,
 `worklog/0219-the-requirements-and-the-design-rewritten.md`.
+
+## Release 2.8.9 — what changes in the numbers
+
+This portion is not a journal matter only: **`README.md` travels in the tarball** (`files`: `bin`, `src`,
+`templates`, `README.md`, `LICENSE`) and it is the package's landing page, so what the registry shows
+changes and a release is due. It takes a PATCH — the code and the tool's numbers do not move, only the
+words around them, and the rewritten `README.md` is the one shipped file that does: 2 052 B → 1 667 B.
+
+- **The tool's own answers are what they were:** the artifact, `--json`, parity with the fixture and with
+the consumer's live history, both references, the tarball's entries. `pnpm run verify` green throughout.
+- **This project's report gained the row** — the `docs:` commit (9d3e487) is its newest, and it carries the
+  whole of the portion: the seven documents under the columns fall from 155 606 B to 96 960 B, that is from
+  36 708 to 23 093 tokens, with `docs/architecture.md` alone 46 739 → 24 361 B. `size` with no command
+  answers 0 over 272 commits × 337 files, so the table and the history agree.
+- **The attached copy** is re-pinned to 2.8.9 in a commit of its own, with the `Gate-Change:` trailer.
