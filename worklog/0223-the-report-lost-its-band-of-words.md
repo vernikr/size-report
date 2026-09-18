@@ -44,6 +44,29 @@ metric's own switch carries its `method` and its `note`, and there is not one `.
 `docs/wiring.md`, `templates/README.md`, `worklog/0223-the-report-lost-its-band-of-words.md`, and
 `docs/size-report.html` (rebuilt).
 
-**Owed:** the version (a `feat` — MINOR), the section of this journal in the release commit, the tag, and the re-pin of
-the attached copy. This portion ships in the same release as 0222: both change `src/`, and the reader's memory of the
-choice is not something to announce in two steps.
+**Owed:** the section of this journal in the release commit, the tag, and the re-pin of the attached copy. This portion
+ships in the same release as 0222: both change `src/`, and the reader's memory of the choice is not something to announce
+in two steps.
+
+## Release 2.9.0 — what changes in the numbers
+
+Two portions ship together, and both live in `src/` — which is what the tarball carries (`files`: `bin`, `src`,
+`templates`, `README.md`, `LICENSE`) — so the release is due and it takes a MINOR: the page behaves differently, and
+nothing of it is a fix to something broken. 0222 makes the reader's choice the report's rather than a build's, 0223 moves
+the way of counting into the tooltip of the switch that does the counting and takes the band of words above the numbers
+out.
+
+- **The artifact is a little smaller: 90 707 B built by 2.8.9 → 90 559 B built by 2.9.0** (−148 B). The markup lost the
+  note's paragraph, the answer lost one key of its dictionary (`note`, which quoted the fix command), and the styling
+  lost two rules (`.sub`, `.note`) and a row of the wide layout's grid — while the tooltip of a metric carries its method
+  in the box's own attribute rather than in a paragraph under it.
+- **The reader's memory is a record per form, not per build.** A browser that lived through the report's many rebuilds
+  holds one address per build of every past naming; what this release writes lives under `size-report:2:<the report's
+  identity>` and the addresses of the older naming are swept when the report is opened. So the choice the reader makes
+  after this release is asked for **once more** — and after that it survives every rebuild, which is the whole point.
+- **The engine's answers are what they were:** `--data` and `--json` (the shape and the fields; the page's block merely
+  stops carrying `fixCommand`), parity with the fixture and with the consumer's live history, both references, the
+  tarball's entries. `pnpm run verify` green throughout.
+- **The attached copy** is re-pinned to 2.9.0 in a commit of its own, with the `Gate-Change:` trailer; the report is
+  then rebuilt by the copy (2.8.9's files build it until that moment, as the release order always has it).
+
