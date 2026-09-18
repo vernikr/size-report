@@ -3,8 +3,8 @@
  * sections that exist** and **it calls the tool in a way that works without the package installed**.
  *
  * Causes with code 2 are held by a registry: `CONFIG_CAUSES` in `src/refusal.js` is the one place where
- * they are listed in words, the help prints them from it, and the code table of the archived README
- * (`docs/archive/README_old.md`) has to name the same list — or the document would again say less than
+ * they are listed in words, the help prints them from it, and the code table of the wiring guide
+ * (`docs/wiring.md`) has to name the same list — or the document would again say less than
  * happens.
  *
  * What is not checked by machine here, said out loud rather than hidden: wording and meaning, promises
@@ -22,12 +22,12 @@ import { ROOT, gitIn } from '../tools/harness.js';
 import { CONFIG_CAUSES, USAGE, refuseCause } from '../src/refusal.js';
 import { TOOL_PKG } from '../src/tool.js';
 
-/* Instructions are what a reader launches the tool by: the package's README and the note in the
- * templates. Calls are checked there alone: the other documents name the target surface, the history or
- * the past, where former calls are in place. */
-const INSTRUCTIONS = ['README.md', ARCHIVE, 'templates/README.md'];
+/* Instructions are what a reader launches the tool by: the package's README, the guide that wires it
+ * into a project and the note in the templates. Calls are checked there alone: the other documents name
+ * the target surface, the history or the past, where former calls are in place. */
+const INSTRUCTIONS = ['README.md', WIRING, 'templates/README.md'];
 import {
-  ARCHIVE, DOCS, NOT_TODAY, PKG, TARGETS, callWords, facts, invocations, read, sectionsOf,
+  DOCS, NOT_TODAY, PKG, TARGETS, WIRING, callWords, facts, invocations, read, sectionsOf,
   usageCommands, usageFlags
 } from '../tools/docs-facts.js';
 
@@ -41,11 +41,11 @@ function usageCauses() {
   });
 }
 
-/* Causes from the code table of the archived README (`docs/archive/README_old.md`): the row
- * `| 2 | … |`, holding groups shaped `**name** (cause, cause)`. */
+/* Causes from the code table of the wiring guide (`docs/wiring.md`): the row `| 2 | … |`, holding
+ * groups shaped `**name** (cause, cause)`. */
 function readmeCauses() {
-  const rows = read(ARCHIVE).split('\n').filter((l) => /^\|\s*2\s*\|/.test(l));
-  assert.ok(rows.length > 0, 'the archived README carries no row about code 2 — there is nothing to compare');
+  const rows = read(WIRING).split('\n').filter((l) => /^\|\s*2\s*\|/.test(l));
+  assert.ok(rows.length > 0, '`docs/wiring.md` carries no row about code 2 — there is nothing to compare');
   const cell = rows[0].split('|')[2];
   const found = [...cell.matchAll(/\*\*(.+?)\*\* \(([^)]+)\)/g)];
   return found.map((m) => [m[1], m[2].split(', ')]);
@@ -121,11 +121,11 @@ test('the documentation calls the tool so that the call works without the packag
   assert.deepEqual(bad, [], 'the call goes by the package name rather than by a path inside the project:\n  ' + bad.join('\n  '));
 });
 
-test('the refusal causes agree between the engine, the help and the code table of the archived README', () => {
+test('the refusal causes agree between the engine, the help and the code table of the wiring guide', () => {
   assert.deepEqual(usageCauses(), CONFIG_CAUSES,
     'the help names causes other than the ones declared in CONFIG_CAUSES');
   assert.deepEqual(readmeCauses(), CONFIG_CAUSES,
-    'the code table of the archived README names causes other than the ones declared in CONFIG_CAUSES');
+    'the code table of `docs/wiring.md` names causes other than the ones declared in CONFIG_CAUSES');
 
   // The other side: a cause declared and printed while nobody hands it out is a promise of a refusal
   // that never happens and a place in the documentation a reader looks for in vain.

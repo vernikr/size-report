@@ -1,7 +1,7 @@
 /* The promise that **what the documentation names exists**. A path from a code span is in the git tree,
  * in the fixture's history (that history is not one tree, and the document may name a file that lived
- * before a rename) or in the list of foreign ones, which a person keeps. The file table of the archived
- * README (`docs/archive/README_old.md`, formerly the main page) has to agree with the tree **both
+ * before a rename) or in the list of foreign ones, which a person keeps. The file table of
+ * `docs/files.md` — the map the archived README used to carry — has to agree with the tree **both
  * ways**: a file missing from it is a gap nobody noticed.
  *
  * What stays with a person is said in the header of `tools/docs-facts.js`: the check takes existence and
@@ -12,7 +12,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { gitIn, sharedClone, tempDir } from '../tools/harness.js';
 import {
-  ARCHIVE, DOCS, FOREIGN, NOT_TODAY, OWN_PROJECT, dirs, facts, inTree, looksLikePath, read, spans, tracked
+  DOCS, FILES, FOREIGN, NOT_TODAY, OWN_PROJECT, dirs, facts, inTree, looksLikePath, read, spans, tracked
 } from '../tools/docs-facts.js';
 
 const tmp = tempDir('docs-paths');
@@ -36,9 +36,11 @@ test('the paths the documentation names exist in the tree', () => {
     + missing.join('\n  '));
 });
 
-test('the file table of the archived README agrees with the tree both ways', () => {
+test('the file table of `docs/files.md` agrees with the tree both ways', () => {
   const named = [];
-  const table = read(ARCHIVE).match(/## What is in the repository[\s\S]*?(?=\n## |$)/)[0];
+  // The section runs to the next heading or to the end of the document (`(?!…)` is the end, since the
+  // `m` flag makes `$` mean the end of a line).
+  const table = read(FILES).match(/^#{1,2} What is in the repository[\s\S]*?(?=\n#{1,2} |(?![\s\S]))/m)[0];
   table.split('\n').forEach((line) => {
     if (line.indexOf('|') !== 0) return;
     const first = line.split('|')[1];
@@ -48,10 +50,10 @@ test('the file table of the archived README agrees with the tree both ways', () 
       if (tok !== '' && tok !== 'File' && tok.indexOf('—') < 0) named.push(tok);
     });
   });
-  assert.ok(named.length > 0, 'the file table of the archived README did not parse');
+  assert.ok(named.length > 0, 'the file table of `docs/files.md` did not parse');
 
   const absent = named.filter((p) => !inTree(p));
-  assert.deepEqual(absent, [], 'the archived README names files that are not there:\n  ' + absent.join('\n  '));
+  assert.deepEqual(absent, [], '`docs/files.md` names files that are not there:\n  ' + absent.join('\n  '));
 
   // The other side: a file missing from the table is a gap nobody noticed. A directory covers everything
   // beneath it; the table does not list itself, because that is its heading rather than a row of
@@ -60,5 +62,5 @@ test('the file table of the archived README agrees with the tree both ways', () 
     || (dirs.has(p) && f.indexOf(p + '/') === 0));
   const undescribed = tracked.filter((f) => f !== 'README.md' && !covered(f));
   assert.deepEqual(undescribed, [],
-    'the tree holds files that are missing from the table of the archived README:\n  ' + undescribed.join('\n  '));
+    'the tree holds files that are missing from the table of `docs/files.md`:\n  ' + undescribed.join('\n  '));
 });

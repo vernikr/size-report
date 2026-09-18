@@ -1,7 +1,7 @@
 # AGENTS.md — how to work in this repository
 
 Only what cannot be derived from the code: what to run, what to do when a sensor is red, what
-must not be touched. The gate itself is described in `docs/archive/README_old.md`.
+must not be touched. The gate itself is described in `docs/architecture.md`.
 
 ## What to run
 

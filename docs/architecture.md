@@ -2,8 +2,9 @@
 
 The living prose of the README this project used to put on its main page: how the engine and the
 report are built, why the numbers are what they are, and which checks hold each promise. The rest of
-that README — its status and release notes, the file table, the wiring instructions, the gate against
-bloat and the traps — is kept in [`archive/README_old.md`](archive/README_old.md).
+that README now lives beside this document — what is in the repository in `docs/files.md` and wiring
+the tool into a project in `docs/wiring.md` — while its release notes stay in
+[`archive/README_old.md`](archive/README_old.md).
 
 **Parity with the implementation the move started from is proven, not asserted.** The command is
 `bin/size.js` and the package's entry point is `src/size-table.js` (a re-export only), with the
@@ -460,3 +461,84 @@ the commit down: the cause is printed as one line and remembered — `size docto
 
 The move, the refinement and the packaging are laid out step by step in `plans/archive/PLAN.md`, with
 acceptance for each.
+
+## The gate against bloat
+
+**The list of checks is single, and it is the one CI runs.** The profiles live in one place
+(`tools/gates/run.js`): `pnpm run verify:fast` (tens of seconds — every edit), `pnpm run verify` (the full
+one — before pushing and in CI) and `pnpm run verify:slow` (on a schedule — the same plus the suite with
+no machine git settings and coverage). CI calls that same command rather than a list of its own: the job
+`verify` (`.github/workflows/ci.yml`) on every push and pull request, the job `verify-slow` on a schedule.
+That they agree is guarded by `test/gates-verify.test.js`: a check that is not in a profile cannot pass in CI.
+
+**The sensors catch bloat rather than style** (style is the linter's business): the size and complexity of
+functions, the size of modules, duplicated branches and functions (`sonarjs`), the weight of checks (a
+check with no assertion, an assertion with no comparison, a switched-off check), debt markers, token clones
+(`jscpd`), cycles and orphans in the graph (`dependency-cruiser`), and coverage falling against its own
+baseline (`c8`).
+
+**A threshold comes from a measurement rather than from a guess, and it is a ratchet.** The thresholds
+today: a function's complexity 12, its length 60, a module 450 lines, cognitive complexity 15 — each of
+them cut in the tail of a measured distribution, not in its middle. **Nothing lies above them**: the
+baseline (`.eslint-suppressions.json`) holds nothing at all, so a new overrun fails the run while the
+tree as it stands needs no excuses. The table behind the thresholds is in
+`worklog/archive/WORKLOG.md` §58.3, and its figures describe the tree of that day rather than this one;
+the sensors print their own numbers on every run.
+
+**A person updates the baselines.** `pnpm run baseline:metrics`, `baseline:dup` and `baseline:coverage` —
+and only with the `Gate-Change:` trailer in the commit message: a gate file edited without it is red both
+locally (the `commit-msg` hook) and over a range (the `pre-push` hook, while CI reads no trailers at all).
+Otherwise the gate would be weakened by the very commit it stops. The table of measurements and the
+rejected tools (knip, ast-grep, size-limit, gitleaks) are in `worklog/archive/WORKLOG.md` §58.
+
+## Traps worth testing the engine on
+
+The fixture (`fixtures/synthetic/history.bundle`) is a history holding what breaks tools of this kind:
+`//` inside a string, a regexp with an escaped slash, a template with an expression, `.mjs` with `export`,
+a file name that is not English, CRLF, a file renamed, a commit that touched only the report, a mixed
+commit, a merge with a conflict-resolution edit, a character replaced without changing the volume, a file
+deleted and returned, an empty file, an unknown extension. The full list is in
+`fixtures/synthetic/README.md`.
+
+```bash
+pnpm test                      # the fast run (every edit): parity on the fixture,
+                               # the data contract and the page, the documentation and release guards
+pnpm test:all                  # the full run (a release and CI): the same plus the integration ones —
+                               # assembling on disk, the comparison with the tree, the hooks, the sensors
+pnpm run suites:measure        # measure every file of the suite
+pnpm run parity:live           # parity with the live project on a clone, two environments
+node bin/size.js --data        # the data contract: the report and an agent
+node bin/size.js --write       # the smallest report
+node bin/size.js --help        # the help and the exit codes
+pnpm run parity                # re-take the parity reference: the project and the revision from the manifest
+pnpm run fixture               # rebuild the fixture and its reference
+pnpm run pack:check            # does the engine work from the assembled tarball
+pnpm run check:standards       # both references reproduce and the tree stays clean
+git clone fixtures/synthetic/history.bundle /tmp/size-report-fixture
+```
+
+Open blockers and known gaps are in `BLOCKERS.md`, and next to them the note about the settings that were
+checked and turned out inert, so as not to check them again.
+
+## What is not here yet
+
+```text
+dist/app.js          a pre-assembled report program: the page's program is pasted into the page
+                     while the report is built, so the file would be a second copy of the same
+size init / measure  commands instead of flags: of the commands only check, explain, doctor and
+                     the hook are here, and no command measures at all
+a block for agents   an instruction for the project's own agent: the requirements do not ask for
+                     it, so the templates carry none
+HTML minification    a minifier of markup: HTML counts as stripping for now
+JSX and TSX          the output depends on the project's own jsx setting — stripping
+token families       anything but openai: the others have no dictionary of their own, and counting
+                     with someone else's is not a family
+```
+
+The seams between modules follow the borders of data: above sit the parts that read git and the file system
+(`git`, `strip`, `metrics`, `history`), below the parts that work on values already collected (`data`,
+`derived`, `page`), while the settings, the texts and the refusal stand at the edges, because everyone
+knows them and they know no one. Both reports are counted at build time: the page gets the sources of the
+shared calculation and of its own program pasted in (`src/derived.js`, `src/page/*.js`) and squeezed on the way
+in, because it opens from disk, with no server and no network. The rest is planned step by step in
+`plans/archive/PLAN.md`.

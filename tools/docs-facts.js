@@ -11,12 +11,13 @@
  * the checks the runner reports — that one holds because a check appears nowhere but at the
  * start of a line (the guard checks that too).
  *
- * Three documents stay out of the fact check, each for its own reason:
- * `worklog/archive/WORKLOG.md` is the journal of the past (its numbers and paths are a snapshot
- * and are supposed to age), `docs/requirements.md` says what the tool is meant to be,
- * `docs/module-design.md` is the plan of the move — both are targets, not the state of today's
- * tree. References to their sections are checked all the same: they are a target, not a source
- * of claims.
+ * Four documents stay out of the fact check, each for its own reason:
+ * `worklog/archive/WORKLOG.md` and `docs/archive/README_old.md` are the journals of the past (their
+ * numbers and paths are a snapshot and are supposed to age — the archived README is what the main
+ * page used to carry, with all of its living prose moved into `docs/`), `docs/requirements.md` says
+ * what the tool is meant to be, `docs/module-design.md` is the plan of the move — both are targets,
+ * not the state of today's tree. References to their sections are checked all the same: they are a
+ * target, not a source of claims.
  */
 
 import fs from 'node:fs';
@@ -32,16 +33,17 @@ export const PKG = TOOL_PKG.name;
 const ESC = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const CALL = ESC('node node_modules/' + PKG + '/bin/size.js');
 
-/* The README the main page used to be, kept under `docs/archive/`. It is no longer the entry point,
- * and the prose about how the tool is put together has moved out of it into `docs/architecture.md`,
- * but it still holds the checked facts — the file table and the code-2 table — so it stays in the
- * fact check as if it were still the README. */
-export const ARCHIVE = 'docs/archive/README_old.md';
+/* Where the living prose of the README the main page used to be now lives, one fact per document:
+ * the tree map (`FILES`) and the wiring guide with its surface for an agent (`WIRING`). The guards
+ * read the file table from the first and the code-2 table from the second — the archive keeps only
+ * its release notes and is no longer a source of claims about today. */
+export const FILES = 'docs/files.md';
+export const WIRING = 'docs/wiring.md';
 
 /* The documents describing the repository's state **today**. */
 export const DOCS = [
-  'README.md', ARCHIVE, 'docs/architecture.md', 'plans/archive/PLAN.md', 'plans/archive/REFACTOR.md',
-  'BLOCKERS.md', 'templates/README.md'
+  'README.md', 'docs/architecture.md', FILES, WIRING, 'plans/archive/PLAN.md',
+  'plans/archive/REFACTOR.md', 'BLOCKERS.md', 'templates/README.md'
 ];
 
 /* Paths a document may name although the tree has no such file: the consumer project's, the
@@ -85,8 +87,9 @@ export const FOREIGN = [
 /* Documents other documents point at by section — the target of a reference, not a source of
  * claims. The name matches by basename: text writes both `PLAN.md` and `docs/requirements.md`. */
 export const TARGETS = [
-  'README.md', ARCHIVE, 'docs/architecture.md', 'plans/archive/PLAN.md', 'plans/archive/REFACTOR.md',
-  'BLOCKERS.md', 'worklog/archive/WORKLOG.md', 'docs/requirements.md', 'docs/module-design.md'
+  'README.md', 'docs/architecture.md', FILES, WIRING, 'plans/archive/PLAN.md',
+  'plans/archive/REFACTOR.md', 'BLOCKERS.md', 'worklog/archive/WORKLOG.md', 'docs/requirements.md',
+  'docs/module-design.md'
 ];
 
 export const tracked = gitIn(ROOT, ['ls-files']).split('\n').filter((l) => l !== '');
@@ -112,17 +115,20 @@ function withoutSection(text, title) {
 
 /* A claim about today is the text without what names the **absent** (the "not yet" section and
  * the `>` remark explaining the caveat): checking those as promises would be nitpicking at
- * wording. The section about wiring the tool into another project is dropped only where
- * **paths** are concerned: its paths are someone else's, its commands are ours and must work. */
-const NOT_TODAY_SECTIONS = ['What is not here yet', 'For an AI agent'];
-export const NOT_TODAY = { 'README.md': NOT_TODAY_SECTIONS, [ARCHIVE]: NOT_TODAY_SECTIONS };
-export const OWN_PROJECT = {
-  'README.md': ['Wiring it into your project'],
-  [ARCHIVE]: ['Wiring it into your project']
+ * wording. The guide about wiring the tool into another project is dropped only where **paths**
+ * are concerned: its paths are someone else's, its commands are ours and must work — and there the
+ * whole document is someone else's project, hence the `*`. */
+export const NOT_TODAY = {
+  'docs/architecture.md': ['What is not here yet'],
+  [WIRING]: ['For an AI agent']
 };
+export const OWN_PROJECT = { [WIRING]: ['*'] };
 export function facts(doc, sections) {
   let text = read(doc);
-  (sections || []).forEach((title) => { text = withoutSection(text, title); });
+  (sections || []).forEach((title) => {
+    // A `*` is the whole document rather than a section of it.
+    text = title === '*' ? '' : withoutSection(text, title);
+  });
   return text.replace(/^>.*$/gm, '');
 }
 
