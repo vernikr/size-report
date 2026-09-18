@@ -81,8 +81,36 @@ export function frozenTarget() {
   };
 }
 
+/* Running the frozen copy: both builders of the fixtures (`tools/parity-freeze.js`, `tools/make-fixture.js`) spawn it
+ * the same way, and the environment of the taking belongs to the golden rather than to a builder — the copy predates the
+ * pin the engine sets for itself (`frozenTarget`), so the reading of paths is pinned here, in one place. The exit code
+ * comes back rather than an exception: a builder words its own refusal. */
+export function runFrozenTool(file, dir, cfgPath, args, env) {
+  const res = spawnSync(process.execPath, [file, '--config', cfgPath].concat(args), {
+    cwd: dir,
+    encoding: 'utf8',
+    maxBuffer: MAX_BUF,
+    env: Object.assign({}, process.env, gitConfig({ 'core.quotePath': 'false' }), env || {})
+  });
+  return { code: res.status, stdout: res.stdout || '', stderr: res.stderr || '' };
+}
+
+/* A directory of the run's own that removes itself when the process ends: every suite opened with the same
+ * pair of lines (make one, take it away after the file — 25 copies), and a tool that takes one had to
+ * remember the removal itself. A listener on the process rather than `after` from `node:test`: this harness
+ * is imported by the tools as well, and importing the test runner alone makes node print a TAP summary
+ * where a tool's output is read. One listener for the whole run — a listener per directory would hit the
+ * ten-warning and one directory shall not depend on another. */
+const tempDirs = [];
+let tempDirsWatched = false;
 export function tempDir(name) {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'size-report-' + name + '-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'size-report-' + name + '-'));
+  tempDirs.push(dir);
+  if (!tempDirsWatched) {
+    tempDirsWatched = true;
+    process.on('exit', () => tempDirs.forEach((d) => fs.rmSync(d, { recursive: true, force: true })));
+  }
+  return dir;
 }
 
 /* git settings through the environment (git ≥ 2.31): that way a check hands the machine rules of its own without touching
@@ -110,16 +138,22 @@ export function cloneCrlf(into) {
   return into;
 }
 
+/* The identity git refuses to commit without — one copy for `initRepo` and for the clones of a sample
+ * project that has already been laid out (three sites had grown the loop separately). */
+export function setIdentity(dir) {
+  ['user.name', 'user.email', 'commit.gpgsign'].forEach((key, i) => {
+    gitIn(dir, ['config', key, ['fixture', 'fixture@local', 'false'][i]]);
+  });
+  return dir;
+}
+
 /* A project from scratch: an empty repository with an `src` directory and a given identity — without it git refuses to
  * commit and cannot ask. One for every suite that needs a project of its own rather than a clone of the fixture
  * (measured: three suites had grown this separately). */
 export function initRepo(dir) {
   fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
   gitIn(dir, ['init', '-q', '-b', 'main']);
-  ['user.name', 'user.email', 'commit.gpgsign'].forEach((key, i) => {
-    gitIn(dir, ['config', key, ['fixture', 'fixture@local', 'false'][i]]);
-  });
-  return dir;
+  return setIdentity(dir);
 }
 
 /* Everything committed in a repository of one's own, with the identity git cannot ask for and therefore refuses
@@ -324,10 +358,13 @@ export function hasStack(text) {
   return /^\s+at /.test(text);
 }
 
-// The fix command taken out of a message: `node <path> --init`.
+/* The fix command taken out of a message: `node <path> <flag>`. A command with no flag is an advice
+ * too (`fix: node …/bin/size.js doctor`): the second word has to be there, and the flag is null when
+ * it is a word — before that narrowing a flag-less advice read as "no command", and the two
+ * assertions naming it would have reddened over good behaviour. */
 export function commandIn(text) {
-  const m = /node\s+(\S+)\s+(--\S+)/.exec(text);
-  return m === null ? null : { file: m[1], flag: m[2] };
+  const m = /node\s+(\S+)\s+(\S+)/.exec(text);
+  return m === null ? null : { file: m[1], flag: m[2][0] === '-' ? m[2] : null };
 }
 
 /* Flags of a tool's own command line: `--name value` and flag-only switches, everything else positional (the first

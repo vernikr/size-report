@@ -1,6 +1,6 @@
 {
   "name": "@vernikr/size-report",
-  "version": "2.8.3",
+  "version": "2.8.4",
   "author": "vernikr",
   "repository": {
     "type": "git",
@@ -65,7 +65,7 @@
     "report"
   ],
   "devDependencies": {
-    "@vernikr/size-report": "2.8.3",
+    "@vernikr/size-report": "2.8.4",
     "c8": "10",
     "dependency-cruiser": "17",
     "eslint": "^9.18.0",

@@ -15,9 +15,8 @@
  * `page-choice`): the file is split by subject, not by size.
  */
 
-import { test, after } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import path from 'node:path';
 import { CATEGORY_ORDER, categoryOf } from '../src/size-table.js';
 import { readHistory } from '../src/git.js';
@@ -27,7 +26,6 @@ import { contractData, pageDecode, unpackPack } from '../tools/page-harness.js';
 import { TOOL_PKG } from '../src/tool.js';
 
 const tmp = tempDir('contract-data');
-after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 /* The contract is taken once for the whole suite: it depends only on the fixture and the settings, and
  * that different clones agree is checked separately, by reproducibility. */

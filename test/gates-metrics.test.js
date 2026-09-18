@@ -16,14 +16,13 @@
  * trailer.
  */
 
-import { test, after } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT, exec, probe, readJson, tempDir, write } from '../tools/gate-probe.js';
 
 const tmp = tempDir('metrics');
-after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 /* The "live sensor" and ratchet probes are written **inside the repository**: ESLint lints only what
  * lies under its base path and quietly does nothing on a tree in a temporary directory — the probe would

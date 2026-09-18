@@ -7,16 +7,14 @@
  * completeness, not whether a file's role is described correctly.
  */
 
-import { test, after } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import { gitIn, sharedClone, tempDir } from '../tools/harness.js';
 import {
   DOCS, FOREIGN, NOT_TODAY, OWN_PROJECT, dirs, facts, inTree, looksLikePath, read, spans, tracked
 } from '../tools/docs-facts.js';
 
 const tmp = tempDir('docs-paths');
-after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 test('the paths the documentation names exist in the tree', () => {
   // The files the fixture knew: its history is not one tree, and the documentation may name a file

@@ -13,7 +13,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
-import { after } from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 import { stripModules } from '../src/size-table.js';
@@ -35,7 +34,7 @@ export function contractData(tmp, name) {
 /* A suite's whole setup: the contract data and the assembled page — what a page suite starts
  * with. The directory comes from the suite's name, so that clones of different processes do not
  * fight over paths. */
-export function reportSetup(tmp, name) {
+function reportSetup(tmp, name) {
   const { data, golden } = contractData(tmp, name);
   return { data: data, golden: golden, pageText: pageHtml(tmp, name) };
 }
@@ -46,7 +45,6 @@ export function reportSetup(tmp, name) {
  * extra second of the run. */
 export function pageReady(name) {
   const tmp = tempDir('page-' + name);
-  after(() => fs.rmSync(tmp, { recursive: true, force: true }));
   const { data, golden, pageText } = reportSetup(tmp, name);
   return {
     data: data, golden: golden, pageText: pageText,
@@ -126,7 +124,7 @@ function platform(window) {
 /* A page with memory: the address gives it an origin (without one jsdom, like a browser in a
  * private window, offers no storage), and `beforeParse` puts in what "the browser saved" on the
  * previous visit — that is how a second visit is checked. */
-export const PAGE_URL = 'https://report.invalid/size-report.html';
+const PAGE_URL = 'https://report.invalid/size-report.html';
 export async function openPage(text, seed, hash, opts) {
   const host = opts || {};
   const dom = new JSDOM(text, {

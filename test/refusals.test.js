@@ -20,7 +20,7 @@
  * pretending otherwise would be worse than saying so.
  */
 
-import { test, after } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -34,7 +34,6 @@ import {
 } from '../tools/harness.js';
 
 const tmp = tempDir('refusals');
-after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 /* The fixture clone is shared by the suite and read-only: command-line refusals happen before the
  * tool writes anything. */
