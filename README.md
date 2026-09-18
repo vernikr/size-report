@@ -30,10 +30,12 @@ pnpm exec size install-hook       # rebuild the report after every commit and me
 
 ## Where the rest is
 
-The full description this project used to carry on its main page — the status, the file table, the
-step-by-step wiring instructions, the settings, the gate against bloat and the traps — is kept whole
-in [`docs/archive/README_old.md`](docs/archive/README_old.md). How to work inside this repository
-(what to run, what to do when a sensor is red) is in [`AGENTS.md`](AGENTS.md).
+How the tool is put together — the engine, the report page, the checks and the promises they hold —
+is in [`docs/architecture.md`](docs/architecture.md). The rest of the description this project used to
+carry on its main page (the status and the release notes, the file table, the step-by-step wiring
+instructions, the settings, the gate against bloat and the traps) is kept in
+[`docs/archive/README_old.md`](docs/archive/README_old.md). How to work inside this repository (what to
+run, what to do when a sensor is red) is in [`AGENTS.md`](AGENTS.md).
 
 ## License
 

@@ -32,15 +32,16 @@ export const PKG = TOOL_PKG.name;
 const ESC = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const CALL = ESC('node node_modules/' + PKG + '/bin/size.js');
 
-/* The README the main page used to be, kept whole under `docs/archive/`. It is no longer the entry
- * point, but it still holds the checked facts — the file table and the code-2 table — so it stays in
- * the fact check as if it were still the README. */
+/* The README the main page used to be, kept under `docs/archive/`. It is no longer the entry point,
+ * and the prose about how the tool is put together has moved out of it into `docs/architecture.md`,
+ * but it still holds the checked facts — the file table and the code-2 table — so it stays in the
+ * fact check as if it were still the README. */
 export const ARCHIVE = 'docs/archive/README_old.md';
 
 /* The documents describing the repository's state **today**. */
 export const DOCS = [
-  'README.md', ARCHIVE, 'plans/archive/PLAN.md', 'plans/archive/REFACTOR.md', 'BLOCKERS.md',
-  'templates/README.md'
+  'README.md', ARCHIVE, 'docs/architecture.md', 'plans/archive/PLAN.md', 'plans/archive/REFACTOR.md',
+  'BLOCKERS.md', 'templates/README.md'
 ];
 
 /* Paths a document may name although the tree has no such file: the consumer project's, the
@@ -84,8 +85,8 @@ export const FOREIGN = [
 /* Documents other documents point at by section — the target of a reference, not a source of
  * claims. The name matches by basename: text writes both `PLAN.md` and `docs/requirements.md`. */
 export const TARGETS = [
-  'README.md', ARCHIVE, 'plans/archive/PLAN.md', 'plans/archive/REFACTOR.md', 'BLOCKERS.md',
-  'worklog/archive/WORKLOG.md', 'docs/requirements.md', 'docs/module-design.md'
+  'README.md', ARCHIVE, 'docs/architecture.md', 'plans/archive/PLAN.md', 'plans/archive/REFACTOR.md',
+  'BLOCKERS.md', 'worklog/archive/WORKLOG.md', 'docs/requirements.md', 'docs/module-design.md'
 ];
 
 export const tracked = gitIn(ROOT, ['ls-files']).split('\n').filter((l) => l !== '');
