@@ -16,14 +16,13 @@
  * fingerprints, and no gate protects it).
  */
 
-import { test, after } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { probe, readJson, tempDir, write } from '../tools/gate-probe.js';
 
 const tmp = tempDir('dup');
-after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 /* The module to be copied: thirteen lines of parsing code — above both `minLines` and `minTokens`. */
 const MODULE = [

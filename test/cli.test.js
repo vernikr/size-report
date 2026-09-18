@@ -9,17 +9,16 @@
  * own keeps this cost out of the fast run.
  */
 
-import { test, after } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import {
-  CONFIG, MAX_BUF, cloneFixture, commandIn, firstLine, gitIn, hasStack, refusal, runSize, tempDir
+  CONFIG, MAX_BUF, cloneFixture, commandIn, firstLine, gitIn, hasStack, initRepo, refusal, runSize, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('cli');
-after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 /* ---------- the help ---------- */
 
@@ -85,12 +84,7 @@ test('with no settings the tool works on the derived ones and says what pins the
  * and only for hosts whose link shape is known: for a foreign one it stays empty, since a link to
  * the wrong place is worse than no link. */
 test('the repair command and the commit link are derived from the project', () => {
-  const dir = path.join(tmp, 'derived-profile');
-  fs.mkdirSync(path.join(dir, 'src'), { recursive: true });
-  gitIn(dir, ['init', '-q', '-b', 'main']);
-  gitIn(dir, ['config', 'user.name', 'fixture']);
-  gitIn(dir, ['config', 'user.email', 'fixture@local']);
-  gitIn(dir, ['config', 'commit.gpgsign', 'false']);
+  const dir = initRepo(path.join(tmp, 'derived-profile'));
   fs.writeFileSync(path.join(dir, 'package.json'), '{"name":"demo","version":"1.0.0"}\n');
   fs.writeFileSync(path.join(dir, 'src', 'code.js'), '// начало\n');
   gitIn(dir, ['add', '-A']);

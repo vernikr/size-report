@@ -58,9 +58,6 @@ const STYLES = {
   }
 };
 
-/* Метрика объявляет, нужен ли ей текст блоба: `needsText: false` вместе с
- * `fromSize: true` означает «хватит размера объекта», и тогда содержимое не
- * читается вовсе (`git cat-file --batch` не вызывается). */
 export const METRICS = {
   raw: {
     label: 'raw',
@@ -208,7 +205,7 @@ function esbuildLoader(file, cfg) {
 /* The engine actually in force: the requested one may be unavailable, in which case the metric
  * counts another way — and that is announced (`sensorGaps`), or a different count would travel
  * into CI as the requested one. */
-export function minEngine(cfg) {
+function minEngine(cfg) {
   if (cfg.minify.engine !== 'esbuild') return 'strip';
   return minifier().tool === null ? 'strip' : 'esbuild';
 }
