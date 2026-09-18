@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       '@vernikr/size-report':
-        specifier: 2.8.7
-        version: 2.8.7
+        specifier: 2.8.8
+        version: 2.8.8
       c8:
         specifier: '10'
         version: 10.1.3
@@ -319,8 +319,8 @@ packages:
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
 
-  '@vernikr/size-report@2.8.7':
-    resolution: {integrity: sha512-CAcgLxhPpKdMJg5YGN/Ur/y9d0RUdS1NP2ro44HwOgpJ8jQviHO47OOq4LISdIc/TUN2b4VOTOazo+wjW6SIVg==}
+  '@vernikr/size-report@2.8.8':
+    resolution: {integrity: sha512-6F6jVUraLmSg+4vcqsU4OlunvWV2G8rE3zz5CO27QqJGek2vEW7MmHXf/1cLiFNz9RpWy3J5qewgdzVO/v4pUA==}
     engines: {node: '>=20.19'}
     hasBin: true
 
@@ -1339,7 +1339,7 @@ snapshots:
 
   '@types/json-schema@7.0.15': {}
 
-  '@vernikr/size-report@2.8.7':
+  '@vernikr/size-report@2.8.8':
     optionalDependencies:
       esbuild: 0.28.2
       gpt-tokenizer: 4.0.0
