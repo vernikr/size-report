@@ -38,3 +38,13 @@ and by the packed copy.
 
 **Files:** `src/git.js`, `src/project.js`, `src/config.js`, `src/page/table.js`,
 `worklog/0220-the-git-boundary-and-the-index-in-one-place.md`.
+
+## Release 2.8.8 — what changes in the numbers
+
+This portion ships: `src/git.js`, `src/project.js`, `src/config.js` and `src/page/table.js` are in
+`files`, so it takes its own PATCH. No number of the measurement moves — `--json`, the artifact and the
+reports are what they were (parity with the fixture and with the consumer's live history holds, both
+references reproduce, the tarball carries the same six entries). What moves is the price of a run: 17
+invocations of git per `--data` instead of 19, one pair of processes fewer for the settings derived from
+the project, and no array of the window's keys on a step down the table. The report is rebuilt by the
+post-commit hook as a commit of its own, as always.
