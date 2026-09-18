@@ -1,5 +1,5 @@
-/* Facts read out of the documentation — one copy for four checks (`test/docs-paths`,
- * `docs-commands`, `docs-numbers`, `docs-pin`). The defect class they exist for is one: a
+/* Facts read out of the documentation — one copy for two checks (`test/docs-paths`,
+ * `docs-commands`). The defect class they exist for is one: a
  * document names what is gone — a path after a move, a check count, a command or a flag the
  * tool does not know, "rebuilt byte for byte" about a dead command. Prose cannot promise that,
  * so the checks read facts instead: the git tree, the fixture's history, the tool's help
@@ -56,6 +56,10 @@ export const FOREIGN = [
   // past: the release guard watched `CHANGELOG.md`, which left the tree; the archived plans
   // still name it, and that is true of them
   'test/changelog.test.js',
+  // past: the count-of-checks guard and the install-pin guard left the tree with the numbers they
+  // watched — the runs table carries no counts now and the install example pins no version; the
+  // archived plans and the blockers record still name them, and that is true of them
+  'test/docs-numbers.test.js', 'test/docs-pin.test.js',
   // past: the report became one file — a self-contained page — so the static form (markup
   // assembly and its styling) left the tree; past records still name these files, and that is
   // true of them
@@ -159,55 +163,6 @@ export function callWords(call) {
     .replace(new RegExp('^npx ' + ESC(PKG)), 'size')
     .replace(new RegExp('^node (?:node_modules/' + ESC(PKG) + '/bin|bin)/size\\.js'), 'size')
     .trim().split(/\s+/).slice(1);
-}
-
-/* The commands the instructions call: only the first word of a call can be one. The list comes
- * from the same calls the neighbour check parses — a second parser would diverge from the first. */
-export function calledCommands() {
-  const out = new Set();
-  ['README.md', 'templates/README.md'].forEach((doc) => {
-    invocations(facts(doc, NOT_TODAY[doc])).forEach((call) => {
-      const words = callWords(call);
-      if (words.length > 0 && usageCommands.indexOf(words[0]) >= 0) out.add(words[0]);
-    });
-  });
-  return out;
-}
-
-/* The commands of the pinned revision's help: the file is read from git history rather than from
- * the tree, because that help is a different one. The section `Commands` of that file is a list of
- * string literals — English, the help the tool prints — and the first word of each literal is a
- * command's name.
- *
- * The Russian spellings of the same two markers stood here while the pin led to a Russian help and
- * went with the release that moved it (N20; measured 2026-09-17 — with them cut out
- * `test/docs-pin.test.js` is green, 5 of 5, because `AGENTS.md` keeps the pin at the current
- * release and its help is English). A pin to a pre-rename revision would need them back, and that is
- * the one case this reader cannot serve — such a revision spells them in the very file read here
- * (`git show <rev>:src/refusal.js`). Only the *commands* are taken out of the section, and those
- * names are ASCII either way. */
-export function commandsAt(rev) {
-  const src = gitIn(ROOT, ['show', rev + ':src/refusal.js']);
-  const section = src.split("'Commands:'")[1];
-  if (section === undefined) return null;
-  const head = section.split("'Modes:'")[0];
-  return [...head.matchAll(/^\s*'\s+([a-z][a-z-]*)/gm)].map((m) => m[1]);
-}
-
-/* The suite runs as README names them: the command and how many checks it takes. Read as a table
- * because this is a claim about numbers rather than prose (and because one number in two wordings
- * ages twice). The row is matched by its command cell — `pnpm test` against `pnpm test:all` — while
- * the words of the label are the document's business. The documentation guard checks it — that the
- * document does not lie about the count. The table has no seconds: a run does not hold to a time
- * (`tools/suites.js`), so there is nothing to promise. */
-export function publishedRuns() {
-  const text = read('README.md');
-  const quick = text.match(/^\|\s*Fast[^|]*\|\s*`pnpm test`\s*\|\s*\*\*(\d+) of (\d+)\*\*\s*\|/m);
-  const long = text.match(/^\|\s*Full[^|]*\|\s*`pnpm test:all`\s*\|\s*\*\*(\d+)\*\*\s*\|/m);
-  return {
-    fast: quick === null ? null : { checks: Number(quick[1]), total: Number(quick[2]) },
-    full: long === null ? null : { checks: Number(long[1]) }
-  };
 }
 
 /* A document's sections: a heading (`## 4.5.`, `## B1.`), a numbered item inside a section

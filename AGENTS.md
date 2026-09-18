@@ -62,16 +62,11 @@ is not given).
 After every portion of work the package is released to the registry, and the attached copy in
 this project is updated — that is part of the work, not a separate decision.
 
-1. The version by SemVer (`docs`/`fix`/`refactor`/`chore` → PATCH, `feat` → MINOR), a section in the
-   journal (`worklog/`, the earlier one in `worklog/archive/WORKLOG.md`) saying what changes in the
-   numbers, and the pin in `README.md` (it equals `installSpec()`, that is, the tag of the current
-   version) — in one commit.
-2. The tag `v<version>` is placed locally **before** that commit and moved onto it afterwards:
-   `test/docs-pin.test.js` requires the pin to lead to an existing revision, and before the
-   release commit there is no such tag. The push is **one command with the tag first**:
-   `git push origin v<version> main`. Pushed as two commands (the branch first, the tag after),
-   CI has time to run the branch without the tag and reddens on the pin guard — the green run is
-   the one where the tag is already there. The release itself runs from CI on GitHub Actions
+1. The version by SemVer (`docs`/`fix`/`refactor`/`chore` → PATCH, `feat` → MINOR) and a section in
+   the journal (`worklog/`, the earlier one in `worklog/archive/WORKLOG.md`) saying what changes in
+   the numbers — in one commit.
+2. The tag `v<version>` is placed on that commit and the push is **one command with the tag first**:
+   `git push origin v<version> main`. The release itself runs from CI on GitHub Actions
    attestation (the tag and the manifest version are compared).
 3. After the release — `pnpm add -D -E @vernikr/size-report@<version>` (`package.json` plus the
    lockfile) and a commit carrying the `Gate-Change:` trailer. That commit **needs no new

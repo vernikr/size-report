@@ -30,9 +30,8 @@ that could not fail are gone (`test/check.test.js`, `test/gates-verify.test.js`)
 spawns the frozen copy instead of two builders' own, one function sets the identity git refuses to commit without
 (three sites had grown the loop), and a suite's temporary directory removes itself when the process ends — 25 suites
 opened with the same pair of lines. Nine `export` keywords on names nothing outside their module reads left the
-surface, and `TODO.md` fell from 96 lines to 31. The checks are at **87** in the fast profile and **192** in the full
-one, none added and none removed; the code of the tree changed by −44 lines. The figures and the reasoning stand in
-`worklog/0213-the-volume-swept-and-the-probes-archived.md`.
+surface, and `TODO.md` fell from 96 lines to 31. No check was added or removed, and the code of the tree changed by
+−44 lines. The figures and the reasoning stand in `worklog/0213-the-volume-swept-and-the-probes-archived.md`.
 
 2.8.3 is about what a sideways scroll of the report costs, and its figures are measured rather than retold. **A step
 sideways moves the window instead of building it:** a row is made once and lives through the move, keeping its node and
@@ -42,10 +41,10 @@ reader's own and the shell's resize are the one thing that cannot be a move — 
 shown — and they build the window from nothing as they did. **Measured on this repository's own report in live Chrome**
 (`probes/archive/step-12-window.mjs`, two rounds, 1440 × 900): the page's own handling of one step **10.4 → 0.6 ms** (worst
 19.2 → 3.6) and the layout the step forces **14.4 → 5.9 ms**; over a sweep of forty steps the browser's own accounting
-gives layout **0.605 → 0.246 s**, style recalculation 0.169 → 0.056 s and task time **1.281 → 0.350 s**. The checks go
-86 → **87** in the fast profile and 191 → **192** in the full one: `test/page-grid.test.js` holds the rule by node
-identity — a page that built the same numbers again would read the same — and by the numbers of the window built at
-that place in one leap. The figures and the reasoning stand in `worklog/0211-sideways-step.md`.
+gives layout **0.605 → 0.246 s**, style recalculation 0.169 → 0.056 s and task time **1.281 → 0.350 s**. A check
+(`test/page-grid.test.js`) holds the rule by node identity — a page that built the same numbers again would read the
+same — and by the numbers of the window built at that place in one leap. The figures and the reasoning stand in
+`worklog/0211-sideways-step.md`.
 
 2.8.2 is about the page's own sources and the checks that guard them, and its figures are measured rather than retold.
 **The four page suites that went quiet with the `<table>` are alive again against the window:** `test/page-view.test.js`,
@@ -61,10 +60,9 @@ metrics and the files of a record became the panels' one question asked twice (`
 click became one drawing (`appChanged`) — while two rules that never took effect went with them (a dead `.cap` of the
 styling, an undefined colour under the folding sign). Measured in bytes for the same history: the chapters **−745 B**
 (37 lines), the suites **−18 462 B** (251 lines), the harness **+4 328 B** — the tree loses **14 879 B and 220 lines**,
-and the artifact **85 730 → 84 991 B**, its program and its styling being exactly what the chapters are. The checks go
-89 → **86** in the fast profile and 194 → **191** in the full one: what a reader of the page does is one place now
-rather than five, and a check that read the table it no longer has is not a check. The figures and the reasoning stand
-in `worklog/0210-page-suites-on-the-window.md`.
+and the artifact **85 730 → 84 991 B**, its program and its styling being exactly what the chapters are. What a reader
+of the page does is one place now rather than five, and a check that read the table it no longer has is not a check.
+The figures and the reasoning stand in `worklog/0210-page-suites-on-the-window.md`.
 
 2.8.1 is the drawing of the page put right after its table became a window, and its figures are measured rather than
 retold. **The panel and the table were sharing one class:** the table's rows were styled by a bare `.row` while the
@@ -79,8 +77,8 @@ cells standing in front of the table is what a reader calls a broken order, so a
 the engine's mark `last` stays in `--data` while the page's block no longer carries it. **One border and one height:**
 every line of the table is 1px of one colour (the header's two lines were 2px and another shade) and the header is two rows
 of the table's own height, while a file's name is centred over its group. The artifact grows 351 B for it — 85 495 B
-against 85 144 B of one history. The checks go 88 → **89** in the fast profile and 193 → **194** in the full one; the
-figures and the reasoning stand in `worklog/0209-page-drawing-order.md`.
+against 85 144 B of one history. The figures and the reasoning stand in
+`worklog/0209-page-drawing-order.md`.
 
 2.8.0 is about what the report costs whoever opens it, and its figures are measured rather than retold.
 **The table is a window of itself:** every row and every column in sight is built, plus four beyond each edge so that
@@ -98,8 +96,7 @@ taken — `@tanstack/virtual-core` is ~6.7 kB gzip and headless, `virtua`'s grid
 knows rows and not columns — because each would be vendored into the artifact, which the report then measures as its own
 bytes. The checks of the old table went quiet with it, each naming its reason, and 2.8.2 brought them back against the
 window; `test/page-grid.test.js` is what guards the window itself. The figures and the reasons stand in
-`worklog/0208-table-window.md`. The checks grow with the work: 81 → **88** in the fast profile and 186 → **193**
-in the full one.
+`worklog/0208-table-window.md`.
 
 2.7.0 is about the page and what a reader does with it, and its figures are measured rather than retold.
 **The report's address stays clean:** a switch writes the record into the browser's memory and nothing into the
@@ -133,8 +130,7 @@ totals, the columns carry computed widths under a fixed layout, and two candidat
 `plans/2026-09-17-page-perf/`. **The contract loses fields:** `metrics[].accuracy` and the `approx` bit map
 are gone and the split into exact and approximate numbers with them, so a reader of `--data` that still
 asks for them gets nothing — while the two schema numbers (`1` for the contract, `2` for the packed block)
-stay where they were. The checks grow with the work: 70 → **81** in the fast profile and 175 → **186** in
-the full one. The note of 2.5.0 — the language the tool speaks — stands in the journal,
+stay where they were. The note of 2.5.0 — the language the tool speaks — stands in the journal,
 `worklog/0203-release-2.5.0.md`.
 
 **Parity with the implementation the move started from is proven, not asserted.** The command is
@@ -236,10 +232,9 @@ runs an installed package only while it is there, and in a project without it th
 registry and pulls a package over the network.
 
 **What the documentation promises is checked, not assumed**, and the promises are split one per file:
-existence and completeness of paths (`test/docs-paths.test.js`), commands, refusal causes and section
-links (`test/docs-commands.test.js`), the count of checks (`test/docs-numbers.test.js`) and the install
-example leading to a revision whose help knows the named commands (`test/docs-pin.test.js`). One reader
-of facts serves them all (`tools/docs-facts.js`). What a
+existence and completeness of paths (`test/docs-paths.test.js`), and commands, refusal causes and section
+links (`test/docs-commands.test.js`). One reader
+of facts serves them both (`tools/docs-facts.js`). What a
 machine cannot check — wording, promises about the future, whether a file's role is described
 correctly — the guards do not take on, and they say so in their headers.
 
@@ -297,15 +292,9 @@ numbers on a shared fixture), and the full one adds what runs the tool many time
 commits and installs hooks; the reason for each expensive file is named line by line in
 `tools/suites.js`.
 
-| Run | Command | Checks |
-|---|---|---|
-| Fast — every edit | `pnpm test` | **87 of 192** |
-| Full — release and CI | `pnpm test:all` | **192** |
-
 No check is lost or weakened: the full run starts every file, the fast one takes part of them. The default is the full run — a file becomes fast only explicitly and with a reason — so new
-expensive work cannot quietly move into the fast one. Two declarations guard that:
-`test/suites.test.js` (every file classified, and a reason for each) and the documentation guard
-`test/docs-numbers.test.js` (the numbers in the table above).
+expensive work cannot quietly move into the fast one. The split is guarded by `test/suites.test.js`
+(every file classified, and a reason for each).
 
 **The runs have no time targets, and that is a decision rather than an omission.** Seconds depend on
 the window — the machine is under very different load at different times — so neither the suite nor CI
@@ -689,7 +678,7 @@ acceptance for each.
 | `tools/page-harness.js` | The harness of the contract and page checks: the contract data, the assembled page, reading it in a real DOM, one set of readers for every page suite (a file's path at HEAD, the rows the window built and their numbers, the captions over them, the order of the columns, a folder's and a category's switch, the place the shell stands at), the page's calculation and its decoder evaluated from their sources, the block unpacked, and the platform's unpacker put into jsdom (which has none) — one for seven suites |
 | `tools/suites.js` | The split of the suite: which files go into the fast run (with a reason for each) and why every dear one is in the full run |
 | `tools/run-tests.js` | Running the suite (`pnpm test`, `pnpm test:all`, `pnpm run suites:measure`): each file's duration measured on its own, and the counts of checks adding up |
-| `tools/docs-facts.js` | Reading facts out of the documentation — one layer for the four checks of the documentation guard: what a document names (paths, calls, section addresses) against what the repository holds |
+| `tools/docs-facts.js` | Reading facts out of the documentation — one layer for the two checks of the documentation guard: what a document names (paths, calls, section addresses) against what the repository holds |
 | `tools/yaml.js` | Parsing a subset of YAML — one parser for the two guards over descriptions (`templates/ci.yml` and `.github/workflows/release.yml`): anything outside the subset is an error rather than a silently skipped line, including a colon followed by a space in an unquoted value — which is what kept the release description unparsable while the check looked for substrings |
 | `tools/refusals.js` | The catalogue of refusals: one line per refusal — its cause, its exit code, the phrases its output must carry, and **what it advises** (`advice`: `run` — a command, `template` — a form with substitutions, `manual` — a person's action with its reason, `coveredBy` — handed to another check), and for one that cannot be caught at all, why. The maps of refusal sites (`SITES`, `PRINTED`) hold the counts, so that a new refusal cannot appear in silence, and the markers of advice so that a new piece of advice cannot either |
 | `test/parity.test.js` | The engine's parity with the reference: the numbers, the report's self-containedness, the locale |
@@ -711,7 +700,7 @@ acceptance for each.
 | `test/guard.test.js` | Parsing a module: it goes through a thread, both paths give one verdict, the fallback works with the thread's file away, and hundreds of parses are cheaper than a launch |
 | `test/runner.test.js` | Reading a process's output: chunks are glued as buffers rather than appended to a string — a multi-byte character at a chunk border does not turn into two replacement characters |
 | `test/git-pins.test.js` | The guard of the git border: no direct calls to git outside the shared list of pins, and an unpinned read is shown by a witness (a quoted path) |
-| `test/docs-paths.test.js`, `test/docs-commands.test.js`, `test/docs-numbers.test.js`, `test/docs-pin.test.js` | The documentation guard, one file per promise: the paths and the file table; the calls, the causes of refusal and the section addresses; the counts of checks; the pin in the install example |
+| `test/docs-paths.test.js`, `test/docs-commands.test.js` | The documentation guard, one file per promise: the paths and the file table; the calls, the causes of refusal and the section addresses |
 | `test/release.test.js` | The guard of the release from CI: it begins with a tag, the version comes from the manifest, no secret and no one-time code are needed, a prerelease does not go to `latest`, the whole suite runs before publishing — and the hint on npmjs.com names this same file |
 | `test/suites.test.js` | The guard of the suite's split: the classification is complete (fast only explicitly, full with a reason), every file has its reason, and the fast run stays part of the suite |
 | `test/gates-metrics.test.js`, `test/gates-dup.test.js`, `test/gates-deps.test.js`, `test/gates-coverage.test.js`, `test/gates-files.test.js` | The sensors' probes: an artificial violation → the sensor is red, taking it away → green again; the run calls a sensor as a command rather than importing it, which is why it proves the exit code too |
@@ -782,32 +771,8 @@ answers the same version the manifest names, `npm access get status @vernikr/siz
 and an anonymous request for the tarball is a 200. `npm i -D` and `yarn add -D` take the same name; no key
 and no link to the repository are needed.
 
-The same release can be taken by a reference to the repository — installation then does not depend on the
-registry, but stays tied to a revision:
-
-```bash
-pnpm add -D github:vernikr/size-report#v2.8.4
-```
-
 With no network (or nothing to fetch from codeload) — the tarball: `pnpm pack` in the package clone, then
 `pnpm add -D ./vernikr-size-report-<version>.tgz`, where the name is the one `pnpm pack` printed.
-
-**Why a tag rather than a sha.** pnpm resolves a short sha only through visible refs, while
-`git ls-remote` gives branch tips alone: while the revision is a tip, a short sha installs, and as soon as
-the branch moves on the installation fails with `Could not resolve <sha> to a commit`. This is an
-observation rather than reasoning: the short pin `6530237` installed while `main` stood on it and stopped
-working at the very next commit, while the same sha in full installed. A branch name (`#main`) and a tag
-are both accepted, but a branch is a moving target and a tag is constant: this release stands on the tag
-`v2.8.4`, which is also the one in the example (forty characters work as well, but they have to be copied
-out of the history by eye).
-
-The revision in the example is a part of the claim rather than decoration: what is described below is
-pinned to it. A pin older than the commands (`check`, `explain`, `doctor`, `install-hook`) would teach
-commands the installed revision does not have, and an extra word there is not refused but silently
-skipped — that is, instead of a refusal the person gets a zero and concludes all is well. So the pin is
-the revision that holds everything named below, refusals on an unknown word included.
-`test/docs-pin.test.js` guards that: the pin has to lead to a revision of this repository, and every
-command named in the text has to be in that revision's help.
 
 The package repository is **public** (it was private until 2026-09-14), and that is exactly what makes the
 installation simple: no developer key and no CI step with access. Checked by a run in an empty project
@@ -1053,8 +1018,8 @@ behaviour rather than as workarounds:
 
 Not on words: the section was walked through command by command in a fresh repository, and the findings are
 in `worklog/archive/WORKLOG.md` §16. What keeps it true is the documentation guard (`REFACTOR.md` R-4.1):
-paths, the file table, the calls and flags of the instructions, the numbers of checks, references to sections
-and the install pin are checked by machine. **No time target is declared anywhere** — seconds depend on the
+paths, the file table, the calls and flags of the instructions and references to sections
+are checked by machine. **No time target is declared anywhere** — seconds depend on the
 window, so there is nothing to check against (`tools/suites.js` says why). Wording, meaning and promises
 about the future are not checked by machine; a person holds those.
 

@@ -33,8 +33,6 @@ export const FAST = [
   { file: 'test/runner.test.js', why: 'reading the output of a process: the pieces are glued by buffers — a pure function, with no git and no runs' },
   { file: 'test/docs-paths.test.js', why: 'the paths named by the documentation against the tree and the files table: it is edited in every pass, so it has to be checked in every pass' },
   { file: 'test/docs-commands.test.js', why: 'the calls, the refusal reasons and the section anchors against the help: the same promise of the documentation' },
-  { file: 'test/docs-numbers.test.js', why: 'the check counts against the fact: a document ages in silence unless it is read every time' },
-  { file: 'test/docs-pin.test.js', why: 'the install pin against the help of the pinned revision: the path by which the package is installed' },
   { file: 'test/git-pins.test.js', why: 'the boundary of the git call: it reads sources and history, and does not run the tool' },
   { file: 'test/templates.test.js', why: 'templates for a project of someone else: the settings draft and the description of a check in full — on a fresh small repository' },
   { file: 'test/guard.test.js', why: 'module parsing: it runs in a worker thread, hundreds of parses in one process — no runs at all' },
