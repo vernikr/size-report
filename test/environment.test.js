@@ -11,16 +11,14 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import path from 'node:path';
 import {
-  PACKAGE, SYNTH, firstDiff, gitBare, gitConfig, readRun, sharedClone, tempDir
+  PACKAGE, firstDiff, gitBare, gitConfig, golden, readRun, sharedClone, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('environment');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-const goldenText = fs.readFileSync(path.join(SYNTH, 'golden.json'), 'utf8');
-const goldenJson = JSON.parse(goldenText);
+const { text: goldenText, json: goldenJson } = golden();
 const PLAIN = sharedClone('plain', tmp);
 
 /* Environments in which the output has to stay the same. The first is also the witness of the fix for

@@ -31,7 +31,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { LEGACY_PATH, MAX_BUF, gitConfig, legacyTool as legacyCopy, sha256 } from './harness.js';
+import { LEGACY_PATH, MAX_BUF, gitConfig, legacyTool as legacyCopy, runMain, sha256 } from './harness.js';
 /* A flag's value is read the same way the package's engine reads it (`src/config.js`) rather than
  * by a parser of its own: "a flag with no value" is a shared question, and a second copy of it would
  * diverge from the first as quietly as any two copies do (the `dup` sensor found it). */
@@ -239,10 +239,4 @@ function main() {
   }
 }
 
-try {
-  main();
-} catch (e) {
-  console.error('✗ ' + (e && e.message ? e.message : e));
-  if (e && e.stderr) console.error(String(e.stderr).trim());
-  process.exitCode = 1;
-}
+runMain(main, 1);

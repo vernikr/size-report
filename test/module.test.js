@@ -23,7 +23,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { ROOT, firstLine, gitIn, hasStack, runSize, runTool, tempDir } from '../tools/harness.js';
+import { ROOT, commitAll, firstLine, gitIn, hasStack, runSize, runTool, tempDir } from '../tools/harness.js';
 import { PKG } from '../tools/docs-facts.js';
 
 /* Where the install puts the package: `node_modules/<name>`, and for a scope one level deeper
@@ -57,11 +57,7 @@ function makeRepo(name, pkg, extra) {
   fs.writeFileSync(path.join(dir, 'src', 'greet.js'), GREET);
   fs.writeFileSync(path.join(dir, 'README.md'), '# ' + name + '\n');
   Object.keys(extra || {}).forEach((f) => fs.writeFileSync(path.join(dir, f), extra[f]));
-  gitIn(dir, ['init', '-q']);
-  gitIn(dir, ['config', 'user.email', 'test@example.com']);
-  gitIn(dir, ['config', 'user.name', 'Тест']);
-  gitIn(dir, ['add', '-A']);
-  gitIn(dir, ['commit', '-qm', 'первый коммит']);
+  commitAll(dir, 'Тест', 'test@example.com', 'первый коммит');
   return dir;
 }
 

@@ -2,10 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { EXIT, Refusal, cliCommand, refuseCause } from './refusal.js';
-import { installSpec } from './tool.js';
+import { TOOL_PKG, installSpec } from './tool.js';
 import { git, gitTry } from './git.js';
 import { loadConfig } from './config.js';
-import { TOOL_PKG } from './tool.js';
 import { rebuild } from './artifact.js';
 
 /* The `post-commit` and `post-merge` hooks: after every commit and merge the report rebuilds itself and, when it is tracked
@@ -120,6 +119,16 @@ function script(entry) {
     + 'exec node ' + entry.quoted + ' hook-run\n';
 }
 
+/* Writing the hook files, executable: the named command and the silent install write the same bytes, since a difference
+ * between them would surface only after somebody's commit. */
+function installFiles(hooks, entry, files) {
+  fs.mkdirSync(hooks.dir, { recursive: true });
+  files.forEach((file) => {
+    fs.writeFileSync(file, script(entry));
+    fs.chmodSync(file, 0o755);
+  });
+}
+
 /* The hook's state for `size doctor`: whether it is installed and how its last run ended. It counts nothing and commits
  * to nothing. */
 export function hookStatus(root) {
@@ -180,11 +189,7 @@ export function installHook(root, cfg) {
       '  to remove it: ' + cliCommand('uninstall-hook')
     ] };
   }
-  fs.mkdirSync(hooks.dir, { recursive: true });
-  files.forEach((file) => {
-    fs.writeFileSync(file, script(entry));
-    fs.chmodSync(file, 0o755);
-  });
+  installFiles(hooks, entry, files);
 
   const lines = [
     '✓ hook: ' + rels.join(', '),
@@ -219,11 +224,7 @@ export function autoInstall(root, cfg) {
     const files = HOOKS.map((name) => path.join(hooks.dir, name));
     if (files.some((f) => fs.existsSync(f) && !isOurs(f))) return null;
     if (files.every(isOurs)) return null;
-    fs.mkdirSync(hooks.dir, { recursive: true });
-    files.forEach((file) => {
-      fs.writeFileSync(file, script(entry));
-      fs.chmodSync(file, 0o755);
-    });
+    installFiles(hooks, entry, files);
     return files.map((f) => path.relative(root, f));
   } catch (_e) {
     /* Not a git repository, no rights on `.git`, a foreign format — all of it means one thing: there will be no automation

@@ -33,7 +33,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { collectOutput, firstDiff, gitIn } from './harness.js';
+import { collectOutput, firstDiff, flagArgs, gitIn, runMain } from './harness.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PARITY = path.join(ROOT, 'fixtures', 'parity');
@@ -48,18 +48,6 @@ const PROFILES = [
   { label: 'the usual environment', env: null },
   { label: 'the machine settings are not read (GIT_CONFIG_GLOBAL=/dev/null)', env: { GIT_CONFIG_GLOBAL: '/dev/null' } }
 ];
-
-function parseArgs(args) {
-  const out = { flags: {} };
-  for (let i = 0; i < args.length; i++) {
-    if (args[i].indexOf('--') === 0) {
-      const next = args[i + 1];
-      if (next !== undefined && next.indexOf('--') !== 0) { out.flags[args[i]] = next; i++; }
-      else out.flags[args[i]] = true;
-    }
-  }
-  return out;
-}
 
 /* A missing file is an answer too ("there is no report"), and it has to be a line of the comparison
  * rather than an exception in the middle of the run. */
@@ -214,7 +202,7 @@ async function checkProfile(profile, expected, tmp) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
+  const args = flagArgs(process.argv.slice(2));
   const repo = path.resolve(typeof args.flags['--repo'] === 'string' ? args.flags['--repo'] : DEFAULT_REPO);
   const bin = path.resolve(typeof args.flags['--bin'] === 'string' ? args.flags['--bin'] : DEFAULT_BIN);
 
@@ -255,7 +243,4 @@ async function main() {
   }
 }
 
-main().then((code) => { process.exitCode = code; }).catch((e) => {
-  console.error('✗ ' + (e && e.message ? e.message : e));
-  process.exitCode = 2;
-});
+runMain(main, 2);

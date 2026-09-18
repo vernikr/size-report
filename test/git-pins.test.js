@@ -13,7 +13,7 @@ import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT, gitBare, gitConfig, gitIn, tempDir } from '../tools/harness.js';
+import { ROOT, commitAll, gitBare, gitConfig, gitIn, tempDir } from '../tools/harness.js';
 
 const tmp = tempDir('git-pins');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
@@ -63,11 +63,7 @@ test('the shared reading of git does not depend on which settings are inherited'
   const dir = path.join(tmp, 'repo');
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'заметки.md'), '# заметки\n');
-  gitIn(dir, ['init', '-q']);
-  gitIn(dir, ['config', 'user.email', 'test@example.com']);
-  gitIn(dir, ['config', 'user.name', 'Тест']);
-  gitIn(dir, ['add', '-A']);
-  gitIn(dir, ['commit', '-qm', 'заметки']);
+  commitAll(dir, 'Тест', 'test@example.com', 'заметки');
 
   const read = ['log', '--name-only', '--pretty=format:'];
   const pinned = gitIn(dir, read);

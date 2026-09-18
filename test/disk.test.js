@@ -18,7 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import {
-  CONFIG, PACKAGE, PACKAGE_BIN, ROOT, cloneCrlf, cloneFixture, gitConfig, gitIn, initRepo,
+  CONFIG, PACKAGE, PACKAGE_BIN, ROOT, cloneCrlf, cloneFixture, configWith, gitConfig, gitIn, initRepo,
   readJson, runFixtureWith, runSize, runTool, tempDir
 } from '../tools/harness.js';
 
@@ -31,15 +31,6 @@ function commit(dir, subject) {
   gitIn(dir, ['add', '-A']);
   gitIn(dir, ['-c', 'user.name=fixture', '-c', 'user.email=fixture@local', 'commit', '-qm', subject]);
   return gitIn(dir, ['rev-parse', 'HEAD']).trim();
-}
-
-// The reference settings with a column added: the history and the other columns stay as they are.
-function configWith(name, columns) {
-  const cfg = readJson(CONFIG);
-  cfg.columns = cfg.columns.concat(columns);
-  const file = path.join(tmp, name + '.json');
-  fs.writeFileSync(file, JSON.stringify(cfg, null, 2) + '\n');
-  return file;
 }
 
 /* Settings for a repository of one's own: they hold only what describes the project, and the engine's
@@ -214,7 +205,9 @@ test('a file deleted before HEAD does not bring the run down, and the numbers ag
   fs.rmSync(gone);
   const removedAgain = commit(dir, 'удалил gone.js снова');
 
-  const res = runSize(dir, ['--config', configWith('gone', [{ label: 'gone.js', paths: ['src/gone.js'] }]), '--json']);
+  const res = runSize(dir, ['--config', configWith(tmp, 'gone', (cfg) => {
+    cfg.columns = cfg.columns.concat([{ label: 'gone.js', paths: ['src/gone.js'] }]);
+  }), '--json']);
   assert.equal(res.code, 0, 'the history with a deleted file is not built: ' + res.stderr.trim().split('\n')[0]);
   assert.equal(/carrying the state/.test(res.stderr), false,
     'the comparison took a deleted file for a lost state:\n' + res.stderr);

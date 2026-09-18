@@ -21,7 +21,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { NO_OPTIONAL } from '../src/optional.js';
 import {
-  CONFIG, firstLine, gitIn, hasStack, initRepo, readJson, runSize, shallowClone, sharedClone, tempDir
+  CONFIG, configWith, firstLine, gitIn, hasStack, initRepo, readJson, runSize, shallowClone, sharedClone, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('doctor');
@@ -33,15 +33,6 @@ const OFF = { [NO_OPTIONAL]: '1' };
 // The fixture's path left outside the columns, and the commit that brought it in.
 const LOOSE = 'README.md';
 const LOOSE_SINCE = '3294a69';
-
-// A copy of the reference settings with an edit: the project's state is set point by point while the
-// history stays the same, so numbers and causes are comparable between cases.
-function configAs(name, edit) {
-  const cfg = JSON.parse(JSON.stringify(readJson(CONFIG)));
-  const file = path.join(tmp, name);
-  fs.writeFileSync(file, JSON.stringify(edit(cfg), null, 2) + '\n');
-  return file;
-}
 
 // A fresh project: two commits and no settings at all — what a first run sees.
 function freshRepo(name) {
@@ -141,7 +132,7 @@ test('unreadable settings: code 2, the cause is named, coverage is not invented'
 });
 
 test('full coverage: the answer says there is nothing to do and invents no problems', () => {
-  const file = configAs('full.json', (cfg) => { cfg.skip = [LOOSE]; return cfg; });
+  const file = configWith(tmp, 'full.json', (cfg) => { cfg.skip = [LOOSE]; });
 
   const res = runSize(PLAIN, ['--config', file, 'doctor']);
   assert.equal(res.code, 0, 'a healthy project was not accepted (code ' + res.code + '):\n' + res.stdout + res.stderr);
@@ -192,10 +183,9 @@ test('a file the measurement cannot parse: code 2 and a settings edit rather tha
   fs.writeFileSync(path.join(dir, 'src', 'bad.js'), '@@@ это не JavaScript\n');
   gitIn(dir, ['add', '-A']);
   gitIn(dir, ['commit', '-qm', 'не JavaScript']);
-  const file = configAs('unparsed.json', (cfg) => {
+  const file = configWith(tmp, 'unparsed.json', (cfg) => {
     cfg.columns = [{ label: 'bad.js', paths: ['src/bad.js'] }];
     cfg.skip = ['src/code.js'];
-    return cfg;
   });
 
   const res = runSize(dir, ['--config', file, 'doctor']);
@@ -213,10 +203,9 @@ test('a file the measurement cannot parse: code 2 and a settings edit rather tha
 });
 
 test('an approximation of a sensor: code 4 with the cause and a ready repair', () => {
-  const file = configAs('esbuild.json', (cfg) => {
+  const file = configWith(tmp, 'esbuild.json', (cfg) => {
     cfg.skip = [LOOSE];
     cfg.minify = { engine: 'esbuild', ext: {}, guard: ['.js', '.mjs', '.cjs'] };
-    return cfg;
   });
 
   const res = runSize(PLAIN, ['--config', file, 'doctor'], OFF);
@@ -234,9 +223,8 @@ test('an approximation of a sensor: code 4 with the cause and a ready repair', (
  * approximate number is still a number. So with two findings the exit code carries incompleteness, and the
  * approximation names itself in the text. */
 test('two findings at once: the exit code is carried by the one without which there are no numbers', () => {
-  const file = configAs('both.json', (cfg) => {
+  const file = configWith(tmp, 'both.json', (cfg) => {
     cfg.minify = { engine: 'esbuild', ext: {}, guard: ['.js', '.mjs', '.cjs'] };
-    return cfg;
   });
 
   const rep = JSON.parse(runSize(PLAIN, ['--config', file, 'doctor', '--json'], OFF).stdout);

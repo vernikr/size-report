@@ -14,15 +14,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  PARITY, SYNTH, firstDiff, frozenTarget, legacyTool, readJson, readRun, requireTarget,
+  PARITY, SYNTH, firstDiff, frozenTarget, golden, legacyTool, readJson, readRun, requireTarget,
   sha256, shaFileLine, sharedClone, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('frozen');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-const golden = fs.readFileSync(path.join(SYNTH, 'golden.json'));
-const goldenText = golden.toString('utf8');
+const { text: goldenText } = golden();
 const parityManifest = readJson(path.join(PARITY, 'manifest.json'));
 
 const PLAIN = sharedClone('plain', tmp);
@@ -35,7 +34,7 @@ test('the frozen copy is the revision the reference was taken with', () => {
   const synth = readJson(path.join(SYNTH, 'manifest.json'));
   assert.equal(synth.legacy.sha256, parityManifest.tool.sha256,
     'the numbers of the fixture were taken by a different revision of the tool than the numbers of the live project');
-  assert.equal(sha256(golden), synth.legacy.goldenSha256,
+  assert.equal(sha256(goldenText), synth.legacy.goldenSha256,
     'the file of reference numbers was changed after it was taken');
 });
 

@@ -18,7 +18,7 @@ import { loadConfig } from '../src/config.js';
 import { EXIT } from '../src/refusal.js';
 import { minifyForm } from '../src/strip.js';
 import {
-  CONFIG, PACKAGE, SYNTH, cloneFixture, draftedRepo, gitIn, readJson, readRun, refusal, runSize,
+  CONFIG, PACKAGE, cloneFixture, configWith, draftedRepo, gitIn, golden, readJson, readRun, refusal, runSize,
   sharedClone, tempDir
 } from '../tools/harness.js';
 
@@ -26,18 +26,16 @@ const tmp = tempDir('minify');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 const PLAIN = sharedClone('plain', tmp);
-const goldenText = fs.readFileSync(path.join(SYNTH, 'golden.json'), 'utf8');
+const { text: goldenText } = golden();
 const OFF = { [NO_OPTIONAL]: '1' };
 
 /* A copy of the reference settings with another minification way: the history and the columns stay the
  * same, so the numbers are comparable cell by cell rather than "roughly alike". */
 function configAs(name, mutate) {
-  const cfg = readJson(CONFIG);
-  cfg.minify = { engine: 'esbuild' };
-  mutate(cfg);
-  const file = path.join(tmp, name + '.json');
-  fs.writeFileSync(file, JSON.stringify(cfg, null, 2) + '\n');
-  return file;
+  return configWith(tmp, name, (cfg) => {
+    cfg.minify = { engine: 'esbuild' };
+    mutate(cfg);
+  });
 }
 
 /* The columns the minifier answers for — the `.js`, `.mjs` and `.css` ones of this fixture (the whole

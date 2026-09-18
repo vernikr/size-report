@@ -11,13 +11,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  CONFIG, PACKAGE, SYNTH, cloneFixture, firstDiff, gitIn, readRun, runFixtureWith, sha256, sharedClone, tempDir
+  CONFIG, PACKAGE, cloneFixture, firstDiff, gitIn, golden, readRun, runFixtureWith, sha256, sharedClone, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('crlf');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-const goldenText = fs.readFileSync(path.join(SYNTH, 'golden.json'), 'utf8');
+const { text: goldenText } = golden();
 
 test('a working tree with CRLF newlines does not stand in the way of the comparison', () => {
   const dir = sharedClone('crlf', tmp);

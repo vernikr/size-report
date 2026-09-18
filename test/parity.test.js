@@ -13,15 +13,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  CONFIG, PACKAGE, SYNTH, cloneFixture, firstDiff, readRun, requireTarget, runFixtureWith,
+  CONFIG, PACKAGE, cloneFixture, firstDiff, golden, readRun, requireTarget, runFixtureWith,
   sharedClone, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('parity');
 after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-const goldenText = fs.readFileSync(path.join(SYNTH, 'golden.json'), 'utf8');
-const goldenJson = JSON.parse(goldenText);
+const { text: goldenText, json: goldenJson } = golden();
 
 /* The clone for read-only runs: `--json` and the locale check write nothing. */
 const PLAIN = sharedClone('plain', tmp);

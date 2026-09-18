@@ -20,7 +20,7 @@ import { CHARS_PER_TOKEN, TOKEN_DEFAULTS, estimate } from '../src/tokens.js';
 import { tokenCount } from '../src/tokens.js';
 import { EXIT } from '../src/refusal.js';
 import {
-  CONFIG, PACKAGE, cloneFixture, draftedRepo, gitIn, readJson, readRun, refusal, runSize, sharedClone, tempDir
+  PACKAGE, cloneFixture, configWith, draftedRepo, gitIn, readJson, readRun, refusal, runSize, sharedClone, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('tokens');
@@ -34,13 +34,11 @@ const CL100K = { family: 'openai', encoding: 'cl100k_base' };
 /* A copy of the reference settings with tokens: the history and the columns stay the same, so the numbers
  * are comparable with `raw` and `min` of the same revision. */
 function configAs(name, metrics, tokens, extra) {
-  const cfg = readJson(CONFIG);
-  cfg.metrics = metrics;
-  if (tokens) cfg.tokens = tokens;
-  if (extra) extra(cfg);
-  const file = path.join(tmp, name + '.json');
-  fs.writeFileSync(file, JSON.stringify(cfg, null, 2) + '\n');
-  return file;
+  return configWith(tmp, name, (cfg) => {
+    cfg.metrics = metrics;
+    if (tokens) cfg.tokens = tokens;
+    if (extra) extra(cfg);
+  });
 }
 
 const TOK = configAs('tok', ['raw', 'min', 'tok'], O200K);

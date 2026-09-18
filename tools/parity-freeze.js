@@ -33,7 +33,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { LEGACY_PATH, MAX_BUF, gitConfig, legacyTool, sha256 } from './harness.js';
+import { LEGACY_PATH, MAX_BUF, flagArgs, gitConfig, legacyTool, runMain, sha256 } from './harness.js';
 import { CONFIG_NAME } from '../src/config.js';
 import { gitArgv, gitEnv } from '../src/git.js';
 
@@ -72,22 +72,6 @@ function legacy(dir, args) {
   return res.stdout || '';
 }
 
-/* Argument reading: a flag may own a value, so a positional argument is the one that is neither a
- * flag nor a flag's value. */
-function parseArgs(args) {
-  const out = { positional: null, flags: {} };
-  for (let i = 0; i < args.length; i++) {
-    if (args[i].indexOf('--') === 0) {
-      const next = args[i + 1];
-      if (next !== undefined && next.indexOf('--') !== 0) { out.flags[args[i]] = next; i++; }
-      else out.flags[args[i]] = true;
-      continue;
-    }
-    if (out.positional === null) out.positional = args[i];
-  }
-  return out;
-}
-
 /* A description of the standard for a person: what lies beside it and what to do with it. Its text goes into
  * the fixture's own README, so it is the standard's data rather than this file's documentation and stays Russian
  * as the fixture holds it — `check:standards` compares `data.json`, `config.json` and `artifact.sha256` byte for
@@ -123,7 +107,7 @@ function manifestNote(ctx) {
  * and the project come from the manifest: the golden is motionless until someone deliberately
  * re-takes it. */
 function plan() {
-  const args = parseArgs(process.argv.slice(2));
+  const args = flagArgs(process.argv.slice(2));
   const out = path.resolve(args.flags['--out'] || DEFAULT_OUT);
   const manifestFile = path.join(out, 'manifest.json');
   const frozen = fs.existsSync(manifestFile) ? JSON.parse(fs.readFileSync(manifestFile, 'utf8')) : null;
@@ -221,9 +205,4 @@ function main() {
   }
 }
 
-try {
-  main();
-} catch (e) {
-  console.error('✗ ' + (e && e.message ? e.message : e));
-  process.exitCode = 1;
-}
+runMain(main, 1);

@@ -204,7 +204,7 @@ function columnsOf(files, journal) {
 }
 
 export function projectConfig(root) {
-  const output = outputOf(root);
+  const output = outputOf();
   const journal = journalOf(root);
   const files = allPaths(root);
   /* Only what git tracks becomes a column: a file absent at HEAD has nothing to measure (it would be

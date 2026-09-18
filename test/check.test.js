@@ -16,7 +16,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  CONFIG, cloneFixture, gitIn, hasStack, readJson, runFixture, runSize, sharedClone, tempDir
+  cloneFixture, configWith, firstLine, gitIn, hasStack, runFixture, runSize, sharedClone, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('check');
@@ -31,17 +31,6 @@ const LOOSE_SINCE = '3294a69';
 // Commits of the fixture that were dropped without a row (the `--json` reference says the same).
 const ONLY_REPORT = 'cd78fd9';
 const NO_VOLUME = '9fee206';
-
-function configWith(name, edit) {
-  const cfg = JSON.parse(JSON.stringify(readJson(CONFIG)));
-  const file = path.join(tmp, name);
-  fs.writeFileSync(file, JSON.stringify(edit(cfg), null, 2) + '\n');
-  return file;
-}
-
-function firstLine(text) {
-  return text.trim().split('\n')[0];
-}
 
 test('completeness: an uncovered path is named together with the commit and a repair', () => {
   const res = runFixture(dir, ['check']);
@@ -73,10 +62,9 @@ test('completeness: it says which part of the history is covered and who dropped
 });
 
 test('completeness: a path that became a column or an exclusion closes the violation', () => {
-  const asSkip = configWith('skip.json', (cfg) => { cfg.skip = [LOOSE]; return cfg; });
-  const asColumn = configWith('column.json', (cfg) => {
+  const asSkip = configWith(tmp, 'skip.json', (cfg) => { cfg.skip = [LOOSE]; });
+  const asColumn = configWith(tmp, 'column.json', (cfg) => {
     cfg.columns.push({ label: LOOSE, paths: [LOOSE] });
-    return cfg;
   });
   [[asSkip, 'as a skip'], [asColumn, 'as a column']].forEach(([file, how]) => {
     const res = runSize(dir, ['--config', file, 'check', '--json']);
@@ -126,9 +114,8 @@ test('explanation: there is a row — and which one is said', () => {
  * numbers did not move". A commit touching the journal alone shows it: the journal is not tracked as a
  * column, its volume does not shift, and a person needs to know why exactly there is no row. */
 test('explanation: a commit outside the columns differs from "the numbers did not move"', () => {
-  const file = configWith('few.json', (cfg) => {
+  const file = configWith(tmp, 'few.json', (cfg) => {
     cfg.columns = [{ label: 'code.js', paths: ['src/code.js'] }];
-    return cfg;
   });
   const res = runSize(dir, ['--config', file, 'explain', '9dfe679', '--json']);
   assert.equal(res.code, 0);
@@ -144,9 +131,8 @@ test('explanation: a commit outside the columns differs from "the numbers did no
  * paths. Two phrases for one situation would be a defect: the viewer gets two different commands, and one
  * of them may go out without the names. */
 test('outside the columns: completeness and the explanation say one phrase with the names of the paths', () => {
-  const file = configWith('outside.json', (cfg) => {
+  const file = configWith(tmp, 'outside.json', (cfg) => {
     cfg.columns = [{ label: 'code.js', paths: ['src/code.js'] }];
-    return cfg;
   });
   const STEM = 'add these paths as a column or to "skip" of size-table.config.json: ';
   const rep = JSON.parse(runSize(dir, ['--config', file, 'explain', '9dfe679', '--json']).stdout);
@@ -185,7 +171,7 @@ test('explanation: a commit with no files — no repair rather than a command wi
 });
 
 test('explanation: a merge is explained by the setting that hid it', () => {
-  const file = configWith('nomerge.json', (cfg) => { cfg.rows.merges = false; return cfg; });
+  const file = configWith(tmp, 'nomerge.json', (cfg) => { cfg.rows.merges = false; });
   const res = runSize(dir, ['--config', file, 'explain', '9326134']);
   assert.equal(res.code, 0);
   assert.match(res.stdout, /the commit is a merge/, 'the cause named is the wrong one:\n' + res.stdout);

@@ -59,14 +59,19 @@ function regexAllowed(last, word) {
   return '([{,;:=!&|?+-*%~^<>'.indexOf(last) !== -1;
 }
 
-function takeRegex(s) {
-  if (s.src[s.i] !== '/' || !regexAllowed(s.last, s.word)) return false;
-  const end = endOfRegex(s.src, s.i);
+/* A token taken whole: it goes into the output and the pass state is advanced over it — the token itself, not the word
+ * before it, decides where a regex may stand next, and the word being read ends with it. */
+function take(s, end, last) {
   s.out += s.src.slice(s.i, end);
   s.i = end;
-  s.last = '/';
+  s.last = last;
   s.word = '';
   return true;
+}
+
+function takeRegex(s) {
+  if (s.src[s.i] !== '/' || !regexAllowed(s.last, s.word)) return false;
+  return take(s, endOfRegex(s.src, s.i), '/');
 }
 
 function endOfRegex(src, start) {
@@ -88,12 +93,7 @@ function endOfRegex(src, start) {
 function takeString(s) {
   const quote = s.src[s.i];
   if (quote !== '"' && quote !== "'" && quote !== '`') return false;
-  const end = endOfString(s.src, s.i, quote);
-  s.out += s.src.slice(s.i, end);
-  s.i = end;
-  s.last = quote;
-  s.word = '';
-  return true;
+  return take(s, endOfString(s.src, s.i, quote), quote);
 }
 
 function endOfString(src, start, quote) {

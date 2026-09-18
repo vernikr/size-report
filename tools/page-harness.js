@@ -192,10 +192,6 @@ export const nowRow = (doc) => doc.querySelector('#grid .row.now');
 // The numbers of a row, left to right: one per column the window holds, the total's first.
 export const rowNumbers = (row) => [...row.querySelectorAll('.cells > span')].map((span) => span.textContent.trim());
 
-/* The contract row a built row stands for: the grid reads newest first and its first row is the state at HEAD
- * (`src/page/table.js`), which is the contract's `now` rather than a row of the history. */
-export const contractRow = (data, r) => (r === 0 ? null : data.rows[data.rows.length - r]);
-
 // The captions over the columns: the total and the files the window holds (above), the metrics (below).
 export const captions = (doc) => [...doc.querySelectorAll('#grid .hgroups > span')].map((span) => span.textContent);
 export const metricCaptions = (doc) => [...doc.querySelectorAll('#grid .hmetrics > span')].map((span) => span.textContent);

@@ -122,6 +122,26 @@ export function initRepo(dir) {
   return dir;
 }
 
+/* Everything committed in a repository of one's own, with the identity git cannot ask for and therefore refuses
+ * without (the five commands every suite that builds a project repeats). It is not `initRepo`: that one lays out an
+ * empty scaffold and commits nothing, while this one commits what already lies there — and the author name is a
+ * parameter, because a suite checking what a non-ASCII one does to the parse names its own. */
+export function commitAll(dir, name, email, subject) {
+  gitIn(dir, ['init', '-q']);
+  gitIn(dir, ['config', 'user.name', name]);
+  gitIn(dir, ['config', 'user.email', email]);
+  gitIn(dir, ['add', '-A']);
+  gitIn(dir, ['commit', '-qm', subject]);
+  return dir;
+}
+
+/* The frozen numbers the port has to reproduce: the text is compared byte for byte and the parsed form is what a check
+ * reads counts out of. Read here rather than in each suite — this is the one place that knows where the golden lies. */
+export function golden() {
+  const text = fs.readFileSync(path.join(SYNTH, 'golden.json'), 'utf8');
+  return { text: text, json: JSON.parse(text) };
+}
+
 /* A fresh project with a settings draft of its own, ready for a run: two suites start from exactly this
  * state (the minifier's way and the tokens'), and the state is shared rather than copied — a copied block
  * is what the `dup` sensor counts, and a copy is what it was: the same commands with the same assertion
@@ -308,4 +328,44 @@ export function hasStack(text) {
 export function commandIn(text) {
   const m = /node\s+(\S+)\s+(--\S+)/.exec(text);
   return m === null ? null : { file: m[1], flag: m[2] };
+}
+
+/* Flags of a tool's own command line: `--name value` and flag-only switches, everything else positional (the first
+ * one wins). The engine reads its line in `src/args.js` and the sensors theirs in `tools/gates/common.js`; the tools
+ * here need this third shape, and one copy of it keeps them from drifting apart. */
+export function flagArgs(args) {
+  const out = { positional: null, flags: {} };
+  for (let i = 0; i < args.length; i++) {
+    if (args[i].indexOf('--') === 0) {
+      const next = args[i + 1];
+      if (next !== undefined && next.indexOf('--') !== 0) { out.flags[args[i]] = next; i++; continue; }
+      out.flags[args[i]] = true;
+      continue;
+    }
+    if (out.positional === null) out.positional = args[i];
+  }
+  return out;
+}
+
+/* The reference settings with an edit, written beside the caller's own temporary directory: the history and the other
+ * settings stay as they are, so numbers and causes are comparable between cases rather than "roughly alike". */
+export function configWith(dir, name, edit) {
+  const cfg = JSON.parse(JSON.stringify(readJson(CONFIG)));
+  edit(cfg);
+  const file = path.join(dir, name.endsWith('.json') ? name : name + '.json');
+  fs.writeFileSync(file, JSON.stringify(cfg, null, 2) + '\n');
+  return file;
+}
+
+/* The tail of a tool's own script: `main` answers with an exit code (or with nothing, meaning success), while a
+ * failure is one line rather than a stack — these commands are run by people and print verdicts of their own. */
+export function runMain(main, failCode) {
+  Promise.resolve().then(main).then(
+    (code) => { process.exitCode = code === undefined ? 0 : code; },
+    (e) => {
+      console.error('✗ ' + (e && e.message ? e.message : e));
+      if (e && e.stderr) console.error(String(e.stderr).trim());
+      process.exitCode = failCode;
+    }
+  );
 }
