@@ -94,13 +94,21 @@ markup: switching a folder off removes exactly its columns and exactly its volum
 list:** the panel is built once and a switch writes only the fields it reached, so no rebuild can lose
 the scroll of the panel or of the list, and the field under the keyboard keeps its focus.
 
-**The panel remembers the reader's choice** in the browser's memory, tied to the report's passport (the
-tool's name, the data schema, the artifact's path, the title and the column labels, hashed into the
-record's key) — all `file://` pages share one memory, so this is no trifle. The record holds names and
-only what is switched off: a column pointed at another path matches nothing, what appeared stays
-switched on, and turning everything back on removes the record. The passport holds neither the tool's
-version nor the top of the history: updating the tool does not change what a column means, while a grown
-history is the very history the reader comes back to.
+**The panel remembers the reader's choice** in the browser's memory, one record per report under an
+address counted from the report's passport (the tool's name, the data schema, the artifact's path, the
+title and the oldest commit of the history, hashed into the record's key) — all `file://` pages share one
+memory, so this is no trifle. The passport holds neither the tool's version nor the top of the history:
+updating the tool does not change what a column means, while a grown history is the very history the
+reader comes back to. It holds no column either, and the oldest commit stands where the column labels
+stood: a report rebuilt after a commit keeps its address — the choice survives every rebuild, which is
+what the reader meets after each of his commits — while two projects that declare one and the same path
+and title are told apart. What is written down is only what is switched off, and as far as the reader
+decided by groups it is the group's own fact that is written: a whole category switched off is remembered
+as that category, so a file joining it later is switched with it, while a category in the third state is
+written file by file, by name. Either way a name the report does not hold matches nothing, what appeared
+stays switched on, and turning everything back on removes the record. The addresses an earlier naming of
+the passport left in the browser — the first one counted the columns, so every build of a report had one
+of its own — are swept when a report of this release is opened.
 
 **The link is read and never written.** The page puts nothing into the address bar; a link an earlier
 release sent (the record in `#size-report=…`) is still read and outranks the memory while it does not

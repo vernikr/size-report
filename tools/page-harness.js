@@ -15,7 +15,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
-import { stripModules } from '../src/size-table.js';
+import { pageHtml as buildPage, stripModules } from '../src/size-table.js';
 import { CONFIG, ROOT, SYNTH, cloneFixture, runFixture, tempDir } from './harness.js';
 
 /* The contract data and the frozen golden: a fresh clone of the fixture plus one `--data` run.
@@ -98,6 +98,13 @@ export function pageHtml(tmp, name) {
   const file = path.join(dir, cfg.output);
   assert.ok(fs.existsSync(file), 'the report did not appear at the path from the settings: ' + cfg.output);
   return fs.readFileSync(file, 'utf8');
+}
+
+/* A page assembled from given data instead of built from the fixture's history: a check about the memory of a choice
+ * needs two builds of one report — the report as it stands and the report after a commit — and only the data tells the
+ * two apart. The language is the fixture's own, taken from the settings rather than from a check's guess. */
+export function pageFrom(data) {
+  return buildPage(data, JSON.parse(fs.readFileSync(CONFIG, 'utf8')));
 }
 
 /* A moment of the page's own clock, taken from the window the page runs in rather than made up by a
@@ -239,11 +246,13 @@ export function columnOrder(data) {
   return data.files.map((_f, i) => i).sort((a, b) => rank[b] - rank[a]);
 }
 
-/* The metric switch is found by its visible label: the label does not depend on the words used
- * for the method and the precision. That those words exist and match the cells is a check of its
- * own. */
-export const metricBox = (doc) => [...doc.querySelectorAll('#panel .box.metric')]
-  .find((b) => b.textContent === 'min').querySelector('input');
+/* A metric's box in the panel, found by its visible label: the label does not depend on the words used
+ * for the method and the precision. That those words exist and match the cells is a check of its own,
+ * and they stand in the box's tooltip — one box, what the metric is and the way it was counted. */
+const metricLabel = (doc, label) => [...doc.querySelectorAll('#panel .box.metric')]
+  .find((b) => b.textContent === label);
+export const metricBox = (doc) => metricLabel(doc, 'min').querySelector('input');
+export const metricTitle = (doc, label) => metricLabel(doc, label).querySelector('input').title;
 
 export function toggleBox(doc, box, checked) {
   box.checked = checked;

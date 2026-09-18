@@ -11,10 +11,12 @@ import { appDecode } from './payload.js';
  * network: the styling arrives in the same file, and the cell markup follows the rules of the shared part of the styling
  * (`clip`, a commit's caption).
  *
- * The panel remembers the reader's choice between visits ("the choice's memory" below): the record is tied to the
- * report's passport and keeps only what is switched off, by name, so someone else's record is not applied while a
- * vanished name simply means nothing. The record stays in the browser's memory and nowhere else: a report opened from
- * disk keeps a clean address, and a link made in an earlier release is still read (`appLinkUse`).
+ * The panel remembers the reader's choice between visits ("the choice's memory" below): the record is addressed by the
+ * report rather than by a build of it (`appPassport`), it keeps the fact of a whole category where the reader decided by
+ * groups and the names of the files where he decided one by one, and only what is switched off is written down — so
+ * someone else's record is not applied while a vanished name simply means nothing. The record stays in the browser's
+ * memory and nowhere else: a report opened from disk keeps a clean address, and a link made in an earlier release is
+ * still read (`appLinkUse`).
  *
  * The page draws no conclusion about how a number was obtained: the method of each metric arrives in the data, and the
  * page prints it. There is no second rule of counting here, and no vocabulary of precision either. */
@@ -44,7 +46,9 @@ let appFoldKey = null;
  * choice's record (`appFileAt`), so the tree and the reader's memory cannot drift apart.
  *
  * The key the reader's memory lives under is counted here as well, because it is the report's passport: it depends
- * on the data, and until the block is unpacked there is nothing to count it from. */
+ * on the data, and until the block is unpacked there is nothing to count it from. The addresses an earlier naming of
+ * the passport left behind go away at the same moment (`appSweep`): the report is in a position to say what is dead,
+ * and nothing of the reader's memory has been read yet. */
 export function appBoot(text) {
   appData = appDecode(JSON.parse(text));
   /* The tree is folded as it opens: a project's tree is longer than the window, and the reader's first look is at a
@@ -55,8 +59,9 @@ export function appBoot(text) {
   appMeasured = {};
   appData.metrics.forEach((m) => { appView.metrics[m.key] = true; appMetric[m.key] = m; });
   appData.files.forEach((_f, i) => { appView.files.push(true); appMeasured[appFileAt(i)] = i; });
-  appKey = 'size-report:' + appPassport();
+  appKey = APP_FORM + appPassport();
   appFoldKey = appKey + ':tree';
+  appSweep();
 }
 
 /* A link is that same choice in the address, under a name of its own: someone else's anchor on the page does not count
@@ -70,11 +75,28 @@ let appTransient = false;
 
 /* -------- the reader's memory of his choice -------- */
 
+/* The form of the memory's address: the tool's namespace, a mark of the form, then the report's identity (`appPassport`
+ * counts it). The mark stands in the address because the identity was named differently once — in the first naming the
+ * columns stood inside it, so every build of the report had an address of its own and the reader's choice was left
+ * behind at the previous one — and because the mark is what lets this release tell the addresses it writes from the
+ * addresses of that naming (`appSweep`), without pretending to know whose record lies under the older one. */
+const APP_STORE = 'size-report:';
+const APP_FORM = APP_STORE + '2:';
+
 /* The name of a file for the record is its path at HEAD, or the last of the settings when the file is already gone from
  * there: that is the name it is recognised by in the report. */
 export function appFileAt(i) {
   const f = appData.files[i];
   return f.path === null ? f.paths[0] : f.path;
+}
+
+/* The files of one category, in the order of the data: a category is a group of files as the engine named it
+ * (`category`), and the record, the boxes of the panel and their fields all ask for that group here rather than walking
+ * the files a second time. */
+export function appCatOf(key) {
+  const idx = [];
+  appData.files.forEach((f, i) => { if (f.category === key) idx.push(i); });
+  return idx;
 }
 
 /* The passport's fingerprint: an identifying mark of a record rather than protection against forgery, so 32 bits are
@@ -88,34 +110,88 @@ function appHash(text) {
   return (h >>> 0).toString(16);
 }
 
-/* The report's passport: the tool's name, the data schema, the artifact's path, the title and the column labels in the
- * report's order. It is what tells one report from another — the record's key is chosen by it, so a choice made in
- * someone else's report is not picked up. The package version and the top of the history are absent on purpose: this is
- * the same report — updating the tool does not change what a column means, while a grown history is the very history the
- * reader comes back to.
+/* The report's passport: the tool's name, the data schema, the artifact's path, the title and the oldest row of the
+ * history. It is what tells one report from another — the record's key is chosen by it, so a choice made in someone
+ * else's report is not picked up — and it is what makes the memory the report's rather than a build of it: every later
+ * build of the same report counts the same value and finds the same choice.
+ *
+ * The first four are what the report says about itself, and they are the same in a report of another project (both the
+ * artifact's path and the title are defaults there, and all `file://` pages share one memory), which is what the fifth
+ * is for: the oldest row is a commit of this history, the same in every clone and every build, and the one commit the
+ * history never moves — rows are built from the oldest commit up, so a commit appends rows and leaves that one where it
+ * stands.
+ *
+ * The package version and the top of the history are absent on purpose: updating the tool does not change what a column
+ * means, while a grown history is the very history the reader comes back to.
+ *
+ * The columns were named here once, and they are what does not belong here at all: their labels and their order move
+ * with the numbers — a project without settings pinned derives the columns on every run, ordered by size within an
+ * extension (`src/project.js`), so every commit that grew or shrank a file gave the report another passport and left the
+ * reader's choice at the old address. What a record holds are names, and a name the report no longer has means nothing
+ * (`appApply`), so the columns have nothing to guard in the passport.
  *
  * Counted once per document: it is a constant of the report, which depends on nothing the reader can change, and every
  * click asks for it (the key of the memory and the passport of the record). A second count would be a second answer
- * waiting to happen, and the labels it reads do not change while the page is open. */
+ * waiting to happen, and the block it reads does not change while the page is open. */
 let appPassportValue = null;
 function appPassport() {
   if (appPassportValue === null) {
+    const oldest = appData.rows.length === 0 ? '' : appData.rows[0].sha;
     appPassportValue = appHash([appData.tool.name, appData.schema, appData.report.artifact,
-      appData.report.title, appData.files.map((f) => f.label).join('|')].join('\n'));
+      appData.report.title, oldest].join('\n'));
   }
   return appPassportValue;
 }
 
-/* One record of the choice: only what is switched off is kept, by name. "Switched on" and "no record" are the same
- * state, hence `null` rather than an empty record — turning every checkbox back on removes the record instead of leaving
- * a trace indistinguishable from a choice. */
+/* The addresses an earlier naming left in the browser: every one of them belonged to a single build of a report, and no
+ * report ever looks under them again — the memory is read under the address of the report's identity alone. A browser
+ * that has lived through a long history holds one such record per commit, so they go away, once, when a report of this
+ * release is opened.
+ *
+ * What is swept is the mark of the form rather than a claim about whose record it is: the older address was counted from
+ * the data, so the record under it cannot be attributed to a report — hence a memory left by an older release in this
+ * browser goes too, and it is one of a report that was not rebuilt since its reader last clicked (that release moved the
+ * address at the next build itself, leaving the memory behind). What this release writes is left alone: under it lies
+ * this report's memory and another report's, and the two are told apart by the identity rather than by the form. */
+function appSweep() {
+  try {
+    for (let i = window.localStorage.length - 1; i >= 0; i--) {
+      const key = window.localStorage.key(i);
+      if (key !== null && key.indexOf(APP_STORE) === 0 && key.indexOf(APP_FORM) !== 0) {
+        window.localStorage.removeItem(key);
+      }
+    }
+  } catch (_e) {
+    /* There is no memory (the browser grants this page none): there is nothing to sweep either. */
+  }
+}
+
+/* One record of the choice: the facts of the groups where the reader decided by groups, the names of the files where he
+ * decided one by one, and only what is switched off.
+ *
+ * A category whose box is wholly off — or wholly on — is written down as that fact rather than as the state of every
+ * file in it: `cats` names the group and says where it stands, so a file that joins the category later is switched with
+ * it, which is exactly what the reader asked for when he switched the group, and the record does not grow with the
+ * project. A category in the third state cannot speak for his choice — the choice was made file by file — and the files
+ * he switched off go into the record by name (`files`), as they did before this chapter knew categories; such a category
+ * is **absent** from `cats`, which is how the record distinguishes "a group fact" from "no group fact to state".
+ *
+ * "Switched on" and "no record" are the same state, hence `null` rather than an empty record — turning every checkbox
+ * back on removes the record instead of leaving a trace indistinguishable from a choice. */
 function appRecord() {
   const metrics = {};
+  const cats = {};
   const files = {};
   appData.metrics.forEach((m) => { if (!appView.metrics[m.key]) metrics[m.key] = false; });
-  appData.files.forEach((_f, i) => { if (!appView.files[i]) files[appFileAt(i)] = false; });
-  const empty = Object.keys(metrics).length === 0 && Object.keys(files).length === 0;
-  return empty ? null : { v: 1, passport: appPassport(), metrics: metrics, files: files };
+  appData.categories.forEach((c) => {
+    const idx = appCatOf(c.key);
+    const on = idx.filter((i) => appView.files[i] === true).length;
+    if (on === idx.length || on === 0) { cats[c.key] = on === idx.length; return; }
+    idx.forEach((i) => { if (appView.files[i] !== true) files[appFileAt(i)] = false; });
+  });
+  const empty = Object.keys(metrics).length === 0 && Object.keys(files).length === 0
+    && Object.keys(cats).every((key) => cats[key] === true);
+  return empty ? null : { v: 1, passport: appPassport(), metrics: metrics, cats: cats, files: files };
 }
 
 // Whether a record is ours and of the right format — one rule for the memory and the address alike.
@@ -232,13 +308,24 @@ export function appRead() {
   return appLoad(appKey);
 }
 
-/* Applying goes by name: a file is recognised by its path, a metric by its key. A name the report does not hold matches
- * nothing (a column was pointed at another path, a metric was dropped from the settings), while files and metrics that
- * appeared stay switched on — the way someone opening the page for the first time sees them. */
+/* Applying goes by name: a file is recognised by its path, a metric by its key, a category by the key the engine gave
+ * it. A name the report does not hold matches nothing (a column was pointed at another path, a metric was dropped from
+ * the settings), while files, categories and metrics that appeared stay switched on — the way someone opening the page
+ * for the first time sees them.
+ *
+ * A category's fact is applied to the files of that category as they are now, and the names are applied after it: the
+ * file-by-file decision is the finer one and stands last, and a record of an earlier release — which knew no categories
+ * and wrote only names — is applied by its names exactly as it was. */
 export function appApply(rec) {
   const metrics = rec.metrics || {};
+  const cats = rec.cats || {};
   const files = rec.files || {};
   appData.metrics.forEach((m) => { if (metrics[m.key] === false) appView.metrics[m.key] = false; });
+  appData.categories.forEach((c) => {
+    const on = cats[c.key];
+    if (on !== true && on !== false) return;
+    appCatOf(c.key).forEach((i) => { appView.files[i] = on; });
+  });
   appData.files.forEach((_f, i) => { if (files[appFileAt(i)] === false) appView.files[i] = false; });
 }
 

@@ -14,14 +14,6 @@ import { appPanel, appPanelAll, appPanelState } from './panel.js';
 // The table's window: made once, at the first drawing.
 let appCache = null;
 
-/* The note under the table: what a row is and how the report was made. It does not depend on the choice, so it is
- * written once — with the table rather than with every drawing of it. */
-function appNote() {
-  document.getElementById('note').textContent = appUi.note
-    .replace('{rows}', appData.rows.length)
-    .replace('{command}', appData.report.fixCommand);
-}
-
 /* What the empty states are told: how many metrics and how many files are left. The window stands there in either
  * case — the words are about what is shown. */
 export function appCounts() {
@@ -76,7 +68,6 @@ export function appSwitchMetric() {
 function appFirst() {
   appPanel();
   appCache = appTable(document.getElementById('grid'));
-  appNote();
   appPaint();
 }
 

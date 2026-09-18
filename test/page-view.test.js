@@ -25,8 +25,8 @@ import { PAGE_KEYS, PAGE_PARTS, pagePayload, squeezedCss, squeezedJs } from '../
 import { PAGE_CSS, TABLE_CSS } from '../src/css.js';
 import { ROOT } from '../tools/harness.js';
 import {
-  allCells, catInput, derivedSrc, dirInput, fileBox, gridRows, metricBox, nowCells, nowRow, nowTotal, pageBlock,
-  pageMath, pageReady, panelInputs, rowNumbers, toggleBox, where
+  allCells, catInput, derivedSrc, dirInput, fileBox, gridRows, metricBox, metricTitle, nowCells, nowRow, nowTotal,
+  pageBlock, pageMath, pageReady, panelInputs, rowNumbers, toggleBox, where
 } from '../tools/page-harness.js';
 
 const { data, pageText, openPage } = pageReady('view');
@@ -73,14 +73,15 @@ test('the computational part of the page is the engine’s code, not a copy', ()
    * back by its own road; the first is fixed here, the second is better not to do at all. The
    * chapters are read as they reach the page — with the module syntax stripped. */
   assert.deepEqual(defined('\n' + stripModules(appSrc)).sort(), [
-    'appAll', 'appApply', 'appBegin', 'appBoot', 'appBox', 'appBytes', 'appCaption', 'appCatState',
+    'appAll', 'appApply', 'appBegin', 'appBoot', 'appBox', 'appBytes', 'appCaption', 'appCatOf', 'appCatState',
     'appCell', 'appCells', 'appChanged', 'appCommit', 'appCounts', 'appDecode', 'appDir', 'appDirHead', 'appDirPath',
     'appDirState', 'appEl', 'appFileAt', 'appFileBox', 'appFirst', 'appFoldBox', 'appFoldRead',
     'appFoldSet', 'appHash', 'appHead', 'appHeadNew', 'appJoined', 'appKeep', 'appLeaf', 'appLeafAt', 'appLeaves',
-    'appLinkRead', 'appLinkUse', 'appList', 'appLoad', 'appName', 'appNode', 'appNote', 'appNotice',
+    'appLinkRead', 'appLinkUse', 'appList', 'appLoad', 'appName', 'appNode', 'appNotice',
     'appNum', 'appOffBox', 'appOrder', 'appPaint', 'appPanel', 'appPanelAll', 'appPanelState',
     'appPassport', 'appPlace', 'appRank', 'appReach', 'appRead', 'appRecord', 'appRecordOk', 'appRow',
-    'appRowBoxes', 'appRowOf', 'appSpan', 'appState', 'appStep', 'appStrip', 'appSub', 'appSwitch', 'appSwitchGroup',
+    'appRowBoxes', 'appRowOf', 'appSpan', 'appState', 'appStep', 'appStrip', 'appSub', 'appSweep', 'appSwitch',
+    'appSwitchGroup',
     'appSwitchMetric', 'appTable', 'appText', 'appTree', 'appTreeList', 'appUnknown', 'appUnmeasuredBox',
     'appUnpack', 'appUnroll', 'appValue', 'appWindow', 'appWrite'
   ], 'the page’s shell started a function of its own: the computation has to live in the computational part');
@@ -206,14 +207,19 @@ test('the page marks no cell and judges no number, while the method stands in th
     .some((span) => span.hasAttribute('title'))).length, 0,
   'a cell explains a number the page did not count');
 
-  /* The way of counting is visible in the panel as text rather than only in a tooltip: the dictionary and the
-   * minifier are chosen by the run's settings, and the reader has nothing on the page to switch them with. */
-  const about = [...doc.querySelectorAll('#panel .about')].map((p) => p.textContent);
-  assert.equal(about.length, data.metrics.length, 'there is no caption of the method under the metrics');
-  data.metrics.forEach((m) => {
-    assert.ok(about.some((line) => line.indexOf(m.method) >= 0),
-      'the method of the metric ' + m.key + ' is not the one: ' + about.join(' | '));
+  /* What a metric is and the way of counting it is told in the tooltip of its own switch: the dictionary and the
+   * minifier are chosen by the run's settings, and the reader has nothing on the page to switch them with — while the
+   * lines under the switches that said the same in words took the room beside the numbers. */
+  const metricTitles = data.metrics.map((m) => metricTitle(doc, m.label));
+  assert.equal(metricTitles.length, data.metrics.length, 'a metric has no tooltip of its own');
+  data.metrics.forEach((m, i) => {
+    assert.ok(metricTitles[i].indexOf(m.method) >= 0,
+      'the method of the metric ' + m.key + ' is not in the tooltip of its own switch: ' + metricTitles[i]);
+    assert.ok(metricTitles[i].indexOf(m.note) >= 0,
+      'what the metric ' + m.key + ' is is not in the tooltip of its own switch: ' + metricTitles[i]);
   });
+  assert.equal(doc.querySelectorAll('#panel .about').length, 0,
+    'the lines under the switches are back: the way of counting lives in the tooltip of the box');
   /* No legend under the file tree: it took the room beside the numbers, while its meaning belongs to what it explains —
    * the colour names a number's sign, the way of counting stands under the switches, and the mark of a gap lives in the
    * cell's own text. */

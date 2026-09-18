@@ -1,5 +1,5 @@
 import { appEl, appBox, appOffBox } from './dom.js';
-import { appData, appUi, appView, appFileAt, appFoldSet, appMeasured } from './state.js';
+import { appCatOf, appData, appUi, appView, appFileAt, appFoldSet, appMeasured } from './state.js';
 
 /* Only a file sets a file's checkbox: both a category and a folder in the tree are ways to set the same checkboxes as
  * a group and keep no state of their own. Otherwise one and the same decision would live in two places and drift
@@ -188,8 +188,12 @@ export function appPanel() {
   const metrics = appEl('fieldset');
   metrics.appendChild(appEl('legend', null, appUi.metrics));
   const mrow = appEl('div', 'row');
+  /* What a metric is and how its number was obtained stand in one place: the tooltip of the box that switches it. The
+   * token dictionary and the way of compression come from the settings of the run, and the page has nothing to switch
+   * them with, so the reader has to know with what he is counting — while the lines that said it in words under the
+   * switches took the room beside the numbers. */
   appData.metrics.forEach((m) => {
-    const box = appBox(m.label, m.note, appView.metrics[m.key], (e) => {
+    const box = appBox(m.label, m.note + ' — ' + appUi.methodLabel + ' ' + m.method, appView.metrics[m.key], (e) => {
       appView.metrics[m.key] = e.target.checked;
       appSwitchMetric();
     }, 'metric');
@@ -197,12 +201,6 @@ export function appPanel() {
     mrow.appendChild(box);
   });
   metrics.appendChild(mrow);
-  /* What produced each number is visible rather than hidden in a tooltip: the token dictionary and the way of
-   * compression are chosen by the settings of the run, the page has nothing to switch them with, and the reader needs
-   * to know this without pointing a mouse. */
-  appData.metrics.forEach((m) => {
-    metrics.appendChild(appEl('p', 'about', m.label + ' — ' + appUi.methodLabel + ' ' + m.method));
-  });
   panel.appendChild(metrics);
 
   const files = appEl('fieldset', 'files');
@@ -211,8 +209,7 @@ export function appPanel() {
    * in the wide layout, which is where the panel scrolls). */
   const cats = appEl('div', 'row cats');
   appData.categories.forEach((cat) => {
-    const idx = [];
-    appData.files.forEach((f, i) => { if (f.category === cat.key) idx.push(i); });
+    const idx = appCatOf(cat.key);
     const box = appBox(cat.label, appUi.all + ' · ' + cat.label, idx.every((i) => appView.files[i]),
       (e) => appSwitchGroup(idx, e.target.checked), 'all');
     appFields.cat[cat.key] = box.querySelector('input');
@@ -246,19 +243,14 @@ function appDirState(path) {
   input.indeterminate = on > 0 && on < boxes.length;
 }
 
-/* A category's field from its files — the same rule, taken from the data: a category's files are named by the
- * category itself (`category`), and the boxes of the tree are a different view of the same files. */
+/* A category's field from its files — the same rule, taken from the data: a category's files are named by the category
+ * itself (`appCatOf`), and the boxes of the tree are a different view of the same files. */
 function appCatState(key) {
-  let all = 0;
-  let on = 0;
-  appData.files.forEach((f, i) => {
-    if (f.category !== key) return;
-    all++;
-    if (appView.files[i] === true) on++;
-  });
+  const idx = appCatOf(key);
+  const on = idx.filter((i) => appView.files[i] === true).length;
   const input = appFields.cat[key];
-  input.checked = on === all;
-  input.indeterminate = on > 0 && on < all;
+  input.checked = on === idx.length;
+  input.indeterminate = on > 0 && on < idx.length;
 }
 
 /* The folders a file lies in: the prefixes of its path, from the root down. The tree's folders are exactly those

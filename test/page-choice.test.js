@@ -1,9 +1,12 @@
 /* The reader's choice: the memory of it in the browser, and the link that carries somebody else's.
  *
- * The memory is the browser rather than a request, and it follows one rule: a record is bound to the
- * report's passport and lives in storage under a key of its own. Hence what is checked here in a real DOM (jsdom): a
- * further visit returns the same choice and the same numbers, while switching everything back removes the record; a
- * foreign, outdated or broken record is not applied, and a foreign name switches off nothing of someone else's.
+ * The memory is the browser rather than a request, and it follows one rule: one record per report, under an address
+ * counted from what the report is rather than from what is written in it (`appPassport`). Hence what is checked here in a
+ * real DOM (jsdom): a further visit returns the same choice and the same numbers — and so does a later build of the same
+ * report, which is what the reader meets after every commit — while switching everything back removes the record; a
+ * foreign, outdated or broken record is not applied, and a foreign name switches off nothing of someone else's; a group
+ * decided as a group is remembered as the group's own fact, a file that joined it later switched with it; and the
+ * addresses an earlier naming of the passport left in the browser are swept.
  *
  * **The address stays clean.** The page writes the choice into the browser's memory and nowhere else: a report opened
  * from disk keeps the address it was opened with, and nothing of what a reader switches lands in the tab's title bar.
@@ -27,10 +30,32 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { totalsOf, valueParts } from '../src/size-table.js';
 import {
-  allCells, fileBox, linkTo, metricBox, nowCells, nowTotal, pageReady, settled, stored, toggleBox, where
+  allCells, catInput, fileBox, linkTo, metricBox, nowCells, nowTotal, openPage as openText, pageFrom, pageReady,
+  settled, stored, toggleBox, where
 } from '../tools/page-harness.js';
 
-const { data, openPage } = pageReady('choice');
+/* The address of the memory, as `src/page/state.js` writes it: the tool's namespace, the form of the address and the
+ * report's passport. A check looks for the record where the page left it rather than inventing a name of its own. */
+const APP_KEY = 'size-report:2:';
+
+const { data, pageText, openPage } = pageReady('choice');
+
+/* The report after one commit: a file of the “docs” category joined the project and the columns stand in another order.
+ * Both are what a rebuild really brings — a project without pinned columns derives them on every run, and the order the
+ * page holds them in follows the numbers (`src/page/table.js`) — and neither may cost the reader his choice. The file is
+ * paired with its cells in every row and in the state at HEAD, since the report holds the two by index. */
+function rebuilt(data) {
+  const next = JSON.parse(JSON.stringify(data));
+  const cell = { raw: 0, min: 0 };
+  next.files.push({ label: '0022-заметка.md', path: 'заметки/0022-заметка.md', paths: ['заметки/0022-заметка.md'],
+    category: 'docs', categoryBy: 'auto' });
+  next.now.push(cell);
+  next.rows.forEach((row) => row.values.push(cell));
+  next.files.push(next.files.shift());
+  next.now.push(next.now.shift());
+  next.rows.forEach((row) => row.values.push(row.values.shift()));
+  return next;
+}
 
 const topRaw = (off) => totalsOf(data.now, ['raw'], off).raw;
 
@@ -43,7 +68,7 @@ async function ownerChoice(pick) {
   toggleBox(doc, (pick === undefined ? metricBox : pick)(doc), false);
   const own = stored(owner);
   return { owner: owner, doc: doc, own: own,
-    passport: Object.keys(own)[0].slice('size-report:'.length) };
+    passport: Object.keys(own)[0].slice(APP_KEY.length) };
 }
 
 /* A link to a choice: the record the memory holds, in the very shape the address carries it. The page no longer
@@ -113,16 +138,19 @@ test('the memory of a choice: a foreign or broken record is not applied', async 
   const key = Object.keys(saved)[0];
   const rec = JSON.parse(saved[key]);
 
-  /* The record explains itself: the format's version, the passport (which is also the key's name,
-   * or the record would be looked for where it does not lie) and only what is off, by name. */
+  /* The record explains itself: the format's version, the passport (which is also the address' tail,
+   * or the record would be looked for where it does not lie) and only what is off. */
   assert.equal(rec.v, 1, 'the record did not declare the format version');
-  assert.equal(rec.passport, key.slice('size-report:'.length),
+  assert.equal(rec.passport, key.slice(APP_KEY.length),
     'the record’s key and its passport diverged');
   assert.deepEqual(rec.metrics, { min: false }, 'the record did not name the switched-off metric');
   assert.deepEqual(rec.files, { 'src/code.js': false }, 'the record did not name the switched-off file');
+  /* The file was switched one by one, so its category is in the third state and stands nowhere in the record — while the
+   * groups the reader never touched are written down as the facts they are: wholly on. */
+  assert.deepEqual(rec.cats, { docs: true, chore: true }, 'the record did not keep the groups as the facts they are');
 
-  /* A foreign report: its record lies under its own key and has to stay whole. */
-  const foreignKey = 'size-report:2f1a';
+  /* A foreign report: its record lies under its own passport and has to stay whole. */
+  const foreignKey = APP_KEY + '2f1a';
   const other = await openPage({ [foreignKey]: JSON.stringify({ v: 1, passport: '2f1a',
     metrics: { min: false }, files: { 'src/code.js': false } }) });
   assert.equal(nowCells(other.window.document), allCells(data), 'another report’s choice was applied to this one');
@@ -148,8 +176,57 @@ test('the memory of a choice: a foreign or broken record is not applied', async 
   assert.equal(fileBox(gd, 'src/code.js').checked, false, 'the named file was not applied');
   assert.equal(fileBox(gd, 'src/empty.js').checked, true, 'a name that vanished switched off a file of someone else');
   assert.deepEqual(JSON.parse(stored(ghost)[key]),
-    { v: 1, passport: rec.passport, metrics: { min: false }, files: { 'src/code.js': false } },
+    { v: 1, passport: rec.passport, metrics: { min: false }, cats: { docs: true, chore: true },
+      files: { 'src/code.js': false } },
     'the page did not bring the record back to what the report holds');
+});
+
+/* The memory belongs to the report rather than to a build of it: the report is rebuilt after every commit, and what a
+ * rebuild changes lies inside it while the reader's choice must not. Two builds of one report stand here — the artifact
+ * as it was built and the same report after a commit — and what one remembers the other brings back, at the same
+ * address; a file that joined the category the reader switched off is switched off with it. */
+test('the memory of a choice: a rebuilt report brings the same choice back', async () => {
+  const docs = data.categories.find((c) => c.key === 'docs');
+  const first = await openText(pageText);
+  const doc = first.window.document;
+  toggleBox(doc, catInput(doc, docs), false);
+  toggleBox(doc, metricBox(doc), false);
+  const saved = stored(first);
+  assert.equal(Object.keys(saved).length, 1, 'the choice is not written as a single record');
+
+  const after = await openText(pageFrom(rebuilt(data)), saved);
+  const ad = after.window.document;
+  assert.deepEqual(stored(after), saved,
+    'a rebuild of the report gave the choice another address or another record: ' + JSON.stringify(stored(after)));
+  assert.equal(catInput(ad, docs).checked, false,
+    'the category switched off before the commit came back on after it');
+  assert.equal(metricBox(ad).checked, false, 'the metric switched off before the commit came back on after it');
+  assert.equal(fileBox(ad, 'заметки/0022-заметка.md').checked, false,
+    'a file that joined the category switched off came back switched on');
+  assert.equal(fileBox(ad, 'src/code.js').checked, true,
+    'the rebuild switched off a file the reader never touched');
+});
+
+/* An address of an earlier release is dead weight rather than a memory: the identity behind it counted the data, so
+ * every build of a report had an address of its own — a browser that has lived through a history holds one per commit.
+ * They go away when a report of this release is opened, while a record of another report of this release stays: what is
+ * swept is the mark of the address' form, not a guess about whose record lies under it. */
+test('the memory of a choice: the addresses of an earlier release are swept', async () => {
+  const legacy = 'size-report:7b3288ef';
+  const dom = await openPage({
+    [legacy]: JSON.stringify({ v: 1, passport: '7b3288ef', metrics: { min: false }, files: {} }),
+    [legacy + ':tree']: JSON.stringify({ v: 1, passport: '7b3288ef', open: { src: true } })
+  });
+  assert.deepEqual(stored(dom), {},
+    'the addresses of an earlier release outlived the report that should have swept them');
+
+  const foreign = APP_KEY + '2f1a';
+  const other = await openPage({
+    [legacy]: JSON.stringify({ v: 1, passport: '7b3288ef', metrics: { min: false }, files: {} }),
+    [foreign]: JSON.stringify({ v: 1, passport: '2f1a', metrics: { min: false }, cats: { docs: false } })
+  });
+  assert.deepEqual(Object.keys(stored(other)), [foreign],
+    'a record of another report of this release was swept with the addresses of an earlier one');
 });
 
 /* A report opened from disk keeps its address: the page writes the choice into the browser's memory and never into the
