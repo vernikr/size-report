@@ -34,8 +34,7 @@ body {
 h1 { margin: 0 0 9px; font-size: 21px; font-weight: 650; letter-spacing: -.012em; }
 
 /* The panel of choices is a card: it separates the controls from the data and does not merge with the table that begins
- * below. The report's heading opens it — the page has no band above the numbers, and the title belongs where the file it
- * names is read from (see the markup in `src/page/build.js`). */
+ * below. The report's heading opens it: the page has no band above the numbers (the markup is in `src/page/build.js`). */
 .panel {
   margin: 0 0 var(--gap);
   padding: 12px 14px 13px;
@@ -164,9 +163,8 @@ h1 { margin: 0 0 9px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
  * (`src/page/build.js`), and adding nodes to it for the sake of styling would mean changing the page's shape in two places
  * instead of one. There are three rows, named by subject: the message about a link, the **working row** and the empty
  * state — while the panel of choices spans them all in the left column, its heading inside it. Only the working row
- * stretches — the table gets all the remaining height and the panel no more than that; the panel's own height is not
- * "whatever came out" (it would push the table off the screen) but that same working row, inside which it scrolls: a file
- * list longer than the window is the usual case.
+ * stretches: the table gets all the remaining height and the panel no more than that; the panel's own height is not
+ * "whatever came out" (it would push the table off the screen) but that same working row, inside which it scrolls.
  *
  * The threshold of 900px is the same as the adaptations' below: one border between "wide" and "narrow", or the page would
  * be left with no rule at all between two thresholds. */
@@ -187,7 +185,7 @@ h1 { margin: 0 0 9px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
   #shell { grid-area: 2 / 2 / 3 / 3; }
   #state { grid-area: 3 / 2 / 4 / 3; align-self: start; }
   /* The working row runs the full height, as the table does: the panel ends where it ends. The panel scrolls rather than the
-   * page, and its top padding is gone: the heading carries that room instead, and it travels away with the list, while the
+   * page, and its top padding is gone: the heading carries that room instead and travels away with the list, while the
    * sticky row of categories stands flush with the card's edge rather than under a band of passing rows. */
   .panel { grid-area: 1 / 1 / -1 / 2; min-height: 0; margin-bottom: 0; padding-top: 0; overflow: auto; }
   .panel h1 { padding-top: 12px; }

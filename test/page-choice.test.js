@@ -1,12 +1,11 @@
 /* The reader's choice: the memory of it in the browser, and the link that carries somebody else's.
  *
  * The memory is the browser rather than a request, and it follows one rule: one record per report, under an address
- * counted from what the report is rather than from what is written in it (`appPassport`). Hence what is checked here in a
- * real DOM (jsdom): a further visit returns the same choice and the same numbers — and so does a later build of the same
- * report, which is what the reader meets after every commit — while switching everything back removes the record; a
- * foreign, outdated or broken record is not applied, and a foreign name switches off nothing of someone else's; a group
- * decided as a group is remembered as the group's own fact, a file that joined it later switched with it; and the
- * addresses an earlier naming of the passport left in the browser are swept.
+ * counted from the report's identity rather than from its data (`appPassport`). Hence what is checked here in a real DOM
+ * (jsdom): a further visit returns the same choice and the same numbers, and so does the report rebuilt after a commit;
+ * switching everything back removes the record; a foreign, outdated or broken record is not applied, and a foreign name
+ * switches off nothing of someone else's; a group decided as a group is remembered as the group's own fact, a file that
+ * joined it later switched with it; and an address of any other form of the passport is swept.
  *
  * **The address stays clean.** The page writes the choice into the browser's memory and nowhere else: a report opened
  * from disk keeps the address it was opened with, and nothing of what a reader switches lands in the tab's title bar.
@@ -181,10 +180,10 @@ test('the memory of a choice: a foreign or broken record is not applied', async 
     'the page did not bring the record back to what the report holds');
 });
 
-/* The memory belongs to the report rather than to a build of it: the report is rebuilt after every commit, and what a
- * rebuild changes lies inside it while the reader's choice must not. Two builds of one report stand here — the artifact
- * as it was built and the same report after a commit — and what one remembers the other brings back, at the same
- * address; a file that joined the category the reader switched off is switched off with it. */
+/* The memory belongs to the report rather than to a build of it: a rebuild changes what lies inside the report and never
+ * the reader's choice. Two builds of one report stand here — the artifact as it was built and the same report after a
+ * commit — and what one remembers the other brings back, at the same address; a file that joined the category the reader
+ * switched off comes back switched off with it. */
 test('the memory of a choice: a rebuilt report brings the same choice back', async () => {
   const docs = data.categories.find((c) => c.key === 'docs');
   const first = await openText(pageText);
@@ -207,10 +206,9 @@ test('the memory of a choice: a rebuilt report brings the same choice back', asy
     'the rebuild switched off a file the reader never touched');
 });
 
-/* An address of an earlier release is dead weight rather than a memory: the identity behind it counted the data, so
- * every build of a report had an address of its own — a browser that has lived through a history holds one per commit.
- * They go away when a report of this release is opened, while a record of another report of this release stays: what is
- * swept is the mark of the address' form, not a guess about whose record lies under it. */
+/* An address of another form is dead weight rather than a memory: the identity behind it is counted from the data, so a
+ * history leaves one per build. They go when a report of this form is opened, while a record of another report of the
+ * same form stays: what is swept is the mark of the form, not a guess about whose record lies under it. */
 test('the memory of a choice: the addresses of an earlier release are swept', async () => {
   const legacy = 'size-report:7b3288ef';
   const dom = await openPage({

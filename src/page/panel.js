@@ -188,10 +188,9 @@ export function appPanel() {
   const metrics = appEl('fieldset');
   metrics.appendChild(appEl('legend', null, appUi.metrics));
   const mrow = appEl('div', 'row');
-  /* What a metric is and how its number was obtained stand in one place: the tooltip of the box that switches it. The
-   * token dictionary and the way of compression come from the settings of the run, and the page has nothing to switch
-   * them with, so the reader has to know with what he is counting — while the lines that said it in words under the
-   * switches took the room beside the numbers. */
+  /* What a metric is and how its number was obtained stand in the tooltip of the box that switches it: the dictionary
+   * and the minifier come from the run's settings, so the reader has to see with what he is counting, and the box is
+   * where he looks. */
   appData.metrics.forEach((m) => {
     const box = appBox(m.label, m.note + ' — ' + appUi.methodLabel + ' ' + m.method, appView.metrics[m.key], (e) => {
       appView.metrics[m.key] = e.target.checked;

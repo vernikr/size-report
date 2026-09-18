@@ -100,9 +100,8 @@ export function pageHtml(tmp, name) {
   return fs.readFileSync(file, 'utf8');
 }
 
-/* A page assembled from given data instead of built from the fixture's history: a check about the memory of a choice
- * needs two builds of one report — the report as it stands and the report after a commit — and only the data tells the
- * two apart. The language is the fixture's own, taken from the settings rather than from a check's guess. */
+/* A page assembled from given data instead of built from the fixture's history: a check that needs two builds of one
+ * report has only the data to tell them apart. The language is the fixture's own rather than a check's guess. */
 export function pageFrom(data) {
   return buildPage(data, JSON.parse(fs.readFileSync(CONFIG, 'utf8')));
 }

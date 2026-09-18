@@ -197,8 +197,8 @@ export function pagePayload(data) {
     schema: 2,
     tool: data.tool,
     /* The report's own words are the ones the page reads: `heading` is the artifact's `<h1>`, built before the block,
-     * `journal` is null today, and `fixCommand` was quoted by the note under the table, which the page no longer has —
-     * the page builds no heading, prints no journal and suggests no command. */
+     * `journal` is null today, and `fixCommand` belongs to a refusal and to the contract rather than to the page, which
+     * builds no heading, prints no journal and suggests no command. */
     report: {
       locale: data.report.locale,
       title: data.report.title,
@@ -238,11 +238,10 @@ export function pagePacked(text) {
 /* The report's page is one file: the data lies in it, the script is pasted in, there are no external references. Hence
  * it opens with a double click and works without a network.
  *
- * The page's chrome is the panel and the table, and nothing stands above the numbers: the report's heading opens the
- * panel (the one place that holds the reader's own controls) rather than a band of its own, and neither the tool, nor the
- * version, nor the artifact's path is printed anywhere — the file is opened from a directory whose name already says
- * where it lies. The panel's card is the markup's and the fields inside it are the script's: `#panel` is emptied and
- * rebuilt on every opening, which is why the heading is the card's other child rather than one more field. */
+ * The page's chrome is the panel and the table, and nothing stands above the numbers: the heading opens the panel — the
+ * one place holding the reader's own controls — and neither the tool, nor its version, nor the artifact's path is printed
+ * anywhere, the file lying in a directory whose name already says where. The panel's card is the markup's and its fields
+ * are the script's: `#panel` is emptied and rebuilt on every opening, hence the heading is the card's other child. */
 export function pageHtml(data, cfg) {
   const loc = LOCALES[cfg.locale];
   return '<!doctype html>\n<html lang="' + esc(loc.html) + '">\n<head>\n<meta charset="utf-8">\n'

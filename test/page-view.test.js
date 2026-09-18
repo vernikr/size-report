@@ -207,9 +207,8 @@ test('the page marks no cell and judges no number, while the method stands in th
     .some((span) => span.hasAttribute('title'))).length, 0,
   'a cell explains a number the page did not count');
 
-  /* What a metric is and the way of counting it is told in the tooltip of its own switch: the dictionary and the
-   * minifier are chosen by the run's settings, and the reader has nothing on the page to switch them with — while the
-   * lines under the switches that said the same in words took the room beside the numbers. */
+  /* What a metric is and how it was counted is told in the tooltip of its own switch: the dictionary and the minifier
+   * come from the run's settings, and the box is where the reader looks. */
   const metricTitles = data.metrics.map((m) => metricTitle(doc, m.label));
   assert.equal(metricTitles.length, data.metrics.length, 'a metric has no tooltip of its own');
   data.metrics.forEach((m, i) => {
