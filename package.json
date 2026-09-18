@@ -65,7 +65,7 @@
     "report"
   ],
   "devDependencies": {
-    "@vernikr/size-report": "2.9.0",
+    "@vernikr/size-report": "2.9.1",
     "c8": "10",
     "dependency-cruiser": "17",
     "eslint": "^9.18.0",
