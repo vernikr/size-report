@@ -9,7 +9,7 @@
  * than a single Node run.
  */
 
-import { test } from 'node:test';
+import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -18,6 +18,7 @@ import { moduleError, parseMode } from '../src/parse.js';
 import { ROOT, tempDir } from '../tools/harness.js';
 
 const tmp = tempDir('guard');
+after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 /* Samples — one per fork of the parsing: a module, a script, a module with a top-level `await`, an empty
  * module, a broken module, a broken statement, an unclosed template and markup right in `.js` (which the

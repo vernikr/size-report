@@ -5,7 +5,7 @@
  * columns get their width, whether a number is clipped, whether the header and the commit column still stick, and what
  * the layout of this very table costs under one algorithm and the other.
  *
- *   node probes/archive/step-09-layout.mjs before=/tmp/before-09.html after=/tmp/after-09.html
+ *   node probes/step-09-layout.mjs before=/tmp/before-09.html after=/tmp/after-09.html
  *
  * Chrome is expected at the debug port (`--remote-debugging-port=9222`). Every artifact is measured in a page of its
  * own: the first layout is timed right after the page's build, the CDP counters of one load are read (they are deltas

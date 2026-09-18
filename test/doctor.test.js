@@ -15,7 +15,7 @@
  * The cost is the seven states, each a process run and a pass over the history.
  */
 
-import { test } from 'node:test';
+import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -25,6 +25,7 @@ import {
 } from '../tools/harness.js';
 
 const tmp = tempDir('doctor');
+after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 const PLAIN = sharedClone('plain', tmp);
 const OFF = { [NO_OPTIONAL]: '1' };

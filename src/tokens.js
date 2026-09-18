@@ -28,7 +28,7 @@ export const CHARS_PER_TOKEN = 3;
  * and the tokenizer would split them into anything at all, giving a random number. The list
  * exists so that the metric says this in words instead of passing such a count off as counted.
  * SVG is deliberately not here: it is text, and its tokens are meaningful. */
-const BINARY_EXTS = [
+export const BINARY_EXTS = [
   '.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.avif',
   '.woff', '.woff2', '.ttf', '.otf', '.eot',
   '.pdf', '.zip', '.gz', '.tar', '.mp4', '.mp3', '.mov'

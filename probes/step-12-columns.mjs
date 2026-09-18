@@ -16,7 +16,7 @@
  * 238 500 cells. They are a measurement of *this* table rather than a property of the tool.
  *
  *   open -na "Google Chrome" --args --remote-debugging-port=9222
- *   node probes/archive/step-12-columns.mjs before=/tmp/page-2.6.0.html after=/tmp/page-2.7.0.html
+ *   node probes/step-12-columns.mjs before=/tmp/page-2.6.0.html after=/tmp/page-2.7.0.html
  *
  * Chrome is expected at the debug port (`--remote-debugging-port=9222`). Read one page at a time: each round presses a
  * real button and the machine's drifting load must not line up with the build being measured.

@@ -18,7 +18,7 @@
  * while the advice has to refuse on the spot.
  */
 
-import { test } from 'node:test';
+import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -36,6 +36,7 @@ const BY_NAME_RE = new RegExp('(^|\\s)(?:npx|npm exec|yarn)\\s+'
   + PKG.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 
 const tmp = tempDir('module');
+after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 /* A module with a trap for the stripper inside: `//` in a URL is no comment — and that is the very
  * line the stripper breaks on once it stops understanding quotes. */

@@ -9,10 +9,10 @@
  * The witness is the platform's own — `contentvisibilityautostatechange`, whose `skipped` flag is the browser saying "I
  * am not laying this out". Rects are measured too, and deliberately: they were the first answer this probe gave, and
  * they said 217 of 217 rows were laid out, which would have looked like an argument *for* shipping the declaration.
- * Against the div control (`probes/archive/step-10-tables.mjs`) the rects are the false witness and the event is the true one.
+ * Against the div control (`probes/step-10-tables.mjs`) the rects are the false witness and the event is the true one.
  *
- *   node probes/archive/step-10-skip.mjs file=docs/size-report.html
- *   node probes/archive/step-10-tables.mjs       # where the property works at all, in this same Chrome
+ *   node probes/step-10-skip.mjs file=docs/size-report.html
+ *   node probes/step-10-tables.mjs       # where the property works at all, in this same Chrome
  *
  * Chrome is expected at the debug port (`--remote-debugging-port=9222`).
  */

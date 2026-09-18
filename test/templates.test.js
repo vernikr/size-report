@@ -10,7 +10,7 @@
  * the delivery is the business of `tools/pack-check.js`, where it is compared byte for byte.
  */
 
-import { test } from 'node:test';
+import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -27,6 +27,7 @@ const INSTALL_RE = new RegExp('^node node_modules/' + PKG_RE + '/bin/size\\.js\\
 const BY_NAME_RE = new RegExp('(^|\\s)(?:npx|npm exec|yarn)\\s+' + PKG_RE + '(\\s|$)');
 
 const tmp = tempDir('templates');
+after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 const TEMPLATES = path.join(ROOT, 'templates');
 const DRAFT = path.join(TEMPLATES, 'size-report.config.json');

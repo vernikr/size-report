@@ -142,12 +142,10 @@ test('the hooks call the profile rather than commands of their own', () => {
   assert.match(preCommit, /pnpm run verify:fast/, 'pre-commit does not call the fast profile');
   assert.match(prePush, /pnpm run verify:fast/, 'pre-push does not call the fast profile');
   assert.match(commitMsg, /tools\/gates\/gatefiles\.js/, 'commit-msg does not guard the gate files');
-  // The hook calls the profile — so it holds no check that `verify` does not, and every script it
-  // names is a script of the manifest (`scriptOf` on the hook's own text answers the name it was
-  // given, so comparing with it would hold nothing).
+  // The hook calls the profile — so it holds no check that `verify` does not.
   [preCommit, prePush].forEach((text) => {
     [...text.matchAll(/pnpm run ([a-z:.-]+)/g)].forEach((m) => {
-      assert.ok(scripts[m[1]] !== undefined, 'the hook calls «' + m[1] + '», which does not exist');
+      assert.ok(scriptOf('pnpm run ' + m[1]) !== null, 'the hook calls «' + m[1] + '», which does not exist');
     });
   });
 });

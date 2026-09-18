@@ -8,7 +8,7 @@
  * would no longer be the one the numbers were taken on.
  */
 
-import { test } from 'node:test';
+import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -18,6 +18,7 @@ import {
 } from '../tools/harness.js';
 
 const tmp = tempDir('parity');
+after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 const { text: goldenText, json: goldenJson } = golden();
 

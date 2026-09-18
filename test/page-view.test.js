@@ -334,16 +334,16 @@ test('the panel’s switches: one click target and a focus that is not lost', as
  * auto` is not honoured on a table row in this Chrome (153: a page of 200 `<tr>` in a scroll container reports 0 skipped,
  * while 200 plain `<div>` in the same box report 138), so a declaration here would be dead bytes in a report that
  * measures its own bytes — the answer was to build less (`src/page/table.js` says what was measured, and
- * `probes/archive/step-12-columns.mjs` how).
+ * `probes/step-12-columns.mjs` how).
  *
  * What is read is the styling **with its comments taken out** (`squeezedCss`, the same stripping the paste into the page
  * uses), so writing the reason down in `src/table.css` — the natural thing to do — does not redden this. A browser that
- * starts honouring the property on a plain grid is the reason to delete the check; `probes/archive/step-10-tables.mjs` is how
+ * starts honouring the property on a plain grid is the reason to delete the check; `probes/step-10-tables.mjs` is how
  * that is settled. */
 test('the styling declares no content-visibility: the property is dead where it was tried', () => {
   [['the shared', TABLE_CSS], ['the page’s own', PAGE_CSS]].forEach(([what, css]) => {
     assert.equal(/content-visibility\s*:/.test(squeezedCss(css)), false,
       what + ' styling declares content-visibility: Chrome 153 does not honour it here, so re-measure before it is '
-      + 'added (probes/archive/step-10-tables.mjs) rather than shipping a promise nothing keeps');
+      + 'added (probes/step-10-tables.mjs) rather than shipping a promise nothing keeps');
   });
 });

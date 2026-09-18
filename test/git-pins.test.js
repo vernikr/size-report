@@ -9,13 +9,14 @@
  * shows the pins work — by witness rather than by hope in the settings of the machine it ran on.
  */
 
-import { test } from 'node:test';
+import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT, commitAll, gitBare, gitConfig, gitIn, tempDir } from '../tools/harness.js';
 
 const tmp = tempDir('git-pins');
+after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 // Directories with real code: the engine, the entry point, the tools, the checks.
 const CODE = ['src', 'bin', 'tools', 'test'];

@@ -49,7 +49,7 @@ worth measuring before it is written into the styling.
 ## Where the property is dead: the answer to the open question (2026-09-17)
 
 Measured in Chrome 153, one page per variant, each with a single scroll box at the top — the geometry in which plain
-`<div>`s **are** skipped (`probes/archive/step-10-tables.mjs`; each page builds 200 rows by script and the browser's own
+`<div>`s **are** skipped (`probes/step-10-tables.mjs`; each page builds 200 rows by script and the browser's own
 `contentvisibilityautostatechange` is the witness, not a rectangle — see below).
 
 | the property sits on | elements | skipped | events |
@@ -86,7 +86,7 @@ already uses): writing the reason down in `src/table.css` is the natural thing t
 
 The A/B is **the same artifact twice**: the declaration injected at runtime as one `<style>` (`#grid tbody tr:not(.now)`)
 after the first pass, so the bytes, the data and the program are identical and only the styling differs
-(`probes/archive/step-10-skip.mjs`, `file://`, this repository's artifact).
+(`probes/step-10-skip.mjs`, `file://`, this repository's artifact).
 
 | one page, both variants | as shipped | declared |
 |---|---:|---:|

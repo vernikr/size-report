@@ -29,11 +29,11 @@
  *   and `core.hooksPath` are never overwritten.
  */
 
-import { test } from 'node:test';
+import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { firstLine, gitIn, gitTry, hasStack, initRepo, runSize, setIdentity, tempDir } from '../tools/harness.js';
+import { firstLine, gitIn, gitTry, hasStack, runSize, tempDir } from '../tools/harness.js';
 
 /* The check sets the environment itself rather than taking the machine's: `CI` and
  * `SIZE_REPORT_NO_HOOK` are the hook's switches and are set for the whole suite in integration, so
@@ -43,6 +43,7 @@ delete process.env.CI;
 delete process.env.SIZE_REPORT_NO_HOOK;
 
 const tmp = tempDir('hook');
+after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 const REPORT = 'docs/size-table.html';
 const CONFIG = 'size-table.config.json';
@@ -56,7 +57,11 @@ let built = false;
  * on different bytes. */
 function source() {
   if (built) return SOURCE;
-  initRepo(SOURCE);
+  fs.mkdirSync(path.join(SOURCE, 'src'), { recursive: true });
+  gitIn(SOURCE, ['init', '-q', '-b', 'main']);
+  ['user.name', 'user.email', 'commit.gpgsign'].forEach((key, i) => {
+    gitIn(SOURCE, ['config', key, ['fixture', 'fixture@local', 'false'][i]]);
+  });
   fs.writeFileSync(path.join(SOURCE, 'README.md'), '# проект\n');
   fs.writeFileSync(path.join(SOURCE, 'src', 'code.js'), '// начало\nvar width = 1;\n');
   fs.writeFileSync(path.join(SOURCE, 'src', 'other.js'), '// ещё файл\n');
@@ -83,7 +88,9 @@ function source() {
 function clone(name) {
   const dir = path.join(tmp, name);
   gitIn(null, ['clone', '-q', '--no-hardlinks', source(), dir]);
-  setIdentity(dir);
+  ['user.name', 'user.email', 'commit.gpgsign'].forEach((key, i) => {
+    gitIn(dir, ['config', key, ['fixture', 'fixture@local', 'false'][i]]);
+  });
   return dir;
 }
 
@@ -321,7 +328,9 @@ test('a refusal of the tool does not bring the commit down, and the cause shows 
   const dir = path.join(tmp, 'shallow');
   const shallow = gitTry(null, ['clone', '-q', '--depth', '1', '--no-hardlinks', 'file://' + source(), dir]);
   assert.equal(shallow.status, 0, 'the truncated working tree was not assembled: ' + firstLine(shallow.stderr));
-  setIdentity(dir);
+  ['user.name', 'user.email', 'commit.gpgsign'].forEach((key, i) => {
+    gitIn(dir, ['config', key, ['fixture', 'fixture@local', 'false'][i]]);
+  });
   install(dir);
 
   const refused = runSize(dir, ['--config', CONFIG, 'hook-run']);

@@ -1,10 +1,5 @@
 # Probes: the measurements behind the page-performance steps
 
-**The probes are archived** (`probes/archive/`, since 2.8.4): the twelve-step plan is settled — its figures stand in
-the files of `plans/2026-09-17-page-perf/` and in the worklog — so the instruments stay as the record of *how* those
-numbers were taken rather than as a working part of the tree. Nothing runs them, and nothing needs to: they still run
-by hand (the instructions below are unchanged, with `archive/` in the paths).
-
 What a suite cannot answer — jsdom has no layout, no paint and no `content-visibility` — is measured in **live Chrome**
 over `file://`, spoken to over the DevTools protocol directly (Node's own `WebSocket`; nothing of the package is used).
 Each file belongs to one step of `plans/2026-09-17-page-perf/` — except `step-12-columns.mjs`, which measures the
@@ -16,7 +11,7 @@ README rows and worklog entries point here.
 
 ```sh
 open -na "Google Chrome" --args --remote-debugging-port=9222
-node probes/archive/step-11-borders.mjs before=/tmp/before.html after=/tmp/after.html
+node probes/step-11-borders.mjs before=/tmp/before.html after=/tmp/after.html
 ```
 
 Two artifacts are compared where a step has a before/after. `before` and `after` are labels; the rounds are interleaved
@@ -57,8 +52,8 @@ two different data sets; the pair above was built twice in a row, in one state.
 | `step-10-tables.mjs` | Where `content-visibility: auto` skips anything at all: rows, `<tbody>`s, a wrapper `<div>`, and plain `<div>`s as the control — the witness is the platform's own `contentvisibilityautostatechange` |
 | `step-10-skip.mjs` | The same artifact with and without the declaration, both witnesses side by side (rectangles, which lie, and the event, which does not), the geometry, a scripted scroll, search and printing |
 | `step-11-borders.mjs` | `border-collapse: collapse` against `separate`: the load's timings, the geometry, the two models laid out in one tab, **and the pixels** — the screenshots are read back in the browser that drew them, so the line positions, their thickness and the difference between the builds need no imaging library |
-| `step-12-window.mjs` | What a step sideways of the window costs: the page's own handling of one scroll step and the layout the browser has to redo before the frame, over a sweep of forty steps from a place in the middle of the grid, with the browser's own accounting of the whole sweep (`node probes/archive/step-12-window.mjs before=/tmp/before-12.html after=/tmp/after-12.html`) |
-| `step-12-columns.mjs` | The price of a switch: what a column-visibility change costs the browser (a class toggled on 1, 750, 6 000 and 20 000 cells, then a forced layout), and the same click on the shipped page and on the page drawn in slices — the synchronous part, every long task, the bar's frames and the browser's own count of layouts (`node probes/archive/step-12-columns.mjs before=/tmp/page-2.6.0.html after=/tmp/page-2.7.0.html`) |
+| `step-12-window.mjs` | What a step sideways of the window costs: the page's own handling of one scroll step and the layout the browser has to redo before the frame, over a sweep of forty steps from a place in the middle of the grid, with the browser's own accounting of the whole sweep (`node probes/step-12-window.mjs before=/tmp/before-12.html after=/tmp/after-12.html`) |
+| `step-12-columns.mjs` | The price of a switch: what a column-visibility change costs the browser (a class toggled on 1, 750, 6 000 and 20 000 cells, then a forced layout), and the same click on the shipped page and on the page drawn in slices — the synchronous part, every long task, the bar's frames and the browser's own count of layouts (`node probes/step-12-columns.mjs before=/tmp/page-2.6.0.html after=/tmp/page-2.7.0.html`) |
 
 **Not part of the suite, and deliberately outside the sensors.** Probes are instruments rather than product code: they
 live outside the paths the gates walk (`src bin tools test`, and coverage's `src bin`), so no threshold, ratchet or

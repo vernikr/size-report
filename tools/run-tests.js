@@ -18,9 +18,11 @@
  * `measure` prints the same duration by running every file one at a time: numbers from a pool are about the pool, while
  * the reference is needed about the file itself.
  *
- * Extra flags after the run's name are handed to `node --test` **before the file**: measured 2026-09-17 and again
- * 2026-09-18 (node 22), a flag given after the file is ignored — with the file first a pattern selects every test,
- * with the flag first only the named one. */
+ * Extra flags after the run's name are handed to `node --test` in that same position. Measured 2026-09-17
+ * (node 22): with the file given first, node ignores them — a pattern selects every test — so the usage example this
+ * comment used to carry (a Russian test-name pattern, and a name no test holds any more either) selected
+ * nothing. The order is left as it is: repairing it is behaviour rather than prose, so it waits for a portion of
+ * its own, and the defect is written down among the open notes. */
 
 
 import fs from 'node:fs';
@@ -57,7 +59,7 @@ function files(n) {
  * output in full. */
 async function runFile(file, args) {
   const started = process.hrtime.bigint();
-  const child = spawn(process.execPath, ['--test'].concat(args, [file]), { stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(process.execPath, ['--test', file].concat(args), { stdio: ['ignore', 'pipe', 'pipe'] });
   const res = await collectOutput(child);
   const out = res.stdout + res.stderr;
   const seconds = Number(process.hrtime.bigint() - started) / 1e9;

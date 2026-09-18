@@ -24,7 +24,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const TEST_DIR = path.join(ROOT, 'test');
+export const TEST_DIR = path.join(ROOT, 'test');
 
 /* The fast run: `pnpm test`. Every entry carries the reason it is here. */
 export const FAST = [

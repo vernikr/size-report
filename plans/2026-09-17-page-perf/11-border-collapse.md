@@ -40,7 +40,7 @@ screenshots came out at a background of 18/255, in which a 25 %-grey line is not
 Then the styling was taken back: the artifact is byte-identical to before (80 397 B, md5
 `62a1d02e7bc57f38b06db0f946a94ec1`), which is how the revert is proven rather than claimed.
 
-**What the reader would see** — the screenshots read back in the same browser (`node probes/archive/step-11-borders.mjs`, one run
+**What the reader would see** — the screenshots read back in the same browser (`node probes/step-11-borders.mjs`, one run
 of five rounds, quoted as it prints):
 
 | the group's left border, sampled across | collapsing (shipped) | separate |
@@ -65,7 +65,7 @@ gets thicker" is not what the pixels say.
 
 **What it buys** — the border map is not built, and the lowest first layout of the finished table does come down, but the
 difference is small next to the machine's own spread, and the same probe on one table in one tab contradicts it. Both
-columns are the probe's own output — `ROUNDS=5 node probes/archive/step-11-borders.mjs before=/tmp/before-11.html
+columns are the probe's own output — `ROUNDS=5 node probes/step-11-borders.mjs before=/tmp/before-11.html
 after=/tmp/after-11.html` — one run of five interleaved rounds over the pair named above, and every number below is copied from
 what it printed (`1 616.1` is "lowest 1616.1", not a rounded reading):
 

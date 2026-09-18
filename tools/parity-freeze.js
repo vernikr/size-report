@@ -31,9 +31,9 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { LEGACY_PATH, MAX_BUF, flagArgs, legacyTool, runFrozenTool, runMain, sha256 } from './harness.js';
+import { LEGACY_PATH, MAX_BUF, flagArgs, gitConfig, legacyTool, runMain, sha256 } from './harness.js';
 import { CONFIG_NAME } from '../src/config.js';
 import { gitArgv, gitEnv } from '../src/git.js';
 
@@ -59,12 +59,17 @@ function gitBytes(dir, args) {
 /* The copy runs in a pinned environment — the one the checks use (`tools/harness.js`,
  * `frozenTarget`): without it the golden is taken with other numbers. */
 function legacy(dir, args) {
-  const res = runFrozenTool(legacyTool(), dir, path.join(dir, CONFIG_NAME), args);
-  if (res.code !== 0) {
+  const res = spawnSync(process.execPath, [legacyTool(), '--config', path.join(dir, CONFIG_NAME)].concat(args), {
+    cwd: dir,
+    encoding: 'utf8',
+    maxBuffer: MAX_BUF,
+    env: Object.assign({}, process.env, gitConfig({ 'core.quotePath': 'false' }))
+  });
+  if (res.status !== 0) {
     throw new Error('the copy did not run (' + (args.join(' ') || 'the check mode')
-      + ', code ' + res.code + '): ' + res.stderr.trim());
+      + ', code ' + res.status + '): ' + (res.stderr || '').trim());
   }
-  return res.stdout;
+  return res.stdout || '';
 }
 
 /* A description of the standard for a person: what lies beside it and what to do with it. Its text goes into

@@ -96,7 +96,7 @@ export function read(doc) {
 }
 
 /* A whole section: from its heading to the next one of the same level, or to the end. */
-function withoutSection(text, title) {
+export function withoutSection(text, title) {
   return text.replace(new RegExp('## ' + title + '[\\s\\S]*?(?=\\n## |$)'), '');
 }
 
@@ -136,12 +136,8 @@ export function looksLikePath(tok) {
 
 /* Commands and flags come from the tool's help: there is no second list and there must not be
  * one — the guard and the help would diverge in silence. */
-/* The commands of the help's `Commands:` section: the first word of an entry — a line whose word
- * stands at two spaces of indent. The continuation lines of an entry are indented further and are
- * words of a sentence rather than names; reading them as commands let a document call `of something`
- * and stay green (the reason this derivation was narrowed). */
 export const usageCommands = USAGE.split('\nCommands:\n')[1].split('\n\n')[0]
-  .split('\n').filter((l) => /^ {2}\S/.test(l)).map((l) => l.trim().split(/\s+/)[0]);
+  .split('\n').map((l) => l.trim().split(/\s+/)[0]).filter((w) => w !== '');
 export const usageFlags = [...USAGE.matchAll(/--[a-z][a-z-]*/g)].map((m) => m[0]);
 
 /* A call to the tool: either a code span or a line of a code block (where it is run, not

@@ -11,7 +11,7 @@
  * The contract itself is in `test/contract-data.test.js`, the page in `page-view`.
  */
 
-import { test } from 'node:test';
+import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -20,6 +20,7 @@ import { ROOT, tempDir } from '../tools/harness.js';
 import { contractData } from '../tools/page-harness.js';
 
 const tmp = tempDir('contract-derived');
+after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 const { data, golden } = contractData(tmp, 'numbers');
 

@@ -11,14 +11,16 @@
  * and that is the whole cost of the file.
  */
 
-import { test } from 'node:test';
+import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import path from 'node:path';
 import {
   cloneFixture, configWith, firstLine, gitIn, hasStack, runFixture, runSize, sharedClone, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('check');
+after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 const dir = sharedClone('plain', tmp);
 
@@ -216,6 +218,8 @@ test('explanation: a name that does not exist and a commit outside the history a
   assert.match(away.stderr, /not in the history of the report/, 'the cause named is the wrong one:\n' + away.stderr);
   assert.ok(away.stderr.indexOf(sha.slice(0, 7)) >= 0,
     'the refusal did not name the sha of the commit asked about:\n' + away.stderr);
+  assert.ok(!/is not a revision name and not the start of a sha/.test(away.stderr),
+    'a commit that exists is called non-existent:\n' + away.stderr);
 });
 
 test('command refusals: an unknown word, an unknown commit, an ambiguous prefix', () => {

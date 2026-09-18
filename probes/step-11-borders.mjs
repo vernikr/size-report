@@ -23,7 +23,7 @@
  * `localStorage` of the `file://` origin, which every tab shares, so each run loads once, empties it, and only then
  * loads the page it measures.
  *
- *   node probes/archive/step-11-borders.mjs before=/tmp/before-11.html after=/tmp/after-11.html
+ *   node probes/step-11-borders.mjs before=/tmp/before-11.html after=/tmp/after-11.html
  *
  * Chrome is expected at the debug port (`--remote-debugging-port=9222`).
  */

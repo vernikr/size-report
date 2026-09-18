@@ -29,8 +29,9 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { LEGACY_PATH, legacyTool as legacyCopy, runFrozenTool, runMain, sha256 } from './harness.js';
+import { LEGACY_PATH, MAX_BUF, gitConfig, legacyTool as legacyCopy, runMain, sha256 } from './harness.js';
 /* A flag's value is read the same way the package's engine reads it (`src/config.js`) rather than
  * by a parser of its own: "a flag with no value" is a shared question, and a second copy of it would
  * diverge from the first as quietly as any two copies do (the `dup` sensor found it). */
@@ -42,6 +43,10 @@ import { fixtureNote } from './synthetic/note.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'fixtures', 'synthetic');
+
+/* The environment of the taking is the one the frozen-copy checks use (`tools/harness.js`,
+ * `frozenTarget`): without the path reading pinned, the golden is taken by another one. */
+const FROZEN_ENV = gitConfig({ 'core.quotePath': 'false' });
 
 // --- the fixture's settings -------------------------------------------------
 
@@ -105,10 +110,20 @@ function commitLog(repo) {
     });
 }
 
+function runLegacy(tool, dir, cfgPath, args, env) {
+  const res = spawnSync(process.execPath, [tool, '--config', cfgPath].concat(args), {
+    cwd: dir,
+    encoding: 'utf8',
+    maxBuffer: MAX_BUF,
+    env: Object.assign({}, process.env, FROZEN_ENV, env || {})
+  });
+  return { code: res.status, stdout: res.stdout || '', stderr: res.stderr || '' };
+}
+
 /* The artifact is built on a clone rather than in the assembled repository: `--write` writes a file,
  * and in the fixture it has to stay untracked rather than become one commit more. */
 function takeArtifact(paths, clone) {
-  const wrote = runFrozenTool(paths.tool, clone, paths.config, ['--write']);
+  const wrote = runLegacy(paths.tool, clone, paths.config, ['--write']);
   if (wrote.code !== 0) throw new Error('the tool did not build the artifact: ' + wrote.stderr.trim());
   const artifact = fs.readFileSync(path.join(clone, CONFIG.output));
   fs.writeFileSync(path.join(paths.out, 'artifact.sha256'),
@@ -119,7 +134,7 @@ function takeArtifact(paths, clone) {
 /* Paths outside ASCII: git quotes them depending on the locale, and if the numbers change with it
  * the golden is not portable — worth knowing before rather than after. */
 function localeStable(paths, clone, data) {
-  const cLocale = runFrozenTool(paths.tool, clone, paths.config, ['--json'], { LC_ALL: 'C', LANG: 'C' });
+  const cLocale = runLegacy(paths.tool, clone, paths.config, ['--json'], { LC_ALL: 'C', LANG: 'C' });
   const cData = cLocale.code === 0 ? JSON.parse(cLocale.stdout) : null;
   return !!cData && JSON.stringify(cData) === JSON.stringify(data);
 }
@@ -131,7 +146,7 @@ function takeGolden(paths, ctx) {
   }
   const clone = path.join(paths.work, 'clone');
   git(paths.work, ['clone', '-q', paths.bundle, clone]);
-  const json = runFrozenTool(paths.tool, clone, paths.config, ['--json']);
+  const json = runLegacy(paths.tool, clone, paths.config, ['--json']);
   if (json.code !== 0) throw new Error('the tool gave no --json: ' + json.stderr.trim());
   const data = JSON.parse(json.stdout);
   const golden = Buffer.from(JSON.stringify(data, null, 2) + '\n', 'utf8');
@@ -139,7 +154,7 @@ function takeGolden(paths, ctx) {
 
   const artifact = takeArtifact(paths, clone);
   // The check mode must be green: the golden was taken from an agreed artifact.
-  const checked = runFrozenTool(paths.tool, clone, paths.config, []);
+  const checked = runLegacy(paths.tool, clone, paths.config, []);
   if (checked.code !== 0) throw new Error('the check mode on the fixture is red: ' + checked.stderr.trim());
 
   ctx.localeStable = localeStable(paths, clone, data);

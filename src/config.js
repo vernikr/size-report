@@ -76,7 +76,7 @@ export function gitRoot() {
  * request for that very file, so its absence stays a refusal (otherwise a typo in the path would
  * silently yield someone else's settings). `path` is given in words rather than as a path: there is no
  * file, and "edit <path>" would lead the reader to something the project does not have. */
-function derivedConfig(root) {
+export function derivedConfig(root) {
   const cfg = derivedProfile(root);
   cfg.path = 'derived from the project';
   cfg.derived = true;

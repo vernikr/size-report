@@ -13,12 +13,14 @@
  * out empty).
  */
 
-import { test } from 'node:test';
+import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT, git, probe, readJson, tempDir, write } from '../tools/gate-probe.js';
 
 const tmp = tempDir('cover');
+after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 /* A report in c8's shape: per file, four metrics of `{ total, covered, skipped, pct }`. The arguments
  * are the **executed counts** — the unit the ratchet compares — and `extra` pads the totals, which is how

@@ -12,13 +12,14 @@
  * an ordinary file needs no trailer (otherwise the gate would demand a justification for every edit).
  */
 
-import { test } from 'node:test';
+import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT, exec, git, tempDir, write } from '../tools/gate-probe.js';
 
 const tmp = tempDir('gatefiles');
+after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 const repo = path.join(tmp, 'repo');
 const GATE = path.join(repo, 'tools/gates');
