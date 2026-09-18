@@ -8,7 +8,7 @@
  * rectangle cannot be asked — a skipped element's descendants may still report one, which is why the artifact's first
  * probe saw 217 rows "laid out" and looked like a pass.
  *
- *   node probes/step-10-tables.mjs
+ *   node probes/archive/step-10-tables.mjs
  */
 
 const TABLE_BUILD = (groups, wrap) => `

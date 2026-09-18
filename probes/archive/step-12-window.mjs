@@ -9,7 +9,7 @@
  * what stands in the grid at each step.
  *
  *   open -na "Google Chrome" --args --remote-debugging-port=9222
- *   node probes/step-12-window.mjs before=/tmp/before-12.html after=/tmp/after-12.html
+ *   node probes/archive/step-12-window.mjs before=/tmp/before-12.html after=/tmp/after-12.html
  *
  * Chrome is expected at the debug port (`--remote-debugging-port=9222`). Read one page at a time: the rounds are
  * separate tabs and a slow machine would otherwise be read as a slow build. The pair is made the way `probes/README.md`

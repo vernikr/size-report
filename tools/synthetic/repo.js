@@ -21,14 +21,14 @@ const BASE_MS = Date.UTC(2026, 0, 1, 7, 0, 0); // 2026-01-01 10:00:00 +03:00
 const HOUR = 3600 * 1000;
 let tick = 0;
 
-export function stamp() {
+function stamp() {
   const d = new Date(BASE_MS + (tick++) * HOUR + 3 * HOUR); // the same zone as in the stamp
   const p = (n) => String(n).padStart(2, '0');
   return d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate()) + 'T'
     + p(d.getUTCHours()) + ':' + p(d.getUTCMinutes()) + ':' + p(d.getUTCSeconds()) + '+03:00';
 }
 
-export const AUTHOR = {
+const AUTHOR = {
   GIT_AUTHOR_NAME: 'size-report fixture',
   GIT_AUTHOR_EMAIL: 'fixture@size-report.invalid',
   GIT_COMMITTER_NAME: 'size-report fixture',

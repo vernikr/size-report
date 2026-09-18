@@ -11,14 +11,12 @@
  * probes lives in `verdictOf`, or four probes would be nearly the same one.
  */
 
-import { test, after } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import path from 'node:path';
 import { probe, tempDir, write } from '../tools/gate-probe.js';
 
 const tmp = tempDir('deps');
-after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 const A = "import { b } from './b.js';\nexport const a = b + 1;\n";
 const B = 'export const b = 1;\n';

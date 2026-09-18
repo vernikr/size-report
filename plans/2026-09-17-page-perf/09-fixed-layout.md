@@ -173,7 +173,7 @@ width would be 10.5 % over instead of 7.7 %, which is the whole reason that one 
   not measured (that needs DevTools' memory panel and a screenshot of the layer), so the step's net effect on memory
   is an open question rather than a claim: the widths are no longer measured, the table is wider.
 
-To repeat: `node probes/step-09-layout.mjs before=<file> after=<file>` with Chrome at
+To repeat: `node probes/archive/step-09-layout.mjs before=<file> after=<file>` with Chrome at
 `--remote-debugging-port=9222` (the probe is a one-off under `reports/`, which is gitignored; it opens each file in a
 page of its own, clears the reader's storage between them, times the first forced layout after the build, reads the
 CDP counters per load, sweeps every cell for clipping, checks the sticky edges and the delta colours, and switches

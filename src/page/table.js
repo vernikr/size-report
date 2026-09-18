@@ -8,8 +8,8 @@ import { appData, appUi, appView } from './state.js';
  *
  * **Why not a `<table>`.** Measured on this repository's own report (238 500 cells = 370 758 nodes, a table 71 712 ×
  * 5 982 px): about 1.4 GB of a browser's memory, of which roughly half the nodes and half the painted area, and a
- * browser's relayout of it costs close to a second on any switch (`probes/step-12-columns.mjs`). `content-visibility:
- * auto`, the cheap way out, is ignored on a table row by Chrome 153 (`probes/step-10-tables.mjs`), so the answer is
+ * browser's relayout of it costs close to a second on any switch (`probes/archive/step-12-columns.mjs`). `content-visibility:
+ * auto`, the cheap way out, is ignored on a table row by Chrome 153 (`probes/archive/step-10-tables.mjs`), so the answer is
  * to build less rather than to promise the browser will skip it. A grid of `position: absolute` rows has no layout to
  * be redone: a row is placed by its `top`, a column by the `left` of the group of cells that starts it, and the
  * browser never measures a cell to decide a width — every column is `--col` wide (70px), which is what the numbers
@@ -36,7 +36,7 @@ import { appData, appUi, appView } from './state.js';
  * numbers, so a step sideways makes the columns that entered and drops the ones that left (`appStrip`) — a cell per
  * row, the header's two lines included. A row that left the window vertically is dropped and made again when the
  * reader comes back to it, which is what makes a jump down the table cost the same as a step. Building the rows again
- * on every sideways scroll — the first version of this step — is what `probes/step-12-window.mjs` measures against the
+ * on every sideways scroll — the first version of this step — is what `probes/archive/step-12-window.mjs` measures against the
  * splice (`worklog/0211-sideways-step.md`).
  *
  * The choice is applied by building the window again: the columns of a switched-off file are simply not among the

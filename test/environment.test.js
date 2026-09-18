@@ -8,15 +8,13 @@
  * parse in its own way.
  */
 
-import { test, after } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import {
   PACKAGE, firstDiff, gitBare, gitConfig, golden, readRun, sharedClone, tempDir
 } from '../tools/harness.js';
 
 const tmp = tempDir('environment');
-after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 const { text: goldenText, json: goldenJson } = golden();
 const PLAIN = sharedClone('plain', tmp);

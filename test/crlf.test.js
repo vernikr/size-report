@@ -6,7 +6,7 @@
  * tree: the comparison against the working tree must not become an empty gesture.
  */
 
-import { test, after } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -15,7 +15,6 @@ import {
 } from '../tools/harness.js';
 
 const tmp = tempDir('crlf');
-after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 const { text: goldenText } = golden();
 

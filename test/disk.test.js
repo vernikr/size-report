@@ -12,7 +12,7 @@
  * afterwards (one check would slip its edit to another).
  */
 
-import { test, after } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -23,7 +23,6 @@ import {
 } from '../tools/harness.js';
 
 const tmp = tempDir('disk');
-after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 // A commit in the fixture's clone: the identity and the address are set right here so that git does
 // not ask.

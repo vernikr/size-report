@@ -8,7 +8,7 @@
  * its own keeps this cost out of the fast run.
  */
 
-import { test, after } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -18,7 +18,6 @@ import {
 } from '../tools/harness.js';
 
 const tmp = tempDir('cli-paths');
-after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 /* ---------- a shallow history ---------- */
 
