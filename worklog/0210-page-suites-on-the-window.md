@@ -64,6 +64,23 @@ The artifact is 739 B lighter while carrying the same history and the same page:
 are exactly the chapters above, and nothing about what a reader sees changed with them — the suites are what says so,
 and they read the page in jsdom rather than a description of it.
 
+## Measured after the release
+
+- **The published tarball is what the tag holds — all of it.** `npm pack @vernikr/size-report@2.8.2` compared file by
+  file with `git show v2.8.2:<path>`: **48 of 48 byte-identical**, and the tarball's sha1
+  `e6b7d8e01261d8e1caff5ca4d5ac39cd24f12a9e` is the `dist.shasum` the registry answers.
+- **The runs:** CI on the tag green (`35291202047`), the Release workflow green in 1 m 7 s (`35291202032`), `latest`
+  moved to `2.8.2` at the second poll; CI on `main` green for the release push (`35291201965`) and for the attach
+  (`35291640111`).
+- **The attached copy is the tree:** `diff -rq node_modules/@vernikr/size-report/src src` says nothing, so the pages
+  the two engines build are built by the same code.
+- **The artifact, two engines over one history** (the tree at the attach commit, `--write` into `/tmp`): **86 206 B**
+  from the attached 2.8.1 against **85 307 B** from 2.8.2 — the reduction above, re-taken on a history three commits
+  longer than the pair in the table, hence 899 B rather than 739. The lines of the commit are the same everywhere:
+  the page's chapters −37, the suites −251, the readers +68, the tree **−220**.
+- **This repository's page is built by the attached copy again:** the `post-commit` hook rebuilt it after the attach
+  and committed it as `ce40fd3` (85 252 B, md5 `6f5e6cfcc31efe9ba450fbbbc796327f`).
+
 ## Still open
 
 - A sideways scroll still builds the window again (~30 ms a step, `worklog/0208-table-window.md`): reusing the rows and
