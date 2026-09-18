@@ -34,6 +34,14 @@ rule is that a document describing today is checked while a snapshot of the past
 documents that do describe today: the file table into `docs/files.md`, the code-2 table into
 `docs/wiring.md`, which is where the guards read them now.
 
+## Release 2.8.7 — what changes in the numbers
+
+This portion ships: `README.md` is in `files` and its text moves, so it takes its own PATCH. Nothing of
+the measurement moves — no line of `src/` is touched, only documents and the guards that read them: the
+engine's output on the fixture and on the consumer's live history is as it was (parity with the live
+project 95 × 27, both references reproduced, the tarball 6 entries). The tool's own report is rebuilt by
+the post-commit hook as a commit of its own, as always.
+
 ## Suggested next steps
 
 - `docs/architecture.md` is 543 lines of bold paragraphs; a table of contents would make it navigable.
