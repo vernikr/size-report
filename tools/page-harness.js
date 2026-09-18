@@ -142,6 +142,11 @@ export async function openPage(text, seed, hash, opts) {
    * for a timer: a timer would be a guess about how long unpacking takes, and a wrong guess looks like a bug in the
    * page. */
   await dom.window.appDrawn;
+  /* Every suite but the one about the window reads the whole table, so the shell is given a window that holds it: the
+   * page builds the rows and the columns in sight of the shell and no more (`src/page/table.js`), and jsdom lays
+   * nothing out — without this every suite would read the fallback window the page uses for a shell with no size. The
+   * suite of the window places its own places (`place`), which is what makes the window the thing it is about. */
+  whole(dom);
   return dom;
 }
 
@@ -157,25 +162,88 @@ export function stored(dom) {
 export const linkTo = (rec) => '#size-report=' + encodeURIComponent(JSON.stringify(rec));
 
 export const panelInputs = (doc) => [...doc.querySelectorAll('#panel input')];
+export const fileBox = (doc, p) => panelInputs(doc).find((b) => b.title.indexOf(p) === 0);
 
-/* The cells of a row the reader sees. The table is built once and hidden by classes, so the markup holds every column
- * of every file — the suites compare what is shown rather than what exists. A cell is hidden either with its file's
- * column (`off`) or with the whole metric (the table's `m-off-N`). */
-export function shownCells(tr) {
-  const grid = tr.closest('#grid');
-  return [...tr.querySelectorAll('td')].filter((td) => {
-    if (td.classList.contains('off')) return false;
-    const track = [...td.classList].find((c) => /^m\d+$/.test(c));
-    return !grid.classList.contains('m-off-' + track.slice(1));
+/* A group's switch — a folder of the tree, a quick button of a category — found by the text the reader reads (`appDirHead`
+ * and the panel name them): the suites that click a group share this, because how a group is told from another is a fact
+ * about the panel rather than about a suite's subject. */
+export const dirBox = (doc, prefix) => [...doc.querySelectorAll('#panel .box.dir')]
+  .find((b) => b.textContent.indexOf(prefix) === 0);
+export const dirInput = (doc, prefix) => dirBox(doc, prefix).querySelector('input');
+export const catInput = (doc, cat) => [...doc.querySelectorAll('#panel .row .box.all')]
+  .find((b) => b.textContent === cat.label).querySelector('input');
+
+/* -------- reading the page --------
+ *
+ * One set of readers for the page suites, because the drawing they read is one: a file's path as the panel names it,
+ * the rows and the numbers the window built, the captions over the columns, and the place the shell stands at. A suite
+ * that rolled its own reader would be reading the same page with a second pair of eyes — the page is one file, and the
+ * suites are split by subject rather than by what they can see. */
+
+/* A file's path at HEAD, or the last of the settings when the file is already gone from there: the name the panel and
+ * the report recognise it by (`appFileAt`). */
+export const where = (f) => (f.path === null ? f.paths[0] : f.path);
+
+/* The rows the window built, as they stand: the page builds the rows and the columns the shell shows and no more
+ * (`src/page/table.js`), so a suite that wants the whole table gives the shell a window that holds it (`whole`). */
+export const gridRows = (doc) => [...doc.querySelectorAll('#grid .row')];
+export const nowRow = (doc) => doc.querySelector('#grid .row.now');
+
+// The numbers of a row, left to right: one per column the window holds, the total's first.
+export const rowNumbers = (row) => [...row.querySelectorAll('.cells > span')].map((span) => span.textContent.trim());
+
+/* The contract row a built row stands for: the grid reads newest first and its first row is the state at HEAD
+ * (`src/page/table.js`), which is the contract's `now` rather than a row of the history. */
+export const contractRow = (data, r) => (r === 0 ? null : data.rows[data.rows.length - r]);
+
+// The captions over the columns: the total and the files the window holds (above), the metrics (below).
+export const captions = (doc) => [...doc.querySelectorAll('#grid .hgroups > span')].map((span) => span.textContent);
+export const metricCaptions = (doc) => [...doc.querySelectorAll('#grid .hmetrics > span')].map((span) => span.textContent);
+
+/* The “now” row: how many numbers it holds, and the first of them — the whole project in one figure, for the first
+ * metric that is on (`src/page/table.js` builds the cells of the metrics the reader left on). */
+export const nowCells = (doc) => rowNumbers(nowRow(doc)).length;
+export const nowTotal = (doc) => rowNumbers(nowRow(doc))[0];
+export const allCells = (data, keys) => (data.files.length + 1)
+  * (keys === undefined ? data.metrics.length : keys.length);
+
+/* The place the shell is at, given rather than measured: jsdom lays nothing out, so a check hands the shell the four
+ * figures a browser fills in and sends the event a browser sends when they move. The shell is left in place, which is
+ * what lets a suite read the window at two places in a row. */
+export function place(dom, view) {
+  const shell = dom.window.document.getElementById('shell');
+  const given = { clientHeight: view.high, clientWidth: view.wide, scrollTop: view.top, scrollLeft: view.left };
+  Object.keys(given).forEach((name) => {
+    Object.defineProperty(shell, name, { configurable: true, get: () => given[name] });
   });
+  shell.dispatchEvent(new dom.window.Event('scroll'));
+  return shell;
 }
 
-/* The “now” row's cells: the count of what is shown, and the total of the first metric (which is the one the suites
- * compare expected sums with, whether it is on or off — a hidden cell keeps its number). */
-export const nowCells = (doc) => shownCells(doc.querySelectorAll('#grid tbody tr')[0]).length;
-export const nowTotal = (doc) => doc.querySelectorAll('#grid tbody tr')[0].querySelectorAll('td')[0].textContent;
-export const allCells = (data) => (data.files.length + 1) * data.metrics.length;
-export const fileBox = (doc, p) => panelInputs(doc).find((b) => b.title.indexOf(p) === 0);
+// A window that holds the whole grid: every row and every column is built, and the numbers are the numbers of the page.
+export const whole = (dom) => place(dom, { high: 100000, wide: 100000, top: 0, left: 0 });
+
+/* Where each file's numbers moved last: the newest row of the history in which they differ from the row above (or the
+ * first row, where every file is new). The figure the suites hold the order of the columns to — counted from the
+ * contract's own rows here rather than taken from the page, because a check has to have an expectation of its own
+ * (`src/page/table.js` counts the same thing in the page, from the rows of the block). */
+export function columnRank(data) {
+  const rank = data.files.map(() => -1);
+  let was = null;
+  data.rows.forEach((row, i) => {
+    row.values.forEach((cell, j) => {
+      if (was === null || JSON.stringify(cell) !== JSON.stringify(was[j])) rank[j] = i;
+    });
+    was = row.values;
+  });
+  return rank;
+}
+
+// The order of the columns: the files whose numbers moved most recently first, the rest in the settings' order.
+export function columnOrder(data) {
+  const rank = columnRank(data);
+  return data.files.map((_f, i) => i).sort((a, b) => rank[b] - rank[a]);
+}
 
 /* The metric switch is found by its visible label: the label does not depend on the words used
  * for the method and the precision. That those words exist and match the cells is a check of its

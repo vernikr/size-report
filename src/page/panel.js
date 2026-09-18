@@ -22,19 +22,18 @@ function appUnmeasuredBox(entry) {
     + (entry.why === 'rule' ? appUi.notMeasuredRule : appUi.notMeasuredChoice));
 }
 
-/* Every measured file of a subtree — what a folder's switch controls: a file outside the report has nothing to
- * switch. */
-function appIndexes(node) {
-  const out = node.files.slice();
-  node.dirs.forEach((sub) => { out.push(...appIndexes(sub)); });
-  return out;
-}
-
-/* How many files a subtree holds — including the ones that made it into no report. */
-function appCount(node) {
-  let n = node.files.length + node.others.length;
-  node.dirs.forEach((sub) => { n += appCount(sub); });
-  return n;
+/* A subtree in the two figures its folder shows: the measured files its checkbox controls, and how many files the
+ * folder holds at all — including the ones that made it into no report. One walk, because the two are asked together
+ * (a folder of five files with two measured reads "2/5"). */
+function appSub(node) {
+  const idx = node.files.slice();
+  let total = node.files.length + node.others.length;
+  node.dirs.forEach((sub) => {
+    const inner = appSub(sub);
+    idx.push(...inner.idx);
+    total += inner.total;
+  });
+  return { idx: idx, total: total };
 }
 
 /* A tree node: the measured files (columns), the project's other files and the subfolders. */
@@ -48,8 +47,9 @@ function appNode() {
  * without a single measured file stays in place with its checkbox off and unavailable: there is nothing to switch on
  * in it. */
 function appDirHead(name, here, sub) {
-  const idx = appIndexes(sub);
-  const total = appCount(sub);
+  const own = appSub(sub);
+  const idx = own.idx;
+  const total = own.total;
   const label = name + '/';
   let head;
   if (idx.length === 0) {
@@ -141,13 +141,14 @@ function appLeaf(leaf) {
 function appTreeList(node, prefix) {
   const list = appEl('ul', 'tree');
   const dirs = [...node.dirs.keys()].sort(appName)
-    .map((name) => ({ name: name, sub: node.dirs.get(name), inReport: appIndexes(node.dirs.get(name)).length > 0 }));
+    .map((name) => ({ name: name, sub: node.dirs.get(name), inReport: appSub(node.dirs.get(name)).idx.length > 0 }));
   const leaves = appLeaves(node);
   const inside = leaves.filter((leaf) => leaf.entry === null);
+  const outside = leaves.filter((leaf) => leaf.entry !== null);
   dirs.filter((d) => d.inReport).forEach((d) => list.appendChild(appDir(d.name, d.sub, prefix)));
   inside.forEach((leaf) => list.appendChild(appLeaf(leaf)));
   dirs.filter((d) => !d.inReport).forEach((d) => list.appendChild(appDir(d.name, d.sub, prefix)));
-  leaves.filter((leaf) => leaf.entry !== null).forEach((leaf) => list.appendChild(appLeaf(leaf)));
+  outside.forEach((leaf) => list.appendChild(appLeaf(leaf)));
   return list;
 }
 
@@ -237,10 +238,10 @@ function appRowBoxes(box) {
 }
 
 // A folder's field from its files: all on — checked, some — the third state, none — simply unchecked.
-function appDirState(box) {
-  const boxes = appRowBoxes(box);
+function appDirState(path) {
+  const boxes = appRowBoxes(appFields.dir[path]);
   const on = boxes.filter((b) => b.checked).length;
-  const input = box.querySelector('input');
+  const input = appFields.dir[path].querySelector('input');
   input.checked = on === boxes.length;
   input.indeterminate = on > 0 && on < boxes.length;
 }
@@ -267,29 +268,17 @@ function appDirPath(path) {
   return parts.slice(0, -1).map((_part, i) => parts.slice(0, i + 1).join('/'));
 }
 
-/* A click reaches a folder's field through the files below it: every folder on the path of a switched file shows the
- * share of what is left on. A folder without measured files has a field of its own too — it is off and unavailable,
- * which is not the reader's state and must not be overwritten here. */
-function appDirsOf(indexes) {
+/* A click reaches the fields of a folder and of a category through the files below them — one walk for both, because
+ * it is one question: which groups the reader sees hold a switched file, and what do they show now. A field that is not
+ * there is left alone: a folder without measured files has a box of its own, off and unavailable, which is not the
+ * reader's state. */
+function appReach(indexes, fields, namesOf, stateOf) {
   const seen = {};
-  indexes.forEach((i) => {
-    appDirPath(appFileAt(i)).forEach((path) => {
-      if (seen[path] === true) return;
-      seen[path] = true;
-      if (appFields.dir[path] !== undefined) appDirState(appFields.dir[path]);
-    });
-  });
-}
-
-// The same for the quick buttons of the categories: every category one of the switched files belongs to.
-function appCatsOf(indexes) {
-  const seen = {};
-  indexes.forEach((i) => {
-    const key = appData.files[i].category;
-    if (seen[key] === true || appFields.cat[key] === undefined) return;
-    seen[key] = true;
-    appCatState(key);
-  });
+  indexes.forEach((i) => namesOf(i).forEach((name) => {
+    if (seen[name] === true || fields[name] === undefined) return;
+    seen[name] = true;
+    stateOf(name);
+  }));
 }
 
 /* What a click changed, written where it stands: the files' own boxes, then the fields of the folders and categories
@@ -299,8 +288,8 @@ export function appPanelState(indexes) {
     const input = appFields.file[i];
     if (input !== undefined) input.checked = appView.files[i] === true;
   });
-  appDirsOf(indexes);
-  appCatsOf(indexes);
+  appReach(indexes, appFields.dir, (i) => appDirPath(appFileAt(i)), appDirState);
+  appReach(indexes, appFields.cat, (i) => [appData.files[i].category], appCatState);
 }
 
 /* The whole panel from the view: what a link, a record from the memory and the first drawing need. The metric boxes
@@ -309,5 +298,5 @@ export function appPanelAll() {
   appData.categories.forEach((c) => appCatState(c.key));
   appData.metrics.forEach((m) => { appFields.metric[m.key].checked = appView.metrics[m.key] === true; });
   appData.files.forEach((_f, i) => { appFields.file[i].checked = appView.files[i] === true; });
-  Object.keys(appFields.dir).forEach((path) => appDirState(appFields.dir[path]));
+  Object.keys(appFields.dir).forEach((path) => appDirState(path));
 }

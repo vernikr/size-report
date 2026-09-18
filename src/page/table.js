@@ -268,11 +268,11 @@ export function appWindow(cache, redraw) {
   const was = cache.win;
   cache.win = span;
   if (redraw === true || was === null || was.c0 !== span.c0 || was.c1 !== span.c1) {
-    const head = cache.grid.querySelector('.head');
-    if (head !== null) head.remove();
-    cache.grid.insertBefore(appHead(cache, span), cache.grid.firstChild);
+    /* The grid holds the header and the rows of the window and nothing else, so the whole of it is thrown away rather
+     * than tracked piece by piece — and the rows that are made below say in the map that they are there. */
+    cache.grid.textContent = '';
     cache.rows.clear();
-    [...cache.grid.querySelectorAll('.row')].forEach((row) => row.remove());
+    cache.grid.appendChild(appHead(cache, span));
     for (let r = span.r0; r <= span.r1; r++) appPlace(cache, r, span);
     return;
   }

@@ -106,15 +106,16 @@ function appPassport() {
   return appPassportValue;
 }
 
-/* One record of the choice for everything: it goes both into the memory and into the address, so there are no two formats
- * of one state. Only what is switched off is kept, by name: "switched on" and "no record" are the same state, which is
- * why turning every checkbox back on removes the record instead of leaving a trace indistinguishable from a choice. */
+/* One record of the choice: only what is switched off is kept, by name. "Switched on" and "no record" are the same
+ * state, hence `null` rather than an empty record — turning every checkbox back on removes the record instead of leaving
+ * a trace indistinguishable from a choice. */
 function appRecord() {
   const metrics = {};
   const files = {};
   appData.metrics.forEach((m) => { if (!appView.metrics[m.key]) metrics[m.key] = false; });
   appData.files.forEach((_f, i) => { if (!appView.files[i]) files[appFileAt(i)] = false; });
-  return { v: 1, passport: appPassport(), metrics: metrics, files: files };
+  const empty = Object.keys(metrics).length === 0 && Object.keys(files).length === 0;
+  return empty ? null : { v: 1, passport: appPassport(), metrics: metrics, files: files };
 }
 
 // Whether a record is ours and of the right format — one rule for the memory and the address alike.
@@ -122,22 +123,38 @@ function appRecordOk(rec) {
   return rec !== null && typeof rec === 'object' && rec.v === 1 && rec.passport === appPassport();
 }
 
-/* The record goes into the browser's memory and nowhere else: it is written on the click itself, which is what survives
- * a closing, and the page's address keeps a clean tail — the report is a local page whose address is copied as it is,
- * and a reader's choice belongs in the browser that made it rather than in the tab's title bar. What a link sent from an
- * earlier release holds is still read (`appLinkUse`), and it is not written into the reader's memory: what came in is
- * not his choice until he changes something. */
-export function appWrite() {
-  if (appTransient) return;
-  const rec = appRecord();
-  const empty = Object.keys(rec.metrics).length === 0 && Object.keys(rec.files).length === 0;
+/* A record into the browser's memory or out of it, and what is read back from it: the two halves of the memory, written
+ * once, because the page keeps two records of the same kind under two keys — the choice and the unfolded tree — and
+ * their rules are one. Nothing but the browser's memory is written: it is written on the click itself, which is what
+ * survives a closing, and the page's address keeps a clean tail — the report is a local page whose address is copied as
+ * it is, and a reader's choice belongs in the browser that made it rather than in the tab's title bar. What a link sent
+ * from an earlier release holds is still read (`appLinkUse`), and it is not written into the reader's memory: what came
+ * in is not his choice until he changes something. */
+function appKeep(key, rec) {
   try {
-    if (empty) window.localStorage.removeItem(appKey);
-    else window.localStorage.setItem(appKey, JSON.stringify(rec));
+    if (rec === null) window.localStorage.removeItem(key);
+    else window.localStorage.setItem(key, JSON.stringify(rec));
   } catch (_e) {
     /* There is no memory (the browser grants this page none): the choice will not survive a closing, while the numbers
      * and the markup do not depend on it. */
   }
+}
+
+export function appWrite() {
+  if (!appTransient) appKeep(appKey, appRecord());
+}
+
+/* What the browser saved under a key: its absence, a foreign record, a broken one and a record of another report amount
+ * to the same thing here — nothing to read. `JSON.parse` of a missing value answers `null`, so the two absences need no
+ * telling apart. */
+function appLoad(key) {
+  let rec = null;
+  try {
+    rec = JSON.parse(window.localStorage.getItem(key));
+  } catch (_e) {
+    return null;
+  }
+  return appRecordOk(rec) ? rec : null;
 }
 
 /* A reset to "everything on": the border between "this is no longer in the report" and "switched off" is the record
@@ -174,15 +191,12 @@ function appLinkRead() {
 }
 
 /* How many names in the link are unknown to this report: the reader has to be told about them — otherwise he would look
- * in the table for something that was never there. */
+ * in the table for something that was never there. The two tables the model already holds answer it: a file by its path
+ * at HEAD (`appMeasured`) and a metric by its key (`appMetric`), the same names a record is written in (`appFileAt`). */
 function appUnknown(rec) {
-  const known = {};
-  const metricKeys = {};
-  appData.files.forEach((_f, i) => { known[appFileAt(i)] = true; });
-  appData.metrics.forEach((m) => { metricKeys[m.key] = true; });
   let n = 0;
-  Object.keys(rec.metrics || {}).forEach((k) => { if (!metricKeys[k]) n++; });
-  Object.keys(rec.files || {}).forEach((k) => { if (!known[k]) n++; });
+  Object.keys(rec.metrics || {}).forEach((k) => { if (appMetric[k] === undefined) n++; });
+  Object.keys(rec.files || {}).forEach((k) => { if (appMeasured[k] === undefined) n++; });
   return n;
 }
 
@@ -213,23 +227,9 @@ export function appLinkUse() {
   return 'none';
 }
 
-/* Reading: only a record of ours — of our format version and our passport. Another report's record lies under another key,
- * while a foreign, outdated or broken one amounts to its absence. */
+// Reading: the reader's own choice, as he left it — another report's record lies under another key.
 export function appRead() {
-  let text = null;
-  try {
-    text = window.localStorage.getItem(appKey);
-  } catch (_e) {
-    return null;
-  }
-  if (text === null) return null;
-  let rec = null;
-  try {
-    rec = JSON.parse(text);
-  } catch (_e) {
-    return null;
-  }
-  return appRecordOk(rec) ? rec : null;
+  return appLoad(appKey);
 }
 
 /* Applying goes by name: a file is recognised by its path, a metric by its key. A name the report does not hold matches
@@ -248,37 +248,22 @@ export function appApply(rec) {
  * what the onlooker looks at rather than about which numbers are read, which is why it never goes into a link and never
  * leaves the browser. The tree opens folded, so **the unfolded folders are what is kept** (`true`) — the default is the
  * absence of the name, the same way "switched on" is the absence of a choice. A folder's name is its path ("src/page"),
- * so a vanished name simply means nothing, and unfolding nothing is the state the page opens in: then the record is not
- * kept at all rather than being kept empty. `appFoldKey` is set with the model (`appBoot`), for the reason the key
- * itself is. */
+ * so a vanished name simply means nothing. `appFoldKey` is set with the model (`appBoot`), for the reason the key itself
+ * is. */
 export function appFoldRead() {
-  let text = null;
-  try {
-    text = window.localStorage.getItem(appFoldKey);
-  } catch (_e) {
-    return;
-  }
-  if (text === null) return;
-  let rec = null;
-  try {
-    rec = JSON.parse(text);
-  } catch (_e) {
-    return;
-  }
-  if (!appRecordOk(rec)) return;
+  const rec = appLoad(appFoldKey);
+  if (rec === null) return;
   const open = rec.open || {};
   Object.keys(open).forEach((p) => { if (open[p] === true) appView.open[p] = true; });
 }
 
+/* What a folder's sign does with the memory: the unfolded folders are what is kept (`true`), so a tree folded whole is
+ * the absence of the record — the default — and the record goes away with the last unfolded folder. */
 export function appFoldSet(path, open) {
   if (open) appView.open[path] = true;
   else delete appView.open[path];
-  const rec = { v: 1, passport: appPassport(), open: Object.assign({}, appView.open) };
-  try {
-    if (Object.keys(rec.open).length === 0) window.localStorage.removeItem(appFoldKey);
-    else window.localStorage.setItem(appFoldKey, JSON.stringify(rec));
-  } catch (_e) {
-    /* There is no memory: what is unfolded will not survive a closing, while the view does not depend on it — the tree
-     * is unfolded exactly the way the reader unfolded it just now. */
-  }
+  const names = Object.keys(appView.open);
+  appKeep(appFoldKey, names.length === 0
+    ? null
+    : { v: 1, passport: appPassport(), open: appView.open });
 }

@@ -10,8 +10,8 @@
  * two would place every cell a little away from its caption. The constants are read off the chapter itself (the way
  * `pageMath` takes the calculation) rather than copied here.
  *
- * Neighbouring suites, deactivated while the table was rebuilt: `page-view`, `page-cols`, `page-tree` and
- * `page-choice` read the markup of the `<table>` that is gone, and each names its own reason at the top of the file.
+ * Neighbouring suites, split by subject rather than by size: `page-view` reads the page as a whole, `page-cols` the order
+ * and the captions of the columns, `page-tree` the panel and `page-choice` the memory of a choice and the link.
  */
 
 import { test } from 'node:test';
@@ -20,7 +20,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { cellParts, stripModules, valueParts } from '../src/size-table.js';
 import { ROOT } from '../tools/harness.js';
-import { fileBox, metricBox, pageMath, pageReady, toggleBox } from '../tools/page-harness.js';
+import {
+  captions, columnOrder, fileBox, gridRows, metricBox, nowRow, pageMath, pageReady, place, rowNumbers,
+  toggleBox, where
+} from '../tools/page-harness.js';
 
 const { data, openPage } = pageReady('grid');
 
@@ -34,11 +37,6 @@ const CSS = fs.readFileSync(path.join(ROOT, 'src', 'table.css'), 'utf8');
 const declared = (name) => Number(new RegExp('--' + name + ':\\s*(\\d+)px').exec(CSS)[1]);
 
 const GRID = (doc) => doc.getElementById('grid');
-const rows = (doc) => [...GRID(doc).querySelectorAll('.row')];
-const nowRow = (doc) => GRID(doc).querySelector('.row.now');
-const numbers = (row) => [...row.querySelectorAll('.cells > span')].map((span) => span.textContent.trim());
-const captions = (doc) => [...GRID(doc).querySelectorAll('.hgroups > span')].map((span) => span.textContent);
-const where = (f) => (f.path === null ? f.paths[0] : f.path);
 const placed = (el) => Number(el.style.left.replace('px', ''));
 
 /* The shared sheet read as rules: the comments out, every block with the selectors that open it. Two places write one
@@ -58,38 +56,9 @@ const decl = (selector, name) => {
   return found[1].trim();
 };
 
-/* Where a file's column stands: the files whose numbers moved most recently come first, and a file the history never
- * moved anywhere comes last — the rule the header and the window share (`appOrder`). The expectation is counted here
- * from the contract's own rows rather than taken from the page: a column of empty cells standing in front of the table
- * is what the order is about, and the check says so in the numbers the reader sees. */
-const columnOrder = () => {
-  const rank = data.files.map(() => -1);
-  let was = null;
-  data.rows.forEach((row, i) => {
-    row.values.forEach((cell, j) => {
-      if (was === null || JSON.stringify(cell) !== JSON.stringify(was[j])) rank[j] = i;
-    });
-    was = row.values;
-  });
-  return data.files.map((_f, i) => i).sort((a, b) => rank[b] - rank[a]);
-};
-
-/* A viewport and a place in it, given rather than measured: jsdom has no layout and remembers no scroll, so the check
- * hands the shell the four figures the page reads — the same properties a browser fills in — and sends the event a
- * browser sends when they move. */
-function place(dom, view) {
-  const shell = dom.window.document.getElementById('shell');
-  const given = { clientHeight: view.high, clientWidth: view.wide, scrollTop: view.top, scrollLeft: view.left };
-  Object.keys(given).forEach((name) => {
-    Object.defineProperty(shell, name, { configurable: true, get: () => given[name] });
-  });
-  shell.dispatchEvent(new dom.window.Event('scroll'));
-  return shell;
-}
-
 /* The ordinal of a built row in the whole grid, read off the place it stands in: the page places a row at its own
  * `top` under the header (`APP_HEAD + r * APP_ROW`), so the ordinals say whether the window is where the shell is. */
-const ordinals = (doc) => rows(doc)
+const ordinals = (doc) => gridRows(doc)
   .map((row) => Math.round((Number(row.style.top.replace('px', '')) - G.head) / G.row));
 
 /* The rows in sight of the shell at a place, in ordinals, without the overreach the page is free to build (which is
@@ -105,7 +74,7 @@ function inSight(view) {
 test('the grid is a window of the table: what the reader sees is built, and no more', async () => {
   const dom = await openPage();
   const doc = dom.window.document;
-  const whole = data.rows.length + 1;
+  const all = data.rows.length + 1;
 
   assert.equal(doc.querySelectorAll('#grid table, #grid tr, #grid td').length, 0,
     'ячейки таблицы вернулись в разметку: таблица снова собирается целиком');
@@ -114,12 +83,12 @@ test('the grid is a window of the table: what the reader sees is built, and no m
   /* A shell of one row: the window is what it shows, so the whole history cannot be in it. */
   place(dom, { high: G.row, wide: 400, top: 0, left: 0 });
   const seen = ordinals(doc);
-  assert.ok(seen.length < whole, 'the whole history was built for a window of one row: ' + seen.length);
+  assert.ok(seen.length < all, 'the whole history was built for a window of one row: ' + seen.length);
   assert.deepEqual(seen, [...Array(seen.length).keys()],
     'the rows of the window are not the first ones of the grid, in order: ' + JSON.stringify(seen));
   assert.equal(nowRow(doc).classList.contains('now'), true,
     'the state at HEAD is not the first row of the grid: the deltas below it have nothing to add up to');
-  assert.equal(rows(doc).filter((row) => row.querySelectorAll('.cells > span').length === 0).length, 0,
+  assert.equal(gridRows(doc).filter((row) => row.querySelectorAll('.cells > span').length === 0).length, 0,
     'a row of the window came out without numbers');
 });
 
@@ -225,7 +194,7 @@ test('the window follows the scroll: the rows in sight are built, and those that
 test('the columns of the window follow the scroll sideways, and a number stays under its own caption', async () => {
   const dom = await openPage();
   const doc = dom.window.document;
-  const order = columnOrder();
+  const order = columnOrder(data);
   const count = data.metrics.length;
   /* Six columns to the right: the total's group is out of sight, so the first caption of the header is a file's — and
    * the columns the page builds are the ones of that file, which is what ties the window to the place in it. */
@@ -237,14 +206,14 @@ test('the columns of the window follow the scroll sideways, and a number stays u
   const file = order[group - 1];
   assert.equal(captions(doc)[0], data.files[file].label,
     'the caption over the first column in sight is not the file of that column: ' + captions(doc).join(' | '));
-  assert.equal(numbers(nowRow(doc))[0], valueParts(data.now[file].raw).text,
+  assert.equal(rowNumbers(nowRow(doc))[0], valueParts(data.now[file].raw).text,
     'the first number in sight is not the raw size of the file of that column: '
-      + numbers(nowRow(doc)).slice(0, 2).join(', '));
+      + rowNumbers(nowRow(doc)).slice(0, 2).join(', '));
 });
 
 test('a file switched off leaves the window: its caption, its columns and its numbers', async () => {
   const doc = (await openPage()).window.document;
-  const order = columnOrder();
+  const order = columnOrder(data);
   const file = order[0];
   const before = Number(GRID(doc).style.width.replace('px', ''));
   assert.equal(captions(doc)[1], data.files[file].label, 'the first column of the window is not the first of the order');
@@ -256,7 +225,7 @@ test('a file switched off leaves the window: its caption, its columns and its nu
     'the columns of the switched-off file stayed in the extent of the grid');
   assert.equal(captions(doc).indexOf(data.files[file].label), -1,
     'the caption of the switched-off file stayed over the numbers of others');
-  assert.equal(numbers(nowRow(doc))[0], valueParts(pageMath.totalsOf(data.now, ['raw'], off).raw).text,
+  assert.equal(rowNumbers(nowRow(doc))[0], valueParts(pageMath.totalsOf(data.now, ['raw'], off).raw).text,
     'the total did not drop by exactly the file that was switched off');
 });
 
@@ -265,19 +234,19 @@ test('the rows of the window are the commits, the newest first, and their number
   const doc = dom.window.document;
   /* A shell bigger than the report: the whole history is in the window, so every row can be compared at once. */
   place(dom, { high: 10000, wide: 10000, top: 0, left: 0 });
-  const built = rows(doc);
-  const whole = data.rows.length + 1;
-  assert.equal(built.length, whole, 'the window of a shell that holds everything is not the whole history');
+  const built = gridRows(doc);
+  const all = data.rows.length + 1;
+  assert.equal(built.length, all, 'the window of a shell that holds everything is not the whole history');
 
   const keys = data.metrics.map((m) => m.key);
   const allOn = data.files.map(() => true);
-  keys.forEach((key, mi) => assert.equal(numbers(nowRow(doc))[mi],
+  keys.forEach((key, mi) => assert.equal(rowNumbers(nowRow(doc))[mi],
     valueParts(pageMath.totalsOf(data.now, keys, allOn)[key]).text,
     'the top row is not the state at HEAD for the metric ' + key));
   data.rows.forEach((row, i) => {
     const r = data.rows.length - i;
     const model = pageMath.rowModel(row.values, i === 0 ? null : data.rows[i - 1].values, keys, allOn);
-    keys.forEach((key, mi) => assert.equal(numbers(built[r])[mi],
+    keys.forEach((key, mi) => assert.equal(rowNumbers(built[r])[mi],
       cellParts(model.total[mi].value, model.total[mi].delta, '−').text,
       'the total of the commit ' + i + ' for the metric ' + key + ' is not the shared calculation’s'));
   });
@@ -292,6 +261,6 @@ test('a metric switched off takes its columns out of the window', async () => {
   toggleBox(doc, metricBox(doc), false);
   assert.equal(Number(GRID(doc).style.width.replace('px', '')), before - files * G.col,
     'the columns of the switched-off metric stayed in the extent of the grid');
-  assert.equal(numbers(nowRow(doc)).length, (data.files.length + 1) * (data.metrics.length - 1),
+  assert.equal(rowNumbers(nowRow(doc)).length, (data.files.length + 1) * (data.metrics.length - 1),
     'the window still holds one number per column of every metric');
 });

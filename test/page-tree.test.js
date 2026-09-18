@@ -1,32 +1,29 @@
 /* The choice panel — the project's file tree: folders come from the paths (not only from the
  * columns), a folder has three states, its switch takes the whole subtree with it, and a file the
- * report does not hold stands in its place with the reason in words. Here too is how far the
- * reader got: a rebuild of the panel puts that back, or every switch would start from the bottom.
+ * report does not hold stands in its place with the reason in words.
  *
- * Checked against the assembled page in a real DOM (jsdom) rather than against a description. The
- * numbers, the pasted program and the empty states are a neighbouring suite (`page-view`), and the
- * memory of a choice is `page-choice`: the file is split by subject rather than by size.
- *
- * How far the reader got — how much of the tree is scrolled and which field is under the keyboard — is checked here
- * too, and it is kept by the shape of the page rather than by putting it back: the panel is built once, so a click has
- * nothing that could take that place away.
+ * The panel is built once (`src/page/panel.js`), and that is what makes the reader's place in it safe: a click has
+ * nowhere to lose it. So how far he got — how much of the tree is scrolled and which field is under the keyboard — is
+ * checked here too, and it is kept by the shape of the page rather than by putting it back.
  *
  * Two rules of the level's order stand here as well: the tree opens **folded** (a project's tree is longer than the
  * window, and the reader unfolds what he looks at; what the memory keeps is the unfolding), and a hidden name — one
  * beginning with a dot — stands after every visible one, the alphabet deciding the rest.
+ *
+ * The numbers, the pasted program and the empty states are a neighbouring suite (`page-view`), the memory of a choice
+ * and the link `page-choice`, the columns `page-cols` and the window `page-grid`: the files are split by subject rather
+ * than by size.
  */
 
-import { test as nodeTest } from 'node:test';
-// Deactivated for now: what the tree promises is unchanged, but the checks of this file read the `<table>` the panel
-// switches. Take the option away from this wrapper once they are repaired against the window of `src/page/table.js`.
-const test = (name, body) => nodeTest(name, { skip: 'the table is a virtualized grid now' }, body);
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { stripModules, valueParts } from '../src/size-table.js';
 import { ROOT } from '../tools/harness.js';
 import {
-  fileBox, metricBox, nowCells, nowTotal, pageMath, pageReady, stored, toggleBox
+  catInput, dirBox, dirInput, fileBox, metricBox, nowCells, nowRow, nowTotal, pageMath, pageReady, stored,
+  toggleBox, where
 } from '../tools/page-harness.js';
 
 /* The chapter that builds the panel, as the page carries it: the ordering rule is read from there (with the module
@@ -40,17 +37,14 @@ const { data, openPage } = pageReady('tree');
 
 const allOn = () => data.files.map(() => true);
 
-const where = (f) => (f.path === null ? f.paths[0] : f.path);
 const dirs = (doc) => [...doc.querySelectorAll('#panel .box.dir')];
-const dirBox = (doc, prefix) => dirs(doc).find((b) => b.textContent.indexOf(prefix) === 0);
-const dirInput = (doc, prefix) => dirBox(doc, prefix).querySelector('input');
 const leaves = (doc) => [...doc.querySelectorAll('#panel .tree .box:not(.dir):not(.plain)')];
 const plains = (doc) => [...doc.querySelectorAll('#panel .tree .box.plain:not(.dir)')];
+
 /* Files of the project that the report does not hold: they never became a column. The "column"
  * mark in the catalogue is an empty reason, and a column is named by the same rule the panel
  * uses. */
-const notMeasured = () => data.catalog.filter((e) =>
-  !data.files.some((f) => where(f) === e.path));
+const notMeasured = () => data.catalog.filter((e) => !data.files.some((f) => where(f) === e.path));
 
 /* The tree's folders are exactly those in the project's file paths (not only in the columns), and
  * its leaves are every measurable file. */
@@ -89,7 +83,7 @@ function folderStates(doc) {
 }
 
 /* A folder's switch takes the whole subtree with it: exactly its files and their columns leave
- * the table and the total. The quick category buttons and the tree are one state: switching a
+ * the window and the total. The quick category buttons and the tree are one state: switching a
  * category off shows on the folder holding its files and leaves other files alone. */
 function subtreeAndCategories(doc) {
   const inSrc = [];
@@ -103,7 +97,8 @@ function subtreeAndCategories(doc) {
   assert.equal(nowTotal(doc), valueParts(rawOf(all)).text, 'the total before the folder was switched off is not the one');
   toggleBox(doc, dirInput(doc, 'src/'), false);
   const off = all.map((_on, i) => inSrc.indexOf(i) < 0);
-  assert.equal(nowTotal(doc), valueParts(rawOf(off)).text, 'switching the folder off did not take its files out of the total');
+  assert.equal(nowTotal(doc), valueParts(rawOf(off)).text,
+    'switching the folder off did not take its files out of the total');
   assert.equal(nowCells(doc), (off.filter(Boolean).length + 1) * data.metrics.length,
     'switching the folder off did not take its columns away');
 
@@ -170,16 +165,12 @@ test('the tree shows every file of the project, and those outside the report wit
   toggleBox(doc, dirInput(doc, 'docs/'), false);
   assert.equal(nowCells(doc), (data.files.length - measuredDocs + 1) * data.metrics.length,
     'the folder’s box took more out of the table than its measurable files');
-
-
 });
 
 /* The panel keeps no state of its own: a file's box is the state, and a folder's and a category's fields
- * are what the boxes below them say. That is one promise about every field at once, so it is checked as
- * one — after a mixed sequence of switches (files, two folders, a category and a metric) every field of the
- * panel is compared with the leaves it speaks for, and the files' boxes with the table. The rebuild this
- * step removed made that promise true by construction; nothing does now, and a field a click forgot would
- * drift in silence: the numbers would stay right while a checkbox would lie about what is counted. */
+ * are what the files below them say (`appPanelState`). That is one promise about every field at once, so it is checked
+ * as one — after a mixed sequence of switches every field of the panel is compared with the leaves it speaks for, and
+ * the files' boxes with the window. */
 test('every field of the panel says what the files below it say, after a mixed choice', async () => {
   const doc = (await openPage()).window.document;
   /* The leaves of the tree — and only they: the metric switches and the category buttons are `.box` alike, so
@@ -207,14 +198,13 @@ test('every field of the panel says what the files below it say, after a mixed c
       'третье состояние папки «' + box.textContent.replace(/\/\d+(\/\d+)?$/, '') + '» не то, что говорят её файлы');
   });
   data.categories.forEach((cat) => {
-    const box = [...doc.querySelectorAll('#panel .row .box.all')].find((b) => b.textContent === cat.label);
     const mine = files.filter((b) => data.files.find((f) => where(f) === pathOf(b)).category === cat.key);
     const on = mine.filter((b) => b.checked).length;
-    assert.equal(box.querySelector('input').checked, on === mine.length,
+    assert.equal(catInput(doc, cat).checked, on === mine.length,
       'кнопка категории «' + cat.label + '» не то, что говорят её файлы');
   });
-  /* And the panel with the table: they are two views of one state, and the numbers behind them are counted
-   * per file — the row «сейчас» holds one cell per shown metric per switched-on file plus the total. */
+  /* And the panel with the window: they are two views of one state, and the numbers behind them are counted
+   * per file — the row «сейчас» holds one number per shown metric per switched-on file plus the total. */
   const shown = data.metrics.length - 1;
   assert.equal(nowCells(doc), (files.filter((b) => b.checked).length + 1) * shown,
     'число показанных колонок не то, что говорят переключатели файлов');
@@ -226,12 +216,10 @@ test('every field of the panel says what the files below it say, after a mixed c
  * would have to be searched among strangers — and a hidden name (one beginning with a dot) comes after every
  * visible one, the alphabet deciding the rest.
  *
- * The set of "folders with nothing to measure" is computed from the data rather than read off the
- * markup: otherwise the check would confirm itself and miss a folder marked unavailable for no
- * reason. The hidden-name rule cannot be read off this tree — the shared fixture holds no dot-file — so it
+ * The hidden-name rule cannot be read off this tree — the shared fixture holds no dot-file — so it
  * is checked where it is a rule: the comparator is taken from the chapter that uses it (the way `pageMath`
  * takes the page's calculation) and held to its own cases, and then every level of the assembled tree is
- * compared against it, which is what a project with one dot-file in it would show. */
+ * compared against it. */
 test('folders outside the report come with the box off and after those inside it', async () => {
   const doc = (await openPage()).window.document;
   const measured = data.files.map(where);
@@ -282,7 +270,7 @@ test('folders outside the report come with the box off and after those inside it
 
 /* Folding is how much of the tree is visible, and it must not touch the numbers: the box is
  * responsible for what is counted, the folder's mark for what is visible. So folding and the
- * memory of it are checked where it shows that the table has not moved and that the tree comes back
+ * memory of it are checked where it shows that the window has not moved and that the tree comes back
  * the way the reader left it on the next visit — in a tree of any length that is the only way to
  * reach its middle. The tree opens folded; what the memory keeps is the unfolding. */
 test('the tree opens folded, and the folders a reader unfolds come back unfolded', async () => {
@@ -292,7 +280,7 @@ test('the tree opens folded, and the folders a reader unfolds come back unfolded
   const row = (d, prefix) => dirBox(d, prefix).closest('li');
   const click = (d, prefix) => fold(d, prefix).dispatchEvent(new dom.window.Event('click'));
   const before = nowCells(doc);
-  const table = doc.querySelector('#grid tbody tr');
+  const first = nowRow(doc);
 
   /* The default: every folder is folded — the mark says so, and the row carries the class the styling
    * hides the subtree with, while the subtree itself lies in the markup as it did. */
@@ -306,12 +294,11 @@ test('the tree opens folded, and the folders a reader unfolds come back unfolded
     'the folder’s row is still marked folded: the subtree is hidden from the reader who unfolded it');
   assert.equal(dirInput(doc, 'src/').checked, true,
     'unfolding the folder changed its choice: the mark is for the look, the box for the numbers');
-  assert.equal(nowCells(doc), before, 'unfolding the folder took numbers out of the table');
-  /* Folding is pure appearance: the table stays the very same markup afterwards rather than being
-   * assembled again. Otherwise every click on the mark would count all rows and columns, and a tree
-   * with a long history would answer with a visible delay. */
-  assert.equal(doc.querySelector('#grid tbody tr'), table,
-    'a click on the mark reassembled the table: folding counts numbers it does not change');
+  assert.equal(nowCells(doc), before, 'unfolding the folder took numbers out of the window');
+  /* Folding is pure appearance: the window is not built again — the very nodes stand where they stood. Otherwise every
+   * click on the mark would count the rows and the columns of the grid, and a tree with a long history would answer
+   * with a visible delay. */
+  assert.equal(nowRow(doc), first, 'a click on the mark built the window again: folding counts numbers it cannot change');
 
   /* Memory: the next visit opens with the folder unfolded and the rest folded, and the full choice.
    * The unfolding has a record of its own — otherwise it would travel into a link, and a link is a

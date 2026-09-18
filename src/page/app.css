@@ -45,7 +45,7 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
 }
 .panel fieldset { margin: 0; padding: 0; border: 0; }
 .panel fieldset + fieldset { margin-top: 10px; }
-.panel legend, .panel .cap {
+.panel legend {
   padding: 0;
   color: var(--muted);
   font-size: 11px;
@@ -53,7 +53,6 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
   text-transform: uppercase;
   letter-spacing: .07em;
 }
-.panel .cap { display: block; margin-bottom: 4px; }
 .panel .row { display: flex; flex-wrap: wrap; gap: 3px 6px; align-items: center; }
 /* The way of counting is visible text under the switches: the token dictionary and the way of compression come from the
  * settings of the run rather than from a checkbox, so pointing a mouse is not enough — the reader has to see what produced
@@ -91,7 +90,7 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
   cursor: pointer;
   user-select: none;
 }
-.panel .tree li > .fold:hover { color: var(--ink); }
+.panel .tree li > .fold:hover { color: CanvasText; }
 
 /* A switch is a label around an input: one label and one click target, which is why a mouse, the keyboard (`Space` on the
  * input) and assistive technology all reach it. */
@@ -131,11 +130,7 @@ h1 { margin: 0 0 3px; font-size: 21px; font-weight: 650; letter-spacing: -.012em
 /* Numbers are denser than the page's text: there are more of them, they are shorter, and they are read by their digits. */
 #grid { font-size: 12.5px; }
 
-/* There is no stripe of progress over the page any longer, and that is a measurement rather than an omission: it stood
- * over the browser's relayout of the whole table, and the table is built as a window now — a switch costs a few
- * milliseconds (`src/page/table.js`), so an indicator would be a promise the page does not keep.
- *
- * The message about a link that came in stands above the table, so that it cannot be missed, while it does not push the
+/* The message about a link that came in stands above the table, so that it cannot be missed, while it does not push the
  * table away: one line in the place of the page. Its colour is the system one (the accent), for the page keeps no colours
  * of its own. */
 .notice {

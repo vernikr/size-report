@@ -10,7 +10,7 @@ shows.
 
 ## Status
 
-**Release 2.8.1 (2026-09-18).** The tool lives as a package of its own: the registry name is
+**Release 2.8.2 (2026-09-18).** The tool lives as a package of its own: the registry name is
 `@vernikr/size-report` (published by tag from CI, with no secret). A project may keep no settings at
 all: without a config file the tool derives them from the project itself and says so in one line,
 and `--init` pins what was derived into a file. The report is **one file**, the self-contained page
@@ -18,6 +18,25 @@ and `--init` pins what was derived into a file. The report is **one file**, the 
 is installed and on the first run. The version is in the manifest, and every release is recorded in
 the journal — `worklog/` for today's entries, `worklog/archive/WORKLOG.md` for the earlier ones:
 what changes in the numbers is measured rather than retold.
+
+2.8.2 is about the page's own sources and the checks that guard them, and its figures are measured rather than retold.
+**The four page suites that went quiet with the `<table>` are alive again against the window:** `test/page-view.test.js`,
+`page-cols`, `page-tree` and `page-choice` read the grid and the panel they guard rather than markup that no longer
+exists, and what they promise is what they hold — the pasted program with no second calculation, the sparse block, the
+recount by the choice, the order of the columns, the tree's folds and its memory, the link's refusals. **Their readers
+are no longer each suite's own:** `tools/page-harness.js` keeps one set of them (a file's path at HEAD, the rows the
+window built, the numbers of a row and its captions, a folder's and a category's switch, the place the shell stands at),
+and the copies the suites carried left with it. **And the page's chapters shed the duplication the same request
+found:** the choice's record and the folded tree share one reading and one writing of the browser's memory
+(`appLoad`/`appKeep`), a folder's two figures come from one walk of its subtree (`appSub`), the three walks over the
+metrics and the files of a record became the panels' one question asked twice (`appReach`), and the three paths of a
+click became one drawing (`appChanged`) — while two rules that never took effect went with them (a dead `.cap` of the
+styling, an undefined colour under the folding sign). Measured in bytes for the same history: the chapters **−745 B**
+(37 lines), the suites **−18 462 B** (251 lines), the harness **+4 328 B** — the tree loses **14 879 B and 220 lines**,
+and the artifact **85 730 → 84 991 B**, its program and its styling being exactly what the chapters are. The checks go
+89 → **86** in the fast profile and 194 → **191** in the full one: what a reader of the page does is one place now
+rather than five, and a check that read the table it no longer has is not a check. The figures and the reasoning stand
+in `worklog/0210-page-suites-on-the-window.md`.
 
 2.8.1 is the drawing of the page put right after its table became a window, and its figures are measured rather than
 retold. **The panel and the table were sharing one class:** the table's rows were styled by a bare `.row` while the
@@ -49,11 +68,10 @@ stripe over a drawing is gone with the freeze it was drawn for**: a switch costs
 for an indicator to indicate, and `src/page/work.js` left the tree with it. A virtualizer library was measured and not
 taken — `@tanstack/virtual-core` is ~6.7 kB gzip and headless, `virtua`'s grid is experimental and `Clusterize.js`
 knows rows and not columns — because each would be vendored into the artifact, which the report then measures as its own
-bytes. **The checks of the old table are deactivated while it is rebuilt:** `test/page-view.test.js`, `page-cols`,
-`page-tree` and `page-choice` skip every check with its reason at the top of the file, and this document names them
-where they are the promise-holders of what they described; `test/page-grid.test.js` is what guards the window meanwhile.
-The figures and the reasoning stand in `worklog/0208-table-window.md`. The checks grow with the work: 81 → **88** in the
-fast profile and 186 → **193** in the full one.
+bytes. The checks of the old table went quiet with it, each naming its reason, and 2.8.2 brought them back against the
+window; `test/page-grid.test.js` is what guards the window itself. The figures and the reasons stand in
+`worklog/0208-table-window.md`. The checks grow with the work: 81 → **88** in the fast profile and 186 → **193**
+in the full one.
 
 2.7.0 is about the page and what a reader does with it, and its figures are measured rather than retold.
 **The report's address stays clean:** a switch writes the record into the browser's memory and nothing into the
@@ -253,8 +271,8 @@ commits and installs hooks; the reason for each expensive file is named line by 
 
 | Run | Command | Checks |
 |---|---|---|
-| Fast — every edit | `pnpm test` | **89 of 194** |
-| Full — release and CI | `pnpm test:all` | **194** |
+| Fast — every edit | `pnpm test` | **86 of 191** |
+| Full — release and CI | `pnpm test:all` | **191** |
 
 No check is lost or weakened: the full run starts every file, the fast one takes part of them. The default is the full run — a file becomes fast only explicitly and with a reason — so new
 expensive work cannot quietly move into the fast one. Two declarations guard that:
@@ -637,7 +655,7 @@ acceptance for each.
 | `test/api.test.js` | The package's public API: the list of names is frozen, and splitting the engine may not change it |
 | `eslint.config.js` | The rules of formatting: the same as the consumer project's, plus a ban on gluing operators into one line (`pnpm run lint`, `pnpm run lint:strict`) |
 | `tools/harness.js` | The harness of the checks: paths, clones of the fixture (including one shared per suite and one with CRLF), running the tool, reading refusals, hashes |
-| `tools/page-harness.js` | The harness of the contract and page checks: the contract data, the assembled page, reading it in a real DOM, the panel's switches, the page's calculation and its decoder evaluated from their sources, the block unpacked, and the platform's unpacker put into jsdom (which has none) — one for seven suites |
+| `tools/page-harness.js` | The harness of the contract and page checks: the contract data, the assembled page, reading it in a real DOM, one set of readers for every page suite (a file's path at HEAD, the rows the window built and their numbers, the captions over them, the order of the columns, a folder's and a category's switch, the place the shell stands at), the page's calculation and its decoder evaluated from their sources, the block unpacked, and the platform's unpacker put into jsdom (which has none) — one for seven suites |
 | `tools/suites.js` | The split of the suite: which files go into the fast run (with a reason for each) and why every dear one is in the full run |
 | `tools/run-tests.js` | Running the suite (`pnpm test`, `pnpm test:all`, `pnpm run suites:measure`): each file's duration measured on its own, and the counts of checks adding up |
 | `tools/docs-facts.js` | Reading facts out of the documentation — one layer for the four checks of the documentation guard: what a document names (paths, calls, section addresses) against what the repository holds |
@@ -654,10 +672,10 @@ acceptance for each.
 | `test/contract-data.test.js` | The data contract: the numbers against the reference, the set of fields against the derived quantities, the metric's method against the way the numbers were counted — and the round trip through the page's sparse block, which restores the contract whole and twice over the same bytes |
 | `test/contract-derived.test.js` | The derived quantities against the artifact's numbers: a row's totals, a cell's delta and the delta of a total — on the code that lies in the tree |
 | `test/page-grid.test.js` | The grid of the page as a window: what the reader sees is built and no more, the geometry of the styling against the script's, the rows and the columns that a scroll builds and drops, a number under its own caption, a file and a metric switched off, every row of the window against the engine's own calculation, and the drawing's own rules — the order of the columns by the numbers, one border, the header's rows of one height, and the panel out of the shared styling's reach |
-| `test/page-view.test.js` | The assembled page: pasted with no copy of the calculation, self-contained, the empty states, the styling, the switches, a click that makes no table and the carried totals against the engine's own sums — **deactivated** while the table is rebuilt, every check skipped with its reason in the file |
-| `test/page-tree.test.js` | The panel's file tree: folders by the project's paths, three states, the subtree, files and folders outside the report (a checkbox off, a place after the rest), the hidden names at the end of a level, the tree that opens folded and the unfolding the memory keeps, folding without a rebuild and a scroll a click does not touch — **deactivated** with the table, the checks skipped with their reason |
-| `test/page-choice.test.js` | The reader's choice and the work a click starts: the memory and a revisit, someone else's report, a foreign and a broken record, an address that stays clean, a link read at opening and on an open page, and the drawing of a long switch in a task of its own behind the stripe — **deactivated**: the choice and the link are the same, while the counts and the stripe are not |
-| `test/page-cols.test.js` | The fixed layout the page carries: a column's width is counted from the model rather than measured in a laid-out cell, the clip keeps a caption inside its column, the sticky header and commit column keep their edges, and the table names its own width — **deactivated** with the table: the columns are one fixed width now |
+| `test/page-view.test.js` | The assembled page: pasted with no copy of the calculation, self-contained, the sparse block, the recount by the choice, every total of the window against the engine's own sums, no mark of precision left on a cell, the shared styling pasted once and the delta colour set once, the empty states, and the switches' focus |
+| `test/page-tree.test.js` | The panel's file tree: folders by the project's paths, three states, the subtree, files and folders outside the report (a checkbox off, a place after the rest), the hidden names at the end of a level, the tree that opens folded and the unfolding the memory keeps, folding without a rebuild and a scroll a click does not touch |
+| `test/page-choice.test.js` | The reader's choice: the memory and a revisit, someone else's report, a foreign and a broken record, an address that stays clean, a link read at opening and on an open page, and a host without an unpacker that is told so in words |
+| `test/page-cols.test.js` | The columns of the grid: their order by the newest row a file's numbers moved in, a caption over exactly the metrics of its group, and a choice that moves no other column |
 | `test/module.test.js` | A module under a `.js` extension: measured without touching the settings; the stripper's guard is alive (proved by mutation) and does not accuse the innocent |
 | `test/guard.test.js` | Parsing a module: it goes through a thread, both paths give one verdict, the fallback works with the thread's file away, and hundreds of parses are cheaper than a launch |
 | `test/runner.test.js` | Reading a process's output: chunks are glued as buffers rather than appended to a string — a multi-byte character at a chunk border does not turn into two replacement characters |
@@ -737,7 +755,7 @@ The same release can be taken by a reference to the repository — installation 
 registry, but stays tied to a revision:
 
 ```bash
-pnpm add -D github:vernikr/size-report#v2.8.1
+pnpm add -D github:vernikr/size-report#v2.8.2
 ```
 
 With no network (or nothing to fetch from codeload) — the tarball: `pnpm pack` in the package clone, then
@@ -749,7 +767,7 @@ the branch moves on the installation fails with `Could not resolve <sha> to a co
 observation rather than reasoning: the short pin `6530237` installed while `main` stood on it and stopped
 working at the very next commit, while the same sha in full installed. A branch name (`#main`) and a tag
 are both accepted, but a branch is a moving target and a tag is constant: this release stands on the tag
-`v2.8.1`, which is also the one in the example (forty characters work as well, but they have to be copied
+`v2.8.2`, which is also the one in the example (forty characters work as well, but they have to be copied
 out of the history by eye).
 
 The revision in the example is a part of the claim rather than decoration: what is described below is

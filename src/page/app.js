@@ -4,15 +4,11 @@ import { appState, appTable, appWindow } from './table.js';
 import { appPanel, appPanelAll, appPanelState } from './panel.js';
 
 /* Assembling the report: the table is a window of the grid (`appWindow` of the table chapter) and nothing is built
- * that the reader cannot see. Two paths and no third, as before: `appPaint` draws the whole view (the first drawing, a
- * record from the browser's memory, a link in the address), while a click on a box does the same work for the choice
- * it made — and the difference between them is only how much of the view moved.
- *
- * What a click costs now: the window of rows and columns is built again — a few hundred cells, measured at 1–5 ms on
- * this repository's report — instead of a class on every node of a column of a table the browser lays out whole. The
- * stripe that used to stand over a long drawing (`src/page/work.js`) is gone with the reason for it: a switch no
- * longer has anything to wait for, and an indicator over work that is over before it could be painted would be a
- * promise the page does not keep.
+ * that the reader cannot see. Two paths and no third: `appPaint` draws the whole view (the first drawing, a record from
+ * the browser's memory, a link in the address), while a click on a box does the same work for the choice it made — the
+ * difference between them is only how much of the view moved. Neither has anything to wait for: a switch builds the
+ * window of the grid, a few hundred cells and milliseconds, so the page needs no indicator and keeps no promise it
+ * cannot measure.
  */
 
 // The table's window: made once, at the first drawing.
@@ -42,38 +38,36 @@ export function appPaint() {
   appWrite();
 }
 
-/* One file switched by the reader: the view, the window (its column is simply not among the columns that are built),
- * the fields it shows in. The message about a link fades here: by this action the reader has read it. */
+/* One drawing after a click, whatever was clicked: the window of the grid (the columns of what is switched off are
+ * simply not among the columns that are built), the counts of the empty states, the fields the choice really reached
+ * (`touched` — a whole group is one click, and a field that did not move is not written) and the memory. The message
+ * about a link fades here: by this action the reader has read it. */
+function appChanged(touched) {
+  appWindow(appCache, true);
+  appCounts();
+  if (touched.length > 0) appPanelState(touched);
+  appWrite();
+  appNotice('');
+}
+
+// One file switched by the reader. A switch that changes nothing is not a change: the click costs no drawing.
 export function appSwitch(i, on) {
   if (appView.files[i] === on) return;
   appView.files[i] = on;
-  appWindow(appCache, true);
-  appCounts();
-  appPanelState([i]);
-  appWrite();
-  appNotice('');
+  appChanged([i]);
 }
 
-/* A group switched at once — a folder or a category: the same work per file, then the fields of the files the choice
- * really reached (switching a folder on when a part of it was already on touches only the rest, and a field that did
- * not move is not written). The columns of the whole group leave or enter the window together. */
+/* A group switched at once — a folder or a category: the same work per file, and the fields of the files the choice
+ * really reached (switching a folder on when a part of it was already on touches only the rest). */
 export function appSwitchGroup(indexes, on) {
   const touched = indexes.filter((i) => appView.files[i] !== on);
   touched.forEach((i) => { appView.files[i] = on; });
-  appWindow(appCache, true);
-  appCounts();
-  appPanelState(touched);
-  appWrite();
-  appNotice('');
+  appChanged(touched);
 }
 
-/* One metric switched: the columns of that metric are not among the columns that are built any longer, so this is the
- * same drawing as a file's switch. The metric's own field is the box the reader just clicked. */
+/* One metric switched. Only the panel's metric box shows it, and that box is the one the reader just clicked. */
 export function appSwitchMetric() {
-  appWindow(appCache, true);
-  appCounts();
-  appWrite();
-  appNotice('');
+  appChanged([]);
 }
 
 /* The first drawing: the choice is already in the view (the link and the memory are applied above), the panel is
