@@ -211,6 +211,61 @@ test('the columns of the window follow the scroll sideways, and a number stays u
       + rowNumbers(nowRow(doc)).slice(0, 2).join(', '));
 });
 
+/* A step sideways is the one that used to build everything again: the row's node stays, the cells of the columns that
+ * are still in sight stay with it, and only the columns that entered are made. The check is by node identity — a page
+ * that built the same numbers again would read the same and cost the same as before — and by the window built at the
+ * same place in one leap, which is what the numbers of the moved window have to be. */
+test('a step sideways moves the window: the rows and the numbers in sight stay, and only the columns that entered', async () => {
+  const dom = await openPage();
+  const doc = dom.window.document;
+  const step = 6;
+  const count = data.metrics.length;
+  /* A place in the middle of the grid: a step from either edge would be clamped by the overreach the page builds, and
+   * what is being read here is the movement itself. The columns the step is worth are the page's own arithmetic — the
+   * first column of the window at a place (`appSpan`) — rather than the pixels of the step, so that a window clamped
+   * at an edge would be told apart from one that moved. */
+  const view = { high: 400, wide: 400, top: 0, left: 300 };
+  const col0 = (left) => Math.max(0, Math.floor(left / G.col) - G.over);
+
+  place(dom, view);
+  const from = view.left;
+  const rows = gridRows(doc);
+  const numbers = rows.map((row) => [...row.querySelectorAll('.cells > span')]);
+  const metrics = [...doc.querySelectorAll('#grid .hmetrics > span')];
+  view.left += step * G.col;
+  place(dom, view);
+  const moved = col0(view.left) - col0(from);
+  assert.equal(moved, step, 'подготовка проверки: окно сдвинулось не на тот шаг, которым его двигают');
+
+  /* The header's line of metrics is a strip of the same kind, and it moves by the same arithmetic: a caption stands
+   * over its column, so the strip is asked for whole groups and moves by whole groups. */
+  const movedHead = (Math.floor(col0(view.left) / count) - Math.floor(col0(from) / count)) * count;
+  const captionsNow = [...doc.querySelectorAll('#grid .hmetrics > span')];
+  for (let j = 0; j + movedHead < metrics.length; j++) {
+    assert.equal(captionsNow[j], metrics[j + movedHead], 'a caption over a column still in sight was made again');
+  }
+
+  assert.deepEqual(gridRows(doc), rows, 'the rows were built again for a step sideways: the window was thrown away');
+  gridRows(doc).forEach((row, i) => {
+    const held = [...row.querySelectorAll('.cells > span')];
+    assert.equal(held.length, numbers[i].length,
+      'the window changed its width for a step sideways: a column was made or dropped twice');
+    for (let j = 0; j + moved < numbers[i].length; j++) {
+      assert.equal(held[j], numbers[i][j + moved],
+        'a number that stayed in sight was made again rather than kept');
+    }
+    assert.ok(numbers[i].indexOf(held[held.length - 1]) < 0,
+      'no column entered the window: the check did not move it');
+  });
+
+  /* The same place reached in one leap: the numbers of the moved window are the numbers the page builds there, because
+   * a shift that kept the wrong cells would read as a table all the same. */
+  const other = await openPage();
+  place(other, view);
+  assert.deepEqual(gridRows(doc).map(rowNumbers), gridRows(other.window.document).map(rowNumbers),
+    'the numbers of the window that moved are not the numbers of the window at that place');
+});
+
 test('a file switched off leaves the window: its caption, its columns and its numbers', async () => {
   const doc = (await openPage()).window.document;
   const order = columnOrder(data);

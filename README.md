@@ -10,7 +10,7 @@ shows.
 
 ## Status
 
-**Release 2.8.2 (2026-09-18).** The tool lives as a package of its own: the registry name is
+**Release 2.8.3 (2026-09-18).** The tool lives as a package of its own: the registry name is
 `@vernikr/size-report` (published by tag from CI, with no secret). A project may keep no settings at
 all: without a config file the tool derives them from the project itself and says so in one line,
 and `--init` pins what was derived into a file. The report is **one file**, the self-contained page
@@ -18,6 +18,19 @@ and `--init` pins what was derived into a file. The report is **one file**, the 
 is installed and on the first run. The version is in the manifest, and every release is recorded in
 the journal — `worklog/` for today's entries, `worklog/archive/WORKLOG.md` for the earlier ones:
 what changes in the numbers is measured rather than retold.
+
+2.8.3 is about what a sideways scroll of the report costs, and its figures are measured rather than retold. **A step
+sideways moves the window instead of building it:** a row is made once and lives through the move, keeping its node and
+its numbers — the window's columns are the range of that row's numbers, so the columns that entered it are made and the
+ones that left are dropped, the header's line of names and its line of metrics by the same rule. A switch of the
+reader's own and the shell's resize are the one thing that cannot be a move — a column that is not built cannot be
+shown — and they build the window from nothing as they did. **Measured on this repository's own report in live Chrome**
+(`probes/step-12-window.mjs`, two rounds, 1440 × 900): the page's own handling of one step **10.4 → 0.6 ms** (worst
+19.2 → 3.6) and the layout the step forces **14.4 → 5.9 ms**; over a sweep of forty steps the browser's own accounting
+gives layout **0.605 → 0.246 s**, style recalculation 0.169 → 0.056 s and task time **1.281 → 0.350 s**. The checks go
+86 → **87** in the fast profile and 191 → **192** in the full one: `test/page-grid.test.js` holds the rule by node
+identity — a page that built the same numbers again would read the same — and by the numbers of the window built at
+that place in one leap. The figures and the reasoning stand in `worklog/0211-sideways-step.md`.
 
 2.8.2 is about the page's own sources and the checks that guard them, and its figures are measured rather than retold.
 **The four page suites that went quiet with the `<table>` are alive again against the window:** `test/page-view.test.js`,
@@ -271,8 +284,8 @@ commits and installs hooks; the reason for each expensive file is named line by 
 
 | Run | Command | Checks |
 |---|---|---|
-| Fast — every edit | `pnpm test` | **86 of 191** |
-| Full — release and CI | `pnpm test:all` | **191** |
+| Fast — every edit | `pnpm test` | **87 of 192** |
+| Full — release and CI | `pnpm test:all` | **192** |
 
 No check is lost or weakened: the full run starts every file, the fast one takes part of them. The default is the full run — a file becomes fast only explicitly and with a reason — so new
 expensive work cannot quietly move into the fast one. Two declarations guard that:
@@ -407,7 +420,10 @@ right edge of the pinned commit column rather than under it, and every line of t
 cell, along a group's left edge — is one pixel of one colour: a heavier line would promise a hierarchy to work out
 rather than read. The geometry is four figures — a column, a row, the header, the pinned column — written in the styling
 and in the script that counts the window's ordinals in them, and `test/page-grid.test.js` reads both and holds them
-together.
+together. **A step sideways moves that window rather than building it:** the rows live through the move and only the
+columns that entered are made, at 10.4 → **0.6 ms** for the page's own handling of the step, 14.4 → **5.9 ms** for the
+layout it forces and 1.281 → **0.350 s** of task time over a sweep of forty steps
+(`probes/step-12-window.mjs`).
 
 **A click builds the window again, and that is cheap now.** A file switched off is simply not among the columns that
 are built, and a metric switched off not among the metrics: there is nothing to hide and nothing to carry, and the
@@ -586,7 +602,7 @@ acceptance for each.
 | `tools/parity-freeze.js` | Takes the parity reference (`pnpm run parity`): with the frozen copy, at the project revision from the manifest — `--json`, the config, the artifact's hash, the tool's hash |
 | `tools/make-fixture.js` | Assembles the synthetic fixture (`pnpm run fixture`): a deterministic history with traps plus the reference numbers |
 | `tools/synthetic/` | The subjects of that assembly, one per matter: `repo.js` — how git is spoken to (pinned time, author, settings), `content.js` — what the files hold, `history.js` — which commits come of it, `note.js` — the fixture's note with the list of traps |
-| `probes/` | The scripted measurements behind `plans/2026-09-17-page-perf/`: one file per step, run by hand against live Chrome at the debug port — the fixed layout, where `content-visibility` acts at all, and the two border models with their pixels (`probes/README.md`). Outside the sensors' paths on purpose: they measure the product rather than being part of it, and a suite cannot see layout, paint or a browser's own skipping |
+| `probes/` | The scripted measurements behind `plans/2026-09-17-page-perf/`: one file per step, run by hand against live Chrome at the debug port — the fixed layout, where `content-visibility` acts at all, the price of a switch and of a step sideways — (`probes/README.md`). Outside the sensors' paths on purpose: they measure the product rather than being part of it, and a suite cannot see layout, paint or a browser's own skipping |
 | `tools/parity-live.js` | Compares the engine with the live project on a clone: the numbers and the self-contained report at the path the consumer's settings give (`pnpm run parity:live`) |
 | `tools/pack-check.js` | Assembles the tarball and checks that everything works from it: all sources arrived, the numbers and the report as from the repository (`pnpm run pack:check`) |
 | `tools/check-standards.js` | Checks that both references reproduce: a re-take goes nowhere and is compared with what is committed (our files byte for byte, the bundle by content), and that the live-history bundle carries `HEAD` (`pnpm run check:standards`) |
@@ -622,7 +638,7 @@ acceptance for each.
 | `src/page/state.js` | The page's state: the report's data (the block unrolled by the payload chapter), the view of the checkboxes, the pointer "which path is which column", the unfolded folders, the record's passport, the browser's memory and the link that is read out of the address — a chapter of the page's program |
 | `src/page/dom.js` | The page's nodes: the small helpers of markup (`appEl`, `appBox`) — one set for the panel and the table alike |
 | `src/page/panel.js` | The panel of choices: the switches of metrics and files, the categories, the tree of the project's paths (files outside the report keep a checkbox off with a reason and stand after the rest, and a hidden name after every visible one; the tree opens folded and folders carry a sign that hides the subtree by a class rather than by a rebuild); built once, with the fields of the switches and of the folders and categories written where they stand |
-| `src/page/table.js` | The page's table as a window: the rows and the columns the reader can see (plus four beyond each edge), a cell, a commit's caption, the header, the empty states and the order of the columns — markup over the shared calculation, with the totals counted per row from the choice, the geometry in pixels that the styling mirrors, and the reason a library was not taken |
+| `src/page/table.js` | The page's table as a window: the rows and the columns the reader can see (plus four beyond each edge), moved by a scroll rather than built again (a row lives through a step sideways and only the columns that entered it are made), a cell, a commit's caption, the header, the empty states and the order of the columns — markup over the shared calculation, with the totals counted per row from the choice, the geometry in pixels that the styling mirrors, and the reason a library was not taken |
 | `src/page/app.js` | Assembling and starting the page: the first drawing, then a switch that builds the window again and writes the fields it reached without making a node of the panel; an anchor change; pasted into the assembled page |
 | `src/page/build.js` | Assembling the page: data, styling and program in one file with no external references — the pasted text is **squeezed** on the way in (comments and indentation out, the same stripping the `min` metric counts) while the sources keep them, and the result is guarded by the stripper's own `assertCompilable` |
 | `src/git.js` | The only border where git is called: the pinned settings, blobs by the batch, the history, the comparison with the working tree |
@@ -755,7 +771,7 @@ The same release can be taken by a reference to the repository — installation 
 registry, but stays tied to a revision:
 
 ```bash
-pnpm add -D github:vernikr/size-report#v2.8.2
+pnpm add -D github:vernikr/size-report#v2.8.3
 ```
 
 With no network (or nothing to fetch from codeload) — the tarball: `pnpm pack` in the package clone, then
@@ -767,7 +783,7 @@ the branch moves on the installation fails with `Could not resolve <sha> to a co
 observation rather than reasoning: the short pin `6530237` installed while `main` stood on it and stopped
 working at the very next commit, while the same sha in full installed. A branch name (`#main`) and a tag
 are both accepted, but a branch is a moving target and a tag is constant: this release stands on the tag
-`v2.8.2`, which is also the one in the example (forty characters work as well, but they have to be copied
+`v2.8.3`, which is also the one in the example (forty characters work as well, but they have to be copied
 out of the history by eye).
 
 The revision in the example is a part of the claim rather than decoration: what is described below is

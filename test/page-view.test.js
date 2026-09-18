@@ -74,13 +74,13 @@ test('the computational part of the page is the engine’s code, not a copy', ()
    * chapters are read as they reach the page — with the module syntax stripped. */
   assert.deepEqual(defined('\n' + stripModules(appSrc)).sort(), [
     'appAll', 'appApply', 'appBegin', 'appBoot', 'appBox', 'appBytes', 'appCaption', 'appCatState',
-    'appCell', 'appChanged', 'appCommit', 'appCounts', 'appDecode', 'appDir', 'appDirHead', 'appDirPath',
+    'appCell', 'appCells', 'appChanged', 'appCommit', 'appCounts', 'appDecode', 'appDir', 'appDirHead', 'appDirPath',
     'appDirState', 'appEl', 'appFileAt', 'appFileBox', 'appFirst', 'appFoldBox', 'appFoldRead',
-    'appFoldSet', 'appHash', 'appHead', 'appJoined', 'appKeep', 'appLeaf', 'appLeafAt', 'appLeaves',
+    'appFoldSet', 'appHash', 'appHead', 'appHeadNew', 'appJoined', 'appKeep', 'appLeaf', 'appLeafAt', 'appLeaves',
     'appLinkRead', 'appLinkUse', 'appList', 'appLoad', 'appName', 'appNode', 'appNote', 'appNotice',
     'appNum', 'appOffBox', 'appOrder', 'appPaint', 'appPanel', 'appPanelAll', 'appPanelState',
     'appPassport', 'appPlace', 'appRank', 'appReach', 'appRead', 'appRecord', 'appRecordOk', 'appRow',
-    'appRowBoxes', 'appRowOf', 'appSpan', 'appState', 'appStep', 'appSub', 'appSwitch', 'appSwitchGroup',
+    'appRowBoxes', 'appRowOf', 'appSpan', 'appState', 'appStep', 'appStrip', 'appSub', 'appSwitch', 'appSwitchGroup',
     'appSwitchMetric', 'appTable', 'appText', 'appTree', 'appTreeList', 'appUnknown', 'appUnmeasuredBox',
     'appUnpack', 'appUnroll', 'appValue', 'appWindow', 'appWrite'
   ], 'the page’s shell started a function of its own: the computation has to live in the computational part');
