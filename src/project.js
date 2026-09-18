@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { execFileSync } from 'child_process';
-import { MAX_BUF, git, gitArgv, gitEnv, gitTry, readHistory } from './git.js';
+import { git, gitRead, gitTry, readHistory } from './git.js';
 import { cliCommand, invocation } from './refusal.js';
 
 /* Settings derived from the project itself: what to measure, where the journal is, where to write,
@@ -41,21 +40,24 @@ const JOURNALS = ['WORKLOG.md', 'CHANGELOG.md', 'CHANGES.md', 'HISTORY.md'];
 const MAX_BYTES = 512 * 1024;
 
 /* The index gives paths and sizes: `ls-files -s` yields the objects, and their sizes are asked for in
- * one batch (`cat-file --batch-check`) rather than by reading the content. */
+ * one batch (`cat-file --batch-check`) rather than by reading the content. One call per run: the tree
+ * is asked for once and the answer is handed to whoever needs it (`allPaths`, `projectConfig`). */
 function indexFiles(root) {
   const listed = git(root, ['ls-files', '-s']).split('\n').filter((l) => l !== '');
   const sizes = new Map();
   const shas = listed.map((l) => l.split(/\s+/)[1]);
   if (shas.length > 0) {
-    const checked = execFileSync('git', gitArgv(['cat-file', '--batch-check=%(objectname)\t%(objectsize)']), {
-      cwd: root, encoding: 'utf8', input: shas.join('\n') + '\n', maxBuffer: MAX_BUF, env: gitEnv()
-    });
+    const checked = gitRead(root, ['cat-file', '--batch-check=%(objectname)\t%(objectsize)'],
+      { input: shas.join('\n') + '\n' });
     checked.split('\n').forEach((l) => {
       const [sha, size] = l.split('\t');
       sizes.set(sha, Number(size));
     });
   }
-  return listed.map((line) => ({ p: line.split('\t')[1], size: sizes.get(line.split(/\s+/)[1]) || 0 }));
+  return listed.map((line) => {
+    const [meta, p] = line.split('\t');
+    return { p: p, size: sizes.get(meta.split(' ')[1]) || 0 };
+  });
 }
 
 /* The history is the union of the paths of every commit, read the same way coverage reads it
@@ -76,9 +78,10 @@ function historyPaths(root) {
   return seen;
 }
 
-// The tree and the history in one list: everything the history touched may become a column.
-function allPaths(root) {
-  const files = indexFiles(root);
+// The tree and the history in one list: everything the history touched may become a column. The index
+// comes from outside rather than being read here, so that one run asks git for it once.
+function allPaths(root, index) {
+  const files = index.slice();
   const known = new Set(files.map((f) => f.p));
   historyPaths(root).forEach((p) => {
     if (!known.has(p)) files.push({ p: p, size: 0 });
@@ -206,11 +209,12 @@ function columnsOf(files, journal) {
 export function projectConfig(root) {
   const output = outputOf();
   const journal = journalOf(root);
-  const files = allPaths(root);
+  const index = indexFiles(root);
   /* Only what git tracks becomes a column: a file absent at HEAD has nothing to measure (it would be
    * empty in every row of the report). A path living only in the history is therefore an exception
    * rather than a column, while the list of paths stays complete either way. */
-  const tracked = new Set(indexFiles(root).map((f) => f.p));
+  const tracked = new Set(index.map((f) => f.p));
+  const files = allPaths(root, index);
   const readable = files.filter((f) => tracked.has(f.p) && !generated(f.p, output) && f.size <= MAX_BYTES);
   const columns = columnsOf(readable, journal);
   const taken = new Set(columns.reduce((all, c) => all.concat(c.paths), []));
@@ -272,7 +276,7 @@ export function projectTree(root, output, measured) {
  * (`test/api.test.js` holds the list of names), and the shape of the answer is the same — columns,
  * the extensions the project knows, and how many paths there are in total. */
 export function sniffColumns(root) {
-  const files = allPaths(root);
+  const files = allPaths(root, indexFiles(root));
   const exts = [...new Set(files.map((f) => path.extname(f.p).toLowerCase()))]
     .filter((e) => KNOWN_EXTS.indexOf(e) >= 0).sort();
   return { columns: projectConfig(root).columns, exts: exts, total: files.length };

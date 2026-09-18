@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { execFileSync } from 'child_process';
-import { MAX_BUF, gitArgv, gitEnv } from './git.js';
+import { gitRead } from './git.js';
 import { advicePath, cliCommand, invocation, refuseCause } from './refusal.js';
 import { LOCALES } from './locales.js';
 import { METRICS, MINIFY_ENGINES } from './metrics.js';
@@ -51,9 +50,7 @@ export function argValue(args, name) {
 
 export function gitRoot() {
   try {
-    return execFileSync('git', gitArgv(['rev-parse', '--show-toplevel']), {
-      encoding: 'utf8', maxBuffer: MAX_BUF, env: gitEnv()
-    }).trim();
+    return gitRead(process.cwd(), ['rev-parse', '--show-toplevel']).trim();
   } catch (e) {
     // Two dead ends with different fixes — "git did not start" and "there is no repository here" —
     // are told apart by what git itself said rather than by a guess: ENOENT means the program was not

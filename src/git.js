@@ -36,10 +36,21 @@ export function gitEnv() {
   return Object.assign({}, process.env, { LC_ALL: 'C', LANG: 'C' });
 }
 
+/* How git is started here: the options that make a read the same on any machine, written once. A caller
+ * adds what only it needs — `input` for a batch, `encoding: undefined` where the answer is the bytes of a
+ * blob rather than text, an environment on top of the boundary's own (the hook builds its commit in a
+ * separate index with it). */
+function gitOptions(root, extra) {
+  return Object.assign({ cwd: root, encoding: 'utf8', maxBuffer: MAX_BUF, env: gitEnv() }, extra || {});
+}
+
+/* A read: stdout as text, and an exception where git did not answer. */
+export function gitRead(root, args, extra) {
+  return execFileSync('git', gitArgv(args), gitOptions(root, extra));
+}
+
 export function git(root, args) {
-  return execFileSync('git', gitArgv(args), {
-    cwd: root, encoding: 'utf8', maxBuffer: MAX_BUF, env: gitEnv()
-  });
+  return gitRead(root, args);
 }
 
 /* The same read, but with the exit code: where a non-zero code is an expected answer rather than
@@ -48,10 +59,7 @@ export function git(root, args) {
  * environment — the hook builds the report commit in a separate index with it, leaving the real
  * one untouched (`src/hook.js`). */
 export function gitTry(root, args, env) {
-  const res = spawnSync('git', gitArgv(args), {
-    cwd: root, encoding: 'utf8', maxBuffer: MAX_BUF,
-    env: Object.assign(gitEnv(), env || {})
-  });
+  const res = spawnSync('git', gitArgv(args), gitOptions(root, { env: Object.assign(gitEnv(), env || {}) }));
   return { status: res.status, stdout: res.stdout || '', stderr: res.stderr || '' };
 }
 
@@ -66,15 +74,14 @@ export function gitTry(root, args, env) {
 const BLOB_CHUNK = 1000; // specs per batch: it bounds both stdin and memory
 
 function catFileCheck(root, specs) {
-  const out = execFileSync('git', gitArgv(['cat-file', '--batch-check=%(objectname) %(objecttype) %(objectsize)']), {
-    cwd: root, encoding: 'utf8', input: specs.join('\n') + '\n', maxBuffer: MAX_BUF, env: gitEnv()
-  });
+  const out = gitRead(root, ['cat-file', '--batch-check=%(objectname) %(objecttype) %(objectsize)'],
+    { input: specs.join('\n') + '\n' });
   return out.split('\n');
 }
 
 function catFileBatch(root, shas) {
-  const buf = execFileSync('git', gitArgv(['cat-file', '--batch']), {
-    cwd: root, input: shas.join('\n') + '\n', maxBuffer: MAX_BUF, env: gitEnv()
+  const buf = gitRead(root, ['cat-file', '--batch'], {
+    input: shas.join('\n') + '\n', encoding: undefined
   });
   const out = new Map();
   let i = 0;
@@ -124,9 +131,7 @@ export function readBlobs(root, specs, needText) {
  * the output is split by NUL (`-z`), or paths with spaces would have to be unquoted. */
 export function headTree(root) {
   const out = new Map();
-  const tree = execFileSync('git', gitArgv(['ls-tree', '-r', '-z', 'HEAD']), {
-    cwd: root, encoding: 'utf8', maxBuffer: MAX_BUF, env: gitEnv()
-  });
+  const tree = gitRead(root, ['ls-tree', '-r', '-z', 'HEAD']);
   tree.split('\u0000').forEach((rec) => {
     const tab = rec.indexOf('\t');
     if (tab < 0) return;
@@ -142,9 +147,8 @@ export function headTree(root) {
  * the answers are positional, as with `cat-file`. */
 export function diskHashes(root, paths) {
   const out = new Map();
-  const lines = execFileSync('git', gitArgv(['hash-object', '--stdin-paths']), {
-    cwd: root, encoding: 'utf8', input: paths.join('\n') + '\n', maxBuffer: MAX_BUF, env: gitEnv()
-  }).split('\n');
+  const lines = gitRead(root, ['hash-object', '--stdin-paths'],
+    { input: paths.join('\n') + '\n' }).split('\n');
   paths.forEach((p, i) => { out.set(p, lines[i] === undefined ? '' : lines[i].trim()); });
   return out;
 }
@@ -155,9 +159,7 @@ export function diskHashes(root, paths) {
  * while "cleaning" would turn it back into LF — git warns about such files and puts exactly this
  * on disk. */
 export function diskForm(root, rev, p) {
-  return execFileSync('git', gitArgv(['cat-file', '--filters', rev + ':' + p]), {
-    cwd: root, maxBuffer: MAX_BUF, env: gitEnv()
-  });
+  return gitRead(root, ['cat-file', '--filters', rev + ':' + p], { encoding: undefined });
 }
 
 // The content of a file in a revision, or null when the file is not there.

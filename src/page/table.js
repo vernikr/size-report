@@ -332,9 +332,11 @@ export function appWindow(cache, redraw) {
     return;
   }
   appHead(cache, span);
-  [...cache.rows.keys()].forEach((r) => {
-    if (r >= span.r0 && r <= span.r1) { appCells(cache.rows.get(r), cache, span); return; }
-    cache.rows.get(r).el.remove();
+  /* Walking the map itself rather than a copy of its keys: a step down the table does not allocate,
+   * and the entry the window keeps is taken where it is rather than looked up a second time. */
+  cache.rows.forEach((entry, r) => {
+    if (r >= span.r0 && r <= span.r1) { appCells(entry, cache, span); return; }
+    entry.el.remove();
     cache.rows.delete(r);
   });
   for (let r = span.r0; r <= span.r1; r++) {
